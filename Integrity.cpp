@@ -19,7 +19,8 @@ bool Integrity::Check(uint64_t Address, int nBytes, byte* originalBytes)
 	return true;
 }
 
-//we can build an array here at some memory location with nBytes, then SHA256 
+//we can build an array here at some memory location with nBytes, then SHA256 it to get some hash that will only change if memory is modified
+//each byte in the digest is multiplied by the previous byte in the digest and added to some sum, which is returned as the hash
 uint8_t* Integrity::GetHash(uint64_t Address, int nBytes)
 {
 	byte* arr = new byte[nBytes];
