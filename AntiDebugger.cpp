@@ -76,7 +76,7 @@ bool Debugger::AntiDebug::_IsHardwareDebuggerPresent()
 				else
 				{
 					printf("GetThreadContext failed with: %d\n", GetLastError());
-          CloseHandle(_tThread);
+                                        CloseHandle(_tThread);
 					continue;
 				}
 			}
