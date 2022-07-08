@@ -4,12 +4,13 @@
 #include <string>
 #include <Psapi.h>
 #include <tchar.h>
+#include <TlHelp32.h>
 #include <list>
 
 using namespace std;
 
 #define MAX_DLLS_LOADED 128
-#define MAX_FILE_PATH_LENGTH 512
+#define MAX_FILE_PATH_LENGTH 256
 
 namespace Module
 {
@@ -28,7 +29,12 @@ public:
 
 	uint32_t GetThisProcessId();
 
-	static void GetBaseAddressByName(DWORD processId, TCHAR* processName);
+	uint64_t GetBaseAddress();
+	uint32_t GetMemorySize();
+
+	bool ProtectProcess();
+
+	pPEB::_MYPEB* GetPEB() { return this->_PEB; }
 
 private:
 
