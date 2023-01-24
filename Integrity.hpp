@@ -1,14 +1,14 @@
 #pragma once
-#include "Utility.hpp"
-#include "Process.hpp"
-#include "SHA256.hpp"
+#include "../Common/Utility.hpp"
+#include "../Process/Process.hpp"
+#include "SHA256/SHA256.hpp"
 
 class Integrity
 {
 public:
 
-	bool Check(uint64_t Address, int nBytes, byte* originalBytes);
-	uint8_t* GetHash(uint64_t Address, int nBytes);
+	bool Check(uint64_t Address, int nBytes, std::list<uint64_t>* hashList);
+	list<uint64_t>* GetHash(uint64_t Address, int nBytes);
 
 private:
 
