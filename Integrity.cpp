@@ -1,37 +1,41 @@
-#include "Integrity.hpp"
+#include "AntiTamper/Integrity.hpp"
 #include <stdio.h>
+#include <algorithm>
 
-bool Integrity::Check(uint64_t Address, int nBytes, byte* originalBytes)
+//Call chain: GetHash() to get a hash list of module, then later call Check with the result from GetHash originally.
+//working! returns false if any static memory is modified (assuming we pass in moduleBase and sizeOfModule.
+bool Integrity::Check(uint64_t Address, int nBytes, std::list<uint64_t>* hashList)
 {
-	bool memorySpoiled = false;
+	list<uint64_t>* hashes = GetHash(Address, nBytes);
 
-	for (int i = 0; i < nBytes; i++)
-	{
-		byte x = Utility<byte>::DereferenceSafe(Address + i);
+	bool b_perm = std::is_permutation(hashList->begin(), hashList->end(), hashes->begin());
+	
+	delete hashes;
 
-		if (originalBytes[i] != x)
-		{
-			printf("Memory mismatch!\n");
-			memorySpoiled = true;
-		}
-	}
-
-	return true;
+	return b_perm;
 }
 
-//we can build an array here at some memory location with nBytes, then SHA256 it to get some hash that will only change if memory is modified
-//each byte in the digest is multiplied by the previous byte in the digest and added to some sum, which is returned as the hash
-uint8_t* Integrity::GetHash(uint64_t Address, int nBytes)
+//we can build an array here at some memory location with nBytes, then SHA256 
+list<uint64_t>* Integrity::GetHash(uint64_t Address, int nBytes)
 {
+	std::list<uint64_t>* hashList = new list<uint64_t>();
+
 	byte* arr = new byte[nBytes];
-	memcpy(&arr[0], (void*)&Address, nBytes);
+	memcpy(arr, (void*)Address, nBytes);
 
 	SHA256 sha;
-	sha.update(arr);
-	uint8_t* digest = sha.digest();
+	uint8_t* digest = 0;
+	UINT64 digestCache = 0; //we keep adding 
 
-	//printf("%s\n", SHA256::toString(digest).c_str());
-	printf("%llx\n", SHA256::GetStackedMultiple(digest));
+	for (int i = 0; i < nBytes; i = i + 32)
+	{
+		sha.update(&arr[i], 32);
+		digest = sha.digest();
+		digestCache += *(UINT64*)digest + i;
+		hashList->push_back(digestCache);
+		printf("%llx ", digestCache);
+		delete digest;
+	}
 
-	return digest;
+	return hashList;
 }
