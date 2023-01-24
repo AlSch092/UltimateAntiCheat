@@ -6,7 +6,6 @@
 #include <iostream>
 #include "AntiCheat.hpp"
 
-
 using namespace std;
 
 void GetUserInput()
@@ -26,7 +25,7 @@ void GetUserInput()
         wchar_t userIn[20];
         wscanf_s(L"%s", userIn, 20);
 
-        switch (userIn[0])
+        switch (userIn[0]) //Todo: finish implementing this!
         {
             case L'1':
                 cout << "Selected 1.";
@@ -60,7 +59,7 @@ void GetUserInput()
     }
 }
 
-void TestFunction() //called by our 'rogue' CreateThread
+void TestFunction() //called by our 'rogue'/SymLink CreateThread
 {
     printf("Hello!\n");
 }
@@ -68,8 +67,7 @@ void TestFunction() //called by our 'rogue' CreateThread
 void TestAllFunctionalities()
 {
     AntiCheat* AC = new AntiCheat();
-
-    ChangeModuleName((wchar_t*)L"UltimateAnticheat.exe", (wchar_t*)L"ABC123");
+    bool isCompromised;
 
    // AC->ShellcodeTests();
 
@@ -77,12 +75,41 @@ void TestAllFunctionalities()
 
     AC->GetAntiDebugger()->StartAntiDebugThread();
 
-    AC->GetIntegrityChecker()->Check((uint64_t)GetModuleHandleA(NULL), 5, (byte*)"\x4D\x5A\x90\x00\x03");
+    uint64_t thisModule = (uint64_t)GetModuleHandleA(NULL);
 
-    uint64_t k32DLL = (uint64_t)GetModuleHandleA("kernel32.dll");
-    AC->GetIntegrityChecker()->GetHash((uint64_t)k32DLL, 8); //make some hash of kernel32.dll's bytes, ideally we want to make some heartbeat that hashes memory of the game or process and checks with server, this would get rid of 95% of cheaters
-    
-    AC->GetAntiDebugger()->_IsHardwareDebuggerPresent();
+    if (!thisModule)
+    {
+        printf("Failed to get current module! %d\n", GetLastError());
+    }
+
+    DWORD moduleSize = AC->GetProcessObject()->GetMemorySize();
+ 
+    AC->GetProcessObject()->SetModuleHashList(AC->GetIntegrityChecker()->GetHash((uint64_t)thisModule, moduleSize));
+
+    MessageBoxA(0, "Write process memory here, Check() below should detect if the program is tampered", 0, 0);
+
+    if (AC->GetIntegrityChecker()->Check((uint64_t)thisModule, moduleSize, AC->GetProcessObject()->GetModuleHashList()))
+    {
+        printf("Hashes match! Program is genuine! Remember to put this inside a TLS callback (and then make sure TLS callback isn't hooked) to ensure we get hashes before memory is tampered.\n");
+        isCompromised = false;
+    }
+    else
+    {
+        printf("Program is MODIFIED!\n");
+        isCompromised = true;
+    }
+
+    std::wstring newModuleName = L"new_module_name_any_extension.blah";
+
+    if (ChangeModuleName((wchar_t*)L"UltimateAnticheat.exe", (wchar_t*)newModuleName.c_str()))
+    {
+        wprintf(L"Changed module name to %s!\n", newModuleName.c_str());
+    }
+
+    if (AC->GetAntiDebugger()->_IsHardwareDebuggerPresent())
+    {
+        printf("Found hardware debugger!\n");
+    }
 
     if (Utility::IsVTableHijacked((void*)AC))
     {
@@ -94,20 +121,20 @@ void TestAllFunctionalities()
         printf("Could not protect process.\n");
     }
 
-    Services* s = new Services();
-    // s->StopEventLog();  //this works but its not neccesary as this is not malware! if we want to get savvy there's most likely a way to push our own custom/spoofed event logs by finding the function in the eventlog module which does this and calling it ourselves.
+    AC->GetProcessObject()->SetElevated(Process::IsProcessElevated());
 
-    if (!s->GetServiceModules("Dhcp")) //we can actually open the service process modules and suspend threads or kill the process to stop windows reporting and functionalities. 
+    if (AC->GetProcessObject()->GetElevated())
     {
-        printf("Could not get running services!\n");
+        printf("Process is elevated!\n");
+
+        Services* s = new Services();
+        s->StopEventLog();  //this works but its not neccesary as this is not malware! if we want to get savvy there's most likely a way to push our own custom/spoofed event logs by finding the function in the eventlog module which does this and calling it ourselves.
+        //todo: write generic function which stops a service instead of just targeting event log
     }
-
-
 }
 
 int main()
 {
     TestAllFunctionalities();
-
     GetUserInput();
 }
