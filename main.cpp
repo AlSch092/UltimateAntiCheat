@@ -1,12 +1,21 @@
 // UltimateAnticheat.cpp : This file contains the 'main' function. Program execution begins and ends there.
 // an 'in-development' anti-tamper + anti-debug + anti-load for x86, x64
-// !not for commercial use! please contact the author if you wish to use examples from this in your commercial project.
-// Author: Alex Schwarz (aschwarz92@outlook.com, github: alsch092)
+// Author: Alsch092,  github: alsch092)
+// Credits to changeofpace for file re-mapping
 
-#include <iostream>
 #include "AntiCheat.hpp"
+#include "Process/Memory/remap.hpp"
+
+//
+// This linker option forces every pe section to be loaded at an address which
+//  is aligned to the system allocation granularity. At runtime, each section
+//  is padded with pages of reserved memory.
+// NOTE This option does not affect file size.
+#pragma comment(linker, "/ALIGN:0x10000")
 
 using namespace std;
+
+//extern "C" void _MessageBox(); //ignore these!
 
 void GetUserInput()
 {
@@ -59,47 +68,64 @@ void GetUserInput()
     }
 }
 
-void TestFunction() //called by our 'rogue'/SymLink CreateThread
+void TestFunction() //called by our 'rogue'/SymLink CreateThread. WINAPI is not called for this!
 {
     printf("Hello!\n");
+}
+
+bool TestProgramHash(AntiCheat* AC)
+{
+    uint64_t module = (uint64_t)GetModuleHandleW(L"UltimateAnticheat.exe");
+
+    if (!module)
+    {
+        printf("Failed to get current module! %d\n", GetLastError());
+        return false;
+    }
+
+    DWORD moduleSize = AC->GetProcessObject()->GetMemorySize();
+
+    AC->GetProcessObject()->SetModuleHashList(AC->GetIntegrityChecker()->GetHash((uint64_t)module, 0x1000)); //cache the list of hashes we get from the process .text section
+
+    MessageBoxA(0, "Write '.text' section memory here!", 0, 0);
+
+    if (AC->GetIntegrityChecker()->Check((uint64_t)module, 0x1000, AC->GetProcessObject()->GetModuleHashList())) 
+    {
+        printf("Hashes match! Program appears genuine! Remember to put this inside a TLS callback (and then make sure TLS callback isn't hooked) to ensure we get hashes before memory is tampered.\n");
+    }
+    else
+    {
+        printf("Program is modified!\n");
+        return true;
+    }
+
+    return false;
 }
 
 void TestAllFunctionalities()
 {
     AntiCheat* AC = new AntiCheat();
-    bool isCompromised;
+    TestProgramHash(AC);
 
-   // AC->ShellcodeTests();
+    BOOL bElevated = Process::IsProcessElevated();
+    AC->GetProcessObject()->SetElevated(bElevated);
+
+    if (bElevated)
+    {
+        printf("Process is elevated!\n");
+
+        //Services* s = new Services();
+       // s->StopEventLog();  //this works but its not neccesary as this is not malware! if we want to get savvy there's most likely a way to push our own custom/spoofed event logs by finding the function in the eventlog module which does this and calling it ourselves.
+        //todo: write generic function which stops a service instead of just targeting event log
+    }
+
+    //AC->ShellcodeTests();
 
     SymbolicHash::CreateThread_Hash(0, 0, (LPTHREAD_START_ROUTINE)&TestFunction, 0, 0, 0); //works
 
     AC->GetAntiDebugger()->StartAntiDebugThread();
 
-    uint64_t thisModule = (uint64_t)GetModuleHandleA(NULL);
-
-    if (!thisModule)
-    {
-        printf("Failed to get current module! %d\n", GetLastError());
-    }
-
-    DWORD moduleSize = AC->GetProcessObject()->GetMemorySize();
- 
-    AC->GetProcessObject()->SetModuleHashList(AC->GetIntegrityChecker()->GetHash((uint64_t)thisModule, moduleSize));
-
-    MessageBoxA(0, "Write process memory here, Check() below should detect if the program is tampered", 0, 0);
-
-    if (AC->GetIntegrityChecker()->Check((uint64_t)thisModule, moduleSize, AC->GetProcessObject()->GetModuleHashList()))
-    {
-        printf("Hashes match! Program is genuine! Remember to put this inside a TLS callback (and then make sure TLS callback isn't hooked) to ensure we get hashes before memory is tampered.\n");
-        isCompromised = false;
-    }
-    else
-    {
-        printf("Program is MODIFIED!\n");
-        isCompromised = true;
-    }
-
-    std::wstring newModuleName = L"new_module_name_any_extension.blah";
+    std::wstring newModuleName = L"new.blah";
 
     if (ChangeModuleName((wchar_t*)L"UltimateAnticheat.exe", (wchar_t*)newModuleName.c_str()))
     {
@@ -121,20 +147,24 @@ void TestAllFunctionalities()
         printf("Could not protect process.\n");
     }
 
-    AC->GetProcessObject()->SetElevated(Process::IsProcessElevated());
-
-    if (AC->GetProcessObject()->GetElevated())
+    ULONG_PTR ImageBase = (ULONG_PTR)GetModuleHandle(NULL);
+   
+    if (ImageBase)
     {
-        printf("Process is elevated!\n");
-
-        Services* s = new Services();
-        s->StopEventLog();  //this works but its not neccesary as this is not malware! if we want to get savvy there's most likely a way to push our own custom/spoofed event logs by finding the function in the eventlog module which does this and calling it ourselves.
-        //todo: write generic function which stops a service instead of just targeting event log
+        if (!RmpRemapImage(ImageBase))
+        {
+            printf("RmpRemapImage failed.\n");
+        }
+    }
+    else
+    {
+        printf("Imagebase was NULL!\n");
     }
 }
 
 int main()
 {
+  //  _MessageBox();
     TestAllFunctionalities();
     GetUserInput();
 }
