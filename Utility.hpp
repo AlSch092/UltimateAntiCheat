@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <Windows.h>
 
+//pointer utilities -> reading and writing pointers and dereferencing 'safely'
 class Utility
 {
 public:
@@ -32,22 +33,4 @@ public:
 		}
 		__except (1) { return (T)NULL; }
 	}
-
-	template<class T>
-	static inline void** GetVTableArray(T* pClass, int* pSize) //thanks to  https://stackoverflow.com/questions/2705927/get-specific-process-memory-space
-	{
-		void** ppVTable = *(void***)pClass;
-
-		if (pSize)
-		{
-			*pSize = 0;
-
-			while (!IsBadReadPtr(ppVTable[*pSize], sizeof(unsigned __int64)))
-				(*pSize)++;
-		}
-
-		return ppVTable;
-	}
-
-	static bool IsVTableHijacked(void* pClass);
 };
