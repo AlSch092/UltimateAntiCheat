@@ -1,9 +1,8 @@
 // UltimateAnticheat.cpp : This file contains the 'main' function. Program execution begins and ends there.
 // an 'in-development' anti-tamper + anti-debug + anti-load for x86, x64
 // Author: Alsch092,  github: alsch092)
-// Credits to changeofpace for file re-mapping code
 
-#pragma comment(linker, "/ALIGN:0x10000")
+#pragma comment(linker, "/ALIGN:0x10000") //for remapping code
 
 #define DLL_PROCESS_DETACH 0
 #define DLL_PROCESS_ATTACH 1
@@ -12,13 +11,6 @@
 
 #include "AntiCheat.hpp"
 #include "Process/Memory/remap.hpp"
-
-//
-// This linker option forces every pe section to be loaded at an address which
-//  is aligned to the system allocation granularity. At runtime, each section
-//  is padded with pages of reserved memory.
-// NOTE This option does not affect file size.
-
 
 void NTAPI __stdcall TLSCallback(PVOID DllHandle, DWORD dwReason, PVOID Reserved);
 
@@ -54,10 +46,9 @@ void NTAPI __stdcall TLSCallback(PVOID DllHandle, DWORD dwReason, PVOID Reserved
         break;
 
     case DLL_THREAD_ATTACH:
-        ExitThread(0); //we can stop DLL injecting + DLL debuggers this way
+        //ExitThread(0); //we can stop DLL injecting + DLL debuggers this way, but make sure you're handling your threads carefully..
         printf("New thread spawned!\n");
         break;
-
 
     case DLL_THREAD_DETACH:
         printf("Thread detached!\n");
@@ -65,60 +56,9 @@ void NTAPI __stdcall TLSCallback(PVOID DllHandle, DWORD dwReason, PVOID Reserved
     };
 }
 
-void GetUserInput()
-{
-    bool readingCmd = true;
-
-    while (readingCmd)
-    {
-        cout << "Select your poison.\n";
-
-        cout << "[1] Start anti-tamper.\n";
-        cout << "[2] Start anti-debug.\n";
-        cout << "[3] Activate process hiding\n";
-        cout << "[4] Reject new modules + scan current modules for proxies.\n";
-        cout << "[5] Start all detections\n";
-
-        wchar_t userIn[20];
-        wscanf_s(L"%s", userIn, 20);
-
-        switch (userIn[0]) //Todo: finish implementing this!
-        {
-        case L'1':
-            cout << "Selected 1.";
-            break;
-
-        case L'2':
-            cout << "Selected 2.";
-            break;
-
-        case L'3':
-            cout << "Selected 3.";
-            break;
-
-        case L'4':
-            cout << "Selected 4.";
-            break;
-
-        case L'5':
-            cout << "Selected 5.";
-            break;
-
-        case L'0':
-            cout << "Done!.";
-            return;
-
-        default:
-            cout << "Input not recognized as an option. Try again.";
-            break;
-        }
-
-    }
-}
-
 void TestFunction() //called by our 'rogue'/SymLink CreateThread. WINAPI is not called for this!
 {
-    printf("Hello!\n");
+    printf("Hello! this thread was made without calling CreateThread directly!\n");
 }
 
 bool TestProgramHash(AntiCheat* AC)
@@ -135,7 +75,7 @@ bool TestProgramHash(AntiCheat* AC)
 
     AC->GetProcessObject()->SetModuleHashList(AC->GetIntegrityChecker()->GetHash((uint64_t)module, 0x1000)); //cache the list of hashes we get from the process .text section
 
-    MessageBoxA(0, "Write '.text' section memory here!", 0, 0);
+    MessageBoxA(0, "Write over '.text' section memory here to test integrity checking!", 0, 0);
 
     if (AC->GetIntegrityChecker()->Check((uint64_t)module, 0x1000, AC->GetProcessObject()->GetModuleHashList()))
     {
@@ -150,32 +90,28 @@ bool TestProgramHash(AntiCheat* AC)
     return false;
 }
 
-void TestAllFunctionalities()
+void TestFunctionalities()
 {
     AntiCheat* AC = new AntiCheat();
-    TestProgramHash(AC);
 
-    BOOL bElevated = Process::IsProcessElevated();
-    AC->GetProcessObject()->SetElevated(bElevated);
+    AC->GetProcessObject()->SetElevated(Process::IsProcessElevated());
 
-    if (bElevated)
+    AC->GetProcessObject()->GetProgramSections("UltimateAnticheat.exe"); //we can stop a routine like this from working if we patch NumberOfSections to 0
+
+    if (!Process::CheckParentProcess(L"explorer.exe"))
     {
-        printf("Process is elevated!\n");
-
-        //Services* s = new Services();
-       // s->StopEventLog();  //this works but its not neccesary as this is not malware! if we want to get savvy there's most likely a way to push our own custom/spoofed event logs by finding the function in the eventlog module which does this and calling it ourselves.
-        //todo: write generic function which stops a service instead of just targeting event log
+        printf("Parent process was not explorer.exe! hekker detected!\n"); //sometimes people will launch a game from their own process, which we can easily detect if they haven't spoofed it
     }
 
-    //AC->ShellcodeTests();
+    TestProgramHash(AC);
 
-    SymbolicHash::CreateThread_Hash(0, 0, (LPTHREAD_START_ROUTINE)&TestFunction, 0, 0, 0); //works
+    SymbolicHash::CreateThread_Hash(0, 0, (LPTHREAD_START_ROUTINE)&TestFunction, 0, 0, 0); //works -> shows how we can call CreateThread without directly calling winapi, we call our pointer instead which then invokes createthread
 
     AC->GetAntiDebugger()->StartAntiDebugThread();
 
-    std::wstring newModuleName = L"new.blah";
+    std::wstring newModuleName = L"new_name";
 
-    if (ChangeModuleName((wchar_t*)L"UltimateAnticheat.exe", (wchar_t*)newModuleName.c_str()))
+    if (Process::ChangeModuleName((wchar_t*)L"UltimateAnticheat.exe", (wchar_t*)newModuleName.c_str()))
     {
         wprintf(L"Changed module name to %s!\n", newModuleName.c_str());
     }
@@ -208,10 +144,12 @@ void TestAllFunctionalities()
     {
         printf("Imagebase was NULL!\n");
     }
+
+    delete AC;
 }
 
-int main()
+int main(int argc, char** argv)
 {
-    TestAllFunctionalities();
-    GetUserInput();
+    //  _MessageBox();
+    TestFunctionalities();
 }
