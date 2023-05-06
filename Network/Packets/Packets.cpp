@@ -1,0 +1,29 @@
+#include "Packets.hpp"
+
+PacketWriter* Packets::Builder::ClientHello(string HWID, string Ipv4, string MACAddress)
+{
+	PacketWriter* p = new PacketWriter(Packets::Opcodes::CS_HELLO);
+	p->WriteString(HWID);
+	p->WriteString(Ipv4);
+	p->WriteString(MACAddress);
+	return p;
+}
+
+PacketWriter* Packets::Builder::ClientGoodbye(int reason)
+{
+	PacketWriter* p = new PacketWriter(Packets::Opcodes::CS_GOODBYE);
+	p->Write<int>(reason);
+	return p;
+}
+
+PacketWriter* Packets::Builder::BinaryHashes(list<uint64_t> HashList) //todo: finish these
+{
+	PacketWriter* p = new PacketWriter(Packets::Opcodes::CS_BINARY_HASH);
+	return p;
+}
+
+PacketWriter* Packets::Builder::DetectedBadBehavior(int flagsDetected) //todo: finish these
+{
+	PacketWriter* p = new PacketWriter(Packets::Opcodes::CS_BAD_BEHAVIOUR);
+	return p;
+}
