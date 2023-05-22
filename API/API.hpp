@@ -1,5 +1,5 @@
 #pragma once
-#include "AntiCheat.hpp"
+#include "../AntiCheat.hpp"
 //API is exported routines needed for a game to initialize this anti-cheat program
 
 using namespace std;
@@ -16,6 +16,8 @@ namespace API
 		HEARTBEAT,
 	};
 
-	int __declspec(dllexport) Initialize(string licenseKey);
+	int __declspec(dllexport) Initialize(string licenseKey, wstring parentProcessName);
 	int __declspec(dllexport) Dispatch(DispatchCode code, int reason);
 }
+
+

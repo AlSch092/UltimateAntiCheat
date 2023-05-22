@@ -1,10 +1,11 @@
 #include "API.hpp"
 
-int __declspec(dllexport) API::Initialize(string licenseKey)
+int __declspec(dllexport) API::Initialize(string licenseKey, wstring parentProcessName)
 {
-	int errorCode = 0;
+	int errorCode = Error::OK;
 	bool isLicenseValid = false;
-	//check licenseKey against web server
+
+	//TODO: check licenseKey against some centralized web server, possibly using HTTP requests. once we have verified our license, we can try to connect using Initialize()
 	//gernerate user identifying info and send to server
 
 	if (isLicenseValid)
@@ -13,6 +14,18 @@ int __declspec(dllexport) API::Initialize(string licenseKey)
 		{
 			//don't allow continuing if networking doesn't work
 			errorCode = Error::CANT_STARTUP;
+		}
+		else
+		{
+			//check parent process
+			if (Process::CheckParentProcess(parentProcessName))
+			{
+				g_AC->GetProcessObject()->SetParentName(parentProcessName);
+			}
+			else //bad parent process detected, or parent process mismatch, shut down the program after reporting the error to the server
+			{
+				errorCode = Error::PARENT_PROCESS_MISMATCH;
+			}
 		}
 	}
 
