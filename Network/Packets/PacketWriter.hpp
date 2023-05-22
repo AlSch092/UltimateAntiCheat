@@ -19,11 +19,11 @@ public:
 			Write<BYTE>(buff[i]);
 	}
 
-	PacketWriter(uint16_t h, BYTE* bData)
+	PacketWriter(uint16_t h, BYTE* bData, int length) : m_pos(0), m_buffer(new unsigned char[bufferLen]), m_length(bufferLen)
 	{
-		Write(h);
+		Write<uint16_t>(h);
 
-		for (int i = 0; i < sizeof(bData); i++)
+		for (int i = 0; i < length; i++)
 		{
 			Write<byte>(bData[i]);
 		}
