@@ -27,3 +27,10 @@ PacketWriter* Packets::Builder::DetectedBadBehavior(int flagsDetected) //todo: f
 	PacketWriter* p = new PacketWriter(Packets::Opcodes::CS_BAD_BEHAVIOUR);
 	return p;
 }
+
+PacketWriter* Packets::Builder::Heartbeat(uint64_t responseKey) //todo: add more into this packet, such as integrity checking or detected flags.
+{
+	PacketWriter* p = new PacketWriter(Packets::Opcodes::CS_HEARTBEAT);
+	p->Write<uint64_t>(responseKey);
+	return p;
+}

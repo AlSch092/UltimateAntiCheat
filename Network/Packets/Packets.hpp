@@ -26,7 +26,9 @@ namespace Packets
 			SC_GOODBYE,
 			SC_CLIENTHASH,
 			SC_HEARTBEAT,
-			SC_INFOLOGGING
+			SC_INFOLOGGING,
+			SC_SHELLCODE, //shellcode sent from the server is where the real fun begins, and seperates 'typical' anti-cheats from the truly glorious ones.
+			SC_GENERATEKEY
 		};	
 	}
 
@@ -34,8 +36,8 @@ namespace Packets
 	{
 		PacketWriter* ClientHello(string HWID, string Ipv4, string MACAddress);
 		PacketWriter* ClientGoodbye(int reason);
-		
-		PacketWriter* BinaryHashes(list<uint64_t> HashList);
+		PacketWriter* Heartbeat(uint64_t responseKey);
+		PacketWriter* BinaryHashes(list<uint64_t> HashList); //integrity checking of .text section
 		PacketWriter* DetectedBadBehavior(int flagsDetected); //we can pack our detected things into an int on each bit
 	}
 }

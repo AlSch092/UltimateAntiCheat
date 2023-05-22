@@ -19,6 +19,16 @@ public:
 			Write<BYTE>(buff[i]);
 	}
 
+	PacketWriter(uint16_t h, BYTE* bData)
+	{
+		Write(h);
+
+		for (int i = 0; i < sizeof(bData); i++)
+		{
+			Write<byte>(bData[i]);
+		}
+	}
+
 	void ReadString(std::string value);
 
 	template<typename T>
