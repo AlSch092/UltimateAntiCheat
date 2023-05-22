@@ -1,4 +1,4 @@
-#include "Process/Process.hpp"
+#include "Process.hpp"
 
 #pragma comment(lib, "ImageHlp")
 
@@ -88,6 +88,7 @@ bool Process::ProtectProcess()
     return true;
 }
 
+//returns TRUE if our parameter desiredParent is the same process name as our parent process ID
 BOOL Process::CheckParentProcess(wstring desiredParent)
 {
     return GetParentProcessId() != GetProcessIdByName(desiredParent) ? 0 : 1;
@@ -334,7 +335,7 @@ void Process::ChangePEEntryPoint(DWORD newEntry)
             VirtualProtect((LPVOID)pEntry, sizeof(DWORD), PAGE_READWRITE, &protect);
 
             printf("pEntry: %llX\n", (UINT64)pEntry);
-            memcpy((void*)&pEntry, (void*)newEntry, sizeof(DWORD));
+            memcpy((void*)&pEntry, (void*)&newEntry, sizeof(DWORD));
             printf("new AddressOfEntryPoint: %llx\n", (long long)pNtH->OptionalHeader.AddressOfEntryPoint);
 
             VirtualProtect((LPVOID)pEntry, sizeof(DWORD), protect, &protect);
