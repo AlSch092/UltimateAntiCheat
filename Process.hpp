@@ -58,13 +58,11 @@ public:
 	void SetElevated(BOOL bElevated) { this->_Elevated = bElevated; }
 	BOOL GetElevated() { return this->_Elevated; }
 
-	list<uint64_t>* GetModuleHashList() { return this->ModuleHashes; }
-	
-	void SetModuleHashList(list<uint64_t>* L)
-	{
-		this->ModuleHashes = L; //TODO: check if this even works
-		//delete L;
-	}
+	wstring GetParentName() { return this->_ParentProcessName; }
+	uint32_t GetParentId() { return this->_ParentProcessId; }
+
+	void SetParentName(wstring parentName) { this->_ParentProcessName = parentName; }
+	void SetParentId(uint32_t id) { this->_ParentProcessId = id; }
 
 	bool ProtectProcessMemory(DWORD processId);
 
@@ -90,17 +88,20 @@ private:
 	//all aspects of a process should be here, preferrably in some order
 
 	_MYPEB* _PEB = new _MYPEB();
-
-	//Header* processHeader = new Header(GetModuleHandle(NULL));
+	
+	//Header* procHeader = new Header(); //process header
 	
 	list<Module::Section*> _sections;
 	
 	uint32_t _ProcessId;
 	HANDLE _Mutant;
 
-	string _ProcessName;
-	string _WindowClassName;
-	string _WindowTitle;
+	wstring _ProcessName;
+	wstring _WindowClassName;
+	wstring _WindowTitle;
+
+	wstring _ParentProcessName;
+	uint32_t _ParentProcessId;
 
 	list<Module::MODULE_DATA*> ModuleList;
 	list<uint64_t>* ModuleHashes;
