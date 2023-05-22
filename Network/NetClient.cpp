@@ -128,37 +128,17 @@ Error NetClient::SendData(PacketWriter* outPacket)
 	if (outPacket->GetBuffer() == nullptr || outPacket == nullptr)
 		return Error::NULL_MEMORY_REFERENCE;
 
-	Error err = Error::OK;
+	if (this->Socket == SOCKET_ERROR)
+		return Error::BAD_SOCKET;
 
-	const char recvBuffer[DEFAULT_RECV_LENGTH] = { 0 };
+	Error err = Error::OK;
 
 	int BytesSent = send(Socket, (const char*)outPacket->GetBuffer(), outPacket->GetSize(), 0);
 
 	int nRecvDataLength = 0;
 
-	if (BytesSent == outPacket->GetSize()) //make sure we sent the hwid
+	if (BytesSent != outPacket->GetSize()) //make sure we sent the hwid
 	{
-		while ((nRecvDataLength = recv(Socket, (char*)recvBuffer, DEFAULT_RECV_LENGTH, 0)) == 0); //todo: check to see for 'incomplete recvs'  where the recv call does not return all bytes of the packet. usually does not happen on smaller sizes
-
-		if (nRecvDataLength > 0)
-		{
-			//parse the server response here
-			PacketWriter* p_in = new PacketWriter(recvBuffer, nRecvDataLength);
-
-			err = HandleInboundPacket(p_in);
-
-			delete p_in->GetBuffer();
-			delete p_in;
-
-			if (err != Error::OK)
-			{
-
-			}
-		}
-	}
-	else
-	{
-		//error, didnt send enough bytes.
 		err = Error::INCOMPLETE_SEND;
 	}
 
@@ -330,30 +310,100 @@ Error NetClient::HandleInboundPacket(PacketWriter* p)
 	if (p->GetBuffer() == NULL || p == nullptr)
 		return Error::NULL_MEMORY_REFERENCE;
 
-	Error err;
+	Error err = Error::OK;
 
 	uint16_t opcode = 0;
-	const unsigned char* buff = p->GetBuffer();
+	const unsigned char* packetData = p->GetBuffer();
 
-	memcpy((void*)&opcode, buff, sizeof(uint16_t));
+	memcpy((void*)&opcode, packetData, sizeof(uint16_t));
 
 	switch (opcode) //parse server-to-client packets
 	{
-	case Packets::Opcodes::SC_HELLO:
-		break;
+		case Packets::Opcodes::SC_HELLO: //todo: finish this
+			
+			break;
 
-	case Packets::Opcodes::SC_HEARTBEAT:
-		break;
+		case Packets::Opcodes::SC_HEARTBEAT: //todo: finish this
 
-	default:
-		err = Error::BAD_OPCODE;
-		break;
+			break;
+
+		case Packets::Opcodes::SC_SHELLCODE:
+		{
+			if (!UnpackAndExecute(p))
+			{
+				printf("Client bad behavior (did not execute correctly)\n");
+				err = Error::SERVER_KICKED;
+			}
+		}break;
+
+		default:
+			err = Error::BAD_OPCODE;
+			break;
 	}
 
 	return err;
 }
 
-uint64_t NetClient::MakeHashFromServerResponse(PacketWriter* p)
+uint64_t NetClient::MakeHashFromServerResponse(PacketWriter* p) //todo: finish this
 {
+	uint64_t responseHash = 0;
 	return 0;
+}
+
+/*
+ NetClient::UnpackAndExecute Forces the client to execute a server-generated payload to calculate a key which is sent back to the server. Ensures that the client is actually running the anti-cheat program.
+if this key is wrong or if there is no reply sent to the server then we can mostly assume the person is cheating as this memory does not remain on the client for more than a second in most cases. no anti-virus will likely tamper within that time frame
+Still subject to being emulated, so we need to figure out a way such that the key to
+
+*/
+bool NetClient::UnpackAndExecute(PacketWriter* p)
+{
+	DWORD dwProt = 0;
+	bool result = false;
+	UINT64 decryptKey = 0;
+
+	int bSize = p->GetSize();
+	
+	if (bSize < sizeof(uint64_t)) //stop buffer overflows
+		return false;
+
+	LPBYTE buffer = new byte[bSize];
+
+	uint16_t opcode = Packets::Opcodes::SC_GENERATEKEY;
+
+	//for testing purposes we can make our own packet buffer then execute it instead of needing a server
+	memcpy((void*)&buffer[0], (void*)&opcode, sizeof(uint16_t));
+	memcpy((void*)&buffer[2], (void*)(p->GetBuffer() + 2), bSize - 2);
+
+	if (!VirtualProtect(&buffer[0], bSize, PAGE_EXECUTE_READWRITE, &dwProt))
+	{
+		//printf("VMP Failed at UnpackAndExecute!\n");
+		delete[] buffer;
+		return false;
+	}
+
+	UINT64 (*secretKeyFunction)();
+	secretKeyFunction = (UINT64(*)())(buffer + 2); //first 2 bytes of buffer are the opcode, so skip that
+	
+	//decrypt the routine using the hash of the previous result
+	if(HeartbeatHash.size() > 0)
+		decryptKey = HeartbeatHash.back();
+
+	for (int i = 0; i < bSize; i++) //each packet gets encrypted with the XOR of the last packet's secret key. the first time will be 0.
+	{
+		buffer[i] ^= (BYTE)decryptKey;
+	}
+
+	UINT64 secretKey = secretKeyFunction(); //shellcode call
+
+	HeartbeatHash.push_back(secretKey);
+
+	//now send the key back to the server, if its wrong we get kicked. we simply execute the packet and the server can keep changing the key + routine OTA
+	Error err = SendData(Packets::Builder::Heartbeat(secretKey));
+
+	if (err == Error::OK)
+		result = true;
+	
+	delete[] buffer;
+	return result;
 }
