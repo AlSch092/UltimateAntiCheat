@@ -11,7 +11,8 @@
 
 #include "API/API.hpp"
 
-void NTAPI __stdcall TLSCallback(PVOID DllHandle, DWORD dwReason, PVOID Reserved);
+void NTAPI __stdcall TLSCallback(PVOID DllHandle, DWORD dwReason, PVOID Reserved); //in a commercial setting our AC would be in a .dll and the game/process would have the Tls callback
+                                                                                   //todo: find way to insert Tls callback into an EXE from a DLL at runtime (modify the directory ptrs to callbacks?)
 
 #ifdef _M_IX86
 #pragma comment (linker, "/INCLUDE:__tls_used")
@@ -121,6 +122,8 @@ void TestNetworkHeartbeat()
 
 void TestFunctionalities()
 {  
+    ULONG_PTR ImageBase = (ULONG_PTR)GetModuleHandle(NULL);
+
     if (!API::Initialize("LICENSE-123456789", L"explorer.exe"))
     {
         printf("Initializing failed!\n");
@@ -168,14 +171,23 @@ void TestFunctionalities()
     {
         printf("Could not protect process.\n");
     }
-
-    ULONG_PTR ImageBase = (ULONG_PTR)GetModuleHandle(NULL);
-
+   
     if (ImageBase)
     {
-        if (!RmpRemapImage(ImageBase))
+        if (!RmpRemapImage(ImageBase)) //re-mapping of image to stop patching, and of course we can easily detect if someone bypasses this
         {
             printf("RmpRemapImage failed.\n");
+        }
+        else
+        {
+            //check page protections, if they're writable then some cheater has re-mapped our image to make it write-friendly and we need to ban them!
+            MEMORY_BASIC_INFORMATION mbi = {};
+            VirtualQueryEx(GetCurrentProcess(), (LPCVOID)ImageBase, &mbi, sizeof(mbi));
+
+            if (mbi.AllocationProtect != PAGE_READONLY && mbi.State == MEM_COMMIT && mbi.Type == MEM_MAPPED)
+            {
+                printf("Cheater! Change back the protections NOW!\n");
+            }
         }
     }
     else
