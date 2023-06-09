@@ -1,5 +1,5 @@
-// UltimateAnticheat.cpp : This file contains the 'main' function. Program execution begins and ends there.
-// an 'in-development' anti-cheat (anti-tamper + anti-debug + anti-load) for x86, x64, aiming to be mostly server-sided logic
+// UltimateAnticheat.cpp : This file contains the 'main' function. Program execution begins and ends there. main.cpp contains testing of functionality
+// an 'in-development' anti-cheat (anti-tamper + anti-debug + anti-load) for x86, x64, aiming to be eventually be server-sided logic
 // Author: Alsch092,  github: alsch092)
 
 #pragma comment(linker, "/ALIGN:0x10000") //for remapping code
@@ -13,7 +13,6 @@
 
 void NTAPI __stdcall TLSCallback(PVOID DllHandle, DWORD dwReason, PVOID Reserved); //in a commercial setting our AC would be in a .dll and the game/process would have the Tls callback
                                                                                    //todo: find way to insert Tls callback into an EXE from a DLL at runtime (modify the directory ptrs to callbacks?)
-
 #ifdef _M_IX86
 #pragma comment (linker, "/INCLUDE:__tls_used")
 #pragma comment (linker, "/INCLUDE:__tls_callback")
@@ -75,11 +74,11 @@ bool TestMemoryIntegrity(AntiCheat* AC)
 
     DWORD moduleSize = AC->GetProcessObject()->GetMemorySize();
 
-    AC->GetIntegrityChecker()->SetHashList(AC->GetIntegrityChecker()->GetMemoryHash((uint64_t)module, 0x1000)); //cache the list of hashes we get from the process .text section
+    AC->GetIntegrityChecker()->SetMemoryHashList(AC->GetIntegrityChecker()->GetMemoryHash((uint64_t)module, 0x1000)); //cache the list of hashes we get from the process .text section
 
     MessageBoxA(0, "Patch over '.text' section memory here to test integrity checking!", 0, 0);
 
-    if (AC->GetIntegrityChecker()->Check((uint64_t)module, 0x1000, AC->GetIntegrityChecker()->GetHashList()))
+    if (AC->GetIntegrityChecker()->Check((uint64_t)module, 0x1000, AC->GetIntegrityChecker()->GetMemoryHashList()))
     {
         printf("Hashes match! Program appears genuine! Remember to put this inside a TLS callback (and then make sure TLS callback isn't hooked) to ensure we get hashes before memory is tampered.\n");
     }
@@ -122,9 +121,16 @@ void TestNetworkHeartbeat()
 
 void TestFunctionalities()
 {  
+    if (Integrity::IsUnknownDllPresent()) //authenticode DLL verification
+    {
+        printf("Found unsigned/rogue dll: We only want verified, signed dlls in our application (which is still subject to spoofing)!\n");
+    }
+
+    //can we somehow create inline assembly in x64? this might be possible using macros -> make some routine with extra junk instructions/enough space for our asm, write over the junk instructions @ runtime with custom ASM -> should work but is not flexible and doesnt scale well 
+
     ULONG_PTR ImageBase = (ULONG_PTR)GetModuleHandle(NULL);
 
-    if (!API::Initialize("LICENSE-123456789", L"explorer.exe"))
+    if (!API::Initialize("LICENSE-123456789", L"explorer.exe")) //license server checks for whitelisted IPs to disallow others from hi-jacking service
     {
         printf("Initializing failed!\n");
         //exit(Error::CANT_STARTUP);
@@ -182,11 +188,13 @@ void TestFunctionalities()
         {
             //check page protections, if they're writable then some cheater has re-mapped our image to make it write-friendly and we need to ban them!
             MEMORY_BASIC_INFORMATION mbi = {};
-            VirtualQueryEx(GetCurrentProcess(), (LPCVOID)ImageBase, &mbi, sizeof(mbi));
-
-            if (mbi.AllocationProtect != PAGE_READONLY && mbi.State == MEM_COMMIT && mbi.Type == MEM_MAPPED)
+            
+            if (VirtualQueryEx(GetCurrentProcess(), (LPCVOID)ImageBase, &mbi, sizeof(mbi)))
             {
-                printf("Cheater! Change back the protections NOW!\n");
+                if (mbi.AllocationProtect != PAGE_READONLY && mbi.State == MEM_COMMIT && mbi.Type == MEM_MAPPED)
+                {
+                    printf("Cheater! Change back the protections NOW!\n");
+                }
             }
         }
     }
