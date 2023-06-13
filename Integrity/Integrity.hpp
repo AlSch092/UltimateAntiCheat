@@ -14,15 +14,18 @@ public:
 
 	bool Check(uint64_t Address, int nBytes, std::list<uint64_t>* hashList);
 	
-	list<uint64_t>* GetMemoryHash(uint64_t Address, int nBytes);
+	static list<uint64_t>* GetMemoryHash(uint64_t Address, int nBytes);
 
 	void SetMemoryHashList(std::list<uint64_t>* hList);
 	list< uint64_t>* GetMemoryHashList() { return this->_MemorySectionHashes; }
 
 	static list<wstring> GetLoadedDLLs(); //use this to fill _LoadedDlls
-	static list<uint64_t> GetDllHashes(list<wchar_t*> LoadedDlls);
+	static list<uint64_t>* GetDllHashes(list<wchar_t*> LoadedDlls);
 
 	static bool IsUnknownDllPresent();
+
+	static bool DisableDynamicCode();
+	static bool DisableUnsignedCode();
 
 private:
 	

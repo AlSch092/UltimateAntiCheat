@@ -1,7 +1,7 @@
 #include "Integrity.hpp"
 
 //Call chain: GetHash() to get a hash list of module, then later call Check with the result from GetHash originally.
-//working! returns false if any static memory is modified (assuming we pass in moduleBase and sizeOfModule.
+//returns false if any static memory is modified (assuming we pass in moduleBase and sizeOfModule.
 bool Integrity::Check(uint64_t Address, int nBytes, std::list<uint64_t>* hashList)
 {
 	list<uint64_t>* hashes = GetMemoryHash(Address, nBytes);
@@ -26,7 +26,7 @@ list<uint64_t>* Integrity::GetMemoryHash(uint64_t Address, int nBytes)
 	uint8_t* digest = 0;
 	UINT64 digestCache = 0; //we keep adding 
 
-	for (int i = 0; i < nBytes; i = i + 32)
+	for (int i = 0; i < nBytes; i = i + 32) //as long as input->output matches consistently and does not create collisions, the underlying algo doesn't matter too much. 
 	{
 		sha.update(&arr[i], 32);
 		digest = sha.digest();
@@ -70,15 +70,27 @@ list<wstring> Integrity::GetLoadedDLLs()
 
 	return dlls;
 }
-
-list<uint64_t> Integrity::GetDllHashes(list<wchar_t*> LoadedDlls)
+/*
+In addition to authenticode, we can make hashes of all the loaded DLLs and then periodically check these hashes again to see if any modifications have been made/modules hijacked
+*/
+list<uint64_t>* Integrity::GetDllHashes(list<wchar_t*> LoadedDlls)
 {
-	list<uint64_t> dllHashes;
+	list<uint64_t>* HashesList;
 
+	for (auto dll : LoadedDlls)
+	{
+		list<uint64_t>* dllHashes = Integrity::GetMemoryHash((uint64_t)GetModuleHandleW(dll), 0x1000);
+		//HashesList->push_back(dllHashes[0]);
+		delete dllHashes;
+	}
 
-	return dllHashes;
+	
+	return HashesList; //todo: finish this routine
 }
 
+/*
+Authenticode check on loaded DLLs, any unsigned/unverified loaded returns true
+*/
 bool Integrity::IsUnknownDllPresent()
 {
 	bool foundUnknown = false;
@@ -95,4 +107,36 @@ bool Integrity::IsUnknownDllPresent()
 	}
 
 	return foundUnknown;
+}
+
+bool Integrity::DisableDynamicCode()
+{
+	PROCESS_MITIGATION_DYNAMIC_CODE_POLICY dynamicCodePolicy = { 0 };
+
+	dynamicCodePolicy.ProhibitDynamicCode = 1; // Enable dynamic code restriction
+
+	if (!SetProcessMitigationPolicy((PROCESS_MITIGATION_POLICY)2,
+		&dynamicCodePolicy,
+		sizeof(dynamicCodePolicy))) {
+		fprintf(stderr, "Failed to set process mitigation policy. Error code: %lu\n", GetLastError());
+		return false;
+	}
+
+	return true;
+}
+
+bool Integrity::DisableUnsignedCode() //stops unsigned dlls from being loaded! Gives 'Bad Image' error (0xc00000428)
+{
+	_PROCESS_MITIGATION_BINARY_SIGNATURE_POLICY signPolicy = { 0 };
+
+	signPolicy.MicrosoftSignedOnly = true;
+
+	if (!SetProcessMitigationPolicy((PROCESS_MITIGATION_POLICY)8,
+		&signPolicy,
+		sizeof(signPolicy))) {
+		fprintf(stderr, "Failed to set process mitigation policy. Error code: %lu\n", GetLastError());
+		return false;
+	}
+
+	return true;
 }
