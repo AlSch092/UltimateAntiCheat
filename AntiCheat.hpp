@@ -9,40 +9,37 @@
 #endif
 
 #include <iostream>
+#include "Network/NetClient.hpp"
 #include "Process/Process.hpp"
+#include "Process/Exports.hpp" //added June 30, 2023
+#include "Process/Memory/remap.hpp" //added March 2023 or so
 #include "AntiDebug/AntiDebugger.hpp"
 #include "AntiTamper/Integrity.hpp"
 #include "Services.hpp"
 #include "Obfuscation.hpp"
-#include "Process/Memory/remap.hpp"
 
-extern "C" __forceinline bool MisleadingFunction(); //the goal here is to get the compiler to inline our function (although apparently not possible on x64) which breaks the static analysis of REing tools.
-extern "C" void inline_test(); //using macros within masm file
-
-class AntiCheat //main class of the program, or 'hub'. contains all the detection methods
+class AntiCheat //contains all the sub-classes for detection goals
 {
 public:
 
+	NetClient* GetNetworkClient() { return this->Client; }
 	Process* GetProcessObject() { return this->_Proc; }
 	Debugger::AntiDebug* GetAntiDebugger() { return this->_AntiDebugger; }
-
-	typedef void (*FunctionTypePtr)();
-
-	inline void ShellcodeTests();
-
 	inline Integrity* GetIntegrityChecker() { return this->integrityChecker; }
 
+	typedef void (*FunctionTypePtr)();
+	inline void ShellcodeTests(); //can/should be removed after done testing
+
+	bool AllVTableMembersPointToCurrentModule(void* pClass);
 	static bool IsVTableHijacked(void* pClass);
 
 	template<class T>
 	static inline void** GetVTableArray(T* pClass, int* pSize);
 
-protected:
-
 private:
 	
 	Process* _Proc = new Process();
 	Debugger::AntiDebug* _AntiDebugger = new Debugger::AntiDebug();
-
 	Integrity* integrityChecker = new Integrity();
+	NetClient* Client = new NetClient();
 };
