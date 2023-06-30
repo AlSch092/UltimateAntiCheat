@@ -1,8 +1,25 @@
-// UltimateAnticheat.cpp : This file contains the 'main' function. Program execution begins and ends there. main.cpp contains testing of functionality
-// an 'in-development' anti-cheat (anti-tamper + anti-debug + anti-load) for x86, x64, aiming to be eventually be server-sided logic
-// Author: Alsch092,  github: alsch092)
+/*  UltimateAnticheat.cpp : This file contains the 'main' function. Program execution begins and ends there. main.cpp contains testing of functionality
 
-#pragma comment(linker, "/ALIGN:0x10000") //for remapping code
+    U.A.C. is an 'in-development'/educational anti-cheat written in C++ for x64 platforms (and can be easily ported to x86)
+ 
+    Feature list: 
+    1. Anti-dll injection (multiple methods including authenticode enforcement and mitigation policy)
+    2. Anti-debugging (multiple methods)
+    3. Anti-tamper  (multiple methods including image remapping)
+    4. PEB modification
+    5. Server-generated shellcode execution (self-unpacking + containing a key in each message which is required to be sent back, ensuring the shellcode was executed), plus cipher-chaining
+    6. Client-server heartbeats, version checking, licensing, APIs
+    7. Modification of modules: changing loaded module names, symbol names (exports and imports)
+    8. TLS callback for anti-debugging + anti-dll injection and thread management
+    9. WINAPI calls via 'symbolic hashes' -> stores a list of pointers such that we can call winapi routines by a numeric hash instead of its symbol name
+
+    ... and hopefully soon many more techniques!
+
+    Author: Alex S. ,  github: alsch092 .
+
+*/
+
+#pragma comment(linker, "/ALIGN:0x10000") //for image remapping
 
 #define DLL_PROCESS_DETACH 0
 #define DLL_PROCESS_ATTACH 1
@@ -12,7 +29,7 @@
 #include "API/API.hpp"
 
 void NTAPI __stdcall TLSCallback(PVOID DllHandle, DWORD dwReason, PVOID Reserved); //in a commercial setting our AC would be in a .dll and the game/process would have the Tls callback
-                                                                                   //todo: find way to insert Tls callback into an EXE from a DLL at runtime (modify the directory ptrs to callbacks?)
+                                                                                   //todo: find way to insert bogus Tls callback into an EXE from a DLL at runtime (modify the directory ptrs to callbacks?)
 #ifdef _M_IX86
 #pragma comment (linker, "/INCLUDE:__tls_used")
 #pragma comment (linker, "/INCLUDE:__tls_callback")
@@ -42,18 +59,18 @@ void NTAPI __stdcall TLSCallback(PVOID DllHandle, DWORD dwReason, PVOID Reserved
 {
     switch (dwReason)
     {
-    case DLL_PROCESS_ATTACH:
-        printf("New process attached\n");
-        break;
+        case DLL_PROCESS_ATTACH:
+            printf("New process attached\n");
+            break;
 
-    case DLL_THREAD_ATTACH:
-        printf("New thread spawned!\n");
-        //ExitThread(0); //we can stop DLL injecting + DLL debuggers this way, but make sure you're handling your threads carefully..
-        break;
+        case DLL_THREAD_ATTACH:
+            printf("New thread spawned!\n");
+            //ExitThread(0); //we can stop DLL injecting + DLL debuggers this way, but make sure you're handling your threads carefully.. uncomment line for added anti-debug + injection method!
+            break;
 
-    case DLL_THREAD_DETACH:
-        printf("Thread detached!\n");
-        break;
+        case DLL_THREAD_DETACH:
+            printf("Thread detached!\n");
+            break;
     };
 }
 
@@ -100,20 +117,17 @@ void TestNetworkHeartbeat()
 
     if (!g_AC->GetNetworkClient()->UnpackAndExecute(p)) //so that we don't need a server running, just simulate a packet. every heartbeat is encrypted using the hash of the last heartbeat/some server gen'd key to prevent emulation
     {
-        PacketWriter* p1 = new PacketWriter(Packets::Opcodes::SC_HEARTBEAT);
+        PacketWriter* packet_1 = new PacketWriter(Packets::Opcodes::SC_HEARTBEAT);
         uint64_t hash = g_AC->GetNetworkClient()->GetResponseHashList().back();
 
-        for (int i = 0; i < sizeof(shellcode); i++) //this time we should xor our 'packet' by the last hash to simulate real environment, if we don't then we will get execution error 
-        {
-            p1->Write<byte>(shellcode[i] ^ (BYTE)hash);
-        }
-
-        if (!g_AC->GetNetworkClient()->UnpackAndExecute(p1)) //we call this a 2nd time to demonstrate how encrypting using the last hash works
-        {
+        for (int i = 0; i < sizeof(shellcode); i++) //this time we should xor our 'packet' by the last hash to simulate real environment, if we don't then we will get execution error        
+            packet_1->Write<byte>(shellcode[i] ^ (BYTE)hash);
+        
+        if (!g_AC->GetNetworkClient()->UnpackAndExecute(packet_1)) //we call this a 2nd time to demonstrate how encrypting using the last hash works        
             printf("secret key gen failed: No server is present?\n");
-        }
+        
 
-        delete p1;
+        delete packet_1;
     }
 
     delete p;
@@ -121,9 +135,16 @@ void TestNetworkHeartbeat()
 
 void TestFunctionalities()
 {  
-    if (Integrity::IsUnknownDllPresent()) //authenticode DLL verification
+    if (Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryA", "ANTI-INJECT1") &&   ///prevents DLL injection from any method relying on calling LoadLibrary in the host process.
+        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryW", "ANTI-INJECT2") &&
+        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExA", "ANTI-INJECT3") &&
+        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExW", "ANTI-INJECT4"))
+            printf("Wrote over LoadLibrary export names successfully!\n");
+    
+    if (Integrity::IsUnknownDllPresent()) //authenticode winapis
     {
         printf("Found unsigned/rogue dll: We only want verified, signed dlls in our application (which is still subject to spoofing)!\n");
+        //exit(Error::ROGUE_DLL);
     }
 
     //can we somehow create inline assembly in x64? this might be possible using macros -> make some routine with extra junk instructions/enough space for our asm, write over the junk instructions @ runtime with custom ASM -> should work but is not flexible and doesnt scale well 
@@ -133,21 +154,20 @@ void TestFunctionalities()
     if (!API::Initialize("LICENSE-123456789", L"explorer.exe")) //license server checks for whitelisted IPs to disallow others from hi-jacking service
     {
         printf("Initializing failed!\n");
-        //exit(Error::CANT_STARTUP);
+        //exit(Error::LICENSE_UNKNOWN);
     }
 
     TestNetworkHeartbeat();
 
     g_AC->GetProcessObject()->SetElevated(Process::IsProcessElevated()); //this checks+sets our variable, it does not set our process to being elevated
 
-    if (!g_AC->GetProcessObject()->GetProgramSections("UltimateAnticheat.exe")) //we can stop a routine like this from working if we patch NumberOfSections to 0
-    {
+    if (!g_AC->GetProcessObject()->GetProgramSections("UltimateAnticheat.exe")) //we can stop a routine like this from working if we patch NumberOfSections to 0    
         printf("Failed to parse program sections?\n");
-    }
-
+        
     if (!Process::CheckParentProcess(g_AC->GetProcessObject()->GetParentName())) //parent process check, the parent process would normally be set using our API methods
     {
         printf("Parent process was not explorer.exe! hekker detected!\n"); //sometimes people will launch a game from their own process, which we can easily detect if they haven't spoofed it
+        //exit(Error::PARENT_PROCESS_MISMATCH);
     }
 
     TestMemoryIntegrity(g_AC);
@@ -158,14 +178,9 @@ void TestFunctionalities()
 
     std::wstring newModuleName = L"new_name";
 
-    if (Process::ChangeModuleName((wchar_t*)L"UltimateAnticheat.exe", (wchar_t*)newModuleName.c_str()))
+    if (Process::ChangeModuleName((wchar_t*)L"UltimateAnticheat.exe", (wchar_t*)newModuleName.c_str())) //in addition to changing export function names, we can also modify the names of loaded modules/libraries.
     {
         wprintf(L"Changed module name to %s!\n", newModuleName.c_str());
-    }
-
-    if (g_AC->GetAntiDebugger()->_IsHardwareDebuggerPresent())
-    {
-        printf("Found hardware debugger!\n");
     }
 
     if (AntiCheat::IsVTableHijacked((void*)g_AC))
@@ -194,6 +209,7 @@ void TestFunctionalities()
                 if (mbi.AllocationProtect != PAGE_READONLY && mbi.State == MEM_COMMIT && mbi.Type == MEM_MAPPED)
                 {
                     printf("Cheater! Change back the protections NOW!\n");
+                    exit(Error::PAGE_PROTECTIONS_MISMATCH);
                 }
             }
         }
@@ -201,9 +217,10 @@ void TestFunctionalities()
     else
     {
         printf("Imagebase was NULL!\n");
+        exit(Error::NULL_MEMORY_REFERENCE);
     }
 
-    delete g_AC->GetAntiDebugger();
+    delete g_AC->GetAntiDebugger(); //clean up all sub-objects
     delete g_AC->GetProcessObject();
     delete g_AC->GetIntegrityChecker();
     delete g_AC;
