@@ -1,4 +1,4 @@
-//Thank you to @changeofpace (assuming they are the original author!) for this work/code! great job!
+//Thank you to @changeofpace (assuming they are the original author!) for this work/code!!1
 
 #include "remap.hpp"
 #include "ntdll.h"
