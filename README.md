@@ -13,3 +13,7 @@ This project is meant to serve as a very basic anti-cheat program for educationa
 Basic networking has been added along with a Challenge-Response protocol, thus we begin to make the project server-authenticated and rely on routines sent by the server. this adds non-repudiation as each client must generate unique secret keys as replies to requests from the server, and this forces the client to execute our code in order to stay connected to the game service.  
 
 If you have any design suggestions or code improvements/additions feel free to raise an 'issue'. You might need to move a couple of files into different folders if compilation isn't working as I'm currently changing the directory structure around. Thank you for reading!  
+
+## Updates
+
+Last updated on March 24, 2024. A full re-upload was done along with various bug fixes. The program should compile without issues in x64 (x86 not supported yet, apologies). I plan on continuing work on this project in the near future. As it's been some time since making this project, lots more can be added soon with new knowledge and techniques acquired in the time between then and now. Stay tuned for further updates!
