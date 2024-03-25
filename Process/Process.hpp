@@ -83,6 +83,8 @@ public:
 
 	static DWORD GetProcessIdByName(wstring procName);
 
+	static UINT64 GetTextSectionAddress(const char* moduleName);
+
 private:
 
 	//all aspects of a process should be here, preferrably in some order

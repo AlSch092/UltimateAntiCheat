@@ -472,3 +472,42 @@ DWORD Process::GetProcessIdByName(wstring procName)
     CloseHandle(snapshot);
     return pid;
 }
+
+UINT64 Process::GetTextSectionAddress(const char* moduleName)
+{
+    HMODULE hModule = GetModuleHandleA(moduleName);
+    if (hModule == NULL)
+    {
+        printf("Failed to get module handle: %d\n", GetLastError());
+        return 0;
+    }
+
+    UINT64 baseAddress = (UINT64)hModule;
+
+    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)baseAddress;
+    if (pDosHeader->e_magic != IMAGE_DOS_SIGNATURE)
+    {
+        printf("Invalid DOS header.\n");
+        return 0;
+    }
+
+    PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS)(baseAddress + pDosHeader->e_lfanew);
+    if (pNtHeaders->Signature != IMAGE_NT_SIGNATURE)
+    {
+        printf("Invalid NT header.\n");
+        return 0;
+    }
+
+    // Get the section headers
+    PIMAGE_SECTION_HEADER pSectionHeader = IMAGE_FIRST_SECTION(pNtHeaders);
+    for (int i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++) {
+        if (strcmp((const char*)pSectionHeader->Name, ".text") == 0)
+        {
+            return baseAddress + pSectionHeader->VirtualAddress;
+        }
+        pSectionHeader++;
+    }
+
+    printf(".text section not found.\n");
+    return 0;
+}
