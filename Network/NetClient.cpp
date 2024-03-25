@@ -6,7 +6,7 @@ Error NetClient::Initialize(string ip, uint16_t port)
 	SOCKET Socket = INVALID_SOCKET;
 	SOCKADDR_IN SockAddr;
 
-	this->HardwareID = this->GetHardwareID(); //todo: add some detection to fetch the correct drive automatically
+	this->HardwareID = this->GetHardwareID();
 
 	const char recvBuffer[DEFAULT_RECV_LENGTH] = { 0 };
 
