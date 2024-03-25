@@ -8,30 +8,30 @@ int __declspec(dllexport) API::Initialize(string licenseKey, wstring parentProce
 	//TODO: check licenseKey against some centralized web server, possibly using HTTP requests. once we have verified our license, we can try to connect using Initialize()
 	//gernerate user identifying info and send to server
 
-	if (isLicenseValid)
+	if (g_AC->GetNetworkClient()->Initialize("127.0.0.1", 5445) != Error::OK) //initialize client is separate from license key auth
 	{
-		if (g_AC->GetNetworkClient()->Initialize("127.0.0.1", 5445) != Error::OK) //initialize client is separate from license key auth
-		{
-			//don't allow continuing if networking doesn't work
-			errorCode = Error::CANT_STARTUP;
-		}
-		else
-		{
-			//check parent process
-			if (Process::CheckParentProcess(parentProcessName))
-			{
-				g_AC->GetProcessObject()->SetParentName(parentProcessName);
-			}
-			else //bad parent process detected, or parent process mismatch, shut down the program after reporting the error to the server
-			{
-				errorCode = Error::PARENT_PROCESS_MISMATCH;
-			}
-		}
+		//don't allow continuing if networking doesn't work
+		errorCode = Error::CANT_STARTUP;
 	}
+	else
+	{
+		//check parent process
+		if (Process::CheckParentProcess(parentProcessName))
+		{
+			g_AC->GetProcessObject()->SetParentName(parentProcessName);
+		}
+		else //bad parent process detected, or parent process mismatch, shut down the program after reporting the error to the server
+		{
+			errorCode = Error::PARENT_PROCESS_MISMATCH;
+		}
 
+		//isLicenseValid = g_AC->GetNetworkClient()->CheckLicense();  //tood: add licensing checks with server
+	}
+	
 	return errorCode;
 }
 
+//meant to be called by process hosting the anti-cheat module - interface between AC and game
 int __declspec(dllexport) API::Dispatch(DispatchCode code, int reason) //todo: finish this
 {
 	int errorCode = 0;
