@@ -1,6 +1,6 @@
 /*  UltimateAnticheat.cpp : This file contains the 'main' function. Program execution begins and ends there. main.cpp contains testing of functionality
 
-    U.A.C. is an 'in-development'/educational anti-cheat written in C++ for x64 platforms (and can be easily ported to x86)
+    U.A.C. is an 'in-development'/educational anti-cheat written in C++ for x64 platforms
  
     Feature list: 
     1. Anti-dll injection (multiple methods including authenticode enforcement and mitigation policy)
@@ -13,7 +13,7 @@
     8. TLS callback for anti-debugging + anti-dll injection and thread management
     9. WINAPI calls via 'symbolic hashes' -> stores a list of pointers such that we can call winapi routines by a numeric hash instead of its symbol name
 
-    ... and hopefully soon many more techniques!
+    There might be bugs or improvements to techniques, please raise a github issue if you'd like something in particular added or fixed
 
     Author: Alex S. ,  github: alsch092 .
 
@@ -60,16 +60,16 @@ void NTAPI __stdcall TLSCallback(PVOID DllHandle, DWORD dwReason, PVOID Reserved
     switch (dwReason)
     {
         case DLL_PROCESS_ATTACH:
-            printf("New process attached\n");
+            printf("New process attached, current thread %d\n", GetCurrentThreadId());
             break;
 
         case DLL_THREAD_ATTACH:
-            printf("New thread spawned!\n");
+            printf("New thread spawned: %d\n", GetCurrentThreadId());
             //ExitThread(0); //we can stop DLL injecting + DLL debuggers this way, but make sure you're handling your threads carefully.. uncomment line for added anti-debug + injection method!
             break;
 
         case DLL_THREAD_DETACH:
-            printf("Thread detached!\n");
+            printf("Thread %d detached\n", GetCurrentThreadId());
             break;
     };
 }
@@ -79,9 +79,9 @@ void TestFunction() //called by our 'rogue'/SymLink CreateThread. WINAPI is not 
     printf("Hello! this thread was made without calling CreateThread directly!\n");
 }
 
-bool TestMemoryIntegrity(AntiCheat* AC)
+bool TestMemoryIntegrity(AntiCheat* AC) //Currently only scans the program headers/peb (first 0x1000 bytes)
 {
-    uint64_t module = (uint64_t)GetModuleHandleW(L"UltimateAnticheat.exe");
+    uint64_t module = (uint64_t)GetModuleHandleW(NULL);
 
     if (!module)
     {
@@ -89,15 +89,16 @@ bool TestMemoryIntegrity(AntiCheat* AC)
         return false;
     }
 
-    DWORD moduleSize = AC->GetProcessObject()->GetMemorySize();
+    //DWORD moduleSize = AC->GetProcessObject()->GetMemorySize();
+    DWORD moduleSize = 0x1000; //TODO: Fix this routine such that all regions of the process are mapped -> Scanning contiguous memory after first 0x1000 bytes will throw read exceptions 
 
-    AC->GetIntegrityChecker()->SetMemoryHashList(AC->GetIntegrityChecker()->GetMemoryHash((uint64_t)module, 0x1000)); //cache the list of hashes we get from the process .text section
+    AC->GetIntegrityChecker()->SetMemoryHashList(AC->GetIntegrityChecker()->GetMemoryHash((uint64_t)module, moduleSize)); //cache the list of hashes we get from the process .text section
 
-    MessageBoxA(0, "Patch over '.text' section memory here to test integrity checking!", 0, 0);
+    MessageBoxA(0, "Patch over process header memory here using an external program to test integrity checking!", 0, 0);
 
-    if (AC->GetIntegrityChecker()->Check((uint64_t)module, 0x1000, AC->GetIntegrityChecker()->GetMemoryHashList()))
+    if (AC->GetIntegrityChecker()->Check((uint64_t)module, moduleSize, AC->GetIntegrityChecker()->GetMemoryHashList()))
     {
-        printf("Hashes match! Program appears genuine! Remember to put this inside a TLS callback (and then make sure TLS callback isn't hooked) to ensure we get hashes before memory is tampered.\n");
+        printf("Hashes match: Program headers appear genuine.\n");
     }
     else
     {
@@ -108,11 +109,12 @@ bool TestMemoryIntegrity(AntiCheat* AC)
     return false;
 }
 
+//normally the server would send this packet to us as a heartbeat. the first data has no 'added' encryption on it, the ones after it use a secret key contained in the previous message. a payload is then executed by xoring each byte in the packet with the secret key
 void TestNetworkHeartbeat()
 {
-    //normally the server would send this packet to us as a heartbeat. the first packet has no 'added' encryption on it, the ones after it do.
     //the first packet sent has no additional encryption, the ones sent after will be encrypted with the secret key of the last request
     BYTE shellcode[] = { 0x54,0x48,0x81,0xEC,0x80,0x00,0x00,0x00,0x51,0xB0,0x08,0x48,0xC7,0xC1,0x01,0x02,0x03,0x04,0x48,0xC7,0xC2,0x37,0x13,0x00,0x00,0x48,0x33,0xCA,0x48,0x81,0xC2,0x34,0x12,0x00,0x00,0x84,0xC0,0xFE,0xC8,0x75,0xF0,0x48,0x8B,0xC1,0x59,0x48,0x81,0xC4,0x80,0x00,0x00,0x00,0x5C,0xC3 };
+    
     PacketWriter* p = new PacketWriter(Packets::Opcodes::SC_HEARTBEAT, shellcode, sizeof(shellcode)); //write opcode onto packet, then buffer
 
     if (!g_AC->GetNetworkClient()->UnpackAndExecute(p)) //so that we don't need a server running, just simulate a packet. every heartbeat is encrypted using the hash of the last heartbeat/some server gen'd key to prevent emulation
@@ -120,21 +122,64 @@ void TestNetworkHeartbeat()
         PacketWriter* packet_1 = new PacketWriter(Packets::Opcodes::SC_HEARTBEAT);
         uint64_t hash = g_AC->GetNetworkClient()->GetResponseHashList().back();
 
-        for (int i = 0; i < sizeof(shellcode); i++) //this time we should xor our 'packet' by the last hash to simulate real environment, if we don't then we will get execution error        
+        for (int i = 0; i < sizeof(shellcode); i++) //this time we should xor our 'packet' by the last hash to simulate real environment/server, if we don't then we will get execution error        
             packet_1->Write<byte>(shellcode[i] ^ (BYTE)hash);
         
         if (!g_AC->GetNetworkClient()->UnpackAndExecute(packet_1)) //we call this a 2nd time to demonstrate how encrypting using the last hash works        
             printf("secret key gen failed: No server is present?\n");
         
-
         delete packet_1;
     }
 
     delete p;
 }
 
+UINT64 GetTextSectionAddress(const char* moduleName) 
+{
+    HMODULE hModule = GetModuleHandleA(moduleName);
+    if (hModule == NULL) 
+    {
+        printf("Failed to get module handle: %d\n", GetLastError());
+        return 0;
+    }
+
+    UINT64 baseAddress = (UINT64)hModule;
+
+    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)baseAddress;
+    if (pDosHeader->e_magic != IMAGE_DOS_SIGNATURE) 
+    {
+        printf("Invalid DOS header.\n");
+        return 0;
+    }
+
+    PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS)(baseAddress + pDosHeader->e_lfanew);
+    if (pNtHeaders->Signature != IMAGE_NT_SIGNATURE)
+    {
+        printf("Invalid NT header.\n");
+        return 0;
+    }
+
+    // Get the section headers
+    PIMAGE_SECTION_HEADER pSectionHeader = IMAGE_FIRST_SECTION(pNtHeaders);
+    for (int i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++) {
+        if (strcmp((const char*)pSectionHeader->Name, ".text") == 0)
+        {
+            return baseAddress + pSectionHeader->VirtualAddress;
+        }
+        pSectionHeader++;
+    }
+
+    printf(".text section not found.\n");
+    return 0;
+}
+
+//Run all tests
 void TestFunctionalities()
 {  
+    g_AC->GetAntiDebugger()->StartAntiDebugThread();
+
+    ULONG_PTR ImageBase = (ULONG_PTR)GetModuleHandle(NULL);
+
     if (Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryA", "ANTI-INJECT1") &&   ///prevents DLL injection from any method relying on calling LoadLibrary in the host process.
         Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryW", "ANTI-INJECT2") &&
         Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExA", "ANTI-INJECT3") &&
@@ -143,38 +188,35 @@ void TestFunctionalities()
     
     if (Integrity::IsUnknownDllPresent()) //authenticode winapis
     {
-        printf("Found unsigned/rogue dll: We only want verified, signed dlls in our application (which is still subject to spoofing)!\n");
+        printf("Found unsigned dll loaded: We ideally only want verified, signed dlls in our application (which is still subject to spoofing)!\n");
         //exit(Error::ROGUE_DLL);
     }
 
-    //can we somehow create inline assembly in x64? this might be possible using macros -> make some routine with extra junk instructions/enough space for our asm, write over the junk instructions @ runtime with custom ASM -> should work but is not flexible and doesnt scale well 
-
-    ULONG_PTR ImageBase = (ULONG_PTR)GetModuleHandle(NULL);
-
-    if (!API::Initialize("LICENSE-123456789", L"explorer.exe")) //license server checks for whitelisted IPs to disallow others from hi-jacking service
+    if (!API::Initialize("LICENSE-123456789", L"explorer.exe")) //license server checks
     {
         printf("Initializing failed!\n");
-        //exit(Error::LICENSE_UNKNOWN);
+        //exit(Error::LICENSE_UNKNOWN); //uncomment this if you're using a server
     }
 
     TestNetworkHeartbeat();
 
     g_AC->GetProcessObject()->SetElevated(Process::IsProcessElevated()); //this checks+sets our variable, it does not set our process to being elevated
 
-    if (!g_AC->GetProcessObject()->GetProgramSections("UltimateAnticheat.exe")) //we can stop a routine like this from working if we patch NumberOfSections to 0    
+    if (!g_AC->GetProcessObject()->GetProgramSections("UltimateAnticheat.exe")) //we can stop a routine like this from working if we patch NumberOfSections to 0
+    {
         printf("Failed to parse program sections?\n");
-        
+
+    }
+
     if (!Process::CheckParentProcess(g_AC->GetProcessObject()->GetParentName())) //parent process check, the parent process would normally be set using our API methods
     {
         printf("Parent process was not explorer.exe! hekker detected!\n"); //sometimes people will launch a game from their own process, which we can easily detect if they haven't spoofed it
-        //exit(Error::PARENT_PROCESS_MISMATCH);
+        //exit(Error::PARENT_PROCESS_MISMATCH); //when debugging in VS, our parent process won't be explorer.exe
     }
 
-    TestMemoryIntegrity(g_AC);
+    TestMemoryIntegrity(g_AC); //check program headers + peb to make sure nothing was tampered
 
     SymbolicHash::CreateThread_Hash(0, 0, (LPTHREAD_START_ROUTINE)&TestFunction, 0, 0, 0); //shows how we can call CreateThread without directly calling winapi, we call our pointer instead which then invokes createthread
-
-    g_AC->GetAntiDebugger()->StartAntiDebugThread();
 
     std::wstring newModuleName = L"new_name";
 
@@ -188,47 +230,22 @@ void TestFunctionalities()
         printf("VTable of Anticheat has been compromised/hooked.\n");
     }
 
-    if (!g_AC->GetProcessObject()->ProtectProcess()) //todo: find way to stop process attaching or OpenProcess
+    if (!g_AC->GetProcessObject()->ProtectProcess()) //todo: find way to stop process attaching or OpenProcess succeeding
     {
         printf("Could not protect process.\n");
     }
-   
-    if (ImageBase)
-    {
-        if (!RmpRemapImage(ImageBase)) //re-mapping of image to stop patching, and of course we can easily detect if someone bypasses this
-        {
-            printf("RmpRemapImage failed.\n");
-        }
-        else
-        {
-            //check page protections, if they're writable then some cheater has re-mapped our image to make it write-friendly and we need to ban them!
-            MEMORY_BASIC_INFORMATION mbi = {};
-            
-            if (VirtualQueryEx(GetCurrentProcess(), (LPCVOID)ImageBase, &mbi, sizeof(mbi)))
-            {
-                if (mbi.AllocationProtect != PAGE_READONLY && mbi.State == MEM_COMMIT && mbi.Type == MEM_MAPPED)
-                {
-                    printf("Cheater! Change back the protections NOW!\n");
-                    exit(Error::PAGE_PROTECTIONS_MISMATCH);
-                }
-            }
-        }
-    }
-    else
-    {
-        printf("Imagebase was NULL!\n");
-        exit(Error::NULL_MEMORY_REFERENCE);
-    }
 
-    delete g_AC->GetAntiDebugger(); //clean up all sub-objects
-    delete g_AC->GetProcessObject();
-    delete g_AC->GetIntegrityChecker();
+    AntiCheat::RemapAndCheckPages();
+
     delete g_AC;
 }
 
-int main(int argc, char** argv)
+void main(int argc, char** argv)
 {
-    //  _MessageBox();
+    SetConsoleTitle(L"Ultimate Anti-Cheat");
+    
     TestFunctionalities();
-    return 0;
+
+    printf("All tests have been executed, the program will now shut down.\n");
+    exit(0);
 }
