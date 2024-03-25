@@ -71,10 +71,10 @@ public:
 	static bool ChangeModuleBase(const wchar_t* szModule, uint64_t moduleBaseAddress);
 	static bool ChangeModulesChecksum(const wchar_t* szModule, DWORD checksum);
 	static void RemovePEHeader(HANDLE GetModuleBase);
-	static void ChangePEEntryPoint(DWORD newEntry);
-	static void ChangeImageSize(DWORD newImageSize);
-	static void ChangeSizeOfCode(DWORD newSizeOfCode);
-	static void ChangeImageBase(UINT64 newImageBase);
+	static bool ChangePEEntryPoint(DWORD newEntry);
+	static bool ChangeImageSize(DWORD newImageSize);
+	static bool ChangeSizeOfCode(DWORD newSizeOfCode);
+	static bool ChangeImageBase(UINT64 newImageBase);
 
 	static bool HasExportedFunction(string dllName, string functionName);
 
@@ -87,11 +87,8 @@ public:
 
 private:
 
-	//all aspects of a process should be here, preferrably in some order
-
 	_MYPEB* _PEB = new _MYPEB();
-	//Memory* Sections; //todo: some class to represent sections in memory if we can (.text, .data, etc)
-	
+
 	uint32_t _ProcessId;
 	HANDLE _Mutant;
 

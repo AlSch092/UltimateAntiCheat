@@ -313,121 +313,178 @@ void Process::RemovePEHeader(HANDLE GetModuleBase)
     }
 }
 
-void Process::ChangePEEntryPoint(DWORD newEntry)
+bool Process::ChangePEEntryPoint(DWORD newEntry)
 {
     PIMAGE_DOS_HEADER pDoH;
     PIMAGE_NT_HEADERS pNtH;
     DWORD protect = 0;
     HINSTANCE hInst = GetModuleHandleW(NULL);
 
-    if (!hInst) return;
+    if (!hInst) 
+        return false;
 
     pDoH = (PIMAGE_DOS_HEADER)(hInst);
-
     pNtH = (PIMAGE_NT_HEADERS)((PIMAGE_NT_HEADERS)((PBYTE)hInst + (DWORD)pDoH->e_lfanew));
 
-    if (pNtH) {
-
+    if (pNtH) 
+    {
         UINT64 pEntry = (UINT64)&pNtH->OptionalHeader.AddressOfEntryPoint;
 
         if (pEntry)
         {
             VirtualProtect((LPVOID)pEntry, sizeof(DWORD), PAGE_READWRITE, &protect);
 
-            printf("pEntry: %llX\n", (UINT64)pEntry);
-            memcpy((void*)&pEntry, (void*)&newEntry, sizeof(DWORD));
-            printf("new AddressOfEntryPoint: %llx\n", (long long)pNtH->OptionalHeader.AddressOfEntryPoint);
-
-            VirtualProtect((LPVOID)pEntry, sizeof(DWORD), protect, &protect);
+            __try
+            {
+                memcpy((void*)&pEntry, (void*)&newEntry, sizeof(DWORD));
+                VirtualProtect((LPVOID)pEntry, sizeof(DWORD), protect, &protect);
+                return true;
+            }
+            __except (EXCEPTION_EXECUTE_HANDLER)
+            {
+                VirtualProtect((LPVOID)pEntry, sizeof(DWORD), protect, &protect);
+                return false;
+            }
         }
     }
+    
+    return false;
 }
 
 
-void Process::ChangeImageSize(DWORD newEntry)
+bool Process::ChangeImageSize(DWORD newEntry)
 {
     PIMAGE_DOS_HEADER pDoH;
     PIMAGE_NT_HEADERS pNtH;
     DWORD protect;
     HINSTANCE hInst = GetModuleHandleW(NULL);
 
-    if (!hInst) return;
+    if (!hInst) 
+        return false;
 
     pDoH = (PIMAGE_DOS_HEADER)(hInst);
 
     pNtH = (PIMAGE_NT_HEADERS)((PIMAGE_NT_HEADERS)((PBYTE)hInst + (DWORD)pDoH->e_lfanew));
 
-    if (pNtH) {
+    if (!pNtH) 
+    { 
+        printf("NTHeader was somehow NULL at ChangeImageSize\n");
+        return false;
+    }
 
-        UINT64 pEntry = (UINT64)&pNtH->OptionalHeader.SizeOfImage;
+    UINT64 pEntry = (UINT64)&pNtH->OptionalHeader.SizeOfImage;
 
-        VirtualProtect((LPVOID)pEntry, sizeof(DWORD), PAGE_EXECUTE_READWRITE, &protect);
+    if (!VirtualProtect((LPVOID)pEntry, sizeof(DWORD), PAGE_EXECUTE_READWRITE, &protect))
+    {
+        printf("VirtualProtect failed at ChangeImageSize: %d\n", GetLastError());
+        return false;
+    }
 
-        if (pEntry)
+    if (pEntry)
+    {
+        __try
         {
             *(DWORD*)(pEntry) = newEntry;
             VirtualProtect((LPVOID)pEntry, sizeof(DWORD), protect, &protect);
+            return true;
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER)
+        {
+            VirtualProtect((LPVOID)pEntry, sizeof(DWORD), protect, &protect); //reset old protections
+            return false;
         }
     }
+
+    return false;
 }
 
-void Process::ChangeSizeOfCode(DWORD newEntry)
+bool Process::ChangeSizeOfCode(DWORD newEntry)
 {
     PIMAGE_DOS_HEADER pDoH;
     PIMAGE_NT_HEADERS pNtH;
     DWORD protect;
     HINSTANCE hInst = GetModuleHandleW(NULL);
 
-    if (!hInst) return;
+    if (!hInst) 
+        return false;
 
     pDoH = (PIMAGE_DOS_HEADER)(hInst);
 
     pNtH = (PIMAGE_NT_HEADERS)((PIMAGE_NT_HEADERS)((PBYTE)hInst + (DWORD)pDoH->e_lfanew));
 
-    if (pNtH) {
+    if (!pNtH)
+    {
+        printf("NTHeader was somehow NULL at ChangeSizeOfCode\n");
+        return false;
+    }
 
-        UINT64 pEntry = (UINT64)&pNtH->OptionalHeader.SizeOfCode;
+    UINT64 pEntry = (UINT64)&pNtH->OptionalHeader.SizeOfCode;
 
-        VirtualProtect((LPVOID)pEntry, sizeof(DWORD), PAGE_EXECUTE_READWRITE, &protect);
+    if (!VirtualProtect((LPVOID)pEntry, sizeof(DWORD), PAGE_EXECUTE_READWRITE, &protect))
+        return false;
 
-        if (pEntry)
+    if (pEntry)
+    {
+        __try
         {
             *(DWORD*)(pEntry) = newEntry;
-            VirtualProtect((LPVOID)pEntry, sizeof(DWORD), protect, &protect);
+            VirtualProtect((LPVOID)pEntry, sizeof(DWORD), protect, &protect); //reset old protections
+            return true;
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER)
+        {
+            VirtualProtect((LPVOID)pEntry, sizeof(DWORD), protect, &protect); //reset old protections
+            return false;
         }
     }
+    
+    return false;
 }
 
-void Process::ChangeImageBase(UINT64 newEntry)
+bool Process::ChangeImageBase(UINT64 newEntry)
 {
     PIMAGE_DOS_HEADER pDoH;
     PIMAGE_NT_HEADERS pNtH;
     DWORD protect;
     HINSTANCE hInst = GetModuleHandleW(NULL);
 
-    if (!hInst) return;
+    if (!hInst) return false;
 
     pDoH = (PIMAGE_DOS_HEADER)(hInst);
 
     pNtH = (PIMAGE_NT_HEADERS)((PIMAGE_NT_HEADERS)((PBYTE)hInst + (DWORD)pDoH->e_lfanew));
 
-    if (pNtH) {
+    if (!pNtH)
+    {
+        printf("NTHeader was somehow NULL at ChangeImageBase\n");
+        return false;
+    }
 
-        UINT64 pEntry = (UINT64)&pNtH->OptionalHeader.ImageBase;
+    UINT64 pEntry = (UINT64)&pNtH->OptionalHeader.ImageBase;
 
-        VirtualProtect((LPVOID)pEntry, sizeof(ULONGLONG), PAGE_EXECUTE_READWRITE, &protect);
+    VirtualProtect((LPVOID)pEntry, sizeof(ULONGLONG), PAGE_EXECUTE_READWRITE, &protect);
 
-        if (pEntry)
+    if (pEntry)
+    {
+        __try
         {
             *(UINT64*)(pEntry) = newEntry;
             VirtualProtect((LPVOID)pEntry, sizeof(DWORD), protect, &protect);
+            return true;
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER)
+        {
+            VirtualProtect((LPVOID)pEntry, sizeof(DWORD), protect, &protect); //reset old protections
+            return false;
         }
     }
+
+    return false;
 }
 
 DWORD Process::GetParentProcessId()
 {
-    HANDLE hSnapshot;
+    HANDLE hSnapshot = NULL;
     PROCESSENTRY32 pe32;
     DWORD ppid = 0, pid = GetCurrentProcessId();
 
@@ -448,7 +505,8 @@ DWORD Process::GetParentProcessId()
 
     }
     __finally {
-        if (hSnapshot != INVALID_HANDLE_VALUE) CloseHandle(hSnapshot);
+        if (hSnapshot != INVALID_HANDLE_VALUE) 
+            CloseHandle(hSnapshot);
     }
     return ppid;
 }
@@ -498,7 +556,6 @@ UINT64 Process::GetTextSectionAddress(const char* moduleName)
         return 0;
     }
 
-    // Get the section headers
     PIMAGE_SECTION_HEADER pSectionHeader = IMAGE_FIRST_SECTION(pNtHeaders);
     for (int i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++) {
         if (strcmp((const char*)pSectionHeader->Name, ".text") == 0)
