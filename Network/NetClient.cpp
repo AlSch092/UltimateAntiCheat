@@ -6,7 +6,7 @@ Error NetClient::Initialize(string ip, uint16_t port)
 	SOCKET Socket = INVALID_SOCKET;
 	SOCKADDR_IN SockAddr;
 
-	this->HardwareID = this->GetHardwareID("C://"); //todo: add some detection to fetch the correct drive automatically
+	this->HardwareID = this->GetHardwareID(); //todo: add some detection to fetch the correct drive automatically
 
 	const char recvBuffer[DEFAULT_RECV_LENGTH] = { 0 };
 
@@ -30,27 +30,20 @@ Error NetClient::Initialize(string ip, uint16_t port)
 		return Error::CANT_CONNECT;
 	}
 
-	PacketWriter* p = Packets::Builder::ClientHello(this->HardwareID.c_str(), this->GetIpv4().c_str(), this->GetMACAddress().c_str());
-	p->WriteString(this->HardwareID.c_str());
-	p->WriteString(this->GetIpv4().c_str());
+	PacketWriter* p = Packets::Builder::ClientHello(this->HardwareID.c_str(), this->GetHostname().c_str(), this->GetMACAddress().c_str());
 
 	int BytesSent = send(Socket, (const char*)p->GetBuffer(), p->GetSize(), 0);
 
-	delete p->GetBuffer();
+	delete[] p->GetBuffer();
 	delete p;
-
-	if (BytesSent <= 0)
-	{
-		return Error::CANT_SEND;
-	}
 
 	int nRecvDataLength;
 
 	if (BytesSent == p->GetSize())
 	{
-		while ((nRecvDataLength = recv(Socket, (char*)recvBuffer, DEFAULT_RECV_LENGTH, 0)) == 0);
+		while ((nRecvDataLength = recv(Socket, (char*)recvBuffer, DEFAULT_RECV_LENGTH, 0)) == 0); //in a larger project, recv handling would be its own function, not jam-packed into a single routine like here.
 
-		if (nRecvDataLength > 4 && recvBuffer[0] != 0) //change this later... MINIMUM OFFSETS NEEDED..
+		if (nRecvDataLength > 4 && recvBuffer[0] != 0)
 		{
 			try
 			{
@@ -81,7 +74,7 @@ Error NetClient::Initialize(string ip, uint16_t port)
 	this->Ip = ip;
 	this->Port = port;
 
-	this->ConnectedAt = GetTickCount();
+	this->ConnectedAt = GetTickCount64();
 	this->ConnectedDuration = 0;
 
 	//create a thread for handling server replies
@@ -170,7 +163,7 @@ void NetClient::ProcessRequests(LPVOID Param)
 	}
 }
 
-string NetClient::GetIpv4() //todo: finish this function: convert values into string 
+string NetClient::GetHostname() //todo: finish this function: convert values into string 
 {
 	struct IPv4
 	{
@@ -275,9 +268,9 @@ string NetClient::GetMACAddress()
 	return mac_addr; // caller must free.
 }
 
-string NetClient::GetHardwareID(string driveRoot)
+string NetClient::GetHardwareID()
 {
-	string HWID;
+	std::string HWID;
 
 	CHAR volumeName[MAX_PATH + 1] = { 0 };
 	CHAR fileSystemName[MAX_PATH + 1] = { 0 };
@@ -285,23 +278,40 @@ string NetClient::GetHardwareID(string driveRoot)
 	DWORD maxComponentLen = 0;
 	DWORD fileSystemFlags = 0;
 
-	if (!GetVolumeInformationA(driveRoot.c_str(), volumeName, ARRAYSIZE(volumeName), &serialNumber, &maxComponentLen, &fileSystemFlags, fileSystemName, ARRAYSIZE(fileSystemName)))
+	DWORD dwSize = MAX_PATH;
+	char szLogicalDrives[MAX_PATH] = { 0 };
+	DWORD dwResult = GetLogicalDriveStringsA(dwSize, szLogicalDrives);
+
+	char firstDrive[10] = { 0 };
+
+	if (dwResult > 0 && dwResult <= MAX_PATH)
 	{
-		return (string)NULL;
+		char* szSingleDrive = szLogicalDrives;
+		while (*szSingleDrive)
+		{
+			strcpy_s(firstDrive, szSingleDrive);
+			szSingleDrive += strlen(szSingleDrive) + 1;
+		}
 	}
 
-	CHAR serialBuf[20];
-	_itoa_s(serialNumber, serialBuf, 10);
+	if (GetVolumeInformationA(firstDrive, volumeName, ARRAYSIZE(volumeName),&serialNumber,&maxComponentLen,&fileSystemFlags,fileSystemName,ARRAYSIZE(fileSystemName)))
+	{
+		CHAR serialBuf[20];
+		_itoa(serialNumber, serialBuf, 10);
 
-	CHAR username[1024];
-	DWORD size = 1024;
-	GetUserNameA((CHAR*)username, &size);
+		CHAR username[1024 + 1];
+		DWORD size = 1024 + 1;
+		GetUserNameA((CHAR*)username, &size);
 
-	HWID = username;
-	HWID += "-";
-	HWID += serialBuf;
-	HWID += '\0';
-
+		HWID = username;
+		HWID += "-";
+		HWID += serialBuf;
+	}
+	else 
+	{
+		HWID = "Failed to generate HWID.";
+		return NULL;
+	}
 	return HWID;
 }
 
@@ -355,6 +365,8 @@ uint64_t NetClient::MakeHashFromServerResponse(PacketWriter* p) //todo: finish t
 if this key is wrong or if there is no reply sent to the server then we can mostly assume the person is cheating as this memory does not remain on the client for more than a second in most cases. no anti-virus will likely tamper within that time frame
 Still subject to being emulated, so we need to figure out a way such that the key to
 
+Example of Cipher Block Chaining (CBC) mode of encryption -> each plaintext is XOR'd with the previous block, with an IV being used on the initial block
+
 */
 bool NetClient::UnpackAndExecute(PacketWriter* p)
 {
@@ -377,7 +389,7 @@ bool NetClient::UnpackAndExecute(PacketWriter* p)
 
 	if (!VirtualProtect(&buffer[0], bSize, PAGE_EXECUTE_READWRITE, &dwProt))
 	{
-		//printf("VMP Failed at UnpackAndExecute!\n");
+		printf("VMP Failed at UnpackAndExecute!\n");
 		delete[] buffer;
 		return false;
 	}
@@ -401,7 +413,7 @@ bool NetClient::UnpackAndExecute(PacketWriter* p)
 	//now send the key back to the server, if its wrong we get kicked. we simply execute the packet and the server can keep changing the key + routine OTA
 	Error err = SendData(Packets::Builder::Heartbeat(secretKey));
 
-	if (err == Error::OK)
+	if (err == Error::OK) //result will stay false if no server is present
 		result = true;
 	
 	delete[] buffer;

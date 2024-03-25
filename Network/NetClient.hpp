@@ -48,10 +48,13 @@ enum Error //same as a "Status, an Error can still mean normal execution"
 	BAD_SOCKET,
 	DATA_LENGTH_MISMATCH,
 	NULL_MEMORY_REFERENCE,
+	PARENT_PROCESS_MISMATCH,
+	PAGE_PROTECTIONS_MISMATCH,
+	LICENSE_UNKNOWN,
 };
 
 /*
-Class NetClient - Client-side of networking
+Class NetClient - Client-side of networking portion
 */
 class NetClient
 {
@@ -70,14 +73,14 @@ public:
 
 	list<uint64_t> GetResponseHashList() { return this->HeartbeatHash; }
 
-	static string GetIpv4();
+	static string GetHostname();
 	string GetMACAddress();
-	string GetHardwareID(string driveRoot);
+	string GetHardwareID();
 
 	uint64_t MakeHashFromServerResponse(PacketWriter* p);
 	Error HandleInboundPacket(PacketWriter* p);
 
-	bool UnpackAndExecute(PacketWriter* p);
+	bool UnpackAndExecute(PacketWriter* p); //unpacks receive packet which contains a secret key + payload
 
 	bool HandshakeCompleted;
 	bool Initialized;
@@ -91,8 +94,8 @@ private:
 	string Ip;
 	uint16_t Port = DEFAULT_PORT;
 
-	time_t ConnectedDuration = 0;
-	time_t ConnectedAt;
+	unsigned int ConnectedDuration = 0;
+	unsigned long ConnectedAt; //unix timestamp
 
 	string ipv4;
 	string HardwareID;
