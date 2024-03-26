@@ -17,7 +17,7 @@
 #include "AntiTamper/Integrity.hpp"
 #include "Environment/Services.hpp"
 #include "AntiTamper/Obfuscation.hpp"
-
+#include "AntiTamper/SymbolicHash.hpp"
 
 //extern "C" __forceinline bool MisleadingFunction(); //the goal here is to get the compiler to inline our function (although apparently not possible on x64) which breaks the static analysis of REing tools.
 //extern "C" void inline_test(); //using macros within masm file
@@ -41,6 +41,11 @@ public:
 	static inline void** GetVTableArray(T* pClass, int* pSize);
 
 	static bool RemapAndCheckPages();
+
+	void TestNetworkHeartbeat();
+	bool TestMemoryIntegrity();
+
+	bool IsPreventingThreadCreation = false; //used in TLS callback
 
 protected:
 
