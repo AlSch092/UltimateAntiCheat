@@ -83,7 +83,7 @@ public:
 
 	static DWORD GetProcessIdByName(wstring procName);
 
-	static UINT64 GetTextSectionAddress(const char* moduleName);
+	static UINT64 GetSectionAddress(const char* moduleName, const char* sectionName);
 
 private:
 

@@ -91,7 +91,10 @@ bool Process::ProtectProcess()
 //returns TRUE if our parameter desiredParent is the same process name as our parent process ID
 BOOL Process::CheckParentProcess(wstring desiredParent)
 {
-    return GetParentProcessId() != GetProcessIdByName(desiredParent) ? 0 : 1;
+    if (GetParentProcessId() == GetProcessIdByName(desiredParent))
+        return true;
+    
+    return false;
 }
 
 BOOL Process::IsProcessElevated() {
@@ -187,7 +190,7 @@ bool Process::HasExportedFunction(string dllName, string functionName)
 bool Process::GetProgramSections(string module)
 {
     PIMAGE_SECTION_HEADER sectionHeader;
-    HINSTANCE hInst = GetModuleHandleW(NULL);
+    HINSTANCE hInst = GetModuleHandleA(module.c_str());
     PIMAGE_DOS_HEADER pDoH;
     PIMAGE_NT_HEADERS64 pNtH;
 
@@ -531,9 +534,10 @@ DWORD Process::GetProcessIdByName(wstring procName)
     return pid;
 }
 
-UINT64 Process::GetTextSectionAddress(const char* moduleName)
+UINT64 Process::GetSectionAddress(const char* moduleName, const char* sectionName)
 {
     HMODULE hModule = GetModuleHandleA(moduleName);
+
     if (hModule == NULL)
     {
         printf("Failed to get module handle: %d\n", GetLastError());
@@ -557,14 +561,16 @@ UINT64 Process::GetTextSectionAddress(const char* moduleName)
     }
 
     PIMAGE_SECTION_HEADER pSectionHeader = IMAGE_FIRST_SECTION(pNtHeaders);
-    for (int i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++) {
-        if (strcmp((const char*)pSectionHeader->Name, ".text") == 0)
+    for (int i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++) 
+    {
+        if (strcmp((const char*)pSectionHeader->Name, sectionName) == 0)
         {
             return baseAddress + pSectionHeader->VirtualAddress;
         }
+
         pSectionHeader++;
     }
 
-    printf(".text section not found.\n");
+    printf("[WARNING] .text section not found.\n");
     return 0;
 }
