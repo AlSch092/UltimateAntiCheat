@@ -91,4 +91,6 @@ void main(int argc, char** argv)
     API::Dispatch(AC, API::DispatchCode::INITIALIZE); //initialize AC
 
     printf("All tests have been executed, the program will now shut down. Thanks for trying out the project!\n");
+
+    system("pause");
 }
