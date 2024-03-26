@@ -1,5 +1,5 @@
 # UltimateAntiCheat
-Research project: make an anti-cheat system to detect: memory editing, debugging, unsigned code/certs, injected modules, multi-boxing, OS spoofing, etc.
+Research project: make an anti-cheat system to detect and/or prevent things like memory editing, debugging, unsigned code/certs, injected modules, etc.
 
 Additionally, please provide features such as:  
 
@@ -15,5 +15,5 @@ Basic networking has been added along with a Challenge-Response protocol, thus w
 If you have any design suggestions or code improvements/additions feel free to raise an 'issue'. You might need to move a couple of files into different folders if compilation isn't working as I'm currently changing the directory structure around. Thank you for reading!  
 
 ## Updates
-
-Last updated on March 24, 2024. A full re-upload was done along with various bug fixes. The program should compile without issues in x64 (x86 not supported yet, apologies). I plan on continuing work on this project in the near future. As it's been some time since making this project, lots more can be added soon with new knowledge and techniques acquired in the time between then and now. Stay tuned for further updates!
+- March 25, '24: Beginning to move tests into their proper places and making use of the API class. Future updates will improve code structure and add threaded & looping support to make the program feel more like a commercial AC product and less like a techniques testing suite
+- March 24, '24: A full re-upload was done along with various bug fixes. The program should compile without issues in x64 (x86 not supported yet, apologies). I plan on continuing work on this project in the near future. As it's been some time since making this project, lots more can be added soon with new knowledge and techniques acquired in the time between then and now. Stay tuned for further updates!
