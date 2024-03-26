@@ -32,7 +32,7 @@ how can we implement something 'as powerful' as a driver?
 
 using namespace std;
 
-enum Error //same as a "Status, an Error can still mean normal execution"
+enum Error
 {
 	OK,
 	CANT_STARTUP,
@@ -51,6 +51,7 @@ enum Error //same as a "Status, an Error can still mean normal execution"
 	PARENT_PROCESS_MISMATCH,
 	PAGE_PROTECTIONS_MISMATCH,
 	LICENSE_UNKNOWN,
+	BAD_MODULE,
 };
 
 /*

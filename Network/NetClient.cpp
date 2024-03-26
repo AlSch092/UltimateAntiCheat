@@ -210,10 +210,10 @@ string NetClient::GetHostname() //todo: finish this function: convert values int
 
 	char b1[5], b2[5], b3[5], b4[5];
 
-	itoa(myIP.b1, b1, 10);
-	itoa(myIP.b2, b2, 10);
-	itoa(myIP.b3, b3, 10);
-	itoa(myIP.b4, b4, 10);
+	_itoa(myIP.b1, b1, 10);
+	_itoa(myIP.b2, b2, 10);
+	_itoa(myIP.b3, b3, 10);
+	_itoa(myIP.b4, b4, 10);
 
 	sIpv4 = b1;
 	sIpv4 = sIpv4 + "." + b2 + "." + b3 + "." + b4;
