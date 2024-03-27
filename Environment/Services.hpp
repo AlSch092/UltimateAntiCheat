@@ -3,24 +3,36 @@
 #include <Windows.h>
 #include <Psapi.h>
 #include <TlHelp32.h>
-#include <winternl.h>
 #include <string>
+#include <list>
+#include <Softpub.h>
+#include <wincrypt.h>
+#pragma comment(lib, "wintrust")
 
 using namespace std;
-using myNtQueryInformationThread = NTSTATUS(NTAPI*)(IN HANDLE ThreadHandle, IN THREADINFOCLASS ThreadInformationClass, OUT PVOID ThreadInformation, IN ULONG ThreadInformationLength, OUT PULONG ReturnLength);
+
+struct Service
+{
+	wstring displayName;
+	wstring serviceName;
+	DWORD pid;
+	bool isRunning;
+};
 
 class Services
 {
 public:
 
-	static BOOL IsDriverRunning(wstring name);
+	BOOL GetLoadedDrivers();
+	BOOL GetServiceModules();
 
-	BOOL GetRunningServices();
-	BOOL GetServiceModules(string ServiceName);
-	BOOL StopEventLog();
+	list<wstring> GetUnsignedDrivers();
+
+	static BOOL IsDriverSigned(wstring driverPath);
 
 private:
-	wstring wsServices[128];
-	HMODULE hModules[256] = {};
 
+	list<Service*> ServiceList;
+
+	list <wstring> DriverPaths;
 };

@@ -1,260 +1,164 @@
 #include "Services.hpp"
 
-BOOL Services::StopEventLog() //suspends all threads associated with the EventLog service
+BOOL Services::GetServiceModules()
 {
-	HANDLE serviceProcessHandle = 0;
-	HANDLE snapshotHandle = 0;
-	HANDLE threadHandle = 0;
+    SC_HANDLE scmHandle, serviceHandle;
+    DWORD bytesNeeded, servicesReturned, resumeHandle = 0;
+    ENUM_SERVICE_STATUS_PROCESS* services;
+    BOOL result;
 
-	SIZE_T modulesSize = sizeof(this->hModules);
-	DWORD modulesSizeNeeded = 0;
-	DWORD moduleNameSize = 0;
-	SIZE_T modulesCount = 0;
-	WCHAR remoteModuleName[1024] = {};
-	HMODULE serviceModule = NULL;
-	MODULEINFO serviceModuleInfo = {};
-	DWORD_PTR threadStartAddress = 0;
-	DWORD bytesNeeded = 0;
-	HMODULE modules[512] = {};
+    scmHandle = OpenSCManager(NULL, NULL, SC_MANAGER_ENUMERATE_SERVICE);
 
-	myNtQueryInformationThread NtQueryInformationThread = (myNtQueryInformationThread)(GetProcAddress(GetModuleHandleA("ntdll"), "NtQueryInformationThread"));
+    if (scmHandle == NULL) 
+    {
+        printf("Failed to open Service Control Manager: %lu\n", GetLastError());
+        return 1;
+    }
 
-	THREADENTRY32 threadEntry;
-	threadEntry.dwSize = sizeof(THREADENTRY32);
+    // First, get the size needed for buffer
+    result = EnumServicesStatusEx( scmHandle, SC_ENUM_PROCESS_INFO,SERVICE_WIN32, SERVICE_STATE_ALL, NULL,0, &bytesNeeded,&servicesReturned,&resumeHandle,NULL);
 
-	SC_HANDLE sc = OpenSCManagerA(".", NULL, MAXIMUM_ALLOWED);
+    if (!result && GetLastError() != ERROR_MORE_DATA) 
+    {
+        printf("Failed to enumerate services (preliminary call): %lu\n", GetLastError());
+        CloseServiceHandle(scmHandle);
+        return 1;
+    }
 
-	SC_HANDLE service = OpenServiceA(sc, "EasyAntiCheat", MAXIMUM_ALLOWED);
+    services = (ENUM_SERVICE_STATUS_PROCESS*)malloc(bytesNeeded);
+    
+    if (services == NULL) 
+    {
+        printf("Memory allocation failed @ GetServiceModules\n");
+        CloseServiceHandle(scmHandle);
+        return 1;
+    }
 
-	SERVICE_STATUS_PROCESS serviceStatusProcess = {};
+    result = EnumServicesStatusEx(scmHandle,SC_ENUM_PROCESS_INFO,SERVICE_WIN32,SERVICE_STATE_ALL,(LPBYTE)services,bytesNeeded,&bytesNeeded,&servicesReturned,&resumeHandle,NULL);
 
-	QueryServiceStatusEx(service, SC_STATUS_PROCESS_INFO, (LPBYTE)&serviceStatusProcess, sizeof(serviceStatusProcess), &bytesNeeded);
-	DWORD servicePID = serviceStatusProcess.dwProcessId;
+    if (!result) 
+    {
+        printf("Failed to enumerate services: %lu\n", GetLastError());
+        free(services);
+        CloseServiceHandle(scmHandle);
+        return FALSE;
+    }
 
-	TOKEN_PRIVILEGES tp;
-	LUID luid;
+    for (DWORD i = 0; i < servicesReturned; i++) 
+    {
+        Service* service = new Service();
+        service->pid = services[i].ServiceStatusProcess.dwProcessId;
+        service->displayName = services[i].lpDisplayName;
+        service->serviceName = services[i].lpServiceName;
 
-	if (!LookupPrivilegeValue(
-		NULL, // lookup privilege on local system
-		L"SeDebugPrivilege", // privilege to lookup
-		&luid)) // receives LUID of privilege
-	{
-		printf("LookupPrivilegeValue error: %u\n", GetLastError());
-		return FALSE;
-	}
+        switch (services[i].ServiceStatusProcess.dwCurrentState) 
+        {
+            case SERVICE_STOPPED:
+                service->isRunning = false;
+                break;
+            case SERVICE_RUNNING:                
+                service->isRunning = true;
+                break;
+            case SERVICE_PAUSED:
+                service->isRunning = false;
+                break;
+            default:
+                break;
+        }
 
-	tp.PrivilegeCount = 1;
-	tp.Privileges[0].Luid = luid;
-	tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+        ServiceList.push_back(service);
+    }
 
-	// Enable the privilege or disable all privileges.
-	HANDLE currProc = GetCurrentProcess();
-	HANDLE procToken;
-	if (!OpenProcessToken(currProc, TOKEN_ADJUST_PRIVILEGES, &procToken))
-	{
-		wprintf(L"\nOpenProcessToken failed \n");
-			return FALSE;
-	}
-
-	if (!AdjustTokenPrivileges(
-		procToken,
-		FALSE,
-		&tp,
-		sizeof(TOKEN_PRIVILEGES),
-		(PTOKEN_PRIVILEGES)NULL,
-		(PDWORD)NULL))
-	{
-		wprintf(L"\nAdjustTokenPrivileges error: %d\n", GetLastError());
-		return FALSE;
-	}
-
-	CloseHandle(procToken);
-	CloseHandle(currProc);
-
-	serviceProcessHandle = OpenProcess(MAXIMUM_ALLOWED, FALSE, servicePID); //open svchost.exe. this will deny access if SeDebugPrivileges are not enabled here (above code enables it).
-	snapshotHandle = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
-
-	if (!EnumProcessModules(serviceProcessHandle, modules, modulesSize, &modulesSizeNeeded))
-	{
-		printf("EnumProcesssModules failed! %d\n", GetLastError());
-		return FALSE;
-	}
-
-	modulesCount = modulesSizeNeeded / sizeof(HMODULE);
-
-	printf("Modules Count: %lld, service pid: %d\n", modulesCount, servicePID);
-
-	for (size_t i = 0; i < modulesCount; i++)
-	{
-		serviceModule = modules[i];
-		wsServices[i] = remoteModuleName;
-
-		GetModuleBaseName(serviceProcessHandle, serviceModule, remoteModuleName, sizeof(remoteModuleName));
-		wprintf(L"%s\n", wsServices[i].c_str());
-
-		if (wcscmp(remoteModuleName, L"wevtsvc.dll") == 0)
-		{
-			printf("Windows EventLog module %S at %p\n\n", remoteModuleName, serviceModule);
-			GetModuleInformation(serviceProcessHandle, serviceModule, &serviceModuleInfo, sizeof(MODULEINFO));
-		}
-	}
-
-	Thread32First(snapshotHandle, &threadEntry);
-	while (Thread32Next(snapshotHandle, &threadEntry))
-	{
-		if (threadEntry.th32OwnerProcessID == servicePID)
-		{
-			threadHandle = OpenThread(MAXIMUM_ALLOWED, FALSE, threadEntry.th32ThreadID);
-			NtQueryInformationThread(threadHandle, (THREADINFOCLASS)0x9, &threadStartAddress, sizeof(DWORD_PTR), NULL);
-
-			printf("Suspending EventLog thread %d with start address %llX\n", threadEntry.th32ThreadID, threadStartAddress);
-
-			if (threadStartAddress == NULL)
-			{
-				printf("ThreadStartAddress was NULL!\n");
-				return FALSE;
-			}
-
-			if(threadHandle != NULL)
-				SuspendThread(threadHandle);
-
-			Sleep(2000);
-		}
-	}
+    free(services);
+    CloseServiceHandle(scmHandle);
 
 	return TRUE;
 }
 
-BOOL Services::GetServiceModules(string ServiceName)
+BOOL Services::GetLoadedDrivers()
 {
-	HANDLE serviceProcessHandle;
-	HANDLE snapshotHandle;
-	
-	SIZE_T modulesSize = sizeof(this->hModules);
-	DWORD modulesSizeNeeded = 0;
-	DWORD moduleNameSize = 0;
-	SIZE_T modulesCount = 0;
-	WCHAR remoteModuleName[512] = {};
-	HMODULE serviceModule = NULL;
-	MODULEINFO serviceModuleInfo = {};
-	DWORD_PTR threadStartAddress = 0;
-	DWORD bytesNeeded = 0;
+    DWORD cbNeeded;
+    HMODULE drivers[1024];
+    DWORD numDrivers;
 
-	myNtQueryInformationThread NtQueryInformationThread = (myNtQueryInformationThread)(GetProcAddress(GetModuleHandleA("ntdll"), "NtQueryInformationThread"));
+    if (!EnumDeviceDrivers((LPVOID*)drivers, sizeof(drivers), &cbNeeded)) 
+    {
+        printf("Failed to enumerate device drivers\n");
+        return FALSE;
+    }
 
-	THREADENTRY32 threadEntry;
-	threadEntry.dwSize = sizeof(THREADENTRY32);
+    numDrivers = cbNeeded / sizeof(HMODULE);
 
-	SC_HANDLE sc = OpenSCManagerA(".", NULL, MAXIMUM_ALLOWED);
-	
-	SC_HANDLE service = OpenServiceA(sc, ServiceName.c_str(), MAXIMUM_ALLOWED);
+    for (DWORD i = 0; i < numDrivers; i++) 
+    {
+        TCHAR driverName[MAX_PATH];
+        TCHAR driverPath[MAX_PATH];
 
-	SERVICE_STATUS_PROCESS serviceStatusProcess = {};
+        if (GetDeviceDriverBaseName(drivers[i], driverName, MAX_PATH) && GetDeviceDriverFileName(drivers[i], driverPath, MAX_PATH))
+        {
+            DriverPaths.push_back(driverPath);
+        }
+        else 
+        {
+            printf("Failed to get driver information @ GetLoadedDrivers : error %d\n", GetLastError());
+            return FALSE;
+        }
+    }
 
-	QueryServiceStatusEx(service, SC_STATUS_PROCESS_INFO, (LPBYTE)&serviceStatusProcess, sizeof(serviceStatusProcess), &bytesNeeded);
-	DWORD servicePID = serviceStatusProcess.dwProcessId;
-
-	TOKEN_PRIVILEGES tp;
-	LUID luid;
-
-	if (!LookupPrivilegeValue(
-		NULL, // lookup privilege on local system
-		L"SeDebugPrivilege", // privilege to lookup
-		&luid)) // receives LUID of privilege
-	{
-		printf("LookupPrivilegeValue error: %u\n", GetLastError());
-		return false;
-	}
-
-	tp.PrivilegeCount = 1;
-	tp.Privileges[0].Luid = luid;
-	tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-
-	// Enable the privilege or disable all privileges.
-	HANDLE currProc = GetCurrentProcess();
-	HANDLE procToken;
-	if (!OpenProcessToken(currProc, TOKEN_ADJUST_PRIVILEGES, &procToken))
-	{
-		wprintf(L"\nOpenProcessToken failed \n");
-		return false;
-	}
-
-	if (!AdjustTokenPrivileges(
-		procToken,
-		FALSE,
-		&tp,
-		sizeof(TOKEN_PRIVILEGES),
-		(PTOKEN_PRIVILEGES)NULL,
-		(PDWORD)NULL))
-	{
-		wprintf(L"\nAdjustTokenPrivileges error: %d\n", GetLastError());
-
-		return false;
-	}
-
-	CloseHandle(procToken);
-	CloseHandle(currProc);
-
-	serviceProcessHandle = OpenProcess(MAXIMUM_ALLOWED, FALSE, servicePID); //open svchost.exe
-
-	if (!serviceProcessHandle)
-	{
-		printf("OpenProcess failed with %d\n!", GetLastError());
-	}
-
-	snapshotHandle = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
-
-	EnumProcessModules(serviceProcessHandle, this->hModules, modulesSize, &modulesSizeNeeded);
-	modulesCount = modulesSizeNeeded / sizeof(HMODULE);
-	for (size_t i = 0; i < modulesCount; i++)
-	{
-		serviceModule = this->hModules[i];
-		wsServices[i] = remoteModuleName;
-
-		wprintf(L"Module: %s\n", wsServices[i].c_str());
-
-		if (!GetModuleBaseName(serviceProcessHandle, serviceModule, remoteModuleName, sizeof(remoteModuleName)))
-		{
-			printf("GetModuleBaseName failed! %d\n", GetLastError());
-		}
-	}
-
-	return true;
+	return TRUE;
 }
 
-BOOL Services::IsDriverRunning(wstring name)
+BOOL Services::IsDriverSigned(wstring driverPath) 
 {
-	// Get a handle to the current process
-	HANDLE hProcess = GetCurrentProcess();
+    GUID guidAction = WINTRUST_ACTION_GENERIC_VERIFY_V2;
+    WINTRUST_FILE_INFO fileInfo;
+    memset(&fileInfo, 0, sizeof(fileInfo));
+    fileInfo.cbStruct = sizeof(fileInfo);
+    fileInfo.pcwszFilePath = driverPath.c_str();
 
-	// Get an array of handles to the currently loaded drivers
-	HMODULE hModules[1024];
-	DWORD cbNeeded;
-	if (EnumDeviceDrivers((LPVOID*)hModules, sizeof(hModules), &cbNeeded))
-	{
-		// Calculate the number of handles in the array
-		int numModules = cbNeeded / sizeof(HMODULE);
+    WINTRUST_DATA trustData;
+    memset(&trustData, 0, sizeof(trustData));
+    trustData.cbStruct = sizeof(trustData);
+    trustData.dwUIChoice = WTD_UI_NONE;
+    trustData.fdwRevocationChecks = WTD_REVOKE_NONE;
+    trustData.dwUnionChoice = WTD_CHOICE_FILE;
+    trustData.dwStateAction = 0;
+    trustData.hWVTStateData = NULL;
+    trustData.pFile = &fileInfo;
 
-		// Print the base name of each driver
-		for (int i = 0; i < numModules; i++)
-		{
-			TCHAR szModName[MAX_PATH];
-			if (GetDeviceDriverBaseName(hModules[i], szModName, sizeof(szModName) / sizeof(TCHAR)))
-			{
-				wprintf(L"%d: %s\n", i + 1, szModName);
+    LONG lStatus = WinVerifyTrust(NULL, &guidAction, &trustData);
 
-				if (wcscmp(name.c_str(), szModName) == 0)
-				{
-					wprintf(L"Found driver: %s\n", szModName);
-					return TRUE;
-				}
+    if (lStatus != ERROR_SUCCESS)
+    {
+        printf("WinVerifyTrust failed with error code %ld\n", lStatus);
+        return FALSE;
+    }
 
-			}
-		}
-	}
+    return TRUE;
+}
 
-	// Close the handle to the current process
-	CloseHandle(hProcess);
+list<wstring> Services::GetUnsignedDrivers()
+{
+    list<wstring> unsignedDrivers;
 
-	return FALSE;
+    if (DriverPaths.size() == 0)
+    {
+        if (!GetLoadedDrivers())
+        {
+            printf("Failed to get driver list @ GetUnsignedDrivers : error %d\n", GetLastError());
+            return unsignedDrivers;
+        }
+    }
+
+    for (const std::wstring& driverPath : DriverPaths) 
+    {
+        if (!IsDriverSigned(driverPath))
+        {
+            wprintf(L"[WARNING] Found unsigned driver: %s\n", driverPath.c_str());
+        }
+        else
+        {
+            wprintf(L"[INFO] Driver is signed: %s\n", driverPath.c_str());
+        }
+    }
 }
