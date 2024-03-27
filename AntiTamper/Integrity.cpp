@@ -99,7 +99,6 @@ bool Integrity::IsUnknownDllPresent()
 	{
 		//check dll name against a pre-determined white-list of DLLs
 
-
 		if (!Authenticode::VerifyEmbeddedSignature(str.c_str()))
 		{
 			wprintf(L"Bad signature or no signature found for: %s\n", str.c_str());

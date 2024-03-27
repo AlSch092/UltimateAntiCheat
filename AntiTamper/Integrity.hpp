@@ -32,7 +32,6 @@ public:
 	Integrity()
 	{
 		WhitelistedModules.push_back(L"UltimateAntiCheat.exe");
-		WhitelistedModules.push_back(L"C:\\WINDOWS\\SYSTEM32\\apphelp.dll");
 	}
 
 private:
