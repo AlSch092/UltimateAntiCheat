@@ -2,7 +2,7 @@
 
 BOOL Services::GetServiceModules()
 {
-    SC_HANDLE scmHandle, serviceHandle;
+    SC_HANDLE scmHandle = NULL, serviceHandle = NULL;
     DWORD bytesNeeded, servicesReturned, resumeHandle = 0;
     ENUM_SERVICE_STATUS_PROCESS* services;
     BOOL result;
@@ -155,10 +155,13 @@ list<wstring> Services::GetUnsignedDrivers()
         if (!IsDriverSigned(driverPath))
         {
             wprintf(L"[WARNING] Found unsigned driver: %s\n", driverPath.c_str());
+            unsignedDrivers.push_back(driverPath);
         }
         else
         {
             wprintf(L"[INFO] Driver is signed: %s\n", driverPath.c_str());
         }
     }
+
+    return unsignedDrivers;
 }

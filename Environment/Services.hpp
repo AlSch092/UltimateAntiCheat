@@ -23,6 +23,23 @@ class Services
 {
 public:
 
+	Services(bool Initialize)
+	{
+		if (Initialize)
+		{
+		    GetLoadedDrivers();
+		    GetServiceModules();
+		}
+	}
+
+	~Services()
+	{
+		for (auto it = ServiceList.begin(); it != ServiceList.end(); ++it) 
+			delete* it;
+		
+		ServiceList.clear();
+	}
+
 	BOOL GetLoadedDrivers();
 	BOOL GetServiceModules();
 
