@@ -1,7 +1,5 @@
 /*
 	Exports.hpp - a part of the UltimateAntiCheat project
-	by: AlSch092 @ github
-	pls credit if re-posting, be nice goy
 */
 
 #pragma once

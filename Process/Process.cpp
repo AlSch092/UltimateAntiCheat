@@ -196,6 +196,12 @@ bool Process::GetProgramSections(string module)
 
     pDoH = (PIMAGE_DOS_HEADER)(hInst);
 
+    if (pDoH == NULL || hInst == NULL)
+    {
+        printf("[ERROR] PIMAGE_DOS_HEADER or hInst was NULL at GetProgramSections\n");
+        return false;
+    }
+
     pNtH = (PIMAGE_NT_HEADERS64)((PIMAGE_NT_HEADERS64)((PBYTE)hInst + (DWORD)pDoH->e_lfanew));
     sectionHeader = IMAGE_FIRST_SECTION(pNtH);
 

@@ -5,6 +5,13 @@
 #include <ImageHlp.h>
 #include <stdio.h>
 
+#ifdef _WIN64
+#define IS_64_BIT 1
+#else
+#define IS_64_BIT 0
+#endif
+
+
 typedef struct _MYPEB {
 	UCHAR InheritedAddressSpace;
 	UCHAR ReadImageFileExecOptions;
@@ -58,3 +65,15 @@ typedef struct _MYPEB {
 	ULONG GdiHandleBuffer[0x22];
 	PVOID ProcessWindowStation;
 } MYPEB, * PMYPEB;
+
+#if IS_64_BIT
+UINT64 GetPEBPointerAddress();
+PVOID GetPEBAddress();
+void SetPEBAddress(UINT64 address);
+#else
+PVOID GetPEBAddress();
+void SetPEBAddress(DWORD address);
+#endif
+
+BYTE* CopyPEBBytes(unsigned int pebSize);
+BYTE* CopyAndSetPEB();

@@ -13,6 +13,12 @@ bool Exports::ChangeFunctionName(string dllName, string functionName, string new
 
 	if (MapAndLoad(dllName.c_str(), NULL, &LoadedImage, TRUE, TRUE))
 	{
+		if (LoadedImage.MappedAddress == 0)
+		{
+			printf("[ERROR] LoadedImage.MappedAddress was 0 at ChangeFunctionName!\n");
+			return false;
+		}
+
 		ImageExportDirectory = (_IMAGE_EXPORT_DIRECTORY*)ImageDirectoryEntryToData(LoadedImage.MappedAddress, false, IMAGE_DIRECTORY_ENTRY_EXPORT, &cDirSize);
 
 		if (ImageExportDirectory != NULL)
