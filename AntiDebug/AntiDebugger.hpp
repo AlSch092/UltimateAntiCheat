@@ -74,7 +74,6 @@ namespace Debugger
 
 #ifdef ENVIRONMENT32 //we will try to make x64 versions for these a bit later
         bool _IsDebuggerPresent_TrapFlag();
-        bool _IsDebuggerPresent_IceBp();
         //bool _IsDebuggerPresent_INT2D();
 #endif
 

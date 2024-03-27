@@ -92,12 +92,19 @@ bool Debugger::AntiDebug::_IsKernelDebuggerPresent()
 	SYSTEM_KERNEL_DEBUGGER_INFORMATION Info;
 
 	HMODULE hModule = LoadLibraryA("ntdll.dll");
+
+	if (hModule == NULL)
+	{
+		printf("Error fetching module ntdll.dll @ _IsKernelDebuggerPresent: %d\n", GetLastError());
+		return false;
+	}
+
 	ZwQuerySystemInformation = (ZW_QUERY_SYSTEM_INFORMATION)GetProcAddress(hModule, "ZwQuerySystemInformation");
 	if (ZwQuerySystemInformation == NULL)
 		return false;
 
 	if (!ZwQuerySystemInformation(SystemKernelDebuggerInformation, &Info, sizeof(Info), NULL)) 
-	{ // 0 = STATUS_SUCCESS
+	{
 		if (Info.DebuggerEnabled && !Info.DebuggerNotPresent)
 			return true; 
 		else
@@ -328,7 +335,7 @@ bool Debugger::AntiDebug::_IsDebuggerPresent_DbgBreak()
 {
 	__try
 	{
-		DebugBreak(); //same as int3 basically
+		DebugBreak();
 	}
 	__except (EXCEPTION_EXECUTE_HANDLER)
 	{
@@ -358,9 +365,11 @@ inline bool Debugger::AntiDebug::_IsDebuggerPresent_VEH()
 {
 	bool bFound = false;
 
-	if (GetModuleHandleA("vehdebug-x86_64.dll") != NULL) //first the easiest way to check. most people using a VEH debugger are probably using cheat engine's.
+	HMODULE veh_debugger = GetModuleHandleA("vehdebug-x86_64.dll");
+
+	if (veh_debugger != NULL) 
 	{
-		UINT64 veh_addr = (UINT64)GetProcAddress(GetModuleHandleA("vehdebug-x86_64.dll"), "InitializeVEH");
+		UINT64 veh_addr = (UINT64)GetProcAddress(veh_debugger, "InitializeVEH"); //check for named exports of cheat engine's VEH debugger
 		
 		if (veh_addr > 0)
 		{
@@ -368,7 +377,6 @@ inline bool Debugger::AntiDebug::_IsDebuggerPresent_VEH()
 		}
 	}
 
-	//some people will try to rename this DLL in their own cheat engine builds. we can thus look for the exported functions instead
 	return bFound;
 }
 
@@ -382,7 +390,6 @@ inline bool Debugger::AntiDebug::_IsDebuggerPresent_WaitDebugEvent()
 		bFound = true;
 	}
 
-	//some people will try to rename this DLL in their own cheat engine builds. we can thus look for the exported functions instead
 	return bFound;
 }
 
