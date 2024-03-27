@@ -1,3 +1,4 @@
+//By AlSch092 @github
 /*
 NetClient.hpp
 Notes:
@@ -13,46 +14,24 @@ how can we implement something 'as powerful' as a driver?
 
 */
 
-#define DEFAULT_PORT 5445
 #define DEFAULT_RECV_LENGTH 512
+#define MINIMUM_PACKET_SIZE 4
 
 #pragma once
 #include <winsock2.h>
 #include <Iphlpapi.h>
 #include <list>
 
+#include "../Common/Error.hpp"
 #include "Packets/Packets.hpp"
 
 #include <stdint.h>
 #include <string>
-#include <time.h>
 
 #pragma comment(lib, "ws2_32")
 #pragma comment(lib, "iphlpapi.lib")
 
 using namespace std;
-
-enum Error
-{
-	OK,
-	CANT_STARTUP,
-	CANT_CONNECT,
-	CANT_RECIEVE,
-	CANT_SEND,
-	LOST_CONNECTION,
-	SERVER_KICKED,
-	INCOMPLETE_SEND,
-	INCOMPLETE_RECV,
-	NO_RECV_THREAD,
-	BAD_OPCODE,
-	BAD_SOCKET,
-	DATA_LENGTH_MISMATCH,
-	NULL_MEMORY_REFERENCE,
-	PARENT_PROCESS_MISMATCH,
-	PAGE_PROTECTIONS_MISMATCH,
-	LICENSE_UNKNOWN,
-	BAD_MODULE,
-};
 
 /*
 Class NetClient - Client-side of networking portion
@@ -60,6 +39,16 @@ Class NetClient - Client-side of networking portion
 class NetClient
 {
 public:
+
+	NetClient()
+	{
+	}
+
+	NetClient(const char* serverEndpoint, uint16_t port)
+	{
+		Ip = serverEndpoint;
+		Port = port;
+	}
 
 	Error Initialize(string ip, uint16_t port); //connects, sends CS_HELLO, verifies the response of a version number from server
 	Error EndConnection(int reason); //sends CS_GOODBYE and disconnects the socket
@@ -72,7 +61,7 @@ public:
 	string GetConnectedIP() { return this->Ip; }
 	uint16_t GetConnectedPort() { return this->Port; }
 
-	list<uint64_t> GetResponseHashList() { return this->HeartbeatHash; }
+	list<uint64_t> GetResponseHashList() { return this->HeartbeatHashes; }
 
 	static string GetHostname();
 	string GetMACAddress();
@@ -81,7 +70,7 @@ public:
 	uint64_t MakeHashFromServerResponse(PacketWriter* p);
 	Error HandleInboundPacket(PacketWriter* p);
 
-	bool UnpackAndExecute(PacketWriter* p); //unpacks receive packet which contains a secret key + payload
+	bool ExecutePacketPayload(PacketWriter* p); //unpacks receive packet which contains a secret key + payload
 
 	bool HandshakeCompleted;
 	bool Initialized;
@@ -93,21 +82,20 @@ private:
 	bool Connected = false;
 
 	string Ip;
-	uint16_t Port = DEFAULT_PORT;
+	uint16_t Port = 0;
 
 	unsigned int ConnectedDuration = 0;
-	unsigned long ConnectedAt; //unix timestamp
+	unsigned long ConnectedAt = 0; //unix timestamp
 
-	string ipv4;
+	string Hostname;
 	string HardwareID;
 	string MACAddress;
 
-	Error Status;
+	Error Status = Error::OK;
 
 	HANDLE RecvLoopThread = NULL;
-	DWORD recvThreadId;
+	DWORD recvThreadId = 0;
 
-	list<uint64_t> HeartbeatHash; //each next reply should be built using the hash of the last response, similar to a blockchain . if this goes out of sync at any point, server d/cs client
-
+	list<uint64_t> HeartbeatHashes; //each next reply should be built using the hash of the last response, similar to a blockchain . if this goes out of sync at any point, server d/cs client
 };
 

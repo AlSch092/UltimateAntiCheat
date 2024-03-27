@@ -1,3 +1,4 @@
+//By AlSch092 @github
 #include "NetClient.hpp"
 
 Error NetClient::Initialize(string ip, uint16_t port)
@@ -10,7 +11,7 @@ Error NetClient::Initialize(string ip, uint16_t port)
 
 	const char recvBuffer[DEFAULT_RECV_LENGTH] = { 0 };
 
-	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0 || this->HardwareID.size() <= 2)
 	{
 		return Error::CANT_STARTUP;
 	}
@@ -34,7 +35,6 @@ Error NetClient::Initialize(string ip, uint16_t port)
 
 	int BytesSent = send(Socket, (const char*)p->GetBuffer(), p->GetSize(), 0);
 
-	delete[] p->GetBuffer();
 	delete p;
 
 	int nRecvDataLength;
@@ -43,7 +43,7 @@ Error NetClient::Initialize(string ip, uint16_t port)
 	{
 		while ((nRecvDataLength = recv(Socket, (char*)recvBuffer, DEFAULT_RECV_LENGTH, 0)) == 0); //in a larger project, recv handling would be its own function, not jam-packed into a single routine like here.
 
-		if (nRecvDataLength > 4 && recvBuffer[0] != 0)
+		if (nRecvDataLength > MINIMUM_PACKET_SIZE && recvBuffer[0] != 0)
 		{
 			try
 			{
@@ -53,7 +53,6 @@ Error NetClient::Initialize(string ip, uint16_t port)
 				PacketWriter* recvP = new PacketWriter(recvBuffer, packetLength); //todo: make constructor where we can pass in a byte* and it auto copies 
 				Error err = HandleInboundPacket(recvP); //Handle incoming packet. after the initial handshake is done, this will be called from our recv loop.
 
-				delete recvP->GetBuffer();
 				delete recvP;
 			}
 			catch (std::exception e)
@@ -163,7 +162,7 @@ void NetClient::ProcessRequests(LPVOID Param)
 	}
 }
 
-string NetClient::GetHostname() //todo: finish this function: convert values into string 
+string NetClient::GetHostname() //fetch client hostname on local network
 {
 	struct IPv4
 	{
@@ -221,7 +220,7 @@ string NetClient::GetHostname() //todo: finish this function: convert values int
 	return sIpv4;
 }
 
-string NetClient::GetMACAddress()
+string NetClient::GetMACAddress() //fetches adapter MAC
 {
 	PIP_ADAPTER_INFO AdapterInfo;
 	DWORD dwBufLen = sizeof(IP_ADAPTER_INFO);
@@ -232,45 +231,37 @@ string NetClient::GetMACAddress()
 	{
 		printf("Error allocating memory needed to call GetAdaptersinfo\n");
 		free(mac_addr);
-		return NULL; // it is safe to call free(NULL)
+		return "";
 	}
 
-	// Make an initial call to GetAdaptersInfo to get the necessary size into the dwBufLen variable
 	if (GetAdaptersInfo(AdapterInfo, &dwBufLen) == ERROR_BUFFER_OVERFLOW) {
 		free(AdapterInfo);
 		AdapterInfo = (IP_ADAPTER_INFO*)malloc(dwBufLen);
 		if (AdapterInfo == NULL) {
 			printf("Error allocating memory needed to call GetAdaptersinfo\n");
 			free(mac_addr);
-			return NULL;
+			return "";
 		}
 	}
 
 	if (GetAdaptersInfo(AdapterInfo, &dwBufLen) == NO_ERROR) {
-		// Contains pointer to current adapter info
+
 		PIP_ADAPTER_INFO pAdapterInfo = AdapterInfo;
 		do {
-			// technically should look at pAdapterInfo->AddressLength
-			//   and not assume it is 6.
 			sprintf(mac_addr, "%02X:%02X:%02X:%02X:%02X:%02X",
 				pAdapterInfo->Address[0], pAdapterInfo->Address[1],
 				pAdapterInfo->Address[2], pAdapterInfo->Address[3],
 				pAdapterInfo->Address[4], pAdapterInfo->Address[5]);
-			printf("Address: %s, mac: %s\n", pAdapterInfo->IpAddressList.IpAddress.String, mac_addr);
-			// print them all, return the last one.
-			// return mac_addr;
-
-			printf("\n");
 			pAdapterInfo = pAdapterInfo->Next;
 		} while (pAdapterInfo);
 	}
 	free(AdapterInfo);
-	return mac_addr; // caller must free.
+	return mac_addr; // caller must free!
 }
 
 string NetClient::GetHardwareID()
 {
-	std::string HWID;
+	std::string HWID = "";
 
 	CHAR volumeName[MAX_PATH + 1] = { 0 };
 	CHAR fileSystemName[MAX_PATH + 1] = { 0 };
@@ -284,7 +275,7 @@ string NetClient::GetHardwareID()
 
 	char firstDrive[10] = { 0 };
 
-	if (dwResult > 0 && dwResult <= MAX_PATH)
+	if (dwResult > 0 && dwResult <= MAX_PATH) //fetch the list of drives and use the first one detected
 	{
 		char* szSingleDrive = szLogicalDrives;
 		while (*szSingleDrive)
@@ -308,10 +299,8 @@ string NetClient::GetHardwareID()
 		HWID += serialBuf;
 	}
 	else 
-	{
 		HWID = "Failed to generate HWID.";
-		return NULL;
-	}
+	
 	return HWID;
 }
 
@@ -339,7 +328,7 @@ Error NetClient::HandleInboundPacket(PacketWriter* p)
 
 		case Packets::Opcodes::SC_SHELLCODE:
 		{
-			if (!UnpackAndExecute(p))
+			if (!ExecutePacketPayload(p))
 			{
 				printf("Client bad behavior (did not execute correctly)\n");
 				err = Error::SERVER_KICKED;
@@ -361,14 +350,12 @@ uint64_t NetClient::MakeHashFromServerResponse(PacketWriter* p) //todo: finish t
 }
 
 /*
- NetClient::UnpackAndExecute Forces the client to execute a server-generated payload to calculate a key which is sent back to the server. Ensures that the client is actually running the anti-cheat program.
-if this key is wrong or if there is no reply sent to the server then we can mostly assume the person is cheating as this memory does not remain on the client for more than a second in most cases. no anti-virus will likely tamper within that time frame
-Still subject to being emulated, so we need to figure out a way such that the key to
+ NetClient::ExecutePacketPayload -> Tells the client to execute a server-generated payload (here we are simulating a packet coming in), to calculate a key which is then sent back to the server. Ensures that the client is actually running the anti-cheat program as it is a challenge-response protocol.
 
-Example of Cipher Block Chaining (CBC) mode of encryption -> each plaintext is XOR'd with the previous block, with an IV being used on the initial block
+ -> every next packet is unencrypted using the key from the previous packet, and this key should be sent to the server to prove the client is executing the anticheat module (can still be spoofed by a cheater)
 
 */
-bool NetClient::UnpackAndExecute(PacketWriter* p)
+bool NetClient::ExecutePacketPayload(PacketWriter* p)
 {
 	DWORD dwProt = 0;
 	bool result = false;
@@ -398,8 +385,8 @@ bool NetClient::UnpackAndExecute(PacketWriter* p)
 	secretKeyFunction = (UINT64(*)())(buffer + 2); //first 2 bytes of buffer are the opcode, so skip that
 	
 	//decrypt the routine using the hash of the previous result
-	if(HeartbeatHash.size() > 0)
-		decryptKey = HeartbeatHash.back();
+	if(HeartbeatHashes.size() > 0)
+		decryptKey = HeartbeatHashes.back();
 
 	for (int i = 0; i < bSize; i++) //each packet gets encrypted with the XOR of the last packet's secret key. the first time will be 0.
 	{
@@ -408,7 +395,7 @@ bool NetClient::UnpackAndExecute(PacketWriter* p)
 
 	UINT64 secretKey = secretKeyFunction(); //shellcode call
 
-	HeartbeatHash.push_back(secretKey);
+	HeartbeatHashes.push_back(secretKey);
 
 	//now send the key back to the server, if its wrong we get kicked. we simply execute the packet and the server can keep changing the key + routine OTA
 	Error err = SendData(Packets::Builder::Heartbeat(secretKey));
