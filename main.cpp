@@ -72,7 +72,7 @@ void NTAPI __stdcall TLSCallback(PVOID DllHandle, DWORD dwReason, PVOID Reserved
 }
 
 
-void main(int argc, char** argv)
+int main(int argc, char** argv)
 {
     SetConsoleTitle(L"Ultimate Anti-Cheat");
     
@@ -92,4 +92,5 @@ void main(int argc, char** argv)
     printf("All tests have been executed, the program will now shut down. Thanks for trying out the project!\n\n");
 
     system("pause");
+    return 0;
 }
