@@ -8,13 +8,7 @@ void Debugger::AntiDebug::StartAntiDebugThread()
 
 inline bool Debugger::AntiDebug::_IsDebuggerPresent()
 {
-	if (IsDebuggerPresent()) //winapi
-	{
-		DebuggerMethodsDetected = DebuggerMethodsDetected | WINAPI_DEBUGGER;
-		return true;
-	}
-
-	return false;	
+	return IsDebuggerPresent();
 }
 
 bool Debugger::AntiDebug::_IsHardwareDebuggerPresent()
@@ -137,7 +131,6 @@ bool Debugger::AntiDebug::_IsDebuggerPresentHeapFlags()
 	return false;
 }
 
-
 void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 {
 	Debugger::AntiDebug* AntiDbg = reinterpret_cast<Debugger::AntiDebug*>(AD);
@@ -147,42 +140,53 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 
 	if (basicDbg)
 	{
-		AntiDbg->DebuggerMethodsDetected = AntiDbg->DebuggerMethodsDetected | WINAPI_DEBUGGER;
+		AntiDbg->DebuggerMethodsDetected.push_back(Detections::WINAPI_DEBUGGER);
 		printf("Found debugger: WINAPI_DEBUGGER!\n");
 	}
 
 	if (AntiDbg->_IsDebuggerPresent_PEB())
 	{
-		AntiDbg->DebuggerMethodsDetected = AntiDbg->DebuggerMethodsDetected | PEB_FLAG;
+		AntiDbg->DebuggerMethodsDetected.push_back(Detections::PEB_FLAG);
 		printf("Found debugger: PEB_FLAG!\n");
 	}
 
-	if (AntiDbg->_IsHardwareDebuggerPresent() || AntiDbg->_IsDebuggerPresentHeapFlags() || AntiDbg->_IsKernelDebuggerPresent())
+	if (AntiDbg->_IsHardwareDebuggerPresent())
 	{
-		printf("Debugger found.\n");
+		AntiDbg->DebuggerMethodsDetected.push_back(Detections::HARDWARE_REGISTERS);
+		printf("Debugger found: HARDWARE_REGISTERS.\n");
 	}
 
-	//if (AntiDbg->_IsDebuggerPresent_Int2c()) //was throwing false positives, need to re-check
-	//{
-	//	printf("Debugger found 0x2c.\n");
-	//}
+	if (AntiDbg->_IsDebuggerPresentHeapFlags())
+	{
+		AntiDbg->DebuggerMethodsDetected.push_back(Detections::HEAP_FLAG);
+		printf("Debugger found: HEAP_FLAG.\n");	
+	}
+
+	if (AntiDbg->_IsKernelDebuggerPresent())
+	{
+		AntiDbg->DebuggerMethodsDetected.push_back(Detections::KERNEL_DEBUGGER);
+		printf("Debugger found: KERNEL_DEBUGGER.\n");
+	}
 
 	if (AntiDbg->_IsDebuggerPresent_DbgBreak())
 	{
-		printf("Debugger found DebugBreak handled exception.\n");
+		AntiDbg->DebuggerMethodsDetected.push_back(Detections::INT3);
+		printf("Debugger found: DbgBreak Excpetion Handler\n");
 	}
 
 	if (AntiDbg->_IsDebuggerPresent_WaitDebugEvent())
 	{
+		AntiDbg->DebuggerMethodsDetected.push_back(Detections::DEBUG_EVENT);
 		printf("Debugger found WaitDebugEvent.\n");
 	}
 
 	if (AntiDbg->_IsDebuggerPresent_VEH())
 	{
+		AntiDbg->DebuggerMethodsDetected.push_back(Detections::VEH_DEBUGGER);
 		printf("VEH debugger found!\n");
 	}
 
-	if (AntiDbg->DebuggerMethodsDetected)
+	if (AntiDbg->DebuggerMethodsDetected.size() > 0)
 	{
 		printf("Atleast one method has caught a running debugger!\n");
 	}
@@ -343,22 +347,6 @@ bool Debugger::AntiDebug::_IsDebuggerPresent_DbgBreak()
 	}
 
 	return true;
-}
-
-int FilterException(int code, PEXCEPTION_POINTERS ex) {
-	
-	printf("filterException: %x, ex->ContextRecord->DebugControl: %llx\n", code, *ex->ExceptionRecord->ExceptionInformation);
-
-	bool bFound = false;
-
-	switch (code)
-	{
-		case 0xc0000005:
-
-		break;
-	};
-
-	return EXCEPTION_EXECUTE_HANDLER;
 }
 
 inline bool Debugger::AntiDebug::_IsDebuggerPresent_VEH()
