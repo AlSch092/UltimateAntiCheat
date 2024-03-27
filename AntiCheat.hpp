@@ -16,29 +16,44 @@
 #include "AntiDebug/AntiDebugger.hpp"
 #include "AntiTamper/Integrity.hpp"
 #include "Environment/Services.hpp"
-#include "AntiTamper/Obfuscation.hpp"
-#include "AntiTamper/SymbolicHash.hpp"
+#include "Obscure/Obfuscation.hpp"
+#include "Obscure/SymbolicHash.hpp"
 
-//extern "C" __forceinline bool MisleadingFunction(); //the goal here is to get the compiler to inline our function (although apparently not possible on x64) which breaks the static analysis of REing tools.
-//extern "C" void inline_test(); //using macros within masm file
-
-class AntiCheat //main class of the program, or 'hub'. contains all the detection methods
+class AntiCheat
 {
 public:
 
-	Process* GetProcessObject() { return this->_Proc; }
+	AntiCheat()
+	{
+		_Proc = new Process();
+		_AntiDebugger = new Debugger::AntiDebug();
+		integrityChecker = new Integrity();
+		_Services = new Services(false);
+		Client = new NetClient();
+	}
+
+	~AntiCheat()
+	{
+		delete _Proc;
+		delete _AntiDebugger;
+		delete integrityChecker;
+		delete _Services;
+		delete Client;
+	}
+
+	Process* GetProcessObject() { return this->_Proc; }	
 	Debugger::AntiDebug* GetAntiDebugger() { return this->_AntiDebugger; }
 	NetClient* GetNetworkClient() { return this->Client; }
+	Services* GetServiceManager() { return this->_Services; }
+	Integrity* GetIntegrityChecker() { return this->integrityChecker; }
 
 	inline void ShellcodeTests();
 
-	inline Integrity* GetIntegrityChecker() { return this->integrityChecker; }
-
-	bool AllVTableMembersPointToCurrentModule(void* pClass);
-	static bool IsVTableHijacked(void* pClass);
+	bool AllVTableMembersPointToCurrentModule(void* pClass); //needs fixing!
+	static bool IsVTableHijacked(void* pClass); //needs fixing
 
 	template<class T>
-	static inline void** GetVTableArray(T* pClass, int* pSize);
+	static inline void** GetVTableArray(T* pClass, int* pSize);  //needs fixing
 
 	static bool RemapAndCheckPages();
 
@@ -51,10 +66,9 @@ protected:
 
 private:
 	
-	Process* _Proc = new Process();
-	Debugger::AntiDebug* _AntiDebugger = new Debugger::AntiDebug();
-
-	Integrity* integrityChecker = new Integrity();
-
-	NetClient* Client = new NetClient();
+	Process* _Proc = NULL;
+	Debugger::AntiDebug* _AntiDebugger = NULL;
+	Integrity* integrityChecker = NULL;
+	Services* _Services = NULL;
+	NetClient* Client = NULL;
 };

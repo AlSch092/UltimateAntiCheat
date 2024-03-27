@@ -15,17 +15,16 @@
 
     There might be bugs or improvements to techniques, please raise a github issue if you'd like something in particular added or fixed
 
-    Author: Alex S. ,  github: alsch092 .
+    Author: AlSch092 @ Github.
 
 */
 
-#pragma comment(linker, "/ALIGN:0x10000") //for image remapping
+#pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper)
 
 #include "API/API.hpp"
-#include "./AntiTamper/SymbolicHash.hpp"
 
-void NTAPI __stdcall TLSCallback(PVOID DllHandle, DWORD dwReason, PVOID Reserved); //in a commercial setting our AC would be in a .dll and the game/process would have the Tls callback
-                                                                                   //todo: find way to insert bogus Tls callback into an EXE from a DLL at runtime (modify the directory ptrs to callbacks?)
+void NTAPI __stdcall TLSCallback(PVOID DllHandle, DWORD dwReason, PVOID Reserved);
+                                                                                  
 #ifdef _M_IX86
 #pragma comment (linker, "/INCLUDE:__tls_used")
 #pragma comment (linker, "/INCLUDE:__tls_callback")
@@ -90,7 +89,7 @@ void main(int argc, char** argv)
 
     API::Dispatch(AC, API::DispatchCode::INITIALIZE); //initialize AC
 
-    printf("All tests have been executed, the program will now shut down. Thanks for trying out the project!\n");
+    printf("All tests have been executed, the program will now shut down. Thanks for trying out the project!\n\n");
 
     system("pause");
 }

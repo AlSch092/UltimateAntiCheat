@@ -240,7 +240,7 @@ void AntiCheat::TestNetworkHeartbeat()
 
     PacketWriter* p = new PacketWriter(Packets::Opcodes::SC_HEARTBEAT, shellcode, sizeof(shellcode)); //write opcode onto packet, then buffer
 
-    if (!GetNetworkClient()->UnpackAndExecute(p)) //so that we don't need a server running, just simulate a packet. every heartbeat is encrypted using the hash of the last heartbeat/some server gen'd key to prevent emulation
+    if (!GetNetworkClient()->UnpackAndExecute(p)) //so that we don't need a server running, just simulate a packet. every heartbeat is encrypted using the hash of the last heartbeat/some server gen'd key to prevent external message injection
     {
         PacketWriter* packet_1 = new PacketWriter(Packets::Opcodes::SC_HEARTBEAT);
         uint64_t hash = GetNetworkClient()->GetResponseHashList().back();
