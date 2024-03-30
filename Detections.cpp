@@ -1,6 +1,11 @@
 //By AlSch092 @github
 #include "Detections.hpp"
 
+void Detections::StartMonitor()
+{
+
+}
+
 template<class T>
 static inline void** Detections::GetVTableArray(T* pClass, int* pSize)  //needs to be re-written : crashes on debug compilation
 {

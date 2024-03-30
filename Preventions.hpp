@@ -21,6 +21,8 @@ public:
 		delete _Proc;
 	}
 
+	int DeployBarrier(); //activate all
+
 	static bool RemapAndCheckPages();
 
 	Process* GetProcessObject() { return this->_Proc; }

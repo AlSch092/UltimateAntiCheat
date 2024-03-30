@@ -164,13 +164,12 @@
     <ClCompile Include="AntiDebug\AntiDebugger.cpp" />
     <ClCompile Include="AntiTamper\Integrity.cpp" />
     <ClCompile Include="AntiTamper\NAuthenticode.cpp" />
-    <ClCompile Include="AntiTamper\Obfuscation.cpp" />
     <ClCompile Include="AntiTamper\remap.cpp" />
-    <ClCompile Include="AntiTamper\SymbolicHash.cpp" />
     <ClCompile Include="API\API.cpp" />
     <ClCompile Include="Common\MD5.cpp" />
     <ClCompile Include="Common\SHA256.cpp" />
     <ClCompile Include="Common\Utility.cpp" />
+    <ClCompile Include="Detections.cpp" />
     <ClCompile Include="DllMain.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -178,6 +177,9 @@
     <ClCompile Include="Environment\Services.cpp" />
     <ClCompile Include="Network\NetClient.cpp" />
     <ClCompile Include="Network\Packets\Packets.cpp" />
+    <ClCompile Include="Obscure\Obfuscation.cpp" />
+    <ClCompile Include="Obscure\SymbolicHash.cpp" />
+    <ClCompile Include="Preventions.cpp" />
     <ClCompile Include="Process\Exports.cpp" />
     <ClCompile Include="Process\PEB.cpp" />
     <ClCompile Include="Process\Process.cpp" />
@@ -188,17 +190,20 @@
     <ClInclude Include="AntiDebug\AntiDebugger.hpp" />
     <ClInclude Include="AntiTamper\Integrity.hpp" />
     <ClInclude Include="AntiTamper\NAuthenticode.hpp" />
-    <ClInclude Include="AntiTamper\Obfuscation.hpp" />
     <ClInclude Include="AntiTamper\remap.hpp" />
-    <ClInclude Include="AntiTamper\SymbolicHash.hpp" />
     <ClInclude Include="API\API.hpp" />
+    <ClInclude Include="Common\Error.hpp" />
     <ClInclude Include="Common\MD5.hpp" />
     <ClInclude Include="Common\SHA256.hpp" />
     <ClInclude Include="Common\Utility.hpp" />
+    <ClInclude Include="Detections.hpp" />
     <ClInclude Include="Environment\Services.hpp" />
     <ClInclude Include="Network\NetClient.hpp" />
     <ClInclude Include="Network\Packets\Packets.hpp" />
     <ClInclude Include="Network\Packets\PacketWriter.hpp" />
+    <ClInclude Include="Obscure\Obfuscation.hpp" />
+    <ClInclude Include="Obscure\SymbolicHash.hpp" />
+    <ClInclude Include="Preventions.hpp" />
     <ClInclude Include="Process\Exports.hpp" />
     <ClInclude Include="Process\Memory\ntdll.h" />
     <ClInclude Include="Process\PEB.hpp" />

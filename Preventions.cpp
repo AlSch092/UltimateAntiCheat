@@ -1,6 +1,14 @@
 //By AlSch092 @github
 #include "Preventions.hpp"
 
+int Preventions::DeployBarrier()
+{
+    if (!RemapAndCheckPages())
+    {
+        return 0;
+    }
+}
+
 //this function re-maps the process memory and then checks if someone else has re-re-mapped it by querying page protections
 bool Preventions::RemapAndCheckPages()
 {
@@ -74,3 +82,4 @@ bool Preventions::RemapAndCheckPages()
 
     return remap_succeeded;
 }
+

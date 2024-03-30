@@ -23,6 +23,8 @@ public:
 	Services* GetServiceManager() { return this->_Services; }
 	Integrity* GetIntegrityChecker() { return this->integrityChecker; }
 
+	void StartMonitor(); //activate all
+
 	//Vtable checking
 	bool AllVTableMembersPointToCurrentModule(void* pClass); //needs fixing!
 	static bool IsVTableHijacked(void* pClass); //needs fixing
