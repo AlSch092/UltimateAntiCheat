@@ -5,6 +5,9 @@ int API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessName,
 	int errorCode = Error::OK;
 	bool isLicenseValid = false;
 
+	if (AC == NULL)
+		return Error::NULL_MEMORY_REFERENCE;
+
 	if (isServerAvailable) //for testing/teaching purposes, we can get rid of the need to a server as most GitHub users trying the project out won't have the server code
 	{
 		if (AC->GetNetworkClient()->Initialize(API::ServerEndpoint, API::ServerPort) != Error::OK) //initialize client is separate from license key auth
@@ -15,7 +18,7 @@ int API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessName,
 
 	if (Process::CheckParentProcess(parentProcessName)) //check parent process, kick out if bad
 	{
-		AC->GetProcessObject()->SetParentName(parentProcessName);
+		AC->GetBarrier()->GetProcessObject()->SetParentName(parentProcessName);
 		errorCode = Error::OK;
 	}
 	else //bad parent process detected, or parent process mismatch, shut down the program after reporting the error to the server
@@ -29,7 +32,7 @@ int API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessName,
 	return errorCode;
 }
 
-int API::SendHeartbeat(AntiCheat* AC)
+int API::SendHeartbeat(AntiCheat* AC) //todo: finish this!
 {
 	if (AC == NULL)
 		return Error::NULL_MEMORY_REFERENCE;
@@ -39,9 +42,31 @@ int API::SendHeartbeat(AntiCheat* AC)
 
 int API::LaunchBasicTests(AntiCheat* AC) //soon we'll split these tests into their own categories or routines, and add looping to any tests that need periodic checks such a debugger checks
 {
+	if (AC == NULL)
+		return Error::NULL_MEMORY_REFERENCE;
+
 	int errorCode = Error::OK;
 
-	AC->GetAntiDebugger()->StartAntiDebugThread();
+	AC->GetAntiDebugger()->StartAntiDebugThread(); //start debugger checks in a seperate thread
+
+	AC->GetMonitor()->GetServiceManager()->GetServiceModules(); //enumerate services
+
+	if (AC->GetMonitor()->GetServiceManager()->GetLoadedDrivers()) //enumerate drivers
+	{
+		printf("Driver enumeration complete!\n");
+		list<wstring> unsigned_drivers = AC->GetMonitor()->GetServiceManager()->GetUnsignedDrivers(); //unsigned drivers, take further action if needed
+	}
+
+	//BYTE* newPEBBytes = CopyAndSetPEB();
+
+	//if (newPEBBytes == NULL)
+	//{
+	//	printf("Failed to copy PEB!\n");
+	//	exit(0);
+	//}
+
+	//_MYPEB* ourPEB = (_MYPEB*)&newPEBBytes[0];
+	//printf("Being debugged (PEB Spoofing test): %d. Address of new PEB : %llx\n", ourPEB->BeingDebugged, (UINT64) &newPEBBytes[0]);
 
 	ULONG_PTR ImageBase = (ULONG_PTR)GetModuleHandle(NULL);
 
@@ -57,17 +82,15 @@ int API::LaunchBasicTests(AntiCheat* AC) //soon we'll split these tests into the
 		errorCode = Error::BAD_MODULE;
 	}
 
-	AC->TestNetworkHeartbeat();
+	AC->TestNetworkHeartbeat(); //tests executing a payload within server-fed data
 
-	AC->GetProcessObject()->SetElevated(Process::IsProcessElevated()); //this checks+sets our variable, it does not set our process to being elevated
-
-	if (!AC->GetProcessObject()->GetProgramSections("UltimateAnticheat.exe")) //we can stop a routine like this from working if we patch NumberOfSections to 0
+	if (!AC->GetBarrier()->GetProcessObject()->GetProgramSections("UltimateAnticheat.exe")) //we can stop a routine like this from working if we patch NumberOfSections to 0
 	{
 		printf("Failed to parse program sections?\n");
 		errorCode = Error::NULL_MEMORY_REFERENCE;
 	}
 
-	if (!Process::CheckParentProcess(AC->GetProcessObject()->GetParentName())) //parent process check, the parent process would normally be set using our API methods
+	if (!Process::CheckParentProcess(AC->GetBarrier()->GetProcessObject()->GetParentName())) //parent process check, the parent process would normally be set using our API methods
 	{
 		wprintf(L"Parent process was not %s! hekker detected!\n", API::whitelistedParentProcess); //sometimes people will launch a game from their own process, which we can easily detect if they haven't spoofed it
 		errorCode = Error::PARENT_PROCESS_MISMATCH;
@@ -89,18 +112,18 @@ int API::LaunchBasicTests(AntiCheat* AC) //soon we'll split these tests into the
 	//	printf("VTable of Anticheat has been compromised/hooked.\n");
 	//}
 
-	if (!AC->GetProcessObject()->ProtectProcess()) //todo: find way to stop process attaching or OpenProcess succeeding
+	if (!AC->GetBarrier()->GetProcessObject()->ProtectProcess()) //todo: find way to stop process attaching or OpenProcess succeeding
 	{
 		printf("Could not protect process.\n");
 	}
 
-	AntiCheat::RemapAndCheckPages(); //remapping method
+	Preventions::RemapAndCheckPages(); //remapping method
 
 	return errorCode;
 }
 
 //meant to be called by process hosting the anti-cheat module - interface between AC and game
-int __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code) //todo: finish this
+int __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code)
 {
 	int errorCode = 0;
 
@@ -112,6 +135,8 @@ int __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code) //todo
 
 			if (errorCode == Error::OK)
 			{
+				isPostInitialization = true;
+
 				if (LaunchBasicTests(AC) != Error::OK)
 				{
 					printf("At least one technique experienced abnormal behavior when launching tests!\n");
@@ -124,20 +149,12 @@ int __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code) //todo
 			}
 		break;
 
-		case FAILED_INITIALIZE:
-
-			break;
-
-		case CLIENT_EXIT:
-
-			break;
-
-		case CLIENT_DISCONNECT:
-
-			break;
-
 		case HEARTBEAT:
 			errorCode = SendHeartbeat(AC);
+			break;
+
+		default:
+			printf("[INFO] Unrecognized dispatch code @ API::Dispatch: %d\n", code);
 			break;
 	};
 
