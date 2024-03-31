@@ -2,7 +2,7 @@
 #pragma once
 #include "Process/Process.hpp"
 #include "Process/Exports.hpp" 
-#include "Process/Memory/remap.hpp"
+#include "AntiTamper/remap.hpp"
 #include "Obscure/Obfuscation.hpp"
 #include "Obscure/SymbolicHash.hpp"
 #include "Common/Error.hpp"
