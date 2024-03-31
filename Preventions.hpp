@@ -27,6 +27,8 @@ public:
 
 	Process* GetProcessObject() { return this->_Proc; }
 
+	bool IsPreventingThreadCreation = false; //used in TLS callback if we want to supress or track new threads
+
 private:
 	Process* _Proc = NULL;
 };

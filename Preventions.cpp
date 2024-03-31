@@ -1,9 +1,9 @@
 //By AlSch092 @github
 #include "Preventions.hpp"
 
-int Preventions::DeployBarrier()
+int Preventions::DeployBarrier() 
 {
-    if (!RemapAndCheckPages())
+    if (!RemapAndCheckPages()) //TODO: finish this
     {
         return 0;
     }
