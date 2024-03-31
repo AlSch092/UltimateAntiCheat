@@ -45,7 +45,13 @@ int API::LaunchBasicTests(AntiCheat* AC) //soon we'll split these tests into the
 	if (AC == NULL)
 		return Error::NULL_MEMORY_REFERENCE;
 
+	ULONG_PTR ImageBase = (ULONG_PTR)GetModuleHandle(NULL);
+
 	int errorCode = Error::OK;
+
+	printf("[INFO] Starting API::LaunchBasicTests\n");
+
+	AC->GetMonitor()->StartMonitor();
 
 	AC->GetAntiDebugger()->StartAntiDebugThread(); //start debugger checks in a seperate thread
 
@@ -57,24 +63,22 @@ int API::LaunchBasicTests(AntiCheat* AC) //soon we'll split these tests into the
 		list<wstring> unsigned_drivers = AC->GetMonitor()->GetServiceManager()->GetUnsignedDrivers(); //unsigned drivers, take further action if needed
 	}
 
-	//BYTE* newPEBBytes = CopyAndSetPEB();
+	BYTE* newPEBBytes = CopyAndSetPEB();
 
-	//if (newPEBBytes == NULL)
-	//{
-	//	printf("Failed to copy PEB!\n");
-	//	exit(0);
-	//}
+	if (newPEBBytes == NULL)
+	{
+		printf("Failed to copy PEB!\n");
+		exit(0);
+	}
 
-	//_MYPEB* ourPEB = (_MYPEB*)&newPEBBytes[0];
-	//printf("Being debugged (PEB Spoofing test): %d. Address of new PEB : %llx\n", ourPEB->BeingDebugged, (UINT64) &newPEBBytes[0]);
-
-	ULONG_PTR ImageBase = (ULONG_PTR)GetModuleHandle(NULL);
+	_MYPEB* ourPEB = (_MYPEB*)&newPEBBytes[0];
+	printf("Being debugged (PEB Spoofing test): %d. Address of new PEB : %llx\n", ourPEB->BeingDebugged, (UINT64) &newPEBBytes[0]);
 
 	if (Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryA", "ANTI-INJECT1") &&   ///prevents DLL injection from any method relying on calling LoadLibrary in the host process.
 		Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryW", "ANTI-INJECT2") &&
 		Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExA", "ANTI-INJECT3") &&
 		Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExW", "ANTI-INJECT4"))
-		printf("Wrote over LoadLibrary export names successfully!\n");
+			printf("Wrote over LoadLibrary export names successfully!\n");
 
 	if (Integrity::IsUnknownDllPresent()) //authenticode winapis
 	{
@@ -84,7 +88,7 @@ int API::LaunchBasicTests(AntiCheat* AC) //soon we'll split these tests into the
 
 	AC->TestNetworkHeartbeat(); //tests executing a payload within server-fed data
 
-	if (!AC->GetBarrier()->GetProcessObject()->GetProgramSections("UltimateAnticheat.exe")) //we can stop a routine like this from working if we patch NumberOfSections to 0
+	if (!AC->GetBarrier()->GetProcessObject()->PrintProgramSections("UltimateAnticheat.exe")) //we can stop a routine like this from working if we patch NumberOfSections to 0
 	{
 		printf("Failed to parse program sections?\n");
 		errorCode = Error::NULL_MEMORY_REFERENCE;
@@ -96,8 +100,6 @@ int API::LaunchBasicTests(AntiCheat* AC) //soon we'll split these tests into the
 		errorCode = Error::PARENT_PROCESS_MISMATCH;
 	}
 
-	AC->TestMemoryIntegrity(); //check program headers + peb to make sure nothing was tampered
-
 	//SymbolicHash::CreateThread_Hash(0, 0, (LPTHREAD_START_ROUTINE)&TestFunction, 0, 0, 0); //shows how we can call CreateThread without directly calling winapi, we call our pointer instead which then invokes createthread
 
 	std::wstring newModuleName = L"new_name";
@@ -107,17 +109,15 @@ int API::LaunchBasicTests(AntiCheat* AC) //soon we'll split these tests into the
 		wprintf(L"Changed module name to %s!\n", newModuleName.c_str());
 	}
 
-	//if (AntiCheat::IsVTableHijacked((void*)AC)) //this routine needs to be re-written and checked, stay tuned for the next update
-	//{
-	//	printf("VTable of Anticheat has been compromised/hooked.\n");
-	//}
-
 	if (!AC->GetBarrier()->GetProcessObject()->ProtectProcess()) //todo: find way to stop process attaching or OpenProcess succeeding
 	{
 		printf("Could not protect process.\n");
 	}
 
-	Preventions::RemapAndCheckPages(); //remapping method
+	if (Preventions::RemapAndCheckPages()) //remapping method
+	{
+		printf("Remap was successful: you can now no longer modify memory or change page protections!\n");
+	}
 
 	return errorCode;
 }
