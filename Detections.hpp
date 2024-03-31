@@ -41,6 +41,8 @@ public:
 	void SetCheater(BOOL cheating) { this->CheaterWasDetected = cheating; }
 	BOOL IsUserCheater() { return this->CheaterWasDetected; }
 
+	HANDLE GetMonitorThread() { return this->MonitorThread; }
+
 	void StartMonitor()
 	{
 		MonitorThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, 0, &MonitorThreadId);

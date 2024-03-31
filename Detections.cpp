@@ -37,20 +37,21 @@ void Detections::Monitor(LPVOID thisPtr)
         if (s->name == ".text")
         {
             CachedSectionAddress = s->address + ModuleAddr;
-            CachedSectionSize = s->size - 100; //subtract 32 bytes to prevent overflowing into other sections with changing memory
+            CachedSectionSize = 0x1000;//s->size - 1000;  //todo: fix size
         }
     }
   
     bool Monitoring = true;
+    const int MonitorLoopMilliseconds = 5000;
 
     while (Monitoring)
     {
         if (Monitor->CheckSectionHash(CachedSectionAddress, CachedSectionSize)) //track the .text section for changes
         {
-            Monitor->SetCheater(true); //stop monitoring and send message back to home server telling that we've found cheats.
+            Monitor->SetCheater(true); //report back to server that someone's cheating
         }
 
-        Sleep(5000);
+        Sleep(MonitorLoopMilliseconds);
     }
 
     printf("[INFO] Stopping  Detections::Monitor \n");
@@ -72,7 +73,8 @@ list<Module::Section*> Detections::SetSectionHash(const char* module, const char
     {
         if (s->name == sectionName)
         {
-            list<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)s->address + ModuleAddr, s->size - 100);
+            //list<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)s->address + ModuleAddr, s->size - 1000);
+            list<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)s->address + ModuleAddr, 0x1000); //fix this 
 
             if (hashes.size() > 0)
             {
