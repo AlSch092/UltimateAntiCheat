@@ -1,22 +1,36 @@
 #include "Integrity.hpp"
 
-//Call chain: GetHash() to get a hash list of module, then later call Check with the result from GetHash originally.
 //returns false if any static memory is modified (assuming we pass in moduleBase and sizeOfModule.
-bool Integrity::Check(uint64_t Address, int nBytes, std::list<uint64_t>* hashList)
+bool Integrity::Check(uint64_t Address, int nBytes, std::list<uint64_t> hashList)
 {
-	list<uint64_t>* hashes = GetMemoryHash(Address, nBytes);
+	bool hashesMatch = true;
 
-	bool b_perm = std::is_permutation(hashList->begin(), hashList->end(), hashes->begin()); //check if our ordered hash list is the same as the one we compute above
+	list<uint64_t> hashes = GetMemoryHash(Address, nBytes);
 
-	delete hashes;
+	auto it1 = hashes.begin();
+	auto it2 = hashList.begin();
 
-	return b_perm;
+	while (it1 != hashes.end() && it2 != hashList.end())  //iterate both lists at same time, compare each element
+	{
+		if (it1 == hashes.end())
+			break;
+
+		if (*it1 != *it2)
+		{
+			hashesMatch = false;
+			break;
+		}
+
+		++it1;		++it2;
+	}
+
+	return hashesMatch;
 }
 
 //we can build an array here at some memory location with nBytes, then SHA256 
-list<uint64_t>* Integrity::GetMemoryHash(uint64_t Address, int nBytes)
+list<uint64_t> Integrity::GetMemoryHash(uint64_t Address, int nBytes)
 {
-	std::list<uint64_t>* hashList = new list<uint64_t>();
+	std::list<uint64_t> hashList;
 
 	byte* arr = new byte[nBytes];
 
@@ -31,7 +45,7 @@ list<uint64_t>* Integrity::GetMemoryHash(uint64_t Address, int nBytes)
 		sha.update(&arr[i], 32);
 		digest = sha.digest();
 		digestCache += *(UINT64*)digest + i;
-		hashList->push_back(digestCache);
+		hashList.push_back(digestCache);
 		delete digest;
 	}
 
@@ -39,12 +53,9 @@ list<uint64_t>* Integrity::GetMemoryHash(uint64_t Address, int nBytes)
 	return hashList;
 }
 
-void Integrity::SetMemoryHashList(std::list<uint64_t>* hList)
+void Integrity::SetMemoryHashList(std::list<uint64_t> hList)
 {
-	if (this->_MemorySectionHashes == nullptr)
-		this->_MemorySectionHashes = new list<uint64_t>();
-
-	this->_MemorySectionHashes->assign(hList->begin(), hList->end());
+	this->_MemorySectionHashes.assign(hList.begin(), hList.end());
 }
 
 list<wstring> Integrity::GetLoadedDLLs()
@@ -78,9 +89,8 @@ list<uint64_t>* Integrity::GetDllHashes(list<wchar_t*> LoadedDlls)
 
 	for (auto dll : LoadedDlls)
 	{
-		list<uint64_t>* dllHashes = Integrity::GetMemoryHash((uint64_t)GetModuleHandleW(dll), 0x1000);
+		list<uint64_t> dllHashes = Integrity::GetMemoryHash((uint64_t)GetModuleHandleW(dll), 0x1000);
 		//HashesList->push_back(dllHashes[0]);
-		delete dllHashes;
 	}
 	
 	return HashesList; //todo: finish this routine
@@ -115,9 +125,8 @@ bool Integrity::DisableDynamicCode()
 
 	dynamicCodePolicy.ProhibitDynamicCode = 1; // Enable dynamic code restriction
 
-	if (!SetProcessMitigationPolicy((PROCESS_MITIGATION_POLICY)2,
-		&dynamicCodePolicy,
-		sizeof(dynamicCodePolicy))) {
+	if (!SetProcessMitigationPolicy((PROCESS_MITIGATION_POLICY)2, &dynamicCodePolicy, sizeof(dynamicCodePolicy))) 
+	{ 
 		fprintf(stderr, "Failed to set process mitigation policy. Error code: %lu\n", GetLastError());
 		return false;
 	}
@@ -125,18 +134,24 @@ bool Integrity::DisableDynamicCode()
 	return true;
 }
 
-bool Integrity::DisableUnsignedCode() //stops unsigned dlls from being loaded! Gives 'Bad Image' error (0xc00000428)
+bool Integrity::DisableUnsignedCode() //stop some unsigned dlls from being loaded
 {
 	_PROCESS_MITIGATION_BINARY_SIGNATURE_POLICY signPolicy = { 0 };
 
 	signPolicy.MicrosoftSignedOnly = true;
 
-	if (!SetProcessMitigationPolicy((PROCESS_MITIGATION_POLICY)8,
-		&signPolicy,
-		sizeof(signPolicy))) {
+	if (!SetProcessMitigationPolicy((PROCESS_MITIGATION_POLICY)8, &signPolicy, sizeof(signPolicy)))
+	{
 		fprintf(stderr, "Failed to set process mitigation policy. Error code: %lu\n", GetLastError());
 		return false;
 	}
 
 	return true;
+}
+
+bool Integrity::IsFunctionHooked(const char* module, const char* name) //check for jmp's on the first byte of a function, best used on WINAPI
+{
+
+
+	return false;
 }
