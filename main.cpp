@@ -46,10 +46,6 @@ PIMAGE_TLS_CALLBACK _tls_callback = TLSCallback;
 
 using namespace std;
 
-extern "C" uint64_t shellxor(); //test routine for generating shellcode, can be removed when we are done messing around with shellcode
-
-bool PreventingThreadCreation = false;
-
 void NTAPI __stdcall TLSCallback(PVOID DllHandle, DWORD dwReason, PVOID Reserved)
 {
     switch (dwReason)
@@ -61,8 +57,8 @@ void NTAPI __stdcall TLSCallback(PVOID DllHandle, DWORD dwReason, PVOID Reserved
         case DLL_THREAD_ATTACH:
             printf("New thread spawned: %d\n", GetCurrentThreadId());
             
-            if(PreventingThreadCreation)
-                ExitThread(0); //we can stop DLL injecting + DLL debuggers (such as VEH debugger) this way, but make sure you're handling your threads carefully
+            //if (PreventingThreadCreation)
+            //    ExitThread(0); //we can stop DLL injecting + DLL debuggers (such as VEH debugger) this way, but make sure you're handling your threads carefully
             break;
 
         case DLL_THREAD_DETACH:
@@ -84,9 +80,11 @@ int main(int argc, char** argv)
 
     AntiCheat* AC = new AntiCheat();
 
-    API::Dispatch(AC, API::DispatchCode::INITIALIZE); //initialize AC
+    API::Dispatch(AC, API::DispatchCode::INITIALIZE); //initialize AC -> right now basic tests are run within this call 
 
     printf("All tests have been executed, the program will now loop using its detection methods. Thanks for your interest in the project!\n\n");
+
+    API::Dispatch(AC, API::DispatchCode::CLIENT_EXIT); //clean up memory & threads
 
     system("pause");
     return 0;
