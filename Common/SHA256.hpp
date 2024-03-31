@@ -15,7 +15,6 @@ public:
 	uint8_t* digest();
 
 	static std::string toString(const uint8_t* digest);
-	static uint64_t GetStackedMultiple(const uint8_t* digest);
 
 private:
 	uint8_t  m_data[64];

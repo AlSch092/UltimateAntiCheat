@@ -157,19 +157,3 @@ std::string SHA256::toString(const uint8_t* digest) {
 
 	return s.str();
 }
-
-uint64_t SHA256::GetStackedMultiple(const uint8_t* digest) {
-
-	uint64_t stackedMultiple = 0;
-
-	memcpy(&stackedMultiple, (void*)&digest[0], sizeof(uint8_t) * 4);
-	printf("first: %llX\n", stackedMultiple);
-
-	for (uint8_t i = 0; i < 32; i++) {
-		stackedMultiple = stackedMultiple * digest[i];
-
-	}
-
-	printf("%llX\n", stackedMultiple);
-	return stackedMultiple;
-}
