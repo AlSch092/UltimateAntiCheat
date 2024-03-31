@@ -130,7 +130,7 @@ BOOL Services::IsDriverSigned(wstring driverPath)
 
     if (lStatus != ERROR_SUCCESS)
     {
-        printf("WinVerifyTrust failed with error code %ld\n", lStatus);
+        //printf("WinVerifyTrust failed with error code %ld\n", lStatus);
         return FALSE;
     }
 
@@ -154,7 +154,7 @@ list<wstring> Services::GetUnsignedDrivers()
     {
         if (!IsDriverSigned(driverPath))
         {
-            wprintf(L"[WARNING] Found unsigned driver: %s\n", driverPath.c_str());
+            wprintf(L"[WARNING] Found unsigned or outdated certificate on driver: %s\n", driverPath.c_str());
             unsignedDrivers.push_back(driverPath);
         }
         else
