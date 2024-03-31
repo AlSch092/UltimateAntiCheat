@@ -66,25 +66,6 @@ uint32_t Process::GetMemorySize() //returns uint32_t value of combined byte size
     return (uint32_t)ulBaseSize;
 }
 
-/*
-Routine to prevent DLL injection and possibly memory writing
-..One way of doing this is hooking/patching loadlibrary and other module related routines, this is easily worked around though
-*/
-bool Process::ProtectProcess()
-{
-    if (this->GetBaseAddress(L"UltimateAnticheat.exe")) //todo: finish this!
-    {
-        uint32_t size = this->GetMemorySize();
-    }
-    else
-    {
-        printf("Could not protect the process at run time!\n");
-        return false;
-    }
-
-    return true;
-}
-
 //returns TRUE if our parameter desiredParent is the same process name as our parent process ID
 BOOL Process::CheckParentProcess(wstring desiredParent)
 {
@@ -111,37 +92,6 @@ BOOL Process::IsProcessElevated() {
     }
 
     return fRet;
-}
-
-bool Process::ProtectProcessMemory(DWORD processId)
-{
-    HANDLE processHandle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, processId);
-    
-    if (processHandle == NULL)  
-        return false;
-    
-    SYSTEM_INFO systemInfo;
-    GetSystemInfo(&systemInfo);
-
-    MEMORY_BASIC_INFORMATION memInfo;
-    LPVOID address = systemInfo.lpMinimumApplicationAddress;
-    while (VirtualQueryEx(processHandle, address, &memInfo, sizeof(memInfo)) == sizeof(memInfo))
-    {
-        if (memInfo.State == MEM_COMMIT && memInfo.Type == MEM_PRIVATE)
-        {
-            DWORD oldProtect;
-            if (VirtualProtectEx(processHandle, memInfo.BaseAddress, memInfo.RegionSize, PAGE_READONLY, &oldProtect) == FALSE)
-            {
-                CloseHandle(processHandle);
-                return false;
-            }
-        }
-
-        address = (LPVOID)((DWORD_PTR)memInfo.BaseAddress + memInfo.RegionSize);
-    }
-
-    CloseHandle(processHandle);
-    return true;
 }
 
 bool Process::HasExportedFunction(string dllName, string functionName)

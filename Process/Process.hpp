@@ -48,7 +48,6 @@ public:
 	uint64_t GetBaseAddress(const wchar_t* module);
 	uint32_t GetMemorySize();
 
-	bool ProtectProcess(); 
 	bool PrintProgramSections(string module);
 
 	static list<Module::Section*> GetSections(string module);
@@ -65,8 +64,6 @@ public:
 
 	void SetParentName(wstring parentName) { this->_ParentProcessName = parentName; }
 	void SetParentId(uint32_t id) { this->_ParentProcessId = id; }
-
-	bool ProtectProcessMemory(DWORD processId);
 
 	//set of routines to patch PEB over @ runtime, combining enough of these will break certain analysis tools
 	static bool ChangeModuleName(wchar_t* szModule, wchar_t* newName);
