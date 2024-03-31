@@ -20,7 +20,7 @@ public:
 	AntiCheat()
 	{	
 		_AntiDebugger = new Debugger::AntiDebug();
-		Monitor = new Detections();
+		Monitor = new Detections(false);
 		Barrier = new Preventions();
 		Client = new NetClient();
 	}
@@ -39,9 +39,6 @@ public:
 	Detections* GetMonitor() { return this->Monitor; }
 
 	void TestNetworkHeartbeat();
-	bool TestMemoryIntegrity();
-
-	bool IsPreventingThreadCreation = false; //used in TLS callback
 
 private:
 	

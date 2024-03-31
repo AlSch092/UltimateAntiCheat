@@ -26,32 +26,3 @@ void AntiCheat::TestNetworkHeartbeat()
     delete p;
 }
 
-bool AntiCheat::TestMemoryIntegrity() //Currently only scans the program headers/peb (first 0x1000 bytes) -> add parameters for startAddress + size to scan
-{
-    uint64_t module = (uint64_t)GetModuleHandleW(NULL);
-
-    if (!module)
-    {
-        printf("Failed to get current module! %d\n", GetLastError());
-        return false;
-    }
-
-    //DWORD moduleSize = AC->GetProcessObject()->GetMemorySize();
-    DWORD moduleSize = 0x1000; //TODO: Fix this routine such that all regions of the process are mapped -> Scanning contiguous memory after first 0x1000 bytes will throw read exceptions 
-
-    Monitor->GetIntegrityChecker()->SetMemoryHashList(Monitor->GetIntegrityChecker()->GetMemoryHash((uint64_t)module, moduleSize)); //cache the list of hashes we get from the process .text section
-
-    MessageBoxA(0, "Patch over process header memory here using an external program to test integrity checking!", 0, 0);
-
-    if (Monitor->GetIntegrityChecker()->Check((uint64_t)module, moduleSize, Monitor->GetIntegrityChecker()->GetMemoryHashList())) //compares hash to one gathered previously
-    {
-        printf("Hashes match: Program headers appear genuine.\n");
-    }
-    else
-    {
-        printf("Program is modified!\n");
-        return true;
-    }
-
-    return false;
-}
