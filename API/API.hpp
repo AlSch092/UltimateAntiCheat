@@ -25,12 +25,14 @@ namespace API
 	static const wchar_t* whitelistedParentProcess = L"explorer.exe";
 #endif
 
-	int Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessName, bool isServerConnected);
-	int LaunchBasicTests(AntiCheat* AC);
+	Error Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessName, bool isServerConnected);
+	Error Cleanup(AntiCheat* AC);
 	
-	int SendHeartbeat(AntiCheat* AC);
+	Error LaunchBasicTests(AntiCheat* AC);
 	
-	int __declspec(dllexport) Dispatch(AntiCheat* AC, DispatchCode code);
+	Error SendHeartbeat(AntiCheat* AC);
+	
+	Error __declspec(dllexport) Dispatch(AntiCheat* AC, DispatchCode code);
 }
 
 

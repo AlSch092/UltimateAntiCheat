@@ -1,8 +1,8 @@
 #include "API.hpp"
 
-int API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessName, bool isServerAvailable)
+Error API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessName, bool isServerAvailable)
 {
-	int errorCode = Error::OK;
+	Error errorCode = Error::OK;
 	bool isLicenseValid = false;
 
 	if (AC == NULL)
@@ -32,7 +32,7 @@ int API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessName,
 	return errorCode;
 }
 
-int API::SendHeartbeat(AntiCheat* AC) //todo: finish this!
+Error API::SendHeartbeat(AntiCheat* AC) //todo: finish this!
 {
 	if (AC == NULL)
 		return Error::NULL_MEMORY_REFERENCE;
@@ -40,14 +40,30 @@ int API::SendHeartbeat(AntiCheat* AC) //todo: finish this!
 	return Error::OK;
 }
 
-int API::LaunchBasicTests(AntiCheat* AC) //soon we'll split these tests into their own categories or routines, and add looping to any tests that need periodic checks such a debugger checks
+Error API::Cleanup(AntiCheat* AC)
+{
+	if (AC == nullptr)
+		return Error::NULL_MEMORY_REFERENCE;
+
+	if (AC->GetAntiDebugger()->GetDetectionThread() != NULL)
+		TerminateThread(AC->GetAntiDebugger()->GetDetectionThread(), 0);
+
+	if (AC->GetMonitor()->GetMonitorThread() != NULL)
+		TerminateThread(AC->GetMonitor()->GetMonitorThread(), 0);
+	
+	delete AC;
+
+	return Error::OK;
+}
+
+Error API::LaunchBasicTests(AntiCheat* AC) //soon we'll split these tests into their own categories or routines, and add looping to any tests that need periodic checks such a debugger checks
 {
 	if (AC == NULL)
 		return Error::NULL_MEMORY_REFERENCE;
 
 	ULONG_PTR ImageBase = (ULONG_PTR)GetModuleHandle(NULL);
 
-	int errorCode = Error::OK;
+	Error errorCode = Error::OK;
 
 	printf("[INFO] Starting API::LaunchBasicTests\n");
 
@@ -123,14 +139,14 @@ int API::LaunchBasicTests(AntiCheat* AC) //soon we'll split these tests into the
 }
 
 //meant to be called by process hosting the anti-cheat module - interface between AC and game
-int __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code)
+Error __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code)
 {
-	int errorCode = 0;
+	Error errorCode = Error::OK;
 
 	switch (code)
 	{
 		case INITIALIZE:
-
+		{
 			errorCode = Initialize(AC, "LICENSE-ABC123", whitelistedParentProcess, false); //if explorer.exe isn't our parent process, shut 'er down!
 
 			if (errorCode == Error::OK)
@@ -147,14 +163,31 @@ int __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code)
 				printf("Couldn't start up, make sure server is running and re-try\n");
 				return Error::CANT_CONNECT;
 			}
-		break;
+		}		break;
 
 		case HEARTBEAT:
+		{
 			errorCode = SendHeartbeat(AC);
-			break;
+		}	break;
+
+		case CLIENT_EXIT:
+		{
+			Error err = Cleanup(AC);
+
+			if (err == Error::OK) 			//clean up memory, shut down any threads
+			{
+				printf("[INFO] Cleanup successful. Shutting down program.\n");
+				errorCode = Error::OK;
+			}
+			else
+			{
+				printf("[ERROR] Cleanup unsuccessful. Shutting down program.\n");
+				errorCode = Error::NULL_MEMORY_REFERENCE;
+			}
+		}			break;
 
 		default:
-			printf("[INFO] Unrecognized dispatch code @ API::Dispatch: %d\n", code);
+			printf("[WARNING] Unrecognized dispatch code @ API::Dispatch: %d\n", code);
 			break;
 	};
 
