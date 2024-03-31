@@ -1,3 +1,4 @@
+//By AlSch092 @github
 #pragma once
 #include "../Process/Process.hpp"
 

@@ -1,3 +1,4 @@
+//By AlSch092 @github
 #include "AntiDebugger.hpp"
 
 void Debugger::AntiDebug::StartAntiDebugThread()
@@ -133,6 +134,8 @@ bool Debugger::AntiDebug::_IsDebuggerPresentHeapFlags()
 
 void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 {
+	printf("[INFO] Starting Debugger detection thread with Id: %d\n", GetCurrentThreadId());
+
 	Debugger::AntiDebug* AntiDbg = reinterpret_cast<Debugger::AntiDebug*>(AD);
 
 	//Basic winAPI check
