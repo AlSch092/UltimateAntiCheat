@@ -125,11 +125,6 @@ Error API::LaunchBasicTests(AntiCheat* AC) //soon we'll split these tests into t
 		wprintf(L"Changed module name to %s!\n", newModuleName.c_str());
 	}
 
-	if (!AC->GetBarrier()->GetProcessObject()->ProtectProcess()) //todo: find way to stop process attaching or OpenProcess succeeding
-	{
-		printf("Could not protect process.\n");
-	}
-
 	if (Preventions::RemapAndCheckPages()) //remapping method
 	{
 		printf("Remap was successful: you can now no longer modify memory or change page protections!\n");
