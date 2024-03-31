@@ -84,12 +84,9 @@ int main(int argc, char** argv)
 
     AntiCheat* AC = new AntiCheat();
 
-    //AC->IsPreventingThreadCreation = true; //uncommenting this will prevent some of our tests from working properly, use at your discretion 
-    PreventingThreadCreation = AC->IsPreventingThreadCreation;
-
     API::Dispatch(AC, API::DispatchCode::INITIALIZE); //initialize AC
 
-    printf("All tests have been executed, the program will now shut down. Thanks for trying out the project!\n\n");
+    printf("All tests have been executed, the program will now loop using its detection methods. Thanks for your interest in the project!\n\n");
 
     system("pause");
     return 0;
