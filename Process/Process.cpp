@@ -8,15 +8,12 @@ uint32_t Process::GetThisProcessId()
 	return this->_ProcessId;
 }
 
-uint64_t Process::GetBaseAddress()
+uint64_t Process::GetBaseAddress(const wchar_t* module)
 {
-    TCHAR szProcessName[MAX_PATH] = TEXT("UltimateAnticheat.exe");
-    wstring processName = L"UltimateAnticheat.exe";
+    wstring processName = module;
     DWORD ProcessId = GetCurrentProcessId();
 
-    HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION |
-        PROCESS_VM_READ,
-        FALSE, ProcessId);
+    HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, ProcessId);
 
     if (NULL != hProcess)
     {
@@ -26,9 +23,9 @@ uint64_t Process::GetBaseAddress()
         if (EnumProcessModulesEx(hProcess, &hMod, sizeof(hMod),
             &cbNeeded, LIST_MODULES_32BIT | LIST_MODULES_64BIT))
         {
-            GetModuleBaseName(hProcess, hMod, szProcessName,
-                sizeof(szProcessName) / sizeof(TCHAR));
-            if (!_tcsicmp(processName.c_str(), szProcessName)) {
+            GetModuleBaseName(hProcess, hMod, (LPWSTR)processName.c_str(), (DWORD)processName.length() * 2);
+            if (!_tcsicmp(processName.c_str(), processName.c_str()))
+            {
                 wprintf(L"Base address of %s: %llx\n", processName.c_str(), (UINT64)hMod);
                 CloseHandle(hProcess);
                 return (uint64_t)hMod;
@@ -75,7 +72,7 @@ Routine to prevent DLL injection and possibly memory writing
 */
 bool Process::ProtectProcess()
 {
-    if (this->GetBaseAddress()) //todo: finish this!
+    if (this->GetBaseAddress(L"UltimateAnticheat.exe")) //todo: finish this!
     {
         uint32_t size = this->GetMemorySize();
     }
@@ -187,7 +184,7 @@ bool Process::HasExportedFunction(string dllName, string functionName)
     return bFound;
 }
 
-bool Process::GetProgramSections(string module)
+bool Process::PrintProgramSections(string module)
 {
     PIMAGE_SECTION_HEADER sectionHeader;
     HINSTANCE hInst = GetModuleHandleA(module.c_str());
@@ -224,6 +221,48 @@ bool Process::GetProgramSections(string module)
     }
 
     return true;
+}
+
+list<Module::Section*> Process::GetSections(string module)
+{
+    list<Module::Section*> Sections;
+
+    PIMAGE_SECTION_HEADER sectionHeader;
+    HINSTANCE hInst = GetModuleHandleA(module.c_str());
+    PIMAGE_DOS_HEADER pDoH;
+    PIMAGE_NT_HEADERS64 pNtH;
+
+    pDoH = (PIMAGE_DOS_HEADER)(hInst);
+
+    if (pDoH == NULL || hInst == NULL)
+    {
+        printf("[ERROR] PIMAGE_DOS_HEADER or hInst was NULL at GetProgramSections\n");
+        return Sections;
+    }
+
+    pNtH = (PIMAGE_NT_HEADERS64)((PIMAGE_NT_HEADERS64)((PBYTE)hInst + (DWORD)pDoH->e_lfanew));
+    sectionHeader = IMAGE_FIRST_SECTION(pNtH);
+
+    int nSections = pNtH->FileHeader.NumberOfSections;
+
+    for (int i = 0; i < nSections; i++)
+    {
+        Module::Section* s = new Module::Section();
+
+        s->address = sectionHeader[i].VirtualAddress;
+        s->name = string((const char*)sectionHeader[i].Name);
+        s->Misc.PhysicalAddress = sectionHeader[i].Misc.PhysicalAddress;
+        s->Misc.VirtualSize = sectionHeader[i].Misc.VirtualSize;
+        s->size = s->Misc.VirtualSize;
+        s->PointerToRawData = sectionHeader[i].PointerToRawData;
+        s->PointerToRelocations = sectionHeader[i].PointerToRelocations;
+        s->NumberOfLinenumbers = sectionHeader[i].NumberOfLinenumbers;
+        s->PointerToLinenumbers = sectionHeader[i].PointerToLinenumbers;
+
+        Sections.push_back(s);
+    }
+
+    return Sections;
 }
 
 bool Process::ChangeModuleName(wchar_t* szModule, wchar_t* newName)

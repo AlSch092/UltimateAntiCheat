@@ -45,11 +45,13 @@ class Process
 public:
 
 	uint32_t GetThisProcessId();
-	uint64_t GetBaseAddress();
+	uint64_t GetBaseAddress(const wchar_t* module);
 	uint32_t GetMemorySize();
 
 	bool ProtectProcess(); 
-	bool GetProgramSections(string module);
+	bool PrintProgramSections(string module);
+
+	static list<Module::Section*> GetSections(string module);
 
 	_MYPEB* GetPEB() { return (_MYPEB*)__readgsqword(0x60); }
 
