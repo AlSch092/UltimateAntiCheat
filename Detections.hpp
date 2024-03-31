@@ -8,10 +8,13 @@ class Detections
 {
 public:
 
-	Detections()
+	Detections(bool StartMonitor)
 	{
 		_Services = new Services(false);
 		integrityChecker = new Integrity();
+
+		if (StartMonitor)
+			this->StartMonitor();
 	}
 
 	~Detections()
@@ -23,7 +26,10 @@ public:
 	Services* GetServiceManager() { return this->_Services; }
 	Integrity* GetIntegrityChecker() { return this->integrityChecker; }
 
-	void StartMonitor(); //activate all
+	static void Monitor(LPVOID thisPtr); //activate all
+
+	list<Module::Section*> SetSectionHash(const char* module, const char* sectionName);
+	bool CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize);
 
 	//Vtable checking
 	bool AllVTableMembersPointToCurrentModule(void* pClass); //needs fixing!
@@ -32,9 +38,20 @@ public:
 	template<class T>
 	static inline void** GetVTableArray(T* pClass, int* pSize);  //needs fixing
 
-	//winapi hook checking (to do)
+	void SetCheater(BOOL cheating) { this->CheaterWasDetected = cheating; }
+	BOOL IsUserCheater() { return this->CheaterWasDetected; }
+
+	void StartMonitor()
+	{
+		MonitorThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, 0, &MonitorThreadId);
+	}
 
 private:
 	Services* _Services = NULL;
 	Integrity* integrityChecker = NULL;
+
+	HANDLE MonitorThread = NULL;
+	DWORD MonitorThreadId = 0;
+
+	BOOL CheaterWasDetected = FALSE;
 };

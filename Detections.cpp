@@ -1,9 +1,102 @@
 //By AlSch092 @github
 #include "Detections.hpp"
 
-void Detections::StartMonitor()
+void Detections::Monitor(LPVOID thisPtr)
 {
+    printf("[INFO] Starting  Detections::Monitor \n");
 
+    Detections* Monitor = reinterpret_cast<Detections*>(thisPtr);
+
+    if (Monitor == nullptr)
+    {
+        printf("[ERROR] Monitor Ptr was NULL @ Detections::Monitor. Aborting execution!\n");
+        return;
+    }
+
+    list<Module::Section*> sections = Monitor->SetSectionHash("UltimateAnticheat.exe", ".text"); //set our memory hashes of .text
+
+    if (sections.size() == 0)
+    {
+        printf("[ERROR] Sections size was 0 @ Detections::Monitor. Aborting execution!\n");
+        return;
+    }
+
+    UINT64 CachedSectionAddress = 0;
+    DWORD CachedSectionSize = 0;
+
+    UINT64 ModuleAddr = (UINT64)GetModuleHandleA("UltimateAntiCheat.exe");
+
+    if (ModuleAddr == 0)
+    {
+        printf("[ERROR] Module couldn't be retrieved @ Detections::Monitor. Aborting execution! (%d)\n", GetLastError());
+        return;
+    }
+
+    for (Module::Section* s : sections)
+    {
+        if (s->name == ".text")
+        {
+            CachedSectionAddress = s->address + ModuleAddr;
+            CachedSectionSize = s->size - 100; //subtract 32 bytes to prevent overflowing into other sections with changing memory
+        }
+    }
+  
+    bool Monitoring = true;
+
+    while (Monitoring)
+    {
+        if (Monitor->CheckSectionHash(CachedSectionAddress, CachedSectionSize)) //track the .text section for changes
+        {
+            Monitor->SetCheater(true); //stop monitoring and send message back to home server telling that we've found cheats.
+        }
+
+        Sleep(5000);
+    }
+
+    printf("[INFO] Stopping  Detections::Monitor \n");
+}
+
+list<Module::Section*> Detections::SetSectionHash(const char* module, const char* sectionName) //Currently only scans the program headers/peb (first 0x1000 bytes) -> add parameters for startAddress + size to scan
+{
+    list<Module::Section*> sections = Process::GetSections(module);
+
+    UINT64 ModuleAddr = (UINT64)GetModuleHandleA(module);
+
+    if (sections.size() == 0)
+    {
+        printf("[ERROR] sections.size() was 0 @ TestMemoryIntegrity\n");
+        return sections;
+    }
+
+    for (Module::Section* s : sections)
+    {
+        if (s->name == sectionName)
+        {
+            list<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)s->address + ModuleAddr, s->size - 100);
+
+            if (hashes.size() > 0)
+            {
+                GetIntegrityChecker()->SetMemoryHashList(hashes);
+            }
+        }
+    }
+
+    return sections;
+}
+
+bool Detections::CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize)
+{
+    printf("Checking: %llx (%d)\n", cachedAddress, cachedSize);
+
+    if (GetIntegrityChecker()->Check((uint64_t)cachedAddress, cachedSize, GetIntegrityChecker()->GetMemoryHashList())) //compares hash to one gathered previously
+    {
+        printf("[INFO] Hashes match: Program headers appear genuine.\n");
+    }
+    else
+    {
+        printf("[DETECTION] .text section of program is modified!\n");
+        return true;
+    }
 }
 
 template<class T>
