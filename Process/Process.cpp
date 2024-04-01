@@ -215,7 +215,7 @@ list<Module::Section*> Process::GetSections(string module)
     return Sections;
 }
 
-bool Process::ChangeModuleName(wchar_t* szModule, wchar_t* newName)
+bool Process::ChangeModuleName(const wchar_t* szModule, const wchar_t* newName)
 {
     PPEB PEB = (PPEB)__readgsqword(0x60);
     _LIST_ENTRY* f = PEB->Ldr->InMemoryOrderModuleList.Flink;

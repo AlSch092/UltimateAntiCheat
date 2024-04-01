@@ -66,7 +66,7 @@ public:
 	void SetParentId(uint32_t id) { this->_ParentProcessId = id; }
 
 	//set of routines to patch PEB over @ runtime, combining enough of these will break certain analysis tools
-	static bool ChangeModuleName(wchar_t* szModule, wchar_t* newName);
+	static bool ChangeModuleName(const wchar_t* szModule, const wchar_t* newName);
 	static bool ChangeModuleBase(const wchar_t* szModule, uint64_t moduleBaseAddress);
 	static bool ChangeModulesChecksum(const wchar_t* szModule, DWORD checksum);
 	static void RemovePEHeader(HANDLE GetModuleBase);
