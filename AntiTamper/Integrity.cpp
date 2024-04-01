@@ -10,9 +10,11 @@ bool Integrity::Check(uint64_t Address, int nBytes, std::list<uint64_t> hashList
 	auto it1 = hashes.begin();
 	auto it2 = hashList.begin();
 
+	int count = 0;
+
 	while (it1 != hashes.end() && it2 != hashList.end())  //iterate both lists at same time, compare each element
 	{
-		if (it1 == hashes.end())
+		if (count == hashes.size() - 1) //stop edge case error
 			break;
 
 		if (*it1 != *it2)
@@ -21,6 +23,7 @@ bool Integrity::Check(uint64_t Address, int nBytes, std::list<uint64_t> hashList
 			break;
 		}
 
+		count++;
 		++it1;		++it2;
 	}
 
@@ -38,9 +41,9 @@ list<uint64_t> Integrity::GetMemoryHash(uint64_t Address, int nBytes)
 
 	SHA256 sha;
 	uint8_t* digest = 0;
-	UINT64 digestCache = 0; //we keep adding 
+	UINT64 digestCache = 0;
 
-	for (int i = 0; i < nBytes; i = i + 32) //as long as input->output matches consistently and does not create collisions, the underlying algo doesn't matter too much. 
+	for (int i = 0; i < nBytes; i = i + 32)
 	{
 		sha.update(&arr[i], 32);
 		digest = sha.digest();

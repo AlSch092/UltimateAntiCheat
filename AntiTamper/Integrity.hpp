@@ -35,7 +35,10 @@ public:
 	Integrity()
 	{
 		WhitelistedModules.push_back(L"UltimateAntiCheat.exe");
+		WhitelistedModules.push_back(L"new_name"); //we change the module name UltimateAntiCheat.exe to new_name as a technique
 		WhitelistedModules.push_back(L"KERNEL32.dll");
+		WhitelistedModules.push_back(L"KERNELBASE.dll");
+		WhitelistedModules.push_back(L"apphelp.dll");
 		WhitelistedModules.push_back(L"USER32.dll");
 	}
 
