@@ -82,7 +82,9 @@ int main(int argc, char** argv)
 
     API::Dispatch(AC, API::DispatchCode::INITIALIZE); //initialize AC -> right now basic tests are run within this call 
 
-    printf("All tests have been executed, the program will now loop using its detection methods. Thanks for your interest in the project!\n\n");
+    printf("All tests have been executed, the program will now loop using its detection methods for one minute. Thanks for your interest in the project!\n\n");
+
+    Sleep(60000);
 
     API::Dispatch(AC, API::DispatchCode::CLIENT_EXIT); //clean up memory & threads
 
