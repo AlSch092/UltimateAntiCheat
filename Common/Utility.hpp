@@ -33,4 +33,7 @@ public:
 		__except (1) { return (T)NULL; }
 	}
 
+	static bool strcmp_insensitive(const char* s1, const char* s2);
+	static bool wcscmp_insensitive(const wchar_t* s1, const wchar_t* s2);
+
 };
