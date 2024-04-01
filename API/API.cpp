@@ -45,14 +45,19 @@ Error API::Cleanup(AntiCheat* AC)
 	if (AC == nullptr)
 		return Error::NULL_MEMORY_REFERENCE;
 
-	if (AC->GetAntiDebugger()->GetDetectionThread() != NULL)
+	if (AC->GetAntiDebugger()->GetDetectionThread() != NULL) //stop anti-debugger monitor
+	{
 		TerminateThread(AC->GetAntiDebugger()->GetDetectionThread(), 0);
+		AC->GetAntiDebugger()->SetDetectionThread(NULL);
+	}
 
-	if (AC->GetMonitor()->GetMonitorThread() != NULL)
+	if (AC->GetMonitor()->GetMonitorThread() != NULL) //stop generic monitor
+	{
 		TerminateThread(AC->GetMonitor()->GetMonitorThread(), 0);
-	
-	delete AC;
+		AC->GetMonitor()->SetMonitorThread(NULL);
+	}
 
+	delete AC;
 	return Error::OK;
 }
 
@@ -120,14 +125,21 @@ Error API::LaunchBasicTests(AntiCheat* AC) //soon we'll split these tests into t
 
 	std::wstring newModuleName = L"new_name";
 
-	if (Process::ChangeModuleName((wchar_t*)L"UltimateAnticheat.exe", (wchar_t*)newModuleName.c_str())) //in addition to changing export function names, we can also modify the names of loaded modules/libraries.
+	if (Process::ChangeModuleName(AC->InternalModuleName.c_str(), (wchar_t*)newModuleName.c_str())) //in addition to changing export function names, we can also modify the names of loaded modules/libraries.
 	{
 		wprintf(L"Changed module name to %s!\n", newModuleName.c_str());
 	}
 
-	if (Preventions::RemapAndCheckPages()) //remapping method
+	AC->InternalModuleName = newModuleName;
+
+	if (AC->GetBarrier()->DeployBarrier() == Error::OK) //remapping method
 	{
-		printf("Remap was successful: you can now no longer modify memory or change page protections!\n");
+		printf("[INFO] Barrier techniques were applied successfully!\n");
+	}
+	else
+	{
+		printf("[ERROR] Could not initialize the barrier.\n");
+		errorCode = Error::GENERIC_FAIL;
 	}
 
 	return errorCode;
@@ -179,7 +191,7 @@ Error __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code)
 				printf("[ERROR] Cleanup unsuccessful. Shutting down program.\n");
 				errorCode = Error::NULL_MEMORY_REFERENCE;
 			}
-		}			break;
+		} break;
 
 		default:
 			printf("[WARNING] Unrecognized dispatch code @ API::Dispatch: %d\n", code);
