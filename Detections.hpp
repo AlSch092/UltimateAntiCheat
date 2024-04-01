@@ -15,6 +15,14 @@ public:
 
 		if (StartMonitor)
 			this->StartMonitor();
+
+		BlacklistedProcesses.push_back(L"Cheat Engine.exe");
+		BlacklistedProcesses.push_back(L"CheatEngine.exe");
+		BlacklistedProcesses.push_back(L"cheatengine-x86_64-SSE4-AVX2.exe");
+		
+		BlacklistedProcesses.push_back(L"x64dbg.exe");
+		BlacklistedProcesses.push_back(L"windbg.exe");
+		BlacklistedProcesses.push_back(L"Procmon64.exe");
 	}
 
 	~Detections()
@@ -23,10 +31,11 @@ public:
 		delete integrityChecker;
 	}
 
+	void SetCheater(BOOL cheating) { this->CheaterWasDetected = cheating; }
+	BOOL IsUserCheater() { return this->CheaterWasDetected; }
+
 	Services* GetServiceManager() { return this->_Services; }
 	Integrity* GetIntegrityChecker() { return this->integrityChecker; }
-
-	static void Monitor(LPVOID thisPtr); //activate all
 
 	list<Module::Section*> SetSectionHash(const char* module, const char* sectionName);
 	bool CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize);
@@ -38,17 +47,20 @@ public:
 	template<class T>
 	static inline void** GetVTableArray(T* pClass, int* pSize);  //needs fixing
 
-	void SetCheater(BOOL cheating) { this->CheaterWasDetected = cheating; }
-	BOOL IsUserCheater() { return this->CheaterWasDetected; }
+	static void Monitor(LPVOID thisPtr); //activate all
 
 	HANDLE GetMonitorThread() { return this->MonitorThread; }
 
-	void StartMonitor()
-	{
-		MonitorThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, 0, &MonitorThreadId);
+	void StartMonitor() 
+	{ 
+		if(MonitorThread == NULL)
+			MonitorThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, 0, &MonitorThreadId);  
 	}
 
+	BOOL IsBlacklistedProcessRunning();
+
 private:
+
 	Services* _Services = NULL;
 	Integrity* integrityChecker = NULL;
 
@@ -56,4 +68,6 @@ private:
 	DWORD MonitorThreadId = 0;
 
 	BOOL CheaterWasDetected = FALSE;
+
+	list<wstring> BlacklistedProcesses;
 };

@@ -1,7 +1,7 @@
 //By AlSch092 @github
 #include "Detections.hpp"
 
-void Detections::Monitor(LPVOID thisPtr)
+void Detections::Monitor(LPVOID thisPtr) 
 {
     printf("[INFO] Starting  Detections::Monitor \n");
 
@@ -37,7 +37,7 @@ void Detections::Monitor(LPVOID thisPtr)
         if (s->name == ".text")
         {
             CachedSectionAddress = s->address + ModuleAddr;
-            CachedSectionSize = 0x1000;//s->size - 1000;  //todo: fix size
+            CachedSectionSize = s->size - 1000;  //check most of .text section
         }
     }
   
@@ -49,6 +49,12 @@ void Detections::Monitor(LPVOID thisPtr)
         if (Monitor->CheckSectionHash(CachedSectionAddress, CachedSectionSize)) //track the .text section for changes
         {
             Monitor->SetCheater(true); //report back to server that someone's cheating
+        }
+
+        if (Monitor->IsBlacklistedProcessRunning())
+        {
+            printf("Found blacklisted process!\n");
+            Monitor->SetCheater(true);
         }
 
         Sleep(MonitorLoopMilliseconds);
@@ -73,8 +79,7 @@ list<Module::Section*> Detections::SetSectionHash(const char* module, const char
     {
         if (s->name == sectionName)
         {
-            //list<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)s->address + ModuleAddr, s->size - 1000);
-            list<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)s->address + ModuleAddr, 0x1000); //fix this 
+            list<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)s->address + ModuleAddr, s->size - 1000); //check most of .text section
 
             if (hashes.size() > 0)
             {
@@ -92,7 +97,7 @@ bool Detections::CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize)
 
     if (GetIntegrityChecker()->Check((uint64_t)cachedAddress, cachedSize, GetIntegrityChecker()->GetMemoryHashList())) //compares hash to one gathered previously
     {
-        printf("[INFO] Hashes match: Program headers appear genuine.\n");
+        printf("[INFO] Hashes match: Program's .text section appear genuine.\n");
     }
     else
     {
@@ -218,4 +223,40 @@ bool Detections::AllVTableMembersPointToCurrentModule(void* pClass)
     }
 
     return true;
+}
+
+BOOL Detections::IsBlacklistedProcessRunning()
+{
+    BOOL foundBlacklistedProcess = FALSE;
+
+    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (hSnapshot == INVALID_HANDLE_VALUE) 
+    {
+        std::cerr << "Failed to create snapshot of processes. Error code: " << GetLastError() << std::endl;
+        return FALSE;
+    }
+
+    PROCESSENTRY32 pe32;
+    pe32.dwSize = sizeof(PROCESSENTRY32);
+    if (!Process32First(hSnapshot, &pe32)) 
+    {
+        std::cerr << "Failed to get first process. Error code: " << GetLastError() << std::endl;
+        CloseHandle(hSnapshot);
+        return FALSE;
+    }
+
+    do 
+    {
+        for (wstring blacklisted : BlacklistedProcesses)
+        {
+            if (Utility::wcscmp_insensitive(blacklisted.c_str(), pe32.szExeFile))
+            {
+                foundBlacklistedProcess = true;
+                break;
+            }
+        }
+    } while (Process32Next(hSnapshot, &pe32));
+
+    CloseHandle(hSnapshot);
+    return foundBlacklistedProcess;
 }
