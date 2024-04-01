@@ -3,6 +3,8 @@
 
 int Preventions::DeployBarrier() 
 {
+    IsPreventingThreadCreation = true;
+
     if (!RemapAndCheckPages()) //TODO: finish this
     {
         return 0;
@@ -12,7 +14,7 @@ int Preventions::DeployBarrier()
 //this function re-maps the process memory and then checks if someone else has re-re-mapped it by querying page protections
 bool Preventions::RemapAndCheckPages()
 {
-    ULONG_PTR ImageBase = (ULONG_PTR)GetModuleHandle(L"UltimateAnticheat.exe");
+    ULONG_PTR ImageBase = (ULONG_PTR)GetModuleHandle(NULL);
     bool remap_succeeded = false;
 
     if (ImageBase)
