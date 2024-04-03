@@ -48,7 +48,7 @@ void Detections::Monitor(LPVOID thisPtr)
 
     while (Monitoring)
     {
-        if (Monitor->CheckSectionHash(CachedSectionAddress, CachedSectionSize)) //track the .text section for changes
+        if (Monitor->CheckSectionHash(CachedSectionAddress, CachedSectionSize)) //track the .text section for changes -> most expensive CPU-wise
         {
             printf("[DETECTION] Found modified .text section!\n");
             Monitor->SetCheater(true); //report back to server that someone's cheating
@@ -62,8 +62,8 @@ void Detections::Monitor(LPVOID thisPtr)
 
         if (Monitor->DoesFunctionAppearHooked("ws2_32.dll", "send") || Monitor->DoesFunctionAppearHooked("ws2_32.dll", "recv"))   //ensure you use this routine on functions that don't have jumps or calls as their first byte
         {
-            printf("[DETECTION] networking WINAPI was hooked!\n");
-            Monitor->SetCheater(true);
+            printf("[DETECTION] networking WINAPI was hooked!\n"); //WINAPI hooks doesn't always determine someone is cheating since AV and other software can write the hooks
+            Monitor->SetCheater(true); //..but for simplicity in this project we will set them as a cheater
         }
 
         Sleep(MonitorLoopMilliseconds);
@@ -113,6 +113,8 @@ bool Detections::CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize)
         printf("[DETECTION] .text section of program is modified!\n");
         return true;
     }
+
+    return false;
 }
 
 BOOL Detections::IsBlacklistedProcessRunning()
@@ -189,7 +191,7 @@ BOOL Detections::DoesFunctionAppearHooked(const char* moduleName, const char* fu
 }
 
 template<class T>
-static inline void** Detections::GetVTableArray(T* pClass, int* pSize)  //needs to be re-written : crashes on debug compilation
+static inline void** Detections::GetVTableArray(T* pClass, int* pSize)  //needs to be re-written : crashes
 {
     void** ppVTable = *(void***)pClass;
 
@@ -204,7 +206,7 @@ static inline void** Detections::GetVTableArray(T* pClass, int* pSize)  //needs 
     return ppVTable;
 }
 
-bool Detections::IsVTableHijacked(void* pClass) //needs to be checked again when I have time, throws errors on debug compile
+bool Detections::IsVTableHijacked(void* pClass) //needs to be checked again when I have time
 {
     DWORD dOldProt = 0;
     HANDLE hModuleSnap = INVALID_HANDLE_VALUE;
@@ -251,27 +253,21 @@ bool Detections::AllVTableMembersPointToCurrentModule(void* pClass)
     HANDLE hModuleSnap = INVALID_HANDLE_VALUE;
     MODULEENTRY32 moduleEntry;
 
-    // Take a snapshot of all modules in the specified process
     hModuleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetCurrentProcessId());
     if (hModuleSnap == INVALID_HANDLE_VALUE)
         return false;
 
-    // Set the size of the structure before using it
     moduleEntry.dwSize = sizeof(MODULEENTRY32);
 
-    // Retrieve information about the first module (current process)
     if (!Module32First(hModuleSnap, &moduleEntry))
     {
         CloseHandle(hModuleSnap);
         return false;
     }
 
-    // Grab the base address and size of our module (the address range where
-    // the VTable can validly point to)
     UINT_PTR ulBaseAddress = reinterpret_cast<UINT_PTR>(moduleEntry.modBaseAddr);
     UINT_PTR ulBaseSize = moduleEntry.modBaseSize;
 
-    // Get the VTable array and VTable member count
     int nMethods;
     void** ppVTable = GetVTableArray(pClass, &nMethods);
 
@@ -285,21 +281,15 @@ bool Detections::AllVTableMembersPointToCurrentModule(void* pClass)
     ppVTable[0] = moduleEntry.modBaseAddr;
 #endif
 
-    // Don't allow people to overwrite VTables (can easily be bypassed, so make
-    // sure you check the VirtualProtect status of the VTable regularly with
-    // VirtualQuery)
     VirtualProtect(ppVTable, nMethods * sizeof(UINT_PTR), PAGE_EXECUTE, &dOldProt);
 
-    // Clean up the snapshot object
     CloseHandle(hModuleSnap);
 
-    // Ensure all VTable pointers are in our current module's address range
     for (int i = 0; i < nMethods; ++i)
     {
-        // Get address of the method this VTable pointer points to
         UINT_PTR ulFuncAddress = reinterpret_cast<UINT_PTR>(ppVTable[i]);
         printf("vTable member points to address: %llX\n", ulFuncAddress);
-        // Check the address is within our current module range
+
         if (ulFuncAddress < ulBaseAddress || ulFuncAddress > ulBaseAddress + ulBaseSize)
             return false;
     }
