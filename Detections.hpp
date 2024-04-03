@@ -40,13 +40,6 @@ public:
 	list<Module::Section*> SetSectionHash(const char* module, const char* sectionName);
 	bool CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize);
 
-	//Vtable checking
-	bool AllVTableMembersPointToCurrentModule(void* pClass); //needs fixing!
-	static bool IsVTableHijacked(void* pClass); //needs fixing
-
-	template<class T>
-	static inline void** GetVTableArray(T* pClass, int* pSize);  //needs fixing
-
 	static void Monitor(LPVOID thisPtr); //activate all
 
 	HANDLE GetMonitorThread() { return this->MonitorThread; }
@@ -58,7 +51,16 @@ public:
 			MonitorThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, 0, &MonitorThreadId);  
 	}
 
-	BOOL IsBlacklistedProcessRunning();
+	BOOL IsBlacklistedProcessRunning(); //process checking, can be circumvented easily
+
+	BOOL DoesFunctionAppearHooked(const char* moduleName, const char* functionName); //checks for jumps or calls as the first byte on a function
+
+	//Vtable checking
+	bool AllVTableMembersPointToCurrentModule(void* pClass); //needs fixing!
+	static bool IsVTableHijacked(void* pClass); //needs fixing
+
+	template<class T>
+	static inline void** GetVTableArray(T* pClass, int* pSize);  //needs fixing
 
 private:
 

@@ -1,6 +1,7 @@
 //By AlSch092 @github
 #include "Detections.hpp"
 
+//in an actual game scenario this would be single threaded and included in the game's main execution
 void Detections::Monitor(LPVOID thisPtr) 
 {
     printf("[INFO] Starting  Detections::Monitor \n");
@@ -37,10 +38,11 @@ void Detections::Monitor(LPVOID thisPtr)
         if (s->name == ".text")
         {
             CachedSectionAddress = s->address + ModuleAddr;
-            CachedSectionSize = s->size - 1000;  //check most of .text section
+            CachedSectionSize = s->size - 100;  //check most of .text section
         }
     }
   
+    //Main Monitor Loop, continuous detections go in here
     bool Monitoring = true;
     const int MonitorLoopMilliseconds = 5000;
 
@@ -48,12 +50,19 @@ void Detections::Monitor(LPVOID thisPtr)
     {
         if (Monitor->CheckSectionHash(CachedSectionAddress, CachedSectionSize)) //track the .text section for changes
         {
+            printf("[DETECTION] Found modified .text section!\n");
             Monitor->SetCheater(true); //report back to server that someone's cheating
         }
 
         if (Monitor->IsBlacklistedProcessRunning())
         {
-            printf("Found blacklisted process!\n");
+            printf("[DETECTION] Found blacklisted process!\n");
+            Monitor->SetCheater(true);
+        }
+
+        if (Monitor->DoesFunctionAppearHooked("ws2_32.dll", "send") || Monitor->DoesFunctionAppearHooked("ws2_32.dll", "recv"))   //ensure you use this routine on functions that don't have jumps or calls as their first byte
+        {
+            printf("[DETECTION] networking WINAPI was hooked!\n");
             Monitor->SetCheater(true);
         }
 
@@ -79,7 +88,7 @@ list<Module::Section*> Detections::SetSectionHash(const char* module, const char
     {
         if (s->name == sectionName)
         {
-            list<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)s->address + ModuleAddr, s->size - 1000); //check most of .text section
+            list<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)s->address + ModuleAddr, s->size - 100); //check most of .text section
 
             if (hashes.size() > 0)
             {
@@ -141,6 +150,42 @@ BOOL Detections::IsBlacklistedProcessRunning()
 
     CloseHandle(hSnapshot);
     return foundBlacklistedProcess;
+}
+
+BOOL Detections::DoesFunctionAppearHooked(const char* moduleName, const char* functionName)
+{
+    if (moduleName == nullptr || functionName == nullptr)
+        return FALSE;
+
+    BOOL FunctionPreambleIsJump = FALSE;
+
+    HMODULE hMod = GetModuleHandleA(moduleName);
+
+    if (hMod == NULL)
+    {
+        printf("[ERROR] Couldn't fetch module @ Detections::DoesFunctionAppearHooked: %s\n", moduleName);
+        return FALSE;
+    }
+
+    UINT64 AddressFunction = (UINT64)GetProcAddress(hMod, functionName);
+
+    if (AddressFunction == NULL)
+    {
+        printf("[ERROR] Couldn't fetch address of function @ Detections::DoesFunctionAppearHooked: %s\n", functionName);
+        return FALSE;
+    }
+
+    __try
+    {
+        if (*(BYTE*)AddressFunction == 0xE8 || *(BYTE*)AddressFunction == 0xE9 || *(BYTE*)AddressFunction == 0xEA || *(BYTE*)AddressFunction == 0xEB) //0xEB = short jump, 0xE8 = call X, 0xE9 = long jump, 0xEA = "jmp oper2:oper1"
+            FunctionPreambleIsJump = TRUE;
+    }
+    __except(EXCEPTION_EXECUTE_HANDLER)
+    {
+        return FALSE; //couldn't read memory at function
+    }
+
+    return FunctionPreambleIsJump;
 }
 
 template<class T>
