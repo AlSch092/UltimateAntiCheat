@@ -84,23 +84,6 @@ Error API::LaunchBasicTests(AntiCheat* AC) //soon we'll split these tests into t
 		list<wstring> unsigned_drivers = AC->GetMonitor()->GetServiceManager()->GetUnsignedDrivers(); //unsigned drivers, take further action if needed
 	}
 
-	BYTE* newPEBBytes = CopyAndSetPEB();
-
-	if (newPEBBytes == NULL)
-	{
-		printf("Failed to copy PEB!\n");
-		exit(0);
-	}
-
-	_MYPEB* ourPEB = (_MYPEB*)&newPEBBytes[0];
-	printf("Being debugged (PEB Spoofing test): %d. Address of new PEB : %llx\n", ourPEB->BeingDebugged, (UINT64) &newPEBBytes[0]);
-
-	if (Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryA", "ANTI-INJECT1") &&   ///prevents DLL injection from any method relying on calling LoadLibrary in the host process.
-		Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryW", "ANTI-INJECT2") &&
-		Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExA", "ANTI-INJECT3") &&
-		Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExW", "ANTI-INJECT4"))
-			printf("Wrote over LoadLibrary export names successfully!\n");
-
 	if (Integrity::IsUnknownDllPresent()) //authenticode winapis
 	{
 		printf("Found unsigned dll loaded: We ideally only want verified, signed dlls in our application (which is still subject to spoofing)!\n");		
@@ -109,7 +92,7 @@ Error API::LaunchBasicTests(AntiCheat* AC) //soon we'll split these tests into t
 
 	AC->TestNetworkHeartbeat(); //tests executing a payload within server-fed data
 
-	if (!AC->GetBarrier()->GetProcessObject()->PrintProgramSections("UltimateAnticheat.exe")) //we can stop a routine like this from working if we patch NumberOfSections to 0
+	if (!AC->GetBarrier()->GetProcessObject()->GetProgramSections("UltimateAnticheat.exe")) //we can stop a routine like this from working if we patch NumberOfSections to 0
 	{
 		printf("Failed to parse program sections?\n");
 		errorCode = Error::NULL_MEMORY_REFERENCE;
@@ -122,15 +105,6 @@ Error API::LaunchBasicTests(AntiCheat* AC) //soon we'll split these tests into t
 	}
 
 	//SymbolicHash::CreateThread_Hash(0, 0, (LPTHREAD_START_ROUTINE)&TestFunction, 0, 0, 0); //shows how we can call CreateThread without directly calling winapi, we call our pointer instead which then invokes createthread
-
-	std::wstring newModuleName = L"new_name";
-
-	if (Process::ChangeModuleName(AC->InternalModuleName.c_str(), (wchar_t*)newModuleName.c_str())) //in addition to changing export function names, we can also modify the names of loaded modules/libraries.
-	{
-		wprintf(L"Changed module name to %s!\n", newModuleName.c_str());
-	}
-
-	AC->InternalModuleName = newModuleName;
 
 	if (AC->GetBarrier()->DeployBarrier() == Error::OK) //remapping method
 	{
