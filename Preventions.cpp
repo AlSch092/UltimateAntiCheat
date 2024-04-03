@@ -23,7 +23,7 @@ Error Preventions::DeployBarrier()
         Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryW", RandString2) &&
         Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExA", RandString3) &&
         Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExW", RandString4))
-            printf("[INFO] Wrote over LoadLibrary export names successfully!\n");
+            printf("[INFO] Wrote over LoadLibrary (kernel32) export names successfully!\n");
 
     delete[] RandString1;
     delete[] RandString2;
@@ -43,17 +43,19 @@ Error Preventions::DeployBarrier()
 
     printf("Being debugged (PEB Spoofing test): %d. Address of new PEB : %llx\n", ourPEB->BeingDebugged, (UINT64)&newPEBBytes[0]);
 
-    std::wstring newModuleName = L"new_name";
+    wchar_t* newModuleName = Utility::GenerateRandomWString(10);
 
-    if (Process::ChangeModuleName(L"UltimateAnticheat.exe", (wchar_t*)newModuleName.c_str())) //in addition to changing export function names, we can also modify the names of loaded modules/libraries.
+    if (Process::ChangeModuleName(L"UltimateAnticheat.exe", newModuleName)) //in addition to changing export function names, we can also modify the names of loaded modules/libraries.
     {
-        wprintf(L"Changed module name to %s!\n", newModuleName.c_str());
+        wprintf(L"Changed module name to %s!\n", newModuleName);
     }
     else
     {
         printf("[ERROR] Couldn't change module name @ DeployBarrier!\n");
         retError = Error::GENERIC_FAIL;
     }
+
+    delete[] newModuleName;
 
     //AC->InternalModuleName = newModuleName; //need to expose Anticheat* class member in Preventions class
 
