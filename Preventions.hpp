@@ -6,6 +6,7 @@
 #include "Obscure/Obfuscation.hpp"
 #include "Obscure/SymbolicHash.hpp"
 #include "Common/Error.hpp"
+#include "Common/Utility.hpp"
 
 class Preventions
 {
@@ -21,7 +22,7 @@ public:
 		delete _Proc;
 	}
 
-	int DeployBarrier(); //activate all
+	Error DeployBarrier(); //activate all
 
 	static bool RemapAndCheckPages();
 

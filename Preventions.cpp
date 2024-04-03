@@ -1,14 +1,63 @@
 //By AlSch092 @github
 #include "Preventions.hpp"
 
-int Preventions::DeployBarrier() 
+Error Preventions::DeployBarrier() 
 {
-    IsPreventingThreadCreation = true;
+    Error retError = Error::OK;
 
-    if (!RemapAndCheckPages()) //TODO: finish this
+    IsPreventingThreadCreation = true; //TLS anti-dll injection
+
+    if (!RemapAndCheckPages()) //anti-memory write
     {
-        return 0;
+        printf("[ERROR] Couldn't remap memory @ DeployBarrier!\n");
+        retError = Error::CANT_STARTUP;
     }
+
+    //Anti-dll injection
+    char* RandString1 = Utility::GenerateRandomString(10);
+    char* RandString2 = Utility::GenerateRandomString(10);
+    char* RandString3 = Utility::GenerateRandomString(10);
+    char* RandString4 = Utility::GenerateRandomString(10);
+
+    if (Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryA", RandString1) &&   ///prevents DLL injection from any method relying on calling LoadLibrary in the host process.
+        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryW", RandString2) &&
+        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExA", RandString3) &&
+        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExW", RandString4))
+            printf("[INFO] Wrote over LoadLibrary export names successfully!\n");
+
+    delete[] RandString1;
+    delete[] RandString2;
+    delete[] RandString3;
+    delete[] RandString4;
+
+    //PEB spoofing
+    BYTE* newPEBBytes = CopyAndSetPEB();
+
+    if (newPEBBytes == NULL)
+    {
+        printf("Failed to copy PEB!\n");
+        exit(0);
+    }
+
+    _MYPEB* ourPEB = (_MYPEB*)&newPEBBytes[0];
+
+    printf("Being debugged (PEB Spoofing test): %d. Address of new PEB : %llx\n", ourPEB->BeingDebugged, (UINT64)&newPEBBytes[0]);
+
+    std::wstring newModuleName = L"new_name";
+
+    if (Process::ChangeModuleName(L"UltimateAnticheat.exe", (wchar_t*)newModuleName.c_str())) //in addition to changing export function names, we can also modify the names of loaded modules/libraries.
+    {
+        wprintf(L"Changed module name to %s!\n", newModuleName.c_str());
+    }
+    else
+    {
+        printf("[ERROR] Couldn't change module name @ DeployBarrier!\n");
+        retError = Error::GENERIC_FAIL;
+    }
+
+    //AC->InternalModuleName = newModuleName; //need to expose Anticheat* class member in Preventions class
+
+    return retError;
 }
 
 //this function re-maps the process memory and then checks if someone else has re-re-mapped it by querying page protections
