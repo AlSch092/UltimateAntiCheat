@@ -134,7 +134,7 @@ bool Process::HasExportedFunction(string dllName, string functionName)
     return bFound;
 }
 
-bool Process::PrintProgramSections(string module)
+bool Process::GetProgramSections(string module)
 {
     PIMAGE_SECTION_HEADER sectionHeader;
     HINSTANCE hInst = GetModuleHandleA(module.c_str());

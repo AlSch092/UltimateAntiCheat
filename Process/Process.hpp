@@ -48,7 +48,7 @@ public:
 	uint64_t GetBaseAddress(const wchar_t* module);
 	uint32_t GetMemorySize();
 
-	bool PrintProgramSections(string module);
+	bool GetProgramSections(string module); //fills the _sections parameter
 
 	static list<Module::Section*> GetSections(string module);
 
