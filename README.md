@@ -9,12 +9,12 @@ If there is anything not working for you (throws exceptions, can't build, etc) p
 ## Current Detections and protective features:
 - Loaded Unsigned Modules
 - Debugger detection (hardware, PEB, exceptions, kernelmode)
-- Program Header Memory Integrity checks
+- Integrity checks on program memory (.text section checks)
 - Parent process check
 - Remapping sections & re-re-mapping checks (anti-tamper)
 - TLS Callback (anti-DLL injection)
-- Internal module name renaming (process manipulation)
-- Exported function name renaming (process manipulation)
+- Internal module name randomly renaming (process manipulation)
+- Exported function name randomly renaming (process manipulation)
 - Encrypted Shellcode payload execution
 - Data obfuscation via templated type class
 - VTable hooking (code must be fixed)
