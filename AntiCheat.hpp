@@ -40,6 +40,8 @@ public:
 
 	void TestNetworkHeartbeat();
 
+	wstring InternalModuleName = L"UltimateAnticheat.exe";
+
 private:
 	
 	Detections* Monitor = NULL;
