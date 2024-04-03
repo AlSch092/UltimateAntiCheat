@@ -20,6 +20,25 @@ char* Utility::GenerateRandomString(int length) //make sure to delete[] memory a
     return randomString;
 }
 
+wchar_t* Utility::GenerateRandomWString(int length) //make sure to delete[] memory after
+{
+    if (length == 0)
+        return NULL;
+
+    const wchar_t charset[] = L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;";
+
+    wchar_t* randomString = new wchar_t[(length + 1) * sizeof(char)];
+
+    srand(time(NULL));
+
+    for (int i = 0; i < length; ++i)
+        randomString[i] = charset[rand() % (sizeof(charset) - 1)];
+
+    randomString[length] = '\0';
+
+    return randomString;
+}
+
 
 bool Utility::strcmp_insensitive(const char* s1, const char* s2)
 {

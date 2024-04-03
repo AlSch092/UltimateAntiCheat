@@ -39,4 +39,5 @@ public:
 	static bool wcscmp_insensitive(const wchar_t* s1, const wchar_t* s2);
 
 	static char* GenerateRandomString(int length);
+	static wchar_t* GenerateRandomWString(int length);
 };
