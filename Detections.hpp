@@ -50,6 +50,7 @@ public:
 	static void Monitor(LPVOID thisPtr); //activate all
 
 	HANDLE GetMonitorThread() { return this->MonitorThread; }
+	void SetMonitorThread(HANDLE h) { this->MonitorThread = h; }
 
 	void StartMonitor() 
 	{ 

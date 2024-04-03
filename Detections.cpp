@@ -93,7 +93,7 @@ list<Module::Section*> Detections::SetSectionHash(const char* module, const char
 
 bool Detections::CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize)
 {
-    printf("Checking: %llx (%d)\n", cachedAddress, cachedSize);
+    printf("Checking hashes of address: %llx (%d bytes) for memory integrity\n", cachedAddress, cachedSize);
 
     if (GetIntegrityChecker()->Check((uint64_t)cachedAddress, cachedSize, GetIntegrityChecker()->GetMemoryHashList())) //compares hash to one gathered previously
     {
@@ -104,6 +104,43 @@ bool Detections::CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize)
         printf("[DETECTION] .text section of program is modified!\n");
         return true;
     }
+}
+
+BOOL Detections::IsBlacklistedProcessRunning()
+{
+    BOOL foundBlacklistedProcess = FALSE;
+
+    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (hSnapshot == INVALID_HANDLE_VALUE) 
+    {
+        printf("Failed to create snapshot of processes. Error code: %d\n", GetLastError());
+        return FALSE;
+    }
+
+    PROCESSENTRY32 pe32;
+    pe32.dwSize = sizeof(PROCESSENTRY32);
+    if (!Process32First(hSnapshot, &pe32)) 
+    {
+        printf("Failed to get first process. Error code:  %d\n", GetLastError());
+        CloseHandle(hSnapshot);
+        return FALSE;
+    }
+
+    do 
+    {
+        for (wstring blacklisted : BlacklistedProcesses)
+        {
+            if (Utility::wcscmp_insensitive(blacklisted.c_str(), pe32.szExeFile))
+            {
+                wprintf(L"[DETECTION] Blacklisted : %s\n", pe32.szExeFile);
+                foundBlacklistedProcess = true;
+                break;
+            }
+        }
+    } while (Process32Next(hSnapshot, &pe32));
+
+    CloseHandle(hSnapshot);
+    return foundBlacklistedProcess;
 }
 
 template<class T>
@@ -223,40 +260,4 @@ bool Detections::AllVTableMembersPointToCurrentModule(void* pClass)
     }
 
     return true;
-}
-
-BOOL Detections::IsBlacklistedProcessRunning()
-{
-    BOOL foundBlacklistedProcess = FALSE;
-
-    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (hSnapshot == INVALID_HANDLE_VALUE) 
-    {
-        std::cerr << "Failed to create snapshot of processes. Error code: " << GetLastError() << std::endl;
-        return FALSE;
-    }
-
-    PROCESSENTRY32 pe32;
-    pe32.dwSize = sizeof(PROCESSENTRY32);
-    if (!Process32First(hSnapshot, &pe32)) 
-    {
-        std::cerr << "Failed to get first process. Error code: " << GetLastError() << std::endl;
-        CloseHandle(hSnapshot);
-        return FALSE;
-    }
-
-    do 
-    {
-        for (wstring blacklisted : BlacklistedProcesses)
-        {
-            if (Utility::wcscmp_insensitive(blacklisted.c_str(), pe32.szExeFile))
-            {
-                foundBlacklistedProcess = true;
-                break;
-            }
-        }
-    } while (Process32Next(hSnapshot, &pe32));
-
-    CloseHandle(hSnapshot);
-    return foundBlacklistedProcess;
 }
