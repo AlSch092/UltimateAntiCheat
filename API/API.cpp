@@ -61,7 +61,7 @@ Error API::Cleanup(AntiCheat* AC)
 	return Error::OK;
 }
 
-Error API::LaunchBasicTests(AntiCheat* AC) //soon we'll split these tests into their own categories or routines, and add looping to any tests that need periodic checks such a debugger checks
+Error API::LaunchBasicTests(AntiCheat* AC) //currently in the process to split these tests into Detections or Preventions
 {
 	if (AC == NULL)
 		return Error::NULL_MEMORY_REFERENCE;
@@ -84,7 +84,7 @@ Error API::LaunchBasicTests(AntiCheat* AC) //soon we'll split these tests into t
 		list<wstring> unsigned_drivers = AC->GetMonitor()->GetServiceManager()->GetUnsignedDrivers(); //unsigned drivers, take further action if needed
 	}
 
-	if (Integrity::IsUnknownDllPresent()) //authenticode winapis
+	if (AC->GetMonitor()->GetIntegrityChecker()->IsUnknownModulePresent()) //authenticode winapis and check against whitelisted
 	{
 		printf("Found unsigned dll loaded: We ideally only want verified, signed dlls in our application (which is still subject to spoofing)!\n");		
 		errorCode = Error::BAD_MODULE;
