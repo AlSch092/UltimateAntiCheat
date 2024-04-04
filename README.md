@@ -20,6 +20,9 @@ If there is anything not working for you (throws exceptions, can't build, etc) p
 - VTable hooking (code must be fixed)
 - Blocks DLL & symbol enumeration within certain tools such as Cheat Engine (modules will show up as undefined or unknown, making it more difficult to manually inspect)
 
+## Requirements
+- For remapping to work in this project, /O2 must be enabled for optimization. Choosing other options might cause the program to throw exceptions.
+
 ## Updates
 - April 3, '24: Added WINAPI hook checking, blacklisted process checking
 - March 31, '24: Detection methods have been moved to Detections class, techniques/prevention methods have been moved into Preventions class. Thus we have a set of detections and a set of preventions. Added detection looping to make the program feel more like a commercial AC. Code structure is closer now to where I had aimed originally. There's still much that can be added, stay tuned.
