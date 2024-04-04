@@ -1,3 +1,4 @@
+//Thank you to @changeofpace for this
 #include "remap.hpp"
 #include "../Process/Memory/ntdll.h"
 
@@ -164,7 +165,7 @@ RmpRemapImage(
         goto exit;
     }
 
-    printf("RemapRegion:    0x%IX\n", (ULONG_PTR)pRemapRegion);
+    //printf("RemapRegion:    0x%IX\n", (ULONG_PTR)pRemapRegion);
 
     //
     // Copy the image to the remap region.
@@ -179,7 +180,7 @@ RmpRemapImage(
         (ULONG_PTR)RmppRemapImageRoutine -
         ImageBase);
 
-    printf("RemapRoutine:   0x%IX\n", (ULONG_PTR)fpRemapRoutine);
+    //printf("RemapRoutine:   0x%IX\n", (ULONG_PTR)fpRemapRoutine);
 
     //
     // Invoke the remap routine inside the remap region.
@@ -235,7 +236,7 @@ RmppVerifyPeSectionAlignment(
     ULONG_PTR SectionBase = 0;
     BOOL status = TRUE;
 
-    printf("Verifying pe section alignment:\n");
+    //printf("Verifying pe section alignment:\n");
 
     //
     // Query the system allocation granularity.
@@ -309,11 +310,11 @@ RmppCopyPeSections(
     //
     for (WORD i = 0; i < pNtHeaders->FileHeader.NumberOfSections; ++i)
     {
-        printf("Copying %-8.8s from 0x%IX to 0x%IX,  0x%08X\n",
-            pSectionHeader[i].Name,
-            SourceBase + pSectionHeader[i].VirtualAddress,
-            DestinationBase + pSectionHeader[i].VirtualAddress,
-            pSectionHeader[i].Misc.VirtualSize);
+        //printf("Copying %-8.8s from 0x%IX to 0x%IX,  0x%08X\n",
+           // pSectionHeader[i].Name,
+            //SourceBase + pSectionHeader[i].VirtualAddress,
+            //DestinationBase + pSectionHeader[i].VirtualAddress,
+            //pSectionHeader[i].Misc.VirtualSize);
 
         RtlCopyMemory(
             (PVOID)(DestinationBase + pSectionHeader[i].VirtualAddress),
@@ -594,6 +595,8 @@ RmppValidateRemappedImageProtection(
     PIMAGE_NT_HEADERS pNtHeaders = NULL;
     PIMAGE_SECTION_HEADER pSectionHeader = NULL;
     BOOL status = TRUE;
+
+    printf("Validating remapped image protection.\n");
 
     pNtHeaders = RtlImageNtHeader((PVOID)ImageBase);
     if (!pNtHeaders)
