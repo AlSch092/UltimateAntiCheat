@@ -230,7 +230,6 @@ bool Process::ChangeModuleName(const wchar_t* szModule, const wchar_t* newName)
         {
             wcscpy(dataEntry->FullDllName.Buffer, newName);
             Found = TRUE;
-            wprintf(L"Changed module name from %s to %s!\n", szModule, newName);
             return true;
         }
 
