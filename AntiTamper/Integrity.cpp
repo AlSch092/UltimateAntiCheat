@@ -61,9 +61,9 @@ void Integrity::SetMemoryHashList(std::list<uint64_t> hList)
 	this->_MemorySectionHashes.assign(hList.begin(), hList.end());
 }
 
-list<wstring> Integrity::GetLoadedDLLs()
+list<wstring> Integrity::GetLoadedModules()
 {
-	list<wstring> dlls;
+	list<wstring> modules;
 	HMODULE  hMod[1024] = { 0 };
 	DWORD cbNeeded;
 
@@ -75,13 +75,12 @@ list<wstring> Integrity::GetLoadedDLLs()
 
 			if (GetModuleFileNameExW(GetCurrentProcess(), hMod[i], szModName, sizeof(szModName) / sizeof(TCHAR)))
 			{
-				//if(wcsstr(szModName, L".exe") == NULL) //skips .exe, adds everything else
-				dlls.push_back(szModName);
+				modules.push_back(szModName);
 			}
 		}
 	}
 
-	return dlls;
+	return modules;
 }
 /*
 In addition to authenticode, we can make hashes of all the loaded DLLs and then periodically check these hashes again to see if any modifications have been made/modules hijacked
@@ -102,20 +101,32 @@ list<uint64_t>* Integrity::GetDllHashes(list<wchar_t*> LoadedDlls)
 /*
 Authenticode check on loaded DLLs, any unsigned/unverified loaded returns true
 */
-bool Integrity::IsUnknownDllPresent()
+bool Integrity::IsUnknownModulePresent()
 {
 	bool foundUnknown = false;
 
-	list<wstring> dlls = Integrity::GetLoadedDLLs();
+	list<wstring> modules = Integrity::GetLoadedModules();
 
-	for (auto str : dlls)
+	for (auto str : modules)
 	{
-		//check dll name against a pre-determined white-list of DLLs
+		bool found_whitelisted = false;
 
-		if (!Authenticode::VerifyEmbeddedSignature(str.c_str()))
+		for (auto whitelist : WhitelistedModules)  //str is full path while whitelist is just name
 		{
-			wprintf(L"Bad signature or no signature found for: %s\n", str.c_str());
-			foundUnknown = true;
+			if (wcsstr(str.c_str(), whitelist.c_str()) != NULL) //WARNING! wcsstr is not safe against overflows
+			{
+				found_whitelisted = true;
+			}
+		}
+
+		if (!found_whitelisted)
+		{
+			//check dll name against a pre-determined white-list of DLLs, check if signed too
+			if (!Authenticode::VerifyEmbeddedSignature(str.c_str()))
+			{
+				wprintf(L"Bad signature or no signature found for: %s\n", str.c_str());
+				foundUnknown = true;
+			}
 		}
 	}
 

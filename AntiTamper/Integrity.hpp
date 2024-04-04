@@ -20,10 +20,9 @@ public:
 	void SetMemoryHashList(std::list<uint64_t> hList);
 	list<uint64_t> GetMemoryHashList() { return this->_MemorySectionHashes; }
 
-	static list<wstring> GetLoadedDLLs(); //use this to fill _LoadedDlls
-	static list<uint64_t>* GetDllHashes(list<wchar_t*> LoadedDlls);
+	static list<wstring> GetLoadedModules(); //use this to fill _LoadedDlls
 
-	static bool IsUnknownDllPresent();
+	bool IsUnknownModulePresent();
 
 	static bool DisableDynamicCode();
 	static bool DisableUnsignedCode();
@@ -34,8 +33,7 @@ public:
 
 	Integrity()
 	{
-		WhitelistedModules.push_back(L"UltimateAntiCheat.exe");
-		WhitelistedModules.push_back(L"new_name"); //we change the module name UltimateAntiCheat.exe to new_name as a technique
+		WhitelistedModules.push_back(L"UltimateAnticheat.exe");
 		WhitelistedModules.push_back(L"KERNEL32.dll");
 		WhitelistedModules.push_back(L"KERNELBASE.dll");
 		WhitelistedModules.push_back(L"apphelp.dll");
