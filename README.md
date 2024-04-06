@@ -2,9 +2,9 @@
 
 Research project: make an anti-cheat system to detect and/or prevent things like memory editing, debugging, unsigned code/certs, injected modules, etc. 
 
-This project is meant to serve as a very basic anti-cheat program for educational purposes, and is not intended to be commercial software. This is a limited example and includes only basic protections, in production we would aim to have many more detection methods along with a sophisticated server-side design.  
+This project is meant to serve as a basic anti-cheat program for educational purposes and is not intended to be commercial software. This is a limited example and includes only basic protections, in production we would aim to have many more detection methods along with a sophisticated server-side design. We aim to cover all attack surfaces such that the attacker is not able to gain a foothold into our process without being detected. 
 
-If there is anything not working for you (throws exceptions, can't build, etc) please raise an issue and I will answer it ASAP. If you have code suggestions or techniques you'd like to see added, or want assistance with adding anti-cheat to your program, please feel free to give me an email. More techniques and better design will be added to the project, time permitting.
+If there is anything not working for you (throws exceptions, can't build, etc) please raise an issue and I will answer it ASAP. If you have code suggestions or techniques you'd like to see added, or want assistance with adding anti-cheat to your program, please feel free to give me an email or PR. More techniques and better design will be added to the project time permitting.
 
 ## Current Detections and protective features:
 - Detects unsigned Modules 
