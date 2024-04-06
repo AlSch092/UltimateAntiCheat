@@ -23,7 +23,7 @@
 
 #include "API/API.hpp"
 
-void NTAPI __stdcall TLSCallback(PVOID DllHandle, DWORD dwReason, PVOID Reserved);
+void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
                                                                                   
 #ifdef _M_IX86
 #pragma comment (linker, "/INCLUDE:__tls_used")
@@ -46,27 +46,121 @@ PIMAGE_TLS_CALLBACK _tls_callback = TLSCallback;
 
 using namespace std;
 
-bool g_SupressingNewThreads = false;
+LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo);
 
-void NTAPI __stdcall TLSCallback(PVOID DllHandle, DWORD dwReason, PVOID Reserved)
+bool SupressingNewThreads = false;
+bool SetExceptionHandler = false;
+
+std::list<Thread*> ThreadList; //we need access to a thread list in our TLS callback somehow, thus make this global and merge it with our managed AC class
+
+bool AddThread(DWORD id)
+{
+    DWORD tid = GetCurrentThreadId();
+    printf("[INFO] New thread spawned: %d\n", tid);
+
+    CONTEXT context;
+    context.ContextFlags = CONTEXT_ALL;
+
+    HANDLE threadHandle = OpenThread(THREAD_ALL_ACCESS, FALSE, tid);
+
+    if (threadHandle == NULL)
+    {
+        printf("[WARNING] Couldn't open thread handle @ TLS Callback: Thread %d \n", tid);
+        return false;
+    }
+    else
+    {
+        Thread* t = new Thread();
+        t->Id = tid;
+
+        if (GetThreadContext(threadHandle, &context))
+        {
+            t->ContextFlags = context.ContextFlags;
+        }
+        else
+        {
+            printf("[WARNING] GetThreadContext failed @ TLS Callback: Thread %d \n", tid);
+            return false;
+        }
+
+        ThreadList.push_back(t);
+        return true;
+    }
+}
+
+void RemoveThread(DWORD tid)
+{
+    Thread* ToRemove = NULL;
+
+    for (Thread* t : ThreadList)
+    {
+        if (t->Id == tid)
+            ToRemove = t;
+    }
+
+    if (ToRemove != NULL) //remove thread from our list on thread_detach
+        ThreadList.remove(ToRemove);
+}
+
+void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 {
     switch (dwReason)
     {
         case DLL_PROCESS_ATTACH:
-            printf("New process attached, current thread %d\n", GetCurrentThreadId());
-            break;
+        {
+            printf("[INFO] New process attached, current thread %d\n", GetCurrentThreadId());
 
-        case DLL_THREAD_ATTACH:
-            printf("New thread spawned: %d\n", GetCurrentThreadId());
-            
-            if (g_SupressingNewThreads)
+            if (!SetExceptionHandler)
+            {
+                SetUnhandledExceptionFilter(ExceptionHandler);
+
+                if (!AddVectoredExceptionHandler(1, ExceptionHandler))
+                {
+                    printf("[ERROR] Failed to register Vectored Exception Handler @ TLSCallback: %d\n", GetLastError());
+                }
+
+                SetExceptionHandler = true;
+            }
+
+        }break;
+
+        case DLL_PROCESS_DETACH:
+        {
+            for (Thread* t : ThreadList)
+            {
+                delete t;
+            }
+        }break;
+
+        case DLL_THREAD_ATTACH: //add to our thread list
+        {        
+            if (!AddThread(GetCurrentThreadId()))
+            {
+                printf("[ERROR] Failed to add thread to ThreadList @ TLSCallback: %d\n", GetLastError());
+            }
+
+            if (SupressingNewThreads)
                 ExitThread(0); //we can stop DLL injecting + DLL debuggers (such as VEH debugger) this way, but make sure you're handling your threads carefully
-            break;
+
+        }break;
 
         case DLL_THREAD_DETACH:
-            printf("Thread %d detached\n", GetCurrentThreadId());
-            break;
+        {
+            RemoveThread(GetCurrentThreadId());
+        }break;
     };
+}
+
+LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo)  //handler that will be called whenever an unhandled exception occurs in any thread of the process
+{
+    DWORD exceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
+
+    if (exceptionCode == EXCEPTION_BREAKPOINT)
+    {
+        printf("[INFO] Breakpoint exception was caught in ExceptionHandler\n");
+    }
+
+    return EXCEPTION_CONTINUE_SEARCH;
 }
 
 int main(int argc, char** argv)
@@ -75,7 +169,7 @@ int main(int argc, char** argv)
     
     printf("----------------------------------------------------------------------------------------------------------\n");
     printf("|                               Welcome to Ultimate Anti-Cheat!                                          |\n");
-    printf("| An in-development, non-commercial AC made to help teach you basic concepts in game security            |\n");
+    printf("|       An in-development, non-commercial AC made to help teach us basic concepts in game security       |\n");
     printf("|       Made by AlSch092 @Github, with special thanks to changeOfPace for re-mapping method              |\n");
     printf("----------------------------------------------------------------------------------------------------------\n");
 
@@ -83,8 +177,9 @@ int main(int argc, char** argv)
 
     API::Dispatch(AC, API::DispatchCode::INITIALIZE); //initialize AC -> right now basic tests are run within this call 
 
-    g_SupressingNewThreads = AC->GetBarrier()->IsPreventingThreadCreation;
+    SupressingNewThreads = AC->GetBarrier()->IsPreventingThreadCreation;
 
+    printf("\n-----------------------------------------------------------------------------------------\n");
     printf("All tests have been executed, the program will now loop using its detection methods for one minute. Thanks for your interest in the project!\n\n");
 
     Sleep(60000);
