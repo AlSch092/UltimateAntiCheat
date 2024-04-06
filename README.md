@@ -7,18 +7,19 @@ This project is meant to serve as a very basic anti-cheat program for educationa
 If there is anything not working for you (throws exceptions, can't build, etc) please raise an issue and I will answer it ASAP. If you have code suggestions or techniques you'd like to see added, or want assistance with adding anti-cheat to your program, please feel free to give me an email. More techniques and better design will be added to the project, time permitting.
 
 ## Current Detections and protective features:
-- Loaded Unsigned Modules
+- Detects unsigned Modules 
 - Debugger detection (hardware, PEB, exceptions, kernelmode)
-- Integrity checks on program memory (.text section checks)
-- Parent process check
+- Integrity checks on program memory (.text section checks, WINAPI hook checks)
 - Remapping sections & re-re-mapping checks (anti-tamper)
 - TLS Callback (anti-DLL injection)
-- Internal module name randomly renaming (process manipulation)
-- Exported function name randomly renaming (process manipulation)
-- Encrypted Shellcode payload execution
+- Parent process check
+- Blacklisted Processes checks & whitelisted loaded modules check
+- Internal module name random renaming (process manipulation)
+- Exported function names random renaming (process manipulation, anti-injection)
 - Data obfuscation via templated type class
 - VTable hooking (code must be fixed)
 - Blocks DLL & symbol enumeration within certain tools such as Cheat Engine
+- Encrypted Shellcode payload execution (requires a server to send data to this project)
 
 ## Requirements
 - For remapping to work in this project, /O2 must be enabled for optimization. Choosing other options might cause the program to throw exceptions.
