@@ -82,21 +82,6 @@ list<wstring> Integrity::GetLoadedModules()
 
 	return modules;
 }
-/*
-In addition to authenticode, we can make hashes of all the loaded DLLs and then periodically check these hashes again to see if any modifications have been made/modules hijacked
-*/
-list<uint64_t>* Integrity::GetDllHashes(list<wchar_t*> LoadedDlls)
-{
-	list<uint64_t>* HashesList = NULL;
-
-	for (auto dll : LoadedDlls)
-	{
-		list<uint64_t> dllHashes = Integrity::GetMemoryHash((uint64_t)GetModuleHandleW(dll), 0x1000);
-		//HashesList->push_back(dllHashes[0]);
-	}
-	
-	return HashesList; //todo: finish this routine
-}
 
 /*
 Authenticode check on loaded DLLs, any unsigned/unverified loaded returns true
