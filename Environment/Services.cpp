@@ -15,7 +15,6 @@ BOOL Services::GetServiceModules()
         return 1;
     }
 
-    // First, get the size needed for buffer
     result = EnumServicesStatusEx( scmHandle, SC_ENUM_PROCESS_INFO,SERVICE_WIN32, SERVICE_STATE_ALL, NULL,0, &bytesNeeded,&servicesReturned,&resumeHandle,NULL);
 
     if (!result && GetLastError() != ERROR_MORE_DATA) 
@@ -154,7 +153,7 @@ list<wstring> Services::GetUnsignedDrivers()
     {
         if (!IsDriverSigned(driverPath))
         {
-            wprintf(L"[WARNING] Found unsigned or outdated certificate on driver: %s\n", driverPath.c_str());
+            //wprintf(L"[WARNING] Found unsigned or outdated certificate on driver: %s\n", driverPath.c_str());
             unsignedDrivers.push_back(driverPath);
         }
         else
