@@ -13,6 +13,12 @@ using namespace std;
 #define MAX_DLLS_LOADED 128
 #define MAX_FILE_PATH_LENGTH 256
 
+struct Thread
+{
+	DWORD Id;
+	DWORD ContextFlags;
+};
+
 namespace Module
 {
 	struct MODULE_DATA
@@ -74,6 +80,9 @@ public:
 	static bool ChangeImageSize(DWORD newImageSize);
 	static bool ChangeSizeOfCode(DWORD newSizeOfCode);
 	static bool ChangeImageBase(UINT64 newImageBase);
+
+	static bool IsThreadRunning(HANDLE threadHandle);
+	static bool IsThreadSuspended(HANDLE threadHandle);
 
 	static bool HasExportedFunction(string dllName, string functionName);
 

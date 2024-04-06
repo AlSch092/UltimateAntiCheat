@@ -568,3 +568,35 @@ UINT64 Process::GetSectionAddress(const char* moduleName, const char* sectionNam
     printf("[WARNING] .text section not found.\n");
     return 0;
 }
+
+bool Process::IsThreadRunning(HANDLE threadHandle) 
+{
+    if (threadHandle == NULL)
+        return false;
+
+    DWORD exitCode;
+
+    if (GetExitCodeThread(threadHandle, &exitCode) != 0)
+    {
+        return (exitCode == STILL_ACTIVE);
+    }
+    
+    printf("[ERROR] GetExitCodeThread failed @ IsThreadRunning: %d\n", GetLastError());
+    return false;
+}
+
+bool Process::IsThreadSuspended(HANDLE threadHandle)
+{
+    if (threadHandle == NULL)
+        return false;
+
+    CONTEXT context;
+    context.ContextFlags = CONTEXT_ALL;
+    if (GetThreadContext(threadHandle, &context)) 
+    {
+        return (context.ContextFlags == CONTEXT_CONTROL && context.ContextFlags != 0);
+    }
+
+    printf("[ERROR] GetExitCodeThread failed @ IsThreadSuspended: %d\n", GetLastError());
+    return false;
+}
