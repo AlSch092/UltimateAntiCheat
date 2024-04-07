@@ -84,15 +84,9 @@ Error API::LaunchBasicTests(AntiCheat* AC) //currently in the process to split t
 		list<wstring> unsigned_drivers = AC->GetMonitor()->GetServiceManager()->GetUnsignedDrivers(); //unsigned drivers, take further action if needed
 	}
 
-	if (AC->GetMonitor()->GetIntegrityChecker()->IsUnknownModulePresent()) //authenticode winapis and check against whitelisted
-	{
-		printf("Found unsigned dll loaded: We ideally only want verified, signed dlls in our application (which is still subject to spoofing)!\n");		
-		errorCode = Error::BAD_MODULE;
-	}
-
 	AC->TestNetworkHeartbeat(); //tests executing a payload within server-fed data
 
-	if (!AC->GetBarrier()->GetProcessObject()->GetProgramSections("UltimateAnticheat.exe")) //we can stop a routine like this from working if we patch NumberOfSections to 0
+	if (!AC->GetBarrier()->GetProcessObject()->GetProgramSections("UltimateAnticheat.exe"))
 	{
 		printf("Failed to parse program sections?\n");
 		errorCode = Error::NULL_MEMORY_REFERENCE;
@@ -153,9 +147,9 @@ Error __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code)
 
 		case CLIENT_EXIT:
 		{
-			Error err = Cleanup(AC);
+			Error err = Cleanup(AC); //clean up memory, shut down any threads
 
-			if (err == Error::OK) 			//clean up memory, shut down any threads
+			if (err == Error::OK) 			
 			{
 				printf("[INFO] Cleanup successful. Shutting down program.\n");
 				errorCode = Error::OK;
