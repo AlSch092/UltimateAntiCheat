@@ -49,6 +49,12 @@ public:
 	{ 
 		if(MonitorThread == NULL)
 			MonitorThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, 0, &MonitorThreadId);  
+
+		if (MonitorThread == NULL)
+		{
+			printf("[ERROR] Couldn't start MonitorThread, aborting program!\n");
+			exit(-1);
+		}
 	}
 
 	BOOL IsBlacklistedProcessRunning(); //process checking, can be circumvented easily

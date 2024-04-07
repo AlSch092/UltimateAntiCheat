@@ -66,7 +66,7 @@ void Detections::Monitor(LPVOID thisPtr)
             Monitor->SetCheater(true); //..but for simplicity in this project we will set them as a cheater
         }
 
-        if (Monitor->GetIntegrityChecker()->IsUnknownModulePresent()) //authenticode winapis and check against whitelisted
+        if (Monitor->GetIntegrityChecker()->IsUnknownModulePresent()) //authenticode call and check against whitelisted module list
         {
             printf("[DETECTION] Found unsigned dll loaded: We ideally only want verified, signed dlls in our application (which is still subject to spoofing)!\n");
         }
