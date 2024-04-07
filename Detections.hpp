@@ -16,7 +16,7 @@ public:
 		if (StartMonitor)
 			this->StartMonitor();
 
-		BlacklistedProcesses.push_back(L"Cheat Engine.exe");
+		BlacklistedProcesses.push_back(L"Cheat Engine.exe"); //these strings can be XOR'd for slightly better hiding
 		BlacklistedProcesses.push_back(L"CheatEngine.exe");
 		BlacklistedProcesses.push_back(L"cheatengine-x86_64-SSE4-AVX2.exe");
 		
@@ -54,13 +54,6 @@ public:
 	BOOL IsBlacklistedProcessRunning(); //process checking, can be circumvented easily
 
 	BOOL DoesFunctionAppearHooked(const char* moduleName, const char* functionName); //checks for jumps or calls as the first byte on a function
-
-	//Vtable checking
-	bool AllVTableMembersPointToCurrentModule(void* pClass); //needs fixing!
-	static bool IsVTableHijacked(void* pClass); //needs fixing
-
-	template<class T>
-	static inline void** GetVTableArray(T* pClass, int* pSize);  //needs fixing
 
 private:
 

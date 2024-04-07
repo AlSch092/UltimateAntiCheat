@@ -106,7 +106,7 @@ bool Detections::CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize)
 
     if (GetIntegrityChecker()->Check((uint64_t)cachedAddress, cachedSize, GetIntegrityChecker()->GetMemoryHashList())) //compares hash to one gathered previously
     {
-        printf("[INFO] Hashes match: Program's .text section appear genuine.\n");
+        printf("[INFO] Hashes match: Program's .text section appears genuine.\n");
     }
     else
     {
@@ -188,111 +188,4 @@ BOOL Detections::DoesFunctionAppearHooked(const char* moduleName, const char* fu
     }
 
     return FunctionPreambleIsJump;
-}
-
-template<class T>
-static inline void** Detections::GetVTableArray(T* pClass, int* pSize)  //needs to be re-written : crashes
-{
-    void** ppVTable = *(void***)pClass;
-
-    if (pSize)
-    {
-        *pSize = 0;
-
-        while (!IsBadReadPtr(ppVTable[*pSize], sizeof(unsigned __int64)))
-            (*pSize)++;
-    }
-
-    return ppVTable;
-}
-
-bool Detections::IsVTableHijacked(void* pClass) //needs to be checked again when I have time
-{
-    DWORD dOldProt = 0;
-    HANDLE hModuleSnap = INVALID_HANDLE_VALUE;
-    MODULEENTRY32 moduleEntry;
-
-
-    hModuleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetCurrentProcessId());
-    if (hModuleSnap == INVALID_HANDLE_VALUE)
-        return false;
-
-    moduleEntry.dwSize = sizeof(MODULEENTRY32);
-
-    if (!Module32First(hModuleSnap, &moduleEntry))
-    {
-        CloseHandle(hModuleSnap);
-        return false;
-    }
-
-    UINT_PTR ulBaseAddress = reinterpret_cast<UINT_PTR>(moduleEntry.modBaseAddr);
-    UINT_PTR ulBaseSize = moduleEntry.modBaseSize;
-
-    int nMethods;
-    void** ppVTable = GetVTableArray(pClass, &nMethods);
-
-    VirtualProtect(ppVTable, nMethods * sizeof(UINT_PTR), PAGE_EXECUTE, &dOldProt);
-
-    CloseHandle(hModuleSnap);
-
-    for (int i = 0; i < nMethods; ++i)
-    {
-        UINT_PTR ulFuncAddress = reinterpret_cast<UINT_PTR>(ppVTable[i]);
-        printf("vTable member points to address: %llX\n", ulFuncAddress);
-
-        if (ulFuncAddress < ulBaseAddress || ulFuncAddress > ulBaseAddress + ulBaseSize)
-            return false;
-    }
-
-    return true;
-}
-
-bool Detections::AllVTableMembersPointToCurrentModule(void* pClass)
-{
-    DWORD dOldProt = 0;
-    HANDLE hModuleSnap = INVALID_HANDLE_VALUE;
-    MODULEENTRY32 moduleEntry;
-
-    hModuleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetCurrentProcessId());
-    if (hModuleSnap == INVALID_HANDLE_VALUE)
-        return false;
-
-    moduleEntry.dwSize = sizeof(MODULEENTRY32);
-
-    if (!Module32First(hModuleSnap, &moduleEntry))
-    {
-        CloseHandle(hModuleSnap);
-        return false;
-    }
-
-    UINT_PTR ulBaseAddress = reinterpret_cast<UINT_PTR>(moduleEntry.modBaseAddr);
-    UINT_PTR ulBaseSize = moduleEntry.modBaseSize;
-
-    int nMethods;
-    void** ppVTable = GetVTableArray(pClass, &nMethods);
-
-#ifdef VTABLE_FAKING
-    // Allow patching
-    VirtualProtect(ppVTable, nMethods * sizeof(UINT_PTR), PAGE_EXECUTE_READWRITE, &dwOldProtect);
-
-    // Now take the next module and set the first VTable pointer to point to an
-    // invalid address, outside of the current module's address range
-    Module32Next(hModuleSnap, &moduleEntry);
-    ppVTable[0] = moduleEntry.modBaseAddr;
-#endif
-
-    VirtualProtect(ppVTable, nMethods * sizeof(UINT_PTR), PAGE_EXECUTE, &dOldProt);
-
-    CloseHandle(hModuleSnap);
-
-    for (int i = 0; i < nMethods; ++i)
-    {
-        UINT_PTR ulFuncAddress = reinterpret_cast<UINT_PTR>(ppVTable[i]);
-        printf("vTable member points to address: %llX\n", ulFuncAddress);
-
-        if (ulFuncAddress < ulBaseAddress || ulFuncAddress > ulBaseAddress + ulBaseSize)
-            return false;
-    }
-
-    return true;
 }
