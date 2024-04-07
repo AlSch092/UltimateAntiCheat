@@ -7,7 +7,9 @@
 #include <list>
 #include <Softpub.h>
 #include <wincrypt.h>
+#include <stdlib.h>
 #pragma comment(lib, "wintrust")
+
 
 using namespace std;
 
@@ -46,6 +48,8 @@ public:
 	list<wstring> GetUnsignedDrivers();
 
 	static BOOL IsDriverSigned(wstring driverPath);
+
+	static BOOL IsMachineAllowingSelfSignedDrivers();
 
 private:
 
