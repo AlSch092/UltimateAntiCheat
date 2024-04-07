@@ -66,6 +66,17 @@ void Detections::Monitor(LPVOID thisPtr)
             Monitor->SetCheater(true); //..but for simplicity in this project we will set them as a cheater
         }
 
+        if (Monitor->GetIntegrityChecker()->IsUnknownModulePresent()) //authenticode winapis and check against whitelisted
+        {
+            printf("[DETECTION] Found unsigned dll loaded: We ideally only want verified, signed dlls in our application (which is still subject to spoofing)!\n");
+        }
+
+        if (Services::IsMachineAllowingSelfSignedDrivers())
+        {
+            printf("[DETECTION] Testsigning is enabled! In most cases we don't allow the game/process to continue if testsigning is enabled.\n");
+            Monitor->SetCheater(true);
+        }
+
         Sleep(MonitorLoopMilliseconds);
     }
 
