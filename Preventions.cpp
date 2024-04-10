@@ -6,10 +6,10 @@ bool Preventions::PreventDllInjection()
     bool success = FALSE;
 
     //Anti-dll injection
-    char* RandString1 = Utility::GenerateRandomString(10);
-    char* RandString2 = Utility::GenerateRandomString(10);
-    char* RandString3 = Utility::GenerateRandomString(10);
-    char* RandString4 = Utility::GenerateRandomString(10);
+    char* RandString1 = Utility::GenerateRandomString(12);
+    char* RandString2 = Utility::GenerateRandomString(12);
+    char* RandString3 = Utility::GenerateRandomString(14);
+    char* RandString4 = Utility::GenerateRandomString(14);
 
     ///prevents DLL injection from any host process relying on calling LoadLibrary in the target process (we are the target in this case).
     if (Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryA", RandString1) &&   
@@ -44,7 +44,7 @@ Error Preventions::DeployBarrier()
         retError = Error::CANT_STARTUP;
     }
 
-    if (ChangeExportNames())
+    if (PreventDllInjection())
     {
         printf("[INFO] Wrote over LoadLibrary (kernel32) export names successfully!\n");
     }
