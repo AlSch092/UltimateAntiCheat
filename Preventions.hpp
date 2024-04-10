@@ -27,6 +27,7 @@ public:
 
 	static bool RemapAndCheckPages();
 	static bool PreventDllInjection();
+	bool ChangeModuleName();
 	static BYTE* SpoofPEB();
 
 	Process* GetProcessObject() { return this->_Proc; }
@@ -35,4 +36,6 @@ public:
 
 private:
 	Process* _Proc = NULL;
+
+	const wstring OriginalModuleName = L"UltimateAnticheat.exe";
 };

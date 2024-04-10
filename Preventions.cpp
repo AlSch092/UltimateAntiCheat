@@ -48,11 +48,34 @@ BYTE* Preventions::SpoofPEB()
     return newPEBBytes;
 }
 
+bool Preventions::ChangeModuleName()
+{
+    bool success = false;
+
+    int moduleNameSize = wcslen(OriginalModuleName.c_str());
+
+    if (moduleNameSize <= 2) //prevent underflow on next statements
+    {
+        return false;
+    }
+
+    wchar_t* newModuleName = Utility::GenerateRandomWString(moduleNameSize - 2); //intentionally set to -2 to trip up external programs like CE from enumerating dlls & symbols
+
+    if (Process::ChangeModuleName(OriginalModuleName.c_str(), newModuleName)) //in addition to changing export function names, we can also modify the names of loaded modules/libraries.
+    {
+        wprintf(L"Changed module name to %s!\n", newModuleName);
+        success = true;
+    }
+
+    delete[] newModuleName;
+    return success;
+}
+
 Error Preventions::DeployBarrier() 
 {
     Error retError = Error::OK;
 
-    IsPreventingThreadCreation = true; //TLS anti-dll injection
+    IsPreventingThreadCreation = true; //TLS callback anti-dll injection switch var
 
     if (!RemapAndCheckPages()) //anti-memory write
     {
@@ -60,7 +83,7 @@ Error Preventions::DeployBarrier()
         retError = Error::CANT_STARTUP;
     }
 
-    if (PreventDllInjection())
+    if (PreventDllInjection()) //anti-injection
     {
         printf("[INFO] Wrote over LoadLibrary (kernel32) export names successfully!\n");
     }
@@ -82,20 +105,16 @@ Error Preventions::DeployBarrier()
         retError = Error::CANT_APPLY_TECHNIQUE;
     }
 
-    int moduleNameSize = wcslen(L"UltimateAnticheat.exe");
-    wchar_t* newModuleName = Utility::GenerateRandomWString(moduleNameSize - 2); //intentionally set to -2 to trip up external programs like CE from enumerating dlls & symbols
-
-    if (Process::ChangeModuleName(L"UltimateAnticheat.exe", newModuleName)) //in addition to changing export function names, we can also modify the names of loaded modules/libraries.
+    if (ChangeModuleName()) //should block calls to GetModuleHandle from working unless the cheater keeps up with our new module's name
     {
-        wprintf(L"Changed module name to %s!\n", newModuleName);
+        printf("[INFO] Randomized our module's name!\n");
     }
     else
     {
-        printf("[ERROR] Couldn't change module name @ DeployBarrier!\n");
-        retError = Error::GENERIC_FAIL;
+        printf("[ERROR] Couldn't change our module's name @ Preventions::ChangeModuleName\n");
+        retError = Error::CANT_APPLY_TECHNIQUE;
     }
 
-    delete[] newModuleName;
     return retError;
 }
 
