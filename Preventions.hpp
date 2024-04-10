@@ -27,6 +27,7 @@ public:
 
 	static bool RemapAndCheckPages();
 	static bool PreventDllInjection();
+	static BYTE* SpoofPEB();
 
 	Process* GetProcessObject() { return this->_Proc; }
 

@@ -32,6 +32,22 @@ bool Preventions::PreventDllInjection()
     return success;
 }
 
+BYTE* Preventions::SpoofPEB()
+{
+    BYTE* newPEBBytes = CopyAndSetPEB();
+
+    if (newPEBBytes == NULL)
+    {
+        printf("Failed to copy PEB!\n");
+        return NULL;
+    }
+
+    _MYPEB* ourPEB = (_MYPEB*)&newPEBBytes[0];
+
+    printf("[TEST] Being debugged (PEB Spoofing test): %d. Address of new PEB : %llx\n", ourPEB->BeingDebugged, (UINT64)&newPEBBytes[0]);
+    return newPEBBytes;
+}
+
 Error Preventions::DeployBarrier() 
 {
     Error retError = Error::OK;
@@ -51,22 +67,23 @@ Error Preventions::DeployBarrier()
     else
     {
         printf("[ERROR] Couldn't write over export names @ Preventions::ChangeExportNames\n");
+        retError = Error::CANT_APPLY_TECHNIQUE;
     }
 
-    //PEB spoofing
-    BYTE* newPEBBytes = CopyAndSetPEB();
+    BYTE* newPEB = SpoofPEB(); //memory should be free'd at end of program
 
-    if (newPEBBytes == NULL)
+    if (newPEB != NULL)
     {
-        printf("Failed to copy PEB!\n");
-        exit(0);
+        printf("[INFO] Spoofed PEB successfully!\n");
+    }
+    else
+    {
+        printf("[ERROR] Couldn't spoof PEB @ Preventions::ChangeExportNames\n");
+        retError = Error::CANT_APPLY_TECHNIQUE;
     }
 
-    _MYPEB* ourPEB = (_MYPEB*)&newPEBBytes[0];
-
-    printf("Being debugged (PEB Spoofing test): %d. Address of new PEB : %llx\n", ourPEB->BeingDebugged, (UINT64)&newPEBBytes[0]);
-
-    wchar_t* newModuleName = Utility::GenerateRandomWString(10);
+    int moduleNameSize = wcslen(L"UltimateAnticheat.exe");
+    wchar_t* newModuleName = Utility::GenerateRandomWString(moduleNameSize - 2); //intentionally set to -2 to trip up external programs like CE from enumerating dlls & symbols
 
     if (Process::ChangeModuleName(L"UltimateAnticheat.exe", newModuleName)) //in addition to changing export function names, we can also modify the names of loaded modules/libraries.
     {
