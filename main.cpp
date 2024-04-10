@@ -22,6 +22,8 @@
 #pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper)
 
 #include "API/API.hpp"
+#include <AclAPI.h>
+#include <sddl.h>
 
 void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
                                                                                   
@@ -50,8 +52,38 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo);
 
 bool SupressingNewThreads = false;
 bool SetExceptionHandler = false;
+bool FirstProcessAttach = true;
 
 std::list<Thread*> ThreadList; //we need access to a thread list in our TLS callback somehow, thus make this global and merge it with our managed AC class
+bool AddThread(DWORD id);
+void RemoveThread(DWORD tid);
+
+int main(int argc, char** argv)
+{
+    SetConsoleTitle(L"Ultimate Anti-Cheat");
+
+    printf("----------------------------------------------------------------------------------------------------------\n");
+    printf("|                               Welcome to Ultimate Anti-Cheat!                                          |\n");
+    printf("|       An in-development, non-commercial AC made to help teach us basic concepts in game security       |\n");
+    printf("|       Made by AlSch092 @Github, with special thanks to changeOfPace for re-mapping method              |\n");
+    printf("----------------------------------------------------------------------------------------------------------\n");
+
+    AntiCheat* AC = new AntiCheat();
+
+    API::Dispatch(AC, API::DispatchCode::INITIALIZE); //initialize AC -> right now basic tests are run within this call 
+
+    SupressingNewThreads = AC->GetBarrier()->IsPreventingThreadCreation;
+
+    printf("\n-----------------------------------------------------------------------------------------\n");
+    printf("All tests have been executed, the program will now loop using its detection methods for one minute. Thanks for your interest in the project!\n\n");
+
+    Sleep(60000);
+
+    API::Dispatch(AC, API::DispatchCode::CLIENT_EXIT); //clean up memory & threads
+
+    system("pause");
+    return 0;
+}
 
 bool AddThread(DWORD id)
 {
@@ -110,16 +142,25 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
         {
             printf("[INFO] New process attached, current thread %d\n", GetCurrentThreadId());
 
-            if (!SetExceptionHandler)
+            if (FirstProcessAttach)
             {
-                SetUnhandledExceptionFilter(ExceptionHandler);
-
-                if (!AddVectoredExceptionHandler(1, ExceptionHandler))
+                if (!SetExceptionHandler)
                 {
-                    printf("[ERROR] Failed to register Vectored Exception Handler @ TLSCallback: %d\n", GetLastError());
+                    SetUnhandledExceptionFilter(ExceptionHandler);
+
+                    if (!AddVectoredExceptionHandler(1, ExceptionHandler))
+                    {
+                        printf("[ERROR] Failed to register Vectored Exception Handler @ TLSCallback: %d\n", GetLastError());
+                    }
+
+                    SetExceptionHandler = true;
                 }
 
-                SetExceptionHandler = true;
+                FirstProcessAttach = false;
+            }
+            else
+            {
+                printf("[DETECTION] Some unknown process attached @ TLSCallback ");
             }
 
         }break;
@@ -161,31 +202,4 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo)  //handler that 
     }
 
     return EXCEPTION_CONTINUE_SEARCH;
-}
-
-int main(int argc, char** argv)
-{
-    SetConsoleTitle(L"Ultimate Anti-Cheat");
-    
-    printf("----------------------------------------------------------------------------------------------------------\n");
-    printf("|                               Welcome to Ultimate Anti-Cheat!                                          |\n");
-    printf("|       An in-development, non-commercial AC made to help teach us basic concepts in game security       |\n");
-    printf("|       Made by AlSch092 @Github, with special thanks to changeOfPace for re-mapping method              |\n");
-    printf("----------------------------------------------------------------------------------------------------------\n");
-
-    AntiCheat* AC = new AntiCheat();
-
-    API::Dispatch(AC, API::DispatchCode::INITIALIZE); //initialize AC -> right now basic tests are run within this call 
-
-    SupressingNewThreads = AC->GetBarrier()->IsPreventingThreadCreation;
-
-    printf("\n-----------------------------------------------------------------------------------------\n");
-    printf("All tests have been executed, the program will now loop using its detection methods for one minute. Thanks for your interest in the project!\n\n");
-
-    Sleep(60000);
-
-    API::Dispatch(AC, API::DispatchCode::CLIENT_EXIT); //clean up memory & threads
-
-    system("pause");
-    return 0;
 }
