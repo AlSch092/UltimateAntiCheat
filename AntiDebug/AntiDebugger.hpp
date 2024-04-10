@@ -27,6 +27,8 @@ namespace Debugger
         KERNEL_DEBUGGER,
         TRAP_FLAG, //There is a Trap Flag in the Flags register. Bit number 8 of the EFLAGS register is the trap flag. When the Trap Flag is set, a SINGLE_STEP exception is generated.
         ICE_0xF1, //ICEBP is an undocumented instruction that serves as a single byte interrupt 1, generating a single step exception. It can be used to detect if the program is traced.
+        DEBUG_PORT,
+        PROCESS_DEBUG_FLAGS,
         SINGLE_STEP,
         OVERFLOW_FLAG, 
         EXPORTED_FUNCTIONS,
@@ -49,7 +51,7 @@ namespace Debugger
         HANDLE GetDetectionThread() { return this->DetectionThread; }
         void SetDetectionThread(HANDLE h) { this->DetectionThread = h; }
 
-        inline bool _IsDebuggerPresent();
+        inline bool _IsDebuggerPresent() { return IsDebuggerPresent(); }
         inline bool _IsDebuggerPresentHeapFlags();
         inline bool _IsKernelDebuggerPresent();
         inline bool _IsHardwareDebuggerPresent();
@@ -62,13 +64,13 @@ namespace Debugger
         inline bool _IsDebuggerPresent_DbgBreak();
         inline bool _IsDebuggerPresent_WaitDebugEvent();
         inline bool _IsDebuggerPresent_PEB();
+        inline bool _IsDebuggerPresent_DebugPort();
+        inline bool _IsDebuggerPresent_ProcessDebugFlags();
 
-       // bool CheckForDebugger();
         static void CheckForDebugger(LPVOID AD);
         void StartAntiDebugThread();
 
-
-#ifdef ENVIRONMENT32 //we will try to make x64 versions for these a bit later
+#ifdef ENVIRONMENT32 //ununsed for now,
         bool _IsDebuggerPresent_TrapFlag();
         //bool _IsDebuggerPresent_INT2D();
 #endif

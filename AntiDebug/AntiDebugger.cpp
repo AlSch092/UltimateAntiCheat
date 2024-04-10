@@ -7,9 +7,79 @@ void Debugger::AntiDebug::StartAntiDebugThread()
 	thread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Debugger::AntiDebug::CheckForDebugger, (LPVOID)this, 0, 0);
 }
 
-inline bool Debugger::AntiDebug::_IsDebuggerPresent()
+void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 {
-	return IsDebuggerPresent();
+	printf("[INFO] Starting Debugger detection thread with Id: %d\n", GetCurrentThreadId());
+
+	Debugger::AntiDebug* AntiDbg = reinterpret_cast<Debugger::AntiDebug*>(AD);
+
+	//Basic winAPI check
+	bool basicDbg = AntiDbg->_IsDebuggerPresent();
+
+	if (basicDbg)
+	{
+		AntiDbg->DebuggerMethodsDetected.push_back(Detections::WINAPI_DEBUGGER);
+		printf("[DETECTION] Found debugger: WINAPI_DEBUGGER!\n");
+	}
+
+	if (AntiDbg->_IsDebuggerPresent_PEB())
+	{
+		AntiDbg->DebuggerMethodsDetected.push_back(Detections::PEB_FLAG);
+		printf("[DETECTION] Found debugger: PEB_FLAG!\n");
+	}
+
+	if (AntiDbg->_IsHardwareDebuggerPresent())
+	{
+		AntiDbg->DebuggerMethodsDetected.push_back(Detections::HARDWARE_REGISTERS);
+		printf("[DETECTION] Debugger found: HARDWARE_REGISTERS.\n");
+	}
+
+	if (AntiDbg->_IsDebuggerPresentHeapFlags())
+	{
+		AntiDbg->DebuggerMethodsDetected.push_back(Detections::HEAP_FLAG);
+		printf("[DETECTION] Debugger found: HEAP_FLAG.\n");
+	}
+
+	if (AntiDbg->_IsKernelDebuggerPresent())
+	{
+		AntiDbg->DebuggerMethodsDetected.push_back(Detections::KERNEL_DEBUGGER);
+		printf("[DETECTION] Debugger found: KERNEL_DEBUGGER.\n");
+	}
+
+	if (AntiDbg->_IsDebuggerPresent_DbgBreak())
+	{
+		AntiDbg->DebuggerMethodsDetected.push_back(Detections::INT3);
+		printf("[DETECTION] Debugger found: DbgBreak Excpetion Handler\n");
+	}
+
+	if (AntiDbg->_IsDebuggerPresent_WaitDebugEvent())
+	{
+		AntiDbg->DebuggerMethodsDetected.push_back(Detections::DEBUG_EVENT);
+		printf("[DETECTION] Debugger found WaitDebugEvent.\n");
+	}
+
+	if (AntiDbg->_IsDebuggerPresent_VEH())
+	{
+		AntiDbg->DebuggerMethodsDetected.push_back(Detections::VEH_DEBUGGER);
+		printf("[DETECTION] VEH debugger found!\n");
+	}
+
+	if (AntiDbg->_IsDebuggerPresent_DebugPort())
+	{
+		AntiDbg->DebuggerMethodsDetected.push_back(Detections::DEBUG_PORT);
+		printf("[DETECTION] DebugPort found!\n");
+	}
+
+	if (AntiDbg->_IsDebuggerPresent_ProcessDebugFlags())
+	{
+		AntiDbg->DebuggerMethodsDetected.push_back(Detections::PROCESS_DEBUG_FLAGS);
+		printf("[DETECTION] ProcessDebugFlags found!\n");
+	}
+
+	if (AntiDbg->DebuggerMethodsDetected.size() > 0)
+	{
+		printf("[INFO] Atleast one method has caught a running debugger!\n");
+	}
 }
 
 bool Debugger::AntiDebug::_IsHardwareDebuggerPresent()
@@ -132,69 +202,6 @@ bool Debugger::AntiDebug::_IsDebuggerPresentHeapFlags()
 	return false;
 }
 
-void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
-{
-	printf("[INFO] Starting Debugger detection thread with Id: %d\n", GetCurrentThreadId());
-
-	Debugger::AntiDebug* AntiDbg = reinterpret_cast<Debugger::AntiDebug*>(AD);
-
-	//Basic winAPI check
-	bool basicDbg = AntiDbg->_IsDebuggerPresent();
-
-	if (basicDbg)
-	{
-		AntiDbg->DebuggerMethodsDetected.push_back(Detections::WINAPI_DEBUGGER);
-		printf("Found debugger: WINAPI_DEBUGGER!\n");
-	}
-
-	if (AntiDbg->_IsDebuggerPresent_PEB())
-	{
-		AntiDbg->DebuggerMethodsDetected.push_back(Detections::PEB_FLAG);
-		printf("Found debugger: PEB_FLAG!\n");
-	}
-
-	if (AntiDbg->_IsHardwareDebuggerPresent())
-	{
-		AntiDbg->DebuggerMethodsDetected.push_back(Detections::HARDWARE_REGISTERS);
-		printf("Debugger found: HARDWARE_REGISTERS.\n");
-	}
-
-	if (AntiDbg->_IsDebuggerPresentHeapFlags())
-	{
-		AntiDbg->DebuggerMethodsDetected.push_back(Detections::HEAP_FLAG);
-		printf("Debugger found: HEAP_FLAG.\n");	
-	}
-
-	if (AntiDbg->_IsKernelDebuggerPresent())
-	{
-		AntiDbg->DebuggerMethodsDetected.push_back(Detections::KERNEL_DEBUGGER);
-		printf("Debugger found: KERNEL_DEBUGGER.\n");
-	}
-
-	if (AntiDbg->_IsDebuggerPresent_DbgBreak())
-	{
-		AntiDbg->DebuggerMethodsDetected.push_back(Detections::INT3);
-		printf("Debugger found: DbgBreak Excpetion Handler\n");
-	}
-
-	if (AntiDbg->_IsDebuggerPresent_WaitDebugEvent())
-	{
-		AntiDbg->DebuggerMethodsDetected.push_back(Detections::DEBUG_EVENT);
-		printf("Debugger found WaitDebugEvent.\n");
-	}
-
-	if (AntiDbg->_IsDebuggerPresent_VEH())
-	{
-		AntiDbg->DebuggerMethodsDetected.push_back(Detections::VEH_DEBUGGER);
-		printf("VEH debugger found!\n");
-	}
-
-	if (AntiDbg->DebuggerMethodsDetected.size() > 0)
-	{
-		printf("Atleast one method has caught a running debugger!\n");
-	}
-}
-
 #ifdef ENVIRONMENT32
 //these routines more or less check to see if an exception is consumed or not by some already attached debugger
 bool Debugger::AntiDebug::_IsDebuggerPresent_TrapFlag()
@@ -265,9 +272,7 @@ bool Debugger::AntiDebug::_IsDebuggerPresentCloseHandle()
 	{
 		CloseHandle((HANDLE)NULL);
 	}
-	__except (EXCEPTION_INVALID_HANDLE == GetExceptionCode()
-		? EXCEPTION_EXECUTE_HANDLER
-		: EXCEPTION_CONTINUE_SEARCH)
+	__except (EXCEPTION_INVALID_HANDLE == GetExceptionCode() ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
 	{
 		return true;
 	}
@@ -349,6 +354,8 @@ bool Debugger::AntiDebug::_IsDebuggerPresent_DbgBreak()
 		return false;
 	}
 
+	printf("[DETECTION] Calling __fastfail() to prevent further execution, since a debugger was found running.\n");
+	__fastfail(1); //code should not reach here unless process is being debugged
 	return true;
 }
 
@@ -388,4 +395,49 @@ inline bool  Debugger::AntiDebug::_IsDebuggerPresent_PEB()
 {
 	MYPEB* _PEB = (MYPEB*)__readgsqword(0x60);
 	return _PEB->BeingDebugged;
+}
+
+inline bool Debugger::AntiDebug::_IsDebuggerPresent_DebugPort()
+{
+	typedef NTSTATUS(NTAPI* TNtQueryInformationProcess)(IN HANDLE ProcessHandle, IN PROCESSINFOCLASS ProcessInformationClass,OUT PVOID ProcessInformation,IN ULONG ProcessInformationLength,OUT PULONG ReturnLength);
+
+	HMODULE hNtdll = LoadLibraryA("ntdll.dll");
+	if (hNtdll)
+	{
+		auto pfnNtQueryInformationProcess = (TNtQueryInformationProcess)GetProcAddress(hNtdll, "NtQueryInformationProcess");
+
+		if (pfnNtQueryInformationProcess)
+		{
+			DWORD dwProcessDebugPort, dwReturned;
+			NTSTATUS status = pfnNtQueryInformationProcess(GetCurrentProcess(), ProcessDebugPort, &dwProcessDebugPort, sizeof(DWORD), &dwReturned);
+
+			if (NT_SUCCESS(status) && (dwProcessDebugPort == -1))
+				return true;
+		}
+	}
+
+	return false;
+}
+
+
+inline bool Debugger::AntiDebug::_IsDebuggerPresent_ProcessDebugFlags()
+{
+	typedef NTSTATUS(NTAPI* TNtQueryInformationProcess)(IN HANDLE ProcessHandle, IN PROCESSINFOCLASS ProcessInformationClass, OUT PVOID ProcessInformation, IN ULONG ProcessInformationLength, OUT PULONG ReturnLength);
+
+	HMODULE hNtdll = LoadLibraryA("ntdll.dll");
+	if (hNtdll)
+	{
+		auto pfnNtQueryInformationProcess = (TNtQueryInformationProcess)GetProcAddress(hNtdll, "NtQueryInformationProcess");
+
+		if (pfnNtQueryInformationProcess)
+		{
+			DWORD dwProcessDebugFlags, dwReturned;
+			NTSTATUS status = pfnNtQueryInformationProcess(GetCurrentProcess(), (PROCESSINFOCLASS)0x1F, &dwProcessDebugFlags, sizeof(DWORD), &dwReturned);
+
+			if (NT_SUCCESS(status) && (dwProcessDebugFlags == 0))
+				return true;
+		}
+	}
+
+	return false;
 }
