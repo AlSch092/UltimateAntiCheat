@@ -1,6 +1,37 @@
 //By AlSch092 @github
 #include "Preventions.hpp"
 
+bool Preventions::PreventDllInjection()
+{
+    bool success = FALSE;
+
+    //Anti-dll injection
+    char* RandString1 = Utility::GenerateRandomString(10);
+    char* RandString2 = Utility::GenerateRandomString(10);
+    char* RandString3 = Utility::GenerateRandomString(10);
+    char* RandString4 = Utility::GenerateRandomString(10);
+
+    ///prevents DLL injection from any host process relying on calling LoadLibrary in the target process (we are the target in this case).
+    if (Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryA", RandString1) &&   
+        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryW", RandString2) &&
+        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExA", RandString3) &&
+        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExW", RandString4))
+    {
+        success = TRUE;
+    }
+    else
+    {
+        success = FALSE;
+    }
+
+    delete[] RandString1;
+    delete[] RandString2;
+    delete[] RandString3;
+    delete[] RandString4;
+
+    return success;
+}
+
 Error Preventions::DeployBarrier() 
 {
     Error retError = Error::OK;
@@ -13,22 +44,14 @@ Error Preventions::DeployBarrier()
         retError = Error::CANT_STARTUP;
     }
 
-    //Anti-dll injection
-    char* RandString1 = Utility::GenerateRandomString(10);
-    char* RandString2 = Utility::GenerateRandomString(10);
-    char* RandString3 = Utility::GenerateRandomString(10);
-    char* RandString4 = Utility::GenerateRandomString(10);
-
-    if (Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryA", RandString1) &&   ///prevents DLL injection from any method relying on calling LoadLibrary in the host process.
-        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryW", RandString2) &&
-        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExA", RandString3) &&
-        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExW", RandString4))
-            printf("[INFO] Wrote over LoadLibrary (kernel32) export names successfully!\n");
-
-    delete[] RandString1;
-    delete[] RandString2;
-    delete[] RandString3;
-    delete[] RandString4;
+    if (ChangeExportNames())
+    {
+        printf("[INFO] Wrote over LoadLibrary (kernel32) export names successfully!\n");
+    }
+    else
+    {
+        printf("[ERROR] Couldn't write over export names @ Preventions::ChangeExportNames\n");
+    }
 
     //PEB spoofing
     BYTE* newPEBBytes = CopyAndSetPEB();
@@ -56,9 +79,6 @@ Error Preventions::DeployBarrier()
     }
 
     delete[] newModuleName;
-
-    //AC->InternalModuleName = newModuleName; //need to expose Anticheat* class member in Preventions class
-
     return retError;
 }
 

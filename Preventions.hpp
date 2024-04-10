@@ -15,6 +15,7 @@ public:
 	Preventions()
 	{
 		_Proc = new Process();
+		IsPreventingThreadCreation = true;
 	}
 
 	~Preventions()
@@ -22,9 +23,10 @@ public:
 		delete _Proc;
 	}
 
-	Error DeployBarrier(); //activate all
+	Error DeployBarrier(); //activate all protections
 
 	static bool RemapAndCheckPages();
+	static bool PreventDllInjection();
 
 	Process* GetProcessObject() { return this->_Proc; }
 
