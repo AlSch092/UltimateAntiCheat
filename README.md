@@ -17,10 +17,9 @@ If there is anything not working for you (throws exceptions, can't build, etc) p
 - Internal module name random renaming (process manipulation)
 - Exported function names random renaming (process manipulation, anti-injection)
 - Data obfuscation via templated type class
-- VTable hooking (code must be fixed)
 - Blocks DLL & symbol enumeration within certain tools such as Cheat Engine
 - Encrypted Shellcode payload execution (requires a server to send data to this project)
-- Check if Windows is in 'Test Signing mode'
+- Check for if Windows is in 'Test Signing mode'
 
 ## Requirements
 - For remapping to work in this project, /O2 must be enabled for optimization. Choosing other options might cause the program to throw exceptions.
