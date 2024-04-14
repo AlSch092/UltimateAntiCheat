@@ -12,6 +12,7 @@
 #include "Network/NetClient.hpp"
 #include "Detections.hpp"
 #include "Preventions.hpp"
+#include "Logger.hpp"
 
 class AntiCheat
 {
@@ -40,10 +41,8 @@ public:
 
 	void TestNetworkHeartbeat();
 
-	wstring InternalModuleName = L"UltimateAnticheat.exe";
-
 private:
-	
+
 	Detections* Monitor = NULL;
 	Preventions* Barrier = NULL;
 
