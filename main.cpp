@@ -22,8 +22,6 @@
 #pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper)
 
 #include "API/API.hpp"
-#include <AclAPI.h>
-#include <sddl.h>
 
 void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
                                                                                   
@@ -48,15 +46,19 @@ PIMAGE_TLS_CALLBACK _tls_callback = TLSCallback;
 
 using namespace std;
 
-LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo);
+namespace UnmanagedGlobals //we track thread creation through TLS callback, thus we need some object which is visible within the tlscallback
+{
+    std::list<Thread*> ThreadList; 
+    bool AddThread(DWORD id);
+    void RemoveThread(DWORD tid);
 
-bool SupressingNewThreads = false;
-bool SetExceptionHandler = false;
-bool FirstProcessAttach = true;
+    LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo);
 
-std::list<Thread*> ThreadList; //we need access to a thread list in our TLS callback somehow, thus make this global and merge it with our managed AC class
-bool AddThread(DWORD id);
-void RemoveThread(DWORD tid);
+    bool SupressingNewThreads = false;
+    bool SetExceptionHandler = false;
+    bool FirstProcessAttach = true;
+}
+
 
 int main(int argc, char** argv)
 {
@@ -72,7 +74,7 @@ int main(int argc, char** argv)
 
     API::Dispatch(AC, API::DispatchCode::INITIALIZE); //initialize AC -> right now basic tests are run within this call 
 
-    SupressingNewThreads = AC->GetBarrier()->IsPreventingThreadCreation;
+    UnmanagedGlobals::SupressingNewThreads = AC->GetBarrier()->IsPreventingThreadCreation;
 
     printf("\n-----------------------------------------------------------------------------------------\n");
     printf("All tests have been executed, the program will now loop using its detection methods for one minute. Thanks for your interest in the project!\n\n");
@@ -80,12 +82,10 @@ int main(int argc, char** argv)
     Sleep(60000);
 
     API::Dispatch(AC, API::DispatchCode::CLIENT_EXIT); //clean up memory & threads
-
-    system("pause");
     return 0;
 }
 
-bool AddThread(DWORD id)
+bool UnmanagedGlobals::AddThread(DWORD id)
 {
     DWORD tid = GetCurrentThreadId();
     printf("[INFO] New thread spawned: %d\n", tid);
@@ -115,12 +115,12 @@ bool AddThread(DWORD id)
             return false;
         }
 
-        ThreadList.push_back(t);
+        UnmanagedGlobals::ThreadList.push_back(t);
         return true;
     }
 }
 
-void RemoveThread(DWORD tid)
+void UnmanagedGlobals::RemoveThread(DWORD tid)
 {
     Thread* ToRemove = NULL;
 
@@ -140,23 +140,23 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
     {
         case DLL_PROCESS_ATTACH:
         {
-            printf("[INFO] New process attached, current thread %d\n", GetCurrentThreadId());
+            Logger::logf("UltimateAnticheat.log", "[INFO] New process attached, current thread %d\n", GetCurrentThreadId());
 
-            if (FirstProcessAttach)
+            if (UnmanagedGlobals::FirstProcessAttach)
             {
-                if (!SetExceptionHandler)
+                if (!UnmanagedGlobals::SetExceptionHandler)
                 {
-                    SetUnhandledExceptionFilter(ExceptionHandler);
+                    SetUnhandledExceptionFilter(UnmanagedGlobals::ExceptionHandler);
 
-                    if (!AddVectoredExceptionHandler(1, ExceptionHandler))
+                    if (!AddVectoredExceptionHandler(1, UnmanagedGlobals::ExceptionHandler))
                     {
-                        printf("[ERROR] Failed to register Vectored Exception Handler @ TLSCallback: %d\n", GetLastError());
+                        Logger::logf("UltimateAnticheat.log", "[ERROR] Failed to register Vectored Exception Handler @ TLSCallback: %d\n", GetLastError());
                     }
 
-                    SetExceptionHandler = true;
+                    UnmanagedGlobals::SetExceptionHandler = true;
                 }
 
-                FirstProcessAttach = false;
+                UnmanagedGlobals::FirstProcessAttach = false;
             }
             else
             {
@@ -165,9 +165,9 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 
         }break;
 
-        case DLL_PROCESS_DETACH:
+        case DLL_PROCESS_DETACH: //program exit
         {
-            for (Thread* t : ThreadList)
+            for (Thread* t : UnmanagedGlobals::ThreadList)
             {
                 delete t;
             }
@@ -175,24 +175,24 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 
         case DLL_THREAD_ATTACH: //add to our thread list
         {        
-            if (!AddThread(GetCurrentThreadId()))
+            if (!UnmanagedGlobals::AddThread(GetCurrentThreadId()))
             {
                 printf("[ERROR] Failed to add thread to ThreadList @ TLSCallback: %d\n", GetLastError());
             }
 
-            if (SupressingNewThreads)
+            if (UnmanagedGlobals::SupressingNewThreads)
                 ExitThread(0); //we can stop DLL injecting + DLL debuggers (such as VEH debugger) this way, but make sure you're handling your threads carefully
 
         }break;
 
         case DLL_THREAD_DETACH:
         {
-            RemoveThread(GetCurrentThreadId());
+            UnmanagedGlobals::RemoveThread(GetCurrentThreadId());
         }break;
     };
 }
 
-LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo)  //handler that will be called whenever an unhandled exception occurs in any thread of the process
+LONG WINAPI UnmanagedGlobals::ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo)  //handler that will be called whenever an unhandled exception occurs in any thread of the process
 {
     DWORD exceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
 
