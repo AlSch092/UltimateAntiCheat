@@ -1,6 +1,9 @@
+//Process.hpp by Alsch092 @ Github
 #pragma once
 #define _CRT_SECURE_NO_WARNINGS
 #include "PEB.hpp"
+#include "Thread.hpp"
+#include "../Logger.hpp"
 #include <stdint.h>
 #include <string>
 #include <Psapi.h>
@@ -12,12 +15,6 @@ using namespace std;
 
 #define MAX_DLLS_LOADED 128
 #define MAX_FILE_PATH_LENGTH 256
-
-struct Thread
-{
-	DWORD Id;
-	DWORD ContextFlags;
-};
 
 namespace Module
 {
@@ -34,7 +31,8 @@ namespace Module
 		unsigned int size;
 		UINT64 address;
 
-		union {
+		union 
+		{
 			DWORD   PhysicalAddress;
 			DWORD   VirtualSize;
 		} Misc;
@@ -71,18 +69,14 @@ public:
 	void SetParentName(wstring parentName) { this->_ParentProcessName = parentName; }
 	void SetParentId(uint32_t id) { this->_ParentProcessId = id; }
 
-	//set of routines to patch PEB over @ runtime, combining enough of these will break certain analysis tools
 	static bool ChangeModuleName(const wchar_t* szModule, const wchar_t* newName);
 	static bool ChangeModuleBase(const wchar_t* szModule, uint64_t moduleBaseAddress);
 	static bool ChangeModulesChecksum(const wchar_t* szModule, DWORD checksum);
-	static void RemovePEHeader(HANDLE GetModuleBase);
+	static void RemovePEHeader(HANDLE moduleBase);
 	static bool ChangePEEntryPoint(DWORD newEntry);
 	static bool ChangeImageSize(DWORD newImageSize);
 	static bool ChangeSizeOfCode(DWORD newSizeOfCode);
 	static bool ChangeImageBase(UINT64 newImageBase);
-
-	static bool IsThreadRunning(HANDLE threadHandle);
-	static bool IsThreadSuspended(HANDLE threadHandle);
 
 	static bool HasExportedFunction(string dllName, string functionName);
 
@@ -92,6 +86,8 @@ public:
 	static DWORD GetProcessIdByName(wstring procName);
 
 	static UINT64 GetSectionAddress(const char* moduleName, const char* sectionName);
+
+	static BYTE* GetBytesAtAddress(UINT64 address, UINT size);
 
 private:
 

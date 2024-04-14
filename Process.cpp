@@ -26,7 +26,6 @@ uint64_t Process::GetBaseAddress(const wchar_t* module)
             GetModuleBaseName(hProcess, hMod, (LPWSTR)processName.c_str(), (DWORD)processName.length() * 2);
             if (!_tcsicmp(processName.c_str(), processName.c_str()))
             {
-                wprintf(L"Base address of %s: %llx\n", processName.c_str(), (UINT64)hMod);
                 CloseHandle(hProcess);
                 return (uint64_t)hMod;
             }
@@ -80,14 +79,16 @@ BOOL Process::IsProcessElevated() {
     auto fRet = FALSE;
     auto hToken = (HANDLE)NULL;
 
-    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) 
+    {
         TOKEN_ELEVATION Elevation;
         DWORD cbSize = sizeof(TOKEN_ELEVATION);
         if (GetTokenInformation(hToken, TokenElevation, &Elevation, sizeof(Elevation), &cbSize)) {
             fRet = Elevation.TokenIsElevated;
         }
     }
-    if (hToken) {
+    if (hToken) 
+    {
         CloseHandle(hToken);
     }
 
@@ -123,7 +124,7 @@ bool Process::HasExportedFunction(string dllName, string functionName)
             }
         }
         else
-            printf("[ERROR] ImageExportDirectory was NULL!\n");
+            Logger::log("UltimateAnticheat.log", "[ERROR] ImageExportDirectory was NULL!");
         
         UnMapAndLoad(&LoadedImage);
     }
@@ -292,9 +293,9 @@ bool Process::ChangeModulesChecksum(const wchar_t* szModule, DWORD checksum)
 }
 
 
-void Process::RemovePEHeader(HANDLE GetModuleBase)
+void Process::RemovePEHeader(HANDLE moduleBase)
 {
-    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)GetModuleBase;
+    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)moduleBase;
     PIMAGE_NT_HEADERS pNTHeader = (PIMAGE_NT_HEADERS)((PBYTE)pDosHeader + (DWORD)pDosHeader->e_lfanew);
 
     if (pNTHeader->Signature != IMAGE_NT_SIGNATURE)
@@ -304,9 +305,9 @@ void Process::RemovePEHeader(HANDLE GetModuleBase)
     {
         DWORD Protect;
         WORD Size = pNTHeader->FileHeader.SizeOfOptionalHeader;
-        VirtualProtect((void*)GetModuleBase, Size, PAGE_EXECUTE_READWRITE, &Protect);
-        RtlZeroMemory((void*)GetModuleBase, Size);
-        VirtualProtect((void*)GetModuleBase, Size, Protect, &Protect);
+        VirtualProtect((void*)moduleBase, Size, PAGE_EXECUTE_READWRITE, &Protect);
+        RtlZeroMemory((void*)moduleBase, Size);
+        VirtualProtect((void*)moduleBase, Size, Protect, &Protect);
     }
 }
 
@@ -395,7 +396,7 @@ bool Process::ChangeImageSize(DWORD newEntry)
     return false;
 }
 
-bool Process::ChangeSizeOfCode(DWORD newEntry)
+bool Process::ChangeSizeOfCode(DWORD newEntry) //modify the 'sizeofcode' variable in the optionalheader
 {
     PIMAGE_DOS_HEADER pDoH;
     PIMAGE_NT_HEADERS pNtH;
@@ -411,7 +412,7 @@ bool Process::ChangeSizeOfCode(DWORD newEntry)
 
     if (!pNtH)
     {
-        printf("NTHeader was somehow NULL at ChangeSizeOfCode\n");
+        printf("[ERROR] NTHeader was somehow NULL @ ChangeSizeOfCode\n");
         return false;
     }
 
@@ -486,14 +487,16 @@ DWORD Process::GetParentProcessId()
     DWORD ppid = 0, pid = GetCurrentProcessId();
 
     hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    __try {
+    __try 
+    {
         if (hSnapshot == INVALID_HANDLE_VALUE) __leave;
 
         ZeroMemory(&pe32, sizeof(pe32));
         pe32.dwSize = sizeof(pe32);
         if (!Process32First(hSnapshot, &pe32)) __leave;
 
-        do {
+        do 
+        {
             if (pe32.th32ProcessID == pid) {
                 ppid = pe32.th32ParentProcessID;
                 break;
@@ -501,7 +504,8 @@ DWORD Process::GetParentProcessId()
         } while (Process32Next(hSnapshot, &pe32));
 
     }
-    __finally {
+    __finally 
+    {
         if (hSnapshot != INVALID_HANDLE_VALUE) 
             CloseHandle(hSnapshot);
     }
@@ -534,7 +538,7 @@ UINT64 Process::GetSectionAddress(const char* moduleName, const char* sectionNam
 
     if (hModule == NULL)
     {
-        printf("Failed to get module handle: %d\n", GetLastError());
+        printf("[ERROR] Failed to get module handle: %d @ GetSectionAddress\n", GetLastError());
         return 0;
     }
 
@@ -543,14 +547,14 @@ UINT64 Process::GetSectionAddress(const char* moduleName, const char* sectionNam
     PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)baseAddress;
     if (pDosHeader->e_magic != IMAGE_DOS_SIGNATURE)
     {
-        printf("Invalid DOS header.\n");
+        printf("[ERROR] Invalid DOS header @ GetSectionAddress.\n");
         return 0;
     }
 
     PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS)(baseAddress + pDosHeader->e_lfanew);
     if (pNtHeaders->Signature != IMAGE_NT_SIGNATURE)
     {
-        printf("Invalid NT header.\n");
+        printf("[ERROR] Invalid NT header @ GetSectionAddress.\n");
         return 0;
     }
 
@@ -569,34 +573,18 @@ UINT64 Process::GetSectionAddress(const char* moduleName, const char* sectionNam
     return 0;
 }
 
-bool Process::IsThreadRunning(HANDLE threadHandle) 
+BYTE* Process::GetBytesAtAddress(UINT64 address, UINT size) //remember to free bytes if not NULL ret
 {
-    if (threadHandle == NULL)
-        return false;
+    BYTE* memBytes = new BYTE[size];
 
-    DWORD exitCode;
-
-    if (GetExitCodeThread(threadHandle, &exitCode) != 0)
+    __try
     {
-        return (exitCode == STILL_ACTIVE);
+        memcpy((void*)memBytes, (void*)address, size);
+        return memBytes;
     }
-    
-    printf("[ERROR] GetExitCodeThread failed @ IsThreadRunning: %d\n", GetLastError());
-    return false;
-}
-
-bool Process::IsThreadSuspended(HANDLE threadHandle)
-{
-    if (threadHandle == NULL)
-        return false;
-
-    CONTEXT context;
-    context.ContextFlags = CONTEXT_ALL;
-    if (GetThreadContext(threadHandle, &context)) 
+    __except (EXCEPTION_EXECUTE_HANDLER)
     {
-        return (context.ContextFlags == CONTEXT_CONTROL && context.ContextFlags != 0);
+        delete[] memBytes;
+        return NULL;
     }
-
-    printf("[ERROR] GetExitCodeThread failed @ IsThreadSuspended: %d\n", GetLastError());
-    return false;
 }
