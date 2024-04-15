@@ -79,14 +79,16 @@ BOOL Process::IsProcessElevated() {
     auto fRet = FALSE;
     auto hToken = (HANDLE)NULL;
 
-    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) 
+    {
         TOKEN_ELEVATION Elevation;
         DWORD cbSize = sizeof(TOKEN_ELEVATION);
         if (GetTokenInformation(hToken, TokenElevation, &Elevation, sizeof(Elevation), &cbSize)) {
             fRet = Elevation.TokenIsElevated;
         }
     }
-    if (hToken) {
+    if (hToken) 
+    {
         CloseHandle(hToken);
     }
 
@@ -122,12 +124,12 @@ bool Process::HasExportedFunction(string dllName, string functionName)
             }
         }
         else
-            printf("[ERROR] ImageExportDirectory was NULL!\n");
+            Logger::log("UltimateAnticheat.log", Err, " ImageExportDirectory was NULL @ Process::HasExportedFunction");
         
         UnMapAndLoad(&LoadedImage);
     }
     else
-        printf("MapAndLoad failed: %d\n", GetLastError());
+        Logger::logf("UltimateAnticheat.log", Err, "MapAndLoad failed: %d @ Process::HasExportedFunction \n", GetLastError());
     
 
     return bFound;
@@ -144,7 +146,7 @@ bool Process::GetProgramSections(string module)
 
     if (pDoH == NULL || hInst == NULL)
     {
-        printf("[ERROR] PIMAGE_DOS_HEADER or hInst was NULL at GetProgramSections\n");
+        Logger::logf("UltimateAnticheat.log", Err, " PIMAGE_DOS_HEADER or hInst was NULL at GetProgramSections\n");
         return false;
     }
 
@@ -185,7 +187,7 @@ list<Module::Section*> Process::GetSections(string module)
 
     if (pDoH == NULL || hInst == NULL)
     {
-        printf("[ERROR] PIMAGE_DOS_HEADER or hInst was NULL at GetProgramSections\n");
+        Logger::logf("UltimateAnticheat.log", Err, " PIMAGE_DOS_HEADER or hInst was NULL at GetProgramSections\n");
         return Sections;
     }
 
@@ -364,7 +366,7 @@ bool Process::ChangeImageSize(DWORD newEntry)
 
     if (!pNtH) 
     { 
-        printf("NTHeader was somehow NULL at ChangeImageSize\n");
+        Logger::logf("UltimateAnticheat.log", Err, "NTHeader was somehow NULL at ChangeImageSize\n");
         return false;
     }
 
@@ -372,7 +374,7 @@ bool Process::ChangeImageSize(DWORD newEntry)
 
     if (!VirtualProtect((LPVOID)pEntry, sizeof(DWORD), PAGE_EXECUTE_READWRITE, &protect))
     {
-        printf("VirtualProtect failed at ChangeImageSize: %d\n", GetLastError());
+        Logger::logf("UltimateAnticheat.log", Err, "VirtualProtect failed at ChangeImageSize: %d\n", GetLastError());
         return false;
     }
 
@@ -410,7 +412,7 @@ bool Process::ChangeSizeOfCode(DWORD newEntry) //modify the 'sizeofcode' variabl
 
     if (!pNtH)
     {
-        printf("[ERROR] NTHeader was somehow NULL @ ChangeSizeOfCode\n");
+        Logger::logf("UltimateAnticheat.log", Err, " NTHeader was somehow NULL @ ChangeSizeOfCode\n");
         return false;
     }
 
@@ -452,7 +454,7 @@ bool Process::ChangeImageBase(UINT64 newEntry)
 
     if (!pNtH)
     {
-        printf("NTHeader was somehow NULL at ChangeImageBase\n");
+        Logger::logf("UltimateAnticheat.log", Err, "NTHeader was somehow NULL at ChangeImageBase\n");
         return false;
     }
 
@@ -536,7 +538,7 @@ UINT64 Process::GetSectionAddress(const char* moduleName, const char* sectionNam
 
     if (hModule == NULL)
     {
-        printf("[ERROR] Failed to get module handle: %d @ GetSectionAddress\n", GetLastError());
+        Logger::logf("UltimateAnticheat.log", Err, " Failed to get module handle: %d @ GetSectionAddress\n", GetLastError());
         return 0;
     }
 
@@ -545,14 +547,14 @@ UINT64 Process::GetSectionAddress(const char* moduleName, const char* sectionNam
     PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)baseAddress;
     if (pDosHeader->e_magic != IMAGE_DOS_SIGNATURE)
     {
-        printf("[ERROR] Invalid DOS header @ GetSectionAddress.\n");
+        Logger::logf("UltimateAnticheat.log", Err, " Invalid DOS header @ GetSectionAddress.\n");
         return 0;
     }
 
     PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS)(baseAddress + pDosHeader->e_lfanew);
     if (pNtHeaders->Signature != IMAGE_NT_SIGNATURE)
     {
-        printf("[ERROR] Invalid NT header @ GetSectionAddress.\n");
+        Logger::logf("UltimateAnticheat.log", Err, " Invalid NT header @ GetSectionAddress.\n");
         return 0;
     }
 
@@ -571,7 +573,7 @@ UINT64 Process::GetSectionAddress(const char* moduleName, const char* sectionNam
     return 0;
 }
 
-BYTE* Process::GetBytesAtAddress(UINT64 address, UINT size)
+BYTE* Process::GetBytesAtAddress(UINT64 address, UINT size) //remember to free bytes if not NULL ret
 {
     BYTE* memBytes = new BYTE[size];
 

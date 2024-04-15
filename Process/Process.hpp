@@ -3,6 +3,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "PEB.hpp"
 #include "Thread.hpp"
+#include "../Logger.hpp"
 #include <stdint.h>
 #include <string>
 #include <Psapi.h>
@@ -13,13 +14,13 @@
 using namespace std;
 
 #define MAX_DLLS_LOADED 128
-#define MAX_FILE_PATH_LENGTH 256
+#define MAX_FILE_PATH_LENGTH 512
 
 namespace Module
 {
 	struct MODULE_DATA
 	{
-		char fileName[MAX_FILE_PATH_LENGTH];
+		char fileName[MAX_FILE_PATH_LENGTH]; //this could potentially buffer overflow if a large length path is provided, should be changed to dynamic alloc
 		MODULEINFO dllInfo;
 		HMODULE module;
 	};
@@ -30,7 +31,8 @@ namespace Module
 		unsigned int size;
 		UINT64 address;
 
-		union {
+		union 
+		{
 			DWORD   PhysicalAddress;
 			DWORD   VirtualSize;
 		} Misc;
