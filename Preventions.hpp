@@ -34,8 +34,13 @@ public:
 
 	bool IsPreventingThreadCreation = false; //used in TLS callback if we want to supress or track new threads
 
+	void SetErrorCode(Error err) { this->LastError = err; }
+	Error GetErrorCode() { return this->LastError; }
+
 private:
 	Process* _Proc = NULL;
+
+	Error LastError = Error::OK;
 
 	const wstring OriginalModuleName = L"UltimateAnticheat.exe";
 };

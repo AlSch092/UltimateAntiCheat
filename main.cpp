@@ -64,11 +64,11 @@ int main(int argc, char** argv)
 {
     SetConsoleTitle(L"Ultimate Anti-Cheat");
 
-    printf("----------------------------------------------------------------------------------------------------------\n");
-    printf("|                               Welcome to Ultimate Anti-Cheat!                                          |\n");
-    printf("|       An in-development, non-commercial AC made to help teach us basic concepts in game security       |\n");
-    printf("|       Made by AlSch092 @Github, with special thanks to changeOfPace for re-mapping method              |\n");
-    printf("----------------------------------------------------------------------------------------------------------\n");
+    cout << "----------------------------------------------------------------------------------------------------------\n";
+    cout << "|                               Welcome to Ultimate Anti-Cheat!                                          |\n";
+    cout << "|       An in-development, non-commercial AC made to help teach us basic concepts in game security       |\n";
+    cout << "|       Made by AlSch092 @Github, with special thanks to changeOfPace for re-mapping method              |\n";
+    cout << "----------------------------------------------------------------------------------------------------------\n";
 
     AntiCheat* AC = new AntiCheat();
 
@@ -76,8 +76,8 @@ int main(int argc, char** argv)
 
     UnmanagedGlobals::SupressingNewThreads = AC->GetBarrier()->IsPreventingThreadCreation;
 
-    printf("\n-----------------------------------------------------------------------------------------\n");
-    printf("All tests have been executed, the program will now loop using its detection methods for one minute. Thanks for your interest in the project!\n\n");
+    cout << "\n-----------------------------------------------------------------------------------------\n";
+    cout << "All tests have been executed, the program will now loop using its detection methods for one minute. Thanks for your interest in the project!\n\n";
 
     Sleep(60000);
 
@@ -88,7 +88,7 @@ int main(int argc, char** argv)
 bool UnmanagedGlobals::AddThread(DWORD id)
 {
     DWORD tid = GetCurrentThreadId();
-    printf("[INFO] New thread spawned: %d\n", tid);
+    Logger::logf("UltimateAnticheat.log", Info, " New thread spawned: %d\n", tid);
 
     CONTEXT context;
     context.ContextFlags = CONTEXT_ALL;
@@ -97,7 +97,7 @@ bool UnmanagedGlobals::AddThread(DWORD id)
 
     if (threadHandle == NULL)
     {
-        printf("[WARNING] Couldn't open thread handle @ TLS Callback: Thread %d \n", tid);
+        Logger::logf("UltimateAnticheat.log", Warning, " Couldn't open thread handle @ TLS Callback: Thread %d \n", tid);
         return false;
     }
     else
@@ -111,7 +111,7 @@ bool UnmanagedGlobals::AddThread(DWORD id)
         }
         else
         {
-            printf("[WARNING] GetThreadContext failed @ TLS Callback: Thread %d \n", tid);
+            Logger::logf("UltimateAnticheat.log", Warning, " GetThreadContext failed @ TLS Callback: Thread %d \n", tid);
             return false;
         }
 
@@ -140,7 +140,7 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
     {
         case DLL_PROCESS_ATTACH:
         {
-            Logger::logf("UltimateAnticheat.log", "[INFO] New process attached, current thread %d\n", GetCurrentThreadId());
+            Logger::logf("UltimateAnticheat.log", Info, " New process attached, current thread %d\n", GetCurrentThreadId());
 
             if (UnmanagedGlobals::FirstProcessAttach)
             {
@@ -150,7 +150,7 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 
                     if (!AddVectoredExceptionHandler(1, UnmanagedGlobals::ExceptionHandler))
                     {
-                        Logger::logf("UltimateAnticheat.log", "[ERROR] Failed to register Vectored Exception Handler @ TLSCallback: %d\n", GetLastError());
+                        Logger::logf("UltimateAnticheat.log", Err, " Failed to register Vectored Exception Handler @ TLSCallback: %d\n", GetLastError());
                     }
 
                     UnmanagedGlobals::SetExceptionHandler = true;
@@ -160,7 +160,7 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
             }
             else
             {
-                printf("[DETECTION] Some unknown process attached @ TLSCallback ");
+                Logger::logf("UltimateAnticheat.log", Detection, " Some unknown process attached @ TLSCallback ");
             }
 
         }break;
@@ -177,7 +177,7 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
         {        
             if (!UnmanagedGlobals::AddThread(GetCurrentThreadId()))
             {
-                printf("[ERROR] Failed to add thread to ThreadList @ TLSCallback: %d\n", GetLastError());
+                Logger::logf("UltimateAnticheat.log", Err, " Failed to add thread to ThreadList @ TLSCallback: %d\n", GetLastError());
             }
 
             if (UnmanagedGlobals::SupressingNewThreads)
@@ -198,7 +198,7 @@ LONG WINAPI UnmanagedGlobals::ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo
 
     if (exceptionCode == EXCEPTION_BREAKPOINT)
     {
-        printf("[INFO] Breakpoint exception was caught in ExceptionHandler\n");
+        Logger::logf("UltimateAnticheat.log", Info, " Breakpoint exception was caught in ExceptionHandler\n");
     }
 
     return EXCEPTION_CONTINUE_SEARCH;

@@ -11,7 +11,7 @@ bool Preventions::PreventDllInjection()
     char* RandString3 = Utility::GenerateRandomString(14);
     char* RandString4 = Utility::GenerateRandomString(14);
 
-    ///prevents DLL injection from any host process relying on calling LoadLibrary in the target process (we are the target in this case).
+    //prevents DLL injection from any host process relying on calling LoadLibrary in the target process (we are the target in this case)
     if (Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryA", RandString1) &&   
         Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryW", RandString2) &&
         Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExA", RandString3) &&
@@ -38,13 +38,13 @@ BYTE* Preventions::SpoofPEB()
 
     if (newPEBBytes == NULL)
     {
-        printf("Failed to copy PEB!\n");
+        Logger::logf("UltimateAnticheat.log", Err, " Failed to copy PEB @ SpoofPEB!\n");
         return NULL;
     }
 
     _MYPEB* ourPEB = (_MYPEB*)&newPEBBytes[0];
 
-    printf("[TEST] Being debugged (PEB Spoofing test): %d. Address of new PEB : %llx\n", ourPEB->BeingDebugged, (UINT64)&newPEBBytes[0]);
+    Logger::logf("UltimateAnticheat.log", Info, " Being debugged (PEB Spoofing test): %d. Address of new PEB : %llx\n", ourPEB->BeingDebugged, (UINT64)&newPEBBytes[0]);
     return newPEBBytes;
 }
 
@@ -52,7 +52,7 @@ bool Preventions::ChangeModuleName()
 {
     bool success = false;
 
-    int moduleNameSize = wcslen(OriginalModuleName.c_str());
+    int moduleNameSize = (int)wcslen(OriginalModuleName.c_str());
 
     if (moduleNameSize <= 2) //prevent underflow on next statements
     {
@@ -79,17 +79,17 @@ Error Preventions::DeployBarrier()
 
     if (!RemapAndCheckPages()) //anti-memory write
     {
-        printf("[ERROR] Couldn't remap memory @ DeployBarrier!\n");
+        Logger::logf("UltimateAnticheat.log", Err, " Couldn't remap memory @ DeployBarrier!\n");
         retError = Error::CANT_STARTUP;
     }
 
     if (PreventDllInjection()) //anti-injection
     {
-        printf("[INFO] Wrote over LoadLibrary (kernel32) export names successfully!\n");
+        Logger::logf("UltimateAnticheat.log", Info, " Wrote over LoadLibrary (kernel32) export names successfully!\n");
     }
     else
     {
-        printf("[ERROR] Couldn't write over export names @ Preventions::ChangeExportNames\n");
+        Logger::logf("UltimateAnticheat.log", Err, " Couldn't write over export names @ Preventions::ChangeExportNames\n");
         retError = Error::CANT_APPLY_TECHNIQUE;
     }
 
@@ -97,21 +97,21 @@ Error Preventions::DeployBarrier()
 
     if (newPEB != NULL)
     {
-        printf("[INFO] Spoofed PEB successfully!\n");
+        Logger::logf("UltimateAnticheat.log", Info, " Spoofed PEB successfully!\n");
     }
     else
     {
-        printf("[ERROR] Couldn't spoof PEB @ Preventions::ChangeExportNames\n");
+        Logger::logf("UltimateAnticheat.log", Err, " Couldn't spoof PEB @ Preventions::ChangeExportNames\n");
         retError = Error::CANT_APPLY_TECHNIQUE;
     }
 
     if (ChangeModuleName()) //should block calls to GetModuleHandle from working unless the cheater keeps up with our new module's name
     {
-        printf("[INFO] Randomized our module's name!\n");
+        Logger::logf("UltimateAnticheat.log", Info, " Randomized our module's name!\n");
     }
     else
     {
-        printf("[ERROR] Couldn't change our module's name @ Preventions::ChangeModuleName\n");
+        Logger::logf("UltimateAnticheat.log", Err, " Couldn't change our module's name @ Preventions::ChangeModuleName\n");
         retError = Error::CANT_APPLY_TECHNIQUE;
     }
 
@@ -130,17 +130,17 @@ bool Preventions::RemapAndCheckPages()
         {
             if (!RmpRemapImage(ImageBase)) //re-mapping of image to stop patching, and of course we can easily detect if someone bypasses this
             {
-                printf("RmpRemapImage failed.\n");
+                Logger::logf("UltimateAnticheat.log", Err, " RmpRemapImage failed.\n");
             }
             else
             {
-                printf("Successfully remapped\n");
+                Logger::logf("UltimateAnticheat.log", Info, " Successfully remapped\n");
                 remap_succeeded = true;
             }
         }
         __except (EXCEPTION_EXECUTE_HANDLER)
         {
-            printf("Remapping image failed with an exception, you might need to place this at the top of your code before other security mechanisms are in place\n");
+            Logger::logf("UltimateAnticheat.log", Err, " Remapping image failed with an exception, you might need to place this at the top of your code before other security mechanisms are in place\n");
             return false;
         }
 
@@ -156,13 +156,13 @@ bool Preventions::RemapAndCheckPages()
             {
                 if (mbi.AllocationProtect == PAGE_EXECUTE_READWRITE && mbi.State == MEM_COMMIT && mbi.Type == MEM_MAPPED) //after remapping, mbi.Type will be MEM_MAPPED instead of MEM_IMAGE, and memState will be COMMIT instead of RESERVE
                 {
-                    printf("Cheater! Change back the protections NOW!\n");
+                    Logger::logf("UltimateAnticheat.log", Detection, " re-re-mapping occured : Cheater! Change back the page protections NOW! \n");
                     exit(Error::PAGE_PROTECTIONS_MISMATCH);
                 }
             }
             else
             {
-                printf("VirtualQuery failed at RemapAndCheckPages .. we aren't supposed to reach this block: %d\n", GetLastError());
+                Logger::logf("UltimateAnticheat.log", Err, " VirtualQuery failed at RemapAndCheckPages .. we aren't supposed to reach this block: %d\n", GetLastError());
                 return false;
             }
         }
@@ -172,20 +172,19 @@ bool Preventions::RemapAndCheckPages()
             {
                 if (mbi.AllocationProtect == PAGE_EXECUTE_READWRITE && mbi.State == MEM_RESERVE && mbi.Type == MEM_IMAGE) //if remapping failed, it will still be MEM_IMAGE
                 {
-                    printf("Cheater! Change back the protections NOW!\n");
-                    exit(Error::PAGE_PROTECTIONS_MISMATCH);
+                    Logger::logf("UltimateAnticheat.log", Detection, " page protections were writable! \n");
                 }
             }
             else
             {
-                printf("VirtualQuery failed at RemapAndCheckPages .. we aren't supposed to reach this block: %d\n", GetLastError());
+                Logger::logf("UltimateAnticheat.log", Err, " VirtualQuery failed at RemapAndCheckPages .. we aren't supposed to reach this block: %d\n", GetLastError());
                 return false;
             }
         }
     }
     else
     {
-        printf("Imagebase was NULL!\n");
+        Logger::logf("UltimateAnticheat.log", Err, " Imagebase was NULL @ RemapAndCheckPages!\n");
         exit(Error::NULL_MEMORY_REFERENCE);
     }
 
