@@ -4,13 +4,13 @@
 //in an actual game scenario this would be single threaded and included in the game's main execution
 void Detections::Monitor(LPVOID thisPtr) 
 {
-    printf("[INFO] Starting  Detections::Monitor \n");
+    Logger::logf("UltimateAnticheat.log", Info, "Starting  Detections::Monitor \n");
 
     Detections* Monitor = reinterpret_cast<Detections*>(thisPtr);
 
     if (Monitor == nullptr)
     {
-        printf("[ERROR] Monitor Ptr was NULL @ Detections::Monitor. Aborting execution!\n");
+        Logger::logf("UltimateAnticheat.log", Err, "Monitor Ptr was NULL @ Detections::Monitor. Aborting execution!\n");
         return;
     }
 
@@ -18,7 +18,7 @@ void Detections::Monitor(LPVOID thisPtr)
 
     if (sections.size() == 0)
     {
-        printf("[ERROR] Sections size was 0 @ Detections::Monitor. Aborting execution!\n");
+        Logger::logf("UltimateAnticheat.log", Err, "Sections size was 0 @ Detections::Monitor. Aborting execution!\n");
         return;
     }
 
@@ -29,7 +29,7 @@ void Detections::Monitor(LPVOID thisPtr)
 
     if (ModuleAddr == 0)
     {
-        printf("[ERROR] Module couldn't be retrieved @ Detections::Monitor. Aborting execution! (%d)\n", GetLastError());
+        Logger::logf("UltimateAnticheat.log", Err, "Module couldn't be retrieved @ Detections::Monitor. Aborting execution! (%d)\n", GetLastError());
         return;
     }
 
@@ -50,37 +50,37 @@ void Detections::Monitor(LPVOID thisPtr)
     {
         if (Monitor->CheckSectionHash(CachedSectionAddress, CachedSectionSize)) //track the .text section for changes -> most expensive CPU-wise
         {
-            printf("[DETECTION] Found modified .text section!\n");
+            Logger::logf("UltimateAnticheat.log", Detection, "Found modified .text section!\n");
             Monitor->SetCheater(true); //report back to server that someone's cheating
         }
 
         if (Monitor->IsBlacklistedProcessRunning())
         {
-            printf("[DETECTION] Found blacklisted process!\n");
+            Logger::logf("UltimateAnticheat.log", Detection, "Found blacklisted process!\n");
             Monitor->SetCheater(true);
         }
 
         if (Monitor->DoesFunctionAppearHooked("ws2_32.dll", "send") || Monitor->DoesFunctionAppearHooked("ws2_32.dll", "recv"))   //ensure you use this routine on functions that don't have jumps or calls as their first byte
         {
-            printf("[DETECTION] networking WINAPI was hooked!\n"); //WINAPI hooks doesn't always determine someone is cheating since AV and other software can write the hooks
+            Logger::logf("UltimateAnticheat.log", Detection, "networking WINAPI was hooked!\n"); //WINAPI hooks doesn't always determine someone is cheating since AV and other software can write the hooks
             Monitor->SetCheater(true); //..but for simplicity in this project we will set them as a cheater
         }
 
         if (Monitor->GetIntegrityChecker()->IsUnknownModulePresent()) //authenticode call and check against whitelisted module list
         {
-            printf("[DETECTION] Found unsigned dll loaded: We ideally only want verified, signed dlls in our application (which is still subject to spoofing)!\n");
+            Logger::logf("UltimateAnticheat.log", Detection, "Found unsigned dll loaded : We ideally only want verified, signed dlls in our application!\n");
         }
 
         if (Services::IsMachineAllowingSelfSignedDrivers())
         {
-            printf("[DETECTION] Testsigning is enabled! In most cases we don't allow the game/process to continue if testsigning is enabled.\n");
+            Logger::logf("UltimateAnticheat.log", Detection, "Testsigning is enabled! In most cases we don't allow the game/process to continue if testsigning is enabled.\n");
             Monitor->SetCheater(true);
         }
 
         Sleep(MonitorLoopMilliseconds);
     }
 
-    printf("[INFO] Stopping  Detections::Monitor \n");
+    Logger::logf("UltimateAnticheat.log", Info, "Stopping  Detections::Monitor \n");
 }
 
 list<Module::Section*> Detections::SetSectionHash(const char* module, const char* sectionName) //Currently only scans the program headers/peb (first 0x1000 bytes) -> add parameters for startAddress + size to scan
@@ -91,7 +91,7 @@ list<Module::Section*> Detections::SetSectionHash(const char* module, const char
 
     if (sections.size() == 0)
     {
-        printf("[ERROR] sections.size() was 0 @ TestMemoryIntegrity\n");
+        Logger::logf("UltimateAnticheat.log", Err, "sections.size() of section %s was 0 @ TestMemoryIntegrity\n", sectionName);
         return sections;
     }
 
@@ -113,15 +113,15 @@ list<Module::Section*> Detections::SetSectionHash(const char* module, const char
 
 bool Detections::CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize)
 {
-    printf("Checking hashes of address: %llx (%d bytes) for memory integrity\n", cachedAddress, cachedSize);
+    Logger::logf("UltimateAnticheat.log", Info, "Checking hashes of address: %llx (%d bytes) for memory integrity\n", cachedAddress, cachedSize);
 
     if (GetIntegrityChecker()->Check((uint64_t)cachedAddress, cachedSize, GetIntegrityChecker()->GetMemoryHashList())) //compares hash to one gathered previously
     {
-        printf("[INFO] Hashes match: Program's .text section appears genuine.\n");
+        Logger::logf("UltimateAnticheat.log", Info, "Hashes match: Program's .text section appears genuine.\n");
     }
     else
     {
-        printf("[DETECTION] .text section of program is modified!\n");
+        Logger::logf("UltimateAnticheat.log", Detection, " .text section of program is modified!\n");
         return true;
     }
 
@@ -135,7 +135,7 @@ BOOL Detections::IsBlacklistedProcessRunning()
     HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hSnapshot == INVALID_HANDLE_VALUE) 
     {
-        printf("Failed to create snapshot of processes. Error code: %d\n", GetLastError());
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to create snapshot of processes. Error code: %d @ Detections::IsBlacklistedProcessRunning\n", GetLastError());
         return FALSE;
     }
 
@@ -143,7 +143,7 @@ BOOL Detections::IsBlacklistedProcessRunning()
     pe32.dwSize = sizeof(PROCESSENTRY32);
     if (!Process32First(hSnapshot, &pe32)) 
     {
-        printf("Failed to get first process. Error code:  %d\n", GetLastError());
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to get first process. Error code:  %d @ Detections::IsBlacklistedProcessRunning\n", GetLastError());
         CloseHandle(hSnapshot);
         return FALSE;
     }
@@ -176,7 +176,7 @@ BOOL Detections::DoesFunctionAppearHooked(const char* moduleName, const char* fu
 
     if (hMod == NULL)
     {
-        printf("[ERROR] Couldn't fetch module @ Detections::DoesFunctionAppearHooked: %s\n", moduleName);
+        Logger::logf("UltimateAnticheat.log", Err, " Couldn't fetch module @ Detections::DoesFunctionAppearHooked: %s\n", moduleName);
         return FALSE;
     }
 
@@ -184,7 +184,7 @@ BOOL Detections::DoesFunctionAppearHooked(const char* moduleName, const char* fu
 
     if (AddressFunction == NULL)
     {
-        printf("[ERROR] Couldn't fetch address of function @ Detections::DoesFunctionAppearHooked: %s\n", functionName);
+        Logger::logf("UltimateAnticheat.log", Err, " Couldn't fetch address of function @ Detections::DoesFunctionAppearHooked: %s\n", functionName);
         return FALSE;
     }
 
