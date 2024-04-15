@@ -9,7 +9,7 @@ void Debugger::AntiDebug::StartAntiDebugThread()
 
 void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 {
-	printf("[INFO] Starting Debugger detection thread with Id: %d\n", GetCurrentThreadId());
+	Logger::logf("UltimateAnticheat.log", Info, "Starting Debugger detection thread with Id: %d\n", GetCurrentThreadId());
 
 	Debugger::AntiDebug* AntiDbg = reinterpret_cast<Debugger::AntiDebug*>(AD);
 
@@ -19,66 +19,66 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 	if (basicDbg)
 	{
 		AntiDbg->DebuggerMethodsDetected.push_back(Detections::WINAPI_DEBUGGER);
-		printf("[DETECTION] Found debugger: WINAPI_DEBUGGER!\n");
+		Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: WINAPI_DEBUGGER!\n");
 	}
 
 	if (AntiDbg->_IsDebuggerPresent_PEB())
 	{
 		AntiDbg->DebuggerMethodsDetected.push_back(Detections::PEB_FLAG);
-		printf("[DETECTION] Found debugger: PEB_FLAG!\n");
+		Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: PEB_FLAG!\n");
 	}
 
 	if (AntiDbg->_IsHardwareDebuggerPresent())
 	{
 		AntiDbg->DebuggerMethodsDetected.push_back(Detections::HARDWARE_REGISTERS);
-		printf("[DETECTION] Debugger found: HARDWARE_REGISTERS.\n");
+		Logger::logf("UltimateAnticheat.log", Detection, "Debugger found: HARDWARE_REGISTERS.\n");
 	}
 
 	if (AntiDbg->_IsDebuggerPresentHeapFlags())
 	{
 		AntiDbg->DebuggerMethodsDetected.push_back(Detections::HEAP_FLAG);
-		printf("[DETECTION] Debugger found: HEAP_FLAG.\n");
+		Logger::logf("UltimateAnticheat.log", Detection, "Debugger found: HEAP_FLAG.\n");
 	}
 
 	if (AntiDbg->_IsKernelDebuggerPresent())
 	{
 		AntiDbg->DebuggerMethodsDetected.push_back(Detections::KERNEL_DEBUGGER);
-		printf("[DETECTION] Debugger found: KERNEL_DEBUGGER.\n");
+		Logger::logf("UltimateAnticheat.log", Detection, "Debugger found: KERNEL_DEBUGGER.\n");
 	}
 
 	if (AntiDbg->_IsDebuggerPresent_DbgBreak())
 	{
 		AntiDbg->DebuggerMethodsDetected.push_back(Detections::INT3);
-		printf("[DETECTION] Debugger found: DbgBreak Excpetion Handler\n");
+		Logger::logf("UltimateAnticheat.log", Detection, "Debugger found: DbgBreak Excpetion Handler\n");
 	}
 
 	if (AntiDbg->_IsDebuggerPresent_WaitDebugEvent())
 	{
 		AntiDbg->DebuggerMethodsDetected.push_back(Detections::DEBUG_EVENT);
-		printf("[DETECTION] Debugger found WaitDebugEvent.\n");
+		Logger::logf("UltimateAnticheat.log", Detection, "Debugger found WaitDebugEvent.\n");
 	}
 
 	if (AntiDbg->_IsDebuggerPresent_VEH())
 	{
 		AntiDbg->DebuggerMethodsDetected.push_back(Detections::VEH_DEBUGGER);
-		printf("[DETECTION] VEH debugger found!\n");
+		Logger::logf("UltimateAnticheat.log", Detection, "VEH debugger found!\n");
 	}
 
 	if (AntiDbg->_IsDebuggerPresent_DebugPort())
 	{
 		AntiDbg->DebuggerMethodsDetected.push_back(Detections::DEBUG_PORT);
-		printf("[DETECTION] DebugPort found!\n");
+		Logger::logf("UltimateAnticheat.log", Detection, "DebugPort found!\n");
 	}
 
 	if (AntiDbg->_IsDebuggerPresent_ProcessDebugFlags())
 	{
 		AntiDbg->DebuggerMethodsDetected.push_back(Detections::PROCESS_DEBUG_FLAGS);
-		printf("[DETECTION] ProcessDebugFlags found!\n");
+		Logger::logf("UltimateAnticheat.log", Detection, "ProcessDebugFlags found!\n");
 	}
 
 	if (AntiDbg->DebuggerMethodsDetected.size() > 0)
 	{
-		printf("[INFO] Atleast one method has caught a running debugger!\n");
+		Logger::logf("UltimateAnticheat.log", Info, "Atleast one method has caught a running debugger!\n");
 	}
 }
 
@@ -117,7 +117,7 @@ bool Debugger::AntiDebug::_IsHardwareDebuggerPresent()
 				{
 					if (lpContext.Dr0 || lpContext.Dr1 || lpContext.Dr2 || lpContext.Dr3 )
 					{
-						printf("Found at least one debug register enabled\n");
+						Logger::logf("UltimateAnticheat.log", Detection, "Found at least one debug register enabled\n");
 						CloseHandle(hThreadSnap);
 						CloseHandle(_tThread);
 						return true;
@@ -125,20 +125,18 @@ bool Debugger::AntiDebug::_IsHardwareDebuggerPresent()
 				}
 				else
 				{
-					printf("GetThreadContext failed with: %d\n", GetLastError());
+					Logger::logf("UltimateAnticheat.log", Err, "GetThreadContext failed with: %d\n", GetLastError());
 					CloseHandle(_tThread);
 					continue;
 				}
 			}
 			else
 			{
-				printf("Could not call openthread! %d\n", GetLastError());
+				Logger::logf("UltimateAnticheat.log", Err, "Could not call openthread! %d\n", GetLastError());
 				continue;
 			}
 		}
 	} while (Thread32Next(hThreadSnap, &te32));
-
-	printf(("\n"));
 
 	CloseHandle(hThreadSnap);
 	return false;
@@ -160,7 +158,7 @@ bool Debugger::AntiDebug::_IsKernelDebuggerPresent()
 
 	if (hModule == NULL)
 	{
-		printf("Error fetching module ntdll.dll @ _IsKernelDebuggerPresent: %d\n", GetLastError());
+		Logger::logf("UltimateAnticheat.log", Err, "Error fetching module ntdll.dll @ _IsKernelDebuggerPresent: %d\n", GetLastError());
 		return false;
 	}
 
@@ -270,7 +268,7 @@ bool Debugger::AntiDebug::_IsDebuggerPresentCloseHandle()
 {
 	__try
 	{
-		CloseHandle((HANDLE)NULL);
+		CloseHandle((HANDLE)1);
 	}
 	__except (EXCEPTION_INVALID_HANDLE == GetExceptionCode() ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
 	{
@@ -297,12 +295,12 @@ bool Debugger::AntiDebug::_IsDebuggerPresent_IllegalInstruction()
 
 bool Debugger::AntiDebug::_IsDebuggerPresent_Int2c()
 {
-	char cBuf[] = { 0x0F, 0x0B, 0xC3 };
+	unsigned char cBuf[] = { 0x0F, 0x0B, 0xC3 };
 
 	DWORD pOldProt = 0;
 	if (!VirtualProtect((LPVOID)cBuf, 3, PAGE_EXECUTE_READWRITE, &pOldProt))
 	{
-		printf("VirtualProtect failed at _IsDebuggerPresent_Int2c: %d\n", GetLastError());
+		Logger::logf("UltimateAnticheat.log", Err, "VirtualProtect failed at _IsDebuggerPresent_Int2c: %d\n", GetLastError());
 		return false;
 	}
 
@@ -321,12 +319,12 @@ bool Debugger::AntiDebug::_IsDebuggerPresent_Int2c()
 
 bool Debugger::AntiDebug::_IsDebuggerPresent_Int2d()
 {
-	char cBuf[2] = { 0x2D, 0xC3 };
+	unsigned char cBuf[2] = { 0x2D, 0xC3 };
 
 	DWORD pOldProt = 0;
 	if (!VirtualProtect((LPVOID)cBuf, 2, PAGE_EXECUTE_READ, &pOldProt))
 	{
-		printf("VirtualProtect failed at _IsDebuggerPresent_Int2d: %d\n", GetLastError());
+		Logger::logf("UltimateAnticheat.log", Err, "VirtualProtect failed at _IsDebuggerPresent_Int2d: %d\n", GetLastError());
 		return false;
 	}
 
@@ -354,7 +352,7 @@ bool Debugger::AntiDebug::_IsDebuggerPresent_DbgBreak()
 		return false;
 	}
 
-	printf("[DETECTION] Calling __fastfail() to prevent further execution, since a debugger was found running.\n");
+	Logger::logf("UltimateAnticheat.log", Info, "Calling __fastfail() to prevent further execution, since a debugger was found running.\n");
 	__fastfail(1); //code should not reach here unless process is being debugged
 	return true;
 }
