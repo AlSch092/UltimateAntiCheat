@@ -18,23 +18,16 @@ namespace Debugger
         INT2C,
         INT2D, //
         MULTIBYTE_INT3, //extended int3
-        INTO,
         CLOSEHANDLE,
         DEBUG_EVENT,
         DEBUG_OBJECT,
-        KNOWN_DEBUGGER, //for commonly used tools such as IDA, olly, etc
         VEH_DEBUGGER, //https://github.com/cheat-engine/cheat-engine/blob/66d2ad3ba7f4de6726f61437300b24fa00c425f5/Cheat%20Engine/VEHDebugger.pas -> calls CreateFileMapping, MapViewOfFile, CreateEvent, DuplicateHandle, then injects a DLL (vehdebug_x86/64.dll) -> calls "vehdebug.InitializeVEH' export, thus we can likely detect this by a simple module enum
         KERNEL_DEBUGGER,
         TRAP_FLAG, //There is a Trap Flag in the Flags register. Bit number 8 of the EFLAGS register is the trap flag. When the Trap Flag is set, a SINGLE_STEP exception is generated.
         ICE_0xF1, //ICEBP is an undocumented instruction that serves as a single byte interrupt 1, generating a single step exception. It can be used to detect if the program is traced.
         DEBUG_PORT,
         PROCESS_DEBUG_FLAGS,
-        SINGLE_STEP,
-        OVERFLOW_FLAG, 
-        EXPORTED_FUNCTIONS,
-        PARENT,
-        ILLEGAL_INSTRUCTION,
-        PRIVILEGED_INSTRUCTION,
+        PARENT,   //parent is ollydbg.exe or whatever else known debugger
     };
 
     class AntiDebug
@@ -78,5 +71,7 @@ namespace Debugger
     private:       
         list<Detections> DebuggerMethodsDetected;
         HANDLE DetectionThread;
+
+        Thread* _DetectionThread = NULL;
     };
 }

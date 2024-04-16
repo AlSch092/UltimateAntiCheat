@@ -5,6 +5,12 @@ void Debugger::AntiDebug::StartAntiDebugThread()
 {
 	HANDLE thread = this->GetDetectionThread();
 	thread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Debugger::AntiDebug::CheckForDebugger, (LPVOID)this, 0, 0);
+
+	if (thread == NULL)
+	{
+		Logger::logf("UltimateAnticheat.log", Err, "Couldn't start anti-debug thread @ Debugger::AntiDebug::StartAntiDebugThread\n");
+		//optionally shut down here
+	}
 }
 
 void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
