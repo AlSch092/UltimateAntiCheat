@@ -3,10 +3,11 @@
 
 void Debugger::AntiDebug::StartAntiDebugThread()
 {
-	HANDLE thread = this->GetDetectionThread();
-	thread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Debugger::AntiDebug::CheckForDebugger, (LPVOID)this, 0, 0);
+	Thread* t = new Thread();
 
-	if (thread == NULL)
+	t->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Debugger::AntiDebug::CheckForDebugger, (LPVOID)this, 0, &t->Id);
+
+	if (t->handle == INVALID_HANDLE_VALUE || t->handle == NULL)
 	{
 		Logger::logf("UltimateAnticheat.log", Err, "Couldn't start anti-debug thread @ Debugger::AntiDebug::StartAntiDebugThread\n");
 		//optionally shut down here
@@ -17,74 +18,99 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 {
 	Logger::logf("UltimateAnticheat.log", Info, "Starting Debugger detection thread with Id: %d\n", GetCurrentThreadId());
 
-	Debugger::AntiDebug* AntiDbg = reinterpret_cast<Debugger::AntiDebug*>(AD);
+	bool MonitoringDebugger = true;
 
-	//Basic winAPI check
-	bool basicDbg = AntiDbg->_IsDebuggerPresent();
-
-	if (basicDbg)
+	while (MonitoringDebugger)
 	{
-		AntiDbg->DebuggerMethodsDetected.push_back(Detections::WINAPI_DEBUGGER);
-		Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: WINAPI_DEBUGGER!\n");
-	}
+		Debugger::AntiDebug* AntiDbg = reinterpret_cast<Debugger::AntiDebug*>(AD);
 
-	if (AntiDbg->_IsDebuggerPresent_PEB())
-	{
-		AntiDbg->DebuggerMethodsDetected.push_back(Detections::PEB_FLAG);
-		Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: PEB_FLAG!\n");
-	}
+		if (AntiDbg == NULL) //something went wrong, this should not have happened
+		{
+			Logger::logf("UltimateAnticheat.log", Err, "AntiDbg PTR was NULL @ CheckForDebugger");
+			return;
+		}
 
-	if (AntiDbg->_IsHardwareDebuggerPresent())
-	{
-		AntiDbg->DebuggerMethodsDetected.push_back(Detections::HARDWARE_REGISTERS);
-		Logger::logf("UltimateAnticheat.log", Detection, "Debugger found: HARDWARE_REGISTERS.\n");
-	}
+		if (AntiDbg->DetectionThread->ShutdownSignalled)
+		{
+			Logger::logf("UltimateAnticheat.log", Info, "Shutting down Debugger detection thread with Id: %d\n", AntiDbg->DetectionThread->Id);
+			return; //exit thread
+		}
 
-	if (AntiDbg->_IsDebuggerPresentHeapFlags())
-	{
-		AntiDbg->DebuggerMethodsDetected.push_back(Detections::HEAP_FLAG);
-		Logger::logf("UltimateAnticheat.log", Detection, "Debugger found: HEAP_FLAG.\n");
-	}
+		//Basic winAPI check
+		bool basicDbg = AntiDbg->_IsDebuggerPresent();
 
-	if (AntiDbg->_IsKernelDebuggerPresent())
-	{
-		AntiDbg->DebuggerMethodsDetected.push_back(Detections::KERNEL_DEBUGGER);
-		Logger::logf("UltimateAnticheat.log", Detection, "Debugger found: KERNEL_DEBUGGER.\n");
-	}
+		if (basicDbg)
+		{
+			AntiDbg->DebuggerMethodsDetected.push_back(Detections::WINAPI_DEBUGGER);
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: WINAPI_DEBUGGER!\n");
+		}
 
-	if (AntiDbg->_IsDebuggerPresent_DbgBreak())
-	{
-		AntiDbg->DebuggerMethodsDetected.push_back(Detections::INT3);
-		Logger::logf("UltimateAnticheat.log", Detection, "Debugger found: DbgBreak Excpetion Handler\n");
-	}
+		if (AntiDbg->_IsDebuggerPresent_PEB())
+		{
+			AntiDbg->DebuggerMethodsDetected.push_back(Detections::PEB_FLAG);
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: PEB_FLAG!\n");
+		}
 
-	if (AntiDbg->_IsDebuggerPresent_WaitDebugEvent())
-	{
-		AntiDbg->DebuggerMethodsDetected.push_back(Detections::DEBUG_EVENT);
-		Logger::logf("UltimateAnticheat.log", Detection, "Debugger found WaitDebugEvent.\n");
-	}
+		if (AntiDbg->_IsHardwareDebuggerPresent())
+		{
+			AntiDbg->DebuggerMethodsDetected.push_back(Detections::HARDWARE_REGISTERS);
+			Logger::logf("UltimateAnticheat.log", Detection, "Debugger found: HARDWARE_REGISTERS.\n");
+		}
 
-	if (AntiDbg->_IsDebuggerPresent_VEH())
-	{
-		AntiDbg->DebuggerMethodsDetected.push_back(Detections::VEH_DEBUGGER);
-		Logger::logf("UltimateAnticheat.log", Detection, "VEH debugger found!\n");
-	}
+		if (AntiDbg->_IsDebuggerPresentHeapFlags())
+		{
+			AntiDbg->DebuggerMethodsDetected.push_back(Detections::HEAP_FLAG);
+			Logger::logf("UltimateAnticheat.log", Detection, "Debugger found: HEAP_FLAG.\n");
+		}
 
-	if (AntiDbg->_IsDebuggerPresent_DebugPort())
-	{
-		AntiDbg->DebuggerMethodsDetected.push_back(Detections::DEBUG_PORT);
-		Logger::logf("UltimateAnticheat.log", Detection, "DebugPort found!\n");
-	}
+		if (AntiDbg->_IsKernelDebuggerPresent())
+		{
+			AntiDbg->DebuggerMethodsDetected.push_back(Detections::KERNEL_DEBUGGER);
+			Logger::logf("UltimateAnticheat.log", Detection, "Debugger found: KERNEL_DEBUGGER.\n");
+		}
 
-	if (AntiDbg->_IsDebuggerPresent_ProcessDebugFlags())
-	{
-		AntiDbg->DebuggerMethodsDetected.push_back(Detections::PROCESS_DEBUG_FLAGS);
-		Logger::logf("UltimateAnticheat.log", Detection, "ProcessDebugFlags found!\n");
-	}
+		if (AntiDbg->_IsDebuggerPresent_DbgBreak())
+		{
+			AntiDbg->DebuggerMethodsDetected.push_back(Detections::INT3);
+			Logger::logf("UltimateAnticheat.log", Detection, "Debugger found: DbgBreak Excpetion Handler\n");
+		}
 
-	if (AntiDbg->DebuggerMethodsDetected.size() > 0)
-	{
-		Logger::logf("UltimateAnticheat.log", Info, "Atleast one method has caught a running debugger!\n");
+		if (AntiDbg->_IsDebuggerPresent_WaitDebugEvent())
+		{
+			AntiDbg->DebuggerMethodsDetected.push_back(Detections::DEBUG_EVENT);
+			Logger::logf("UltimateAnticheat.log", Detection, "Debugger found WaitDebugEvent.\n");
+		}
+
+		if (AntiDbg->_IsDebuggerPresent_VEH())
+		{
+			AntiDbg->DebuggerMethodsDetected.push_back(Detections::VEH_DEBUGGER);
+			Logger::logf("UltimateAnticheat.log", Detection, "VEH debugger found!\n");
+		}
+
+		if (AntiDbg->_IsDebuggerPresent_DebugPort())
+		{
+			AntiDbg->DebuggerMethodsDetected.push_back(Detections::DEBUG_PORT);
+			Logger::logf("UltimateAnticheat.log", Detection, "DebugPort found!\n");
+		}
+
+		if (AntiDbg->_IsDebuggerPresent_ProcessDebugFlags())
+		{
+			AntiDbg->DebuggerMethodsDetected.push_back(Detections::PROCESS_DEBUG_FLAGS);
+			Logger::logf("UltimateAnticheat.log", Detection, "ProcessDebugFlags found!\n");
+		}
+
+		if (AntiDbg->_IsDebuggerPresentCloseHandle())
+		{
+			AntiDbg->DebuggerMethodsDetected.push_back(Detections::CLOSEHANDLE);
+			Logger::logf("UltimateAnticheat.log", Detection, "Debugger was found via CloseHandle!\n");
+		}
+		
+		if (AntiDbg->DebuggerMethodsDetected.size() > 0)
+		{
+			Logger::logf("UltimateAnticheat.log", Info, "Atleast one method has caught a running debugger!\n");
+		}	
+
+		Sleep(2000);
 	}
 }
 
@@ -206,70 +232,6 @@ bool Debugger::AntiDebug::_IsDebuggerPresentHeapFlags()
 	return false;
 }
 
-#ifdef ENVIRONMENT32
-//these routines more or less check to see if an exception is consumed or not by some already attached debugger
-bool Debugger::AntiDebug::_IsDebuggerPresent_TrapFlag()
-{
-	__try
-	{
-		__asm
-		{
-			pushfd
-			or word ptr[esp], 0x100
-			popfd
-			nop
-		}
-	}
-	__except (1)
-	{
-		return FALSE;
-	}
-	return TRUE;
-}
-
-bool Debugger::AntiDebug::_IsDebuggerPresent_ICEBreakpoint()
-{
-	__try
-	{
-		__asm __emit 0xF1
-	}
-	__except (1)
-	{
-		return FALSE;
-	}
-	return TRUE;
-}
-
-//bool Debugger::AntiDebug::_IsDebuggerPresent_INT2D()
-//{
-//	__try
-//	{
-//		__asm int 0x2d
-//	}
-//	__except (1)
-//	{
-//		return FALSE;
-//	}
-//	return TRUE;
-//}
-//
-//bool Debugger::AntiDebug::_IsDebuggerPresent_Int2c()
-//{
-//	__try
-//	{
-//		__asm int 0x2c
-//	}
-//	__except (1)
-//	{
-//		return FALSE;
-//	}
-//	return TRUE;
-//}
-
-#else
-
-#endif
-
 bool Debugger::AntiDebug::_IsDebuggerPresentCloseHandle()
 {
 	__try
@@ -349,18 +311,19 @@ bool Debugger::AntiDebug::_IsDebuggerPresent_Int2d()
 
 bool Debugger::AntiDebug::_IsDebuggerPresent_DbgBreak()
 {
-	__try
-	{
-		DebugBreak();
-	}
-	__except (EXCEPTION_EXECUTE_HANDLER)
-	{
-		return false;
-	}
+	//__try
+	//{
+	//	DebugBreak();
+	//}
+	//__except (EXCEPTION_EXECUTE_HANDLER)
+	//{
+	//	return false;
+	//}
 
-	Logger::logf("UltimateAnticheat.log", Info, "Calling __fastfail() to prevent further execution, since a debugger was found running.\n");
-	__fastfail(1); //code should not reach here unless process is being debugged
-	return true;
+	//Logger::logf("UltimateAnticheat.log", Info, "Calling __fastfail() to prevent further execution, since a debugger was found running.\n");
+	//__fastfail(1); //code should not reach here unless process is being debugged
+	//return true;
+	return false;
 }
 
 inline bool Debugger::AntiDebug::_IsDebuggerPresent_VEH()

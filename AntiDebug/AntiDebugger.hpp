@@ -48,7 +48,8 @@ namespace Debugger
         
         list<Detections> GetDebuggerMethodsDetected() { return DebuggerMethodsDetected; }
     
-        HANDLE GetDetectionThread() { return this->DetectionThread->handle; }
+        Thread* GetDetectionThread() { return this->DetectionThread; }
+        HANDLE GetDetectionThreadHandle() { return this->DetectionThread->handle; }
         void SetDetectionThread(HANDLE h) { this->DetectionThread->handle = h; }
 
         inline bool _IsDebuggerPresent() { return IsDebuggerPresent(); }
