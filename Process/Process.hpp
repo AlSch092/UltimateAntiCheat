@@ -89,6 +89,8 @@ public:
 
 	static BYTE* GetBytesAtAddress(UINT64 address, UINT size);
 
+	static void TraverseIAT(); //beginning of IAT hook checks, return type will be changed to list<Import*> soon
+
 private:
 
 	_MYPEB* _PEB = new _MYPEB();

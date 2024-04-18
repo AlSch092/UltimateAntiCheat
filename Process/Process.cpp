@@ -569,7 +569,7 @@ UINT64 Process::GetSectionAddress(const char* moduleName, const char* sectionNam
         pSectionHeader++;
     }
 
-    printf("[WARNING] .text section not found.\n");
+    Logger::logf("UltimateAnticheat.log", Warning, ".text section not found.\n");
     return 0;
 }
 
@@ -586,5 +586,38 @@ BYTE* Process::GetBytesAtAddress(UINT64 address, UINT size) //remember to free b
     {
         delete[] memBytes;
         return NULL;
+    }
+}
+
+void Process::TraverseIAT() 
+{
+    HMODULE hModule = GetModuleHandleW(NULL);; //= LoadLibraryExA(exePath, NULL, DONT_RESOLVE_DLL_REFERENCES);
+
+    IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER*)hModule;
+    IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((BYTE*)hModule + dosHeader->e_lfanew);
+    IMAGE_IMPORT_DESCRIPTOR* importDesc = (IMAGE_IMPORT_DESCRIPTOR*)((BYTE*)hModule + ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
+
+    while (importDesc->OriginalFirstThunk != 0) 
+    {    
+        const char* dllName = (const char*)((BYTE*)hModule + importDesc->Name);
+
+        printf("DLL Name: %s\n", dllName);
+
+        IMAGE_THUNK_DATA* iat = (IMAGE_THUNK_DATA*)((BYTE*)hModule + importDesc->FirstThunk);
+
+        while (iat->u1.AddressOfData != 0) {
+
+            if (IMAGE_SNAP_BY_ORDINAL(iat->u1.Ordinal)) {
+                printf("  Ordinal: %llX\n", IMAGE_ORDINAL(iat->u1.Ordinal));
+            }
+            else {
+                //IMAGE_IMPORT_BY_NAME* importByName = (IMAGE_IMPORT_BY_NAME*)((BYTE*)hModule + iat->u1.AddressOfData);
+                printf(" Import Function Address: %llx\n", iat->u1.AddressOfData);
+            }
+
+            iat++;
+        }
+
+        importDesc++;
     }
 }
