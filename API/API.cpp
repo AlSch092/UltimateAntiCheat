@@ -51,7 +51,7 @@ Error API::Cleanup(AntiCheat* AC)
 		t->ShutdownSignalled = true;
 		//WaitForSingleObject(t->handle, INFINITE);
 		
-		if (t->handle != INVALID_HANDLE_VALUE)
+		if (t->handle != INVALID_HANDLE_VALUE || t->handle == NULL)
 		{
 			TerminateThread(t->handle, 0); //its better practice to send a signal to the thread and have the thread shut down on its own instead of terminating it from here, since terminatethread, etc can be hooked
 			delete t;
@@ -86,6 +86,16 @@ Error API::LaunchBasicTests(AntiCheat* AC) //currently in the process to split t
 
 	printf("[INFO] Starting API::LaunchBasicTests\n");
 
+	if (AC->GetBarrier()->DeployBarrier() == Error::OK) //activate all techniques to stop cheaters
+	{
+		printf("[INFO] Barrier techniques were applied successfully!\n");
+	}
+	else
+	{
+		printf("[ERROR] Could not initialize the barrier.\n");
+		errorCode = Error::GENERIC_FAIL;
+	}
+
 	AC->GetMonitor()->StartMonitor();
 
 	AC->GetAntiDebugger()->StartAntiDebugThread(); //start debugger checks in a seperate thread
@@ -110,18 +120,6 @@ Error API::LaunchBasicTests(AntiCheat* AC) //currently in the process to split t
 	{
 		wprintf(L"[DETECTION] Parent process was not %s! hekker detected!\n", API::whitelistedParentProcess); //sometimes people will launch a game from their own process, which we can easily detect if they haven't spoofed it
 		errorCode = Error::PARENT_PROCESS_MISMATCH;
-	}
-
-	//SymbolicHash::CreateThread_Hash(0, 0, (LPTHREAD_START_ROUTINE)&TestFunction, 0, 0, 0); //shows how we can call CreateThread without directly calling winapi, we call our pointer instead which then invokes createthread
-
-	if (AC->GetBarrier()->DeployBarrier() == Error::OK) //activate all techniques to stop cheaters
-	{
-		printf("[INFO] Barrier techniques were applied successfully!\n");
-	}
-	else
-	{
-		printf("[ERROR] Could not initialize the barrier.\n");
-		errorCode = Error::GENERIC_FAIL;
 	}
 
 	return errorCode;

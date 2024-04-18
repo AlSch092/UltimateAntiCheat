@@ -20,7 +20,7 @@ namespace API
 	static const char* ServerEndpoint = "127.0.0.1";
 	static unsigned short ServerPort = 5445;
 #ifdef _DEBUG
-	static const wchar_t* whitelistedParentProcess = L"VsDebugConsole.exe"; //if debugging in VS
+	static const wchar_t* whitelistedParentProcess = L"VsDebugConsole.exe"; //if debugging in VS, otherwise change to explorer.exe
 #else
 	static const wchar_t* whitelistedParentProcess = L"explorer.exe";
 #endif
