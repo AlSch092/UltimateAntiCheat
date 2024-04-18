@@ -23,7 +23,7 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessNam
 	}
 	else //bad parent process detected, or parent process mismatch, shut down the program after reporting the error to the server
 	{
-		printf("Parent process was not whitelisted, shutting down program! Make sure parent process is the same as specified in API.hpp. If you are using VS to debug, this might become VsDebugConsole.exe, rather than explorer.exe\n");
+		printf("[DETECTION] Parent process was not whitelisted, shutting down program! Make sure parent process is the same as specified in API.hpp. If you are using VS to debug, this might become VsDebugConsole.exe, rather than explorer.exe\n");
 		errorCode = Error::PARENT_PROCESS_MISMATCH;
 	}
 
@@ -47,14 +47,28 @@ Error API::Cleanup(AntiCheat* AC)
 
 	if (AC->GetAntiDebugger()->GetDetectionThread() != NULL) //stop anti-debugger monitor
 	{
-		TerminateThread(AC->GetAntiDebugger()->GetDetectionThread(), 0);
-		AC->GetAntiDebugger()->SetDetectionThread(NULL);
+		Thread* t = AC->GetAntiDebugger()->GetDetectionThread();
+		t->ShutdownSignalled = true;
+		//WaitForSingleObject(t->handle, INFINITE);
+		
+		if (t->handle != INVALID_HANDLE_VALUE)
+		{
+			TerminateThread(t->handle, 0); //its better practice to send a signal to the thread and have the thread shut down on its own instead of terminating it from here, since terminatethread, etc can be hooked
+			delete t;
+			AC->GetAntiDebugger()->SetDetectionThread(NULL);
+		}
 	}
 
-	if (AC->GetMonitor()->GetMonitorThread() != NULL) //stop generic monitor
+	if (AC->GetMonitor()->GetMonitorThread() != NULL) //stop anti-cheat monitor
 	{
-		TerminateThread(AC->GetMonitor()->GetMonitorThread(), 0);
-		AC->GetMonitor()->SetMonitorThread(NULL);
+		Thread* t = AC->GetMonitor()->GetMonitorThread();
+
+		if (t->handle != INVALID_HANDLE_VALUE)
+		{
+			TerminateThread(t->handle, 0);
+			delete t;
+			AC->GetMonitor()->SetMonitorThread(NULL);
+		}
 	}
 
 	delete AC;
@@ -94,13 +108,13 @@ Error API::LaunchBasicTests(AntiCheat* AC) //currently in the process to split t
 
 	if (!Process::CheckParentProcess(AC->GetBarrier()->GetProcessObject()->GetParentName())) //parent process check, the parent process would normally be set using our API methods
 	{
-		wprintf(L"Parent process was not %s! hekker detected!\n", API::whitelistedParentProcess); //sometimes people will launch a game from their own process, which we can easily detect if they haven't spoofed it
+		wprintf(L"[DETECTION] Parent process was not %s! hekker detected!\n", API::whitelistedParentProcess); //sometimes people will launch a game from their own process, which we can easily detect if they haven't spoofed it
 		errorCode = Error::PARENT_PROCESS_MISMATCH;
 	}
 
 	//SymbolicHash::CreateThread_Hash(0, 0, (LPTHREAD_START_ROUTINE)&TestFunction, 0, 0, 0); //shows how we can call CreateThread without directly calling winapi, we call our pointer instead which then invokes createthread
 
-	if (AC->GetBarrier()->DeployBarrier() == Error::OK) //remapping method
+	if (AC->GetBarrier()->DeployBarrier() == Error::OK) //activate all techniques to stop cheaters
 	{
 		printf("[INFO] Barrier techniques were applied successfully!\n");
 	}

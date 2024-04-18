@@ -20,17 +20,16 @@ namespace API
 	static const char* ServerEndpoint = "127.0.0.1";
 	static unsigned short ServerPort = 5445;
 #ifdef _DEBUG
-	static const wchar_t* whitelistedParentProcess = L"VsDebugConsole.exe"; //change to VsDebugConsole.exe if you're debugging in VS
+	static const wchar_t* whitelistedParentProcess = L"VsDebugConsole.exe"; //if debugging in VS
 #else
 	static const wchar_t* whitelistedParentProcess = L"explorer.exe";
 #endif
 
 	Error Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessName, bool isServerConnected);
 	Error Cleanup(AntiCheat* AC);
-	
-	Error LaunchBasicTests(AntiCheat* AC);
-	
 	Error SendHeartbeat(AntiCheat* AC);
+
+	Error LaunchBasicTests(AntiCheat* AC);
 	
 	Error __declspec(dllexport) Dispatch(AntiCheat* AC, DispatchCode code);
 }
