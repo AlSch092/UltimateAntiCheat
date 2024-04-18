@@ -42,19 +42,26 @@ public:
 
 	static void Monitor(LPVOID thisPtr); //activate all
 
-	HANDLE GetMonitorThread() { return this->MonitorThread; }
-	void SetMonitorThread(HANDLE h) { this->MonitorThread = h; }
+	Thread* GetMonitorThread() { return this->MonitorThread; }
+	void SetMonitorThread(Thread* h) {  this->MonitorThread = h; }
 
 	void StartMonitor() 
 	{ 
-		if(MonitorThread == NULL)
-			MonitorThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, 0, &MonitorThreadId);  
+		Thread* monitorThread = new Thread();
+		monitorThread->ShutdownSignalled = false;
 
 		if (MonitorThread == NULL)
+		{
+			monitorThread->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, 0, &monitorThread->Id);
+		}
+
+		if (monitorThread->handle == NULL)
 		{
 			printf("[ERROR] Couldn't start MonitorThread, aborting program!\n");
 			exit(-1);
 		}
+
+		this->MonitorThread = monitorThread;
 	}
 
 	BOOL IsBlacklistedProcessRunning(); //process checking, can be circumvented easily
@@ -66,8 +73,7 @@ private:
 	Services* _Services = NULL;
 	Integrity* integrityChecker = NULL;
 
-	HANDLE MonitorThread = NULL;
-	DWORD MonitorThreadId = 0;
+	Thread* MonitorThread;
 
 	BOOL CheaterWasDetected = FALSE;
 

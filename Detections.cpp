@@ -154,7 +154,7 @@ BOOL Detections::IsBlacklistedProcessRunning()
         {
             if (Utility::wcscmp_insensitive(blacklisted.c_str(), pe32.szExeFile))
             {
-                wprintf(L"[DETECTION] Blacklisted : %s\n", pe32.szExeFile);
+                wprintf(L"Blacklisted : %s\n", pe32.szExeFile);
                 foundBlacklistedProcess = true;
                 break;
             }
