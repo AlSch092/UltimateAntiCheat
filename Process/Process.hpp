@@ -42,6 +42,15 @@ namespace Module
 		DWORD NumberOfLinenumbers;
 		UINT64 PointerToLinenumbers;
 	};
+
+	struct ImportFunction
+	{
+		HMODULE Module;
+		std::string AssociatedModuleName;
+
+		UINT64 AddressOfData;
+		unsigned int Ordinal;
+	};
 }
 
 class Process
@@ -89,7 +98,7 @@ public:
 
 	static BYTE* GetBytesAtAddress(UINT64 address, UINT size);
 
-	static void TraverseIAT(); //beginning of IAT hook checks, return type will be changed to list<Import*> soon
+	static list<Module::ImportFunction*> GetIATEntries(); //start of IAT hook checks
 
 private:
 
