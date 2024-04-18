@@ -16,8 +16,8 @@ public:
 		if (StartMonitor)
 			this->StartMonitor();
 
-		BlacklistedProcesses.push_back(L"Cheat Engine.exe"); //these strings can be XOR'd for slightly better hiding
-		BlacklistedProcesses.push_back(L"CheatEngine.exe");
+		BlacklistedProcesses.push_back(L"Cheat Engine.exe"); //these strings can be encrypted for better hiding ability
+		BlacklistedProcesses.push_back(L"CheatEngine.exe"); //in addition, we can scan for window class names, possible exported functions, specific text inside windows, etc.
 		BlacklistedProcesses.push_back(L"cheatengine-x86_64-SSE4-AVX2.exe");
 		
 		BlacklistedProcesses.push_back(L"x64dbg.exe");
@@ -29,6 +29,9 @@ public:
 	{
 		delete _Services;
 		delete integrityChecker;
+
+		if (MonitorThread != NULL)
+			delete MonitorThread;
 	}
 
 	void SetCheater(BOOL cheating) { this->CheaterWasDetected = cheating; }
@@ -55,9 +58,9 @@ public:
 			monitorThread->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, 0, &monitorThread->Id);
 		}
 
-		if (monitorThread->handle == NULL)
+		if (monitorThread->handle == INVALID_HANDLE_VALUE)
 		{
-			printf("[ERROR] Couldn't start MonitorThread, aborting program!\n");
+			Logger::logf("UltimateAnticheat.log", Err, " Failed to create monitor thread  @ Detections::StartMonito\n");
 			exit(-1);
 		}
 
@@ -73,7 +76,7 @@ private:
 	Services* _Services = NULL;
 	Integrity* integrityChecker = NULL;
 
-	Thread* MonitorThread;
+	Thread* MonitorThread = NULL;
 
 	BOOL CheaterWasDetected = FALSE;
 

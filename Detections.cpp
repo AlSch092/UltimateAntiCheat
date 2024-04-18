@@ -154,7 +154,6 @@ BOOL Detections::IsBlacklistedProcessRunning()
         {
             if (Utility::wcscmp_insensitive(blacklisted.c_str(), pe32.szExeFile))
             {
-                wprintf(L"Blacklisted : %s\n", pe32.szExeFile);
                 foundBlacklistedProcess = true;
                 break;
             }
@@ -170,7 +169,7 @@ BOOL Detections::DoesFunctionAppearHooked(const char* moduleName, const char* fu
     if (moduleName == nullptr || functionName == nullptr)
         return FALSE;
 
-    BOOL FunctionPreambleIsJump = FALSE;
+    BOOL FunctionPreambleHooked = FALSE;
 
     HMODULE hMod = GetModuleHandleA(moduleName);
 
@@ -191,12 +190,13 @@ BOOL Detections::DoesFunctionAppearHooked(const char* moduleName, const char* fu
     __try
     {
         if (*(BYTE*)AddressFunction == 0xE8 || *(BYTE*)AddressFunction == 0xE9 || *(BYTE*)AddressFunction == 0xEA || *(BYTE*)AddressFunction == 0xEB) //0xEB = short jump, 0xE8 = call X, 0xE9 = long jump, 0xEA = "jmp oper2:oper1"
-            FunctionPreambleIsJump = TRUE;
+            FunctionPreambleHooked = TRUE;
     }
     __except(EXCEPTION_EXECUTE_HANDLER)
     {
+        Logger::logf("UltimateAnticheat.log", Warning, " Couldn't read bytes @ Detections::DoesFunctionAppearHooked: %s\n", functionName);
         return FALSE; //couldn't read memory at function
     }
 
-    return FunctionPreambleIsJump;
+    return FunctionPreambleHooked;
 }
