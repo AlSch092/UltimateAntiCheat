@@ -589,7 +589,7 @@ BYTE* Process::GetBytesAtAddress(UINT64 address, UINT size) //remember to free b
     }
 }
 
-list<Module::ImportFunction*> Process::TraverseIAT() 
+list<Module::ImportFunction*> Process::GetIATEntries() 
 {
     HMODULE hModule = GetModuleHandleW(NULL);; //= LoadLibraryExA(exePath, NULL, DONT_RESOLVE_DLL_REFERENCES);
 
