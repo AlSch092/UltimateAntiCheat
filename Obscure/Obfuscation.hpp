@@ -1,4 +1,4 @@
-//by AlSch092 @ github
+//By AlSch092 @ Github
 #pragma once
 #include <random>
 #include <string>
@@ -10,7 +10,7 @@
 
 using namespace std;
 
-namespace Obfuscator
+namespace Obfuscator //from my other project, ObfuscateThis !
 {
 	template <class T>
 	__forceinline void obfuscate(T& data)
@@ -92,14 +92,14 @@ namespace Obfuscator
 }
 
 template<class T>
-class ProtectedData
+class ObfuscatedData
 {
 private:
 	T someData; //data member to protect in memory
 
 public:
 
-	ProtectedData(T val)
+	ObfuscatedData(T val)
 	{
 		SetData(val);
 	}
