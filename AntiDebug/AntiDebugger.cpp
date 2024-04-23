@@ -311,6 +311,9 @@ bool Debugger::AntiDebug::_IsDebuggerPresent_Int2d()
 
 bool Debugger::AntiDebug::_IsDebuggerPresent_DbgBreak()
 {
+#ifdef _DEBUG
+	return false;  //only use __fastfail in release build , since it will trip up our execution when debugging this project
+#else
 	__try
 	{
 		DebugBreak();
@@ -323,6 +326,7 @@ bool Debugger::AntiDebug::_IsDebuggerPresent_DbgBreak()
 	Logger::logf("UltimateAnticheat.log", Info, "Calling __fastfail() to prevent further execution, since a debugger was found running.\n");
 	__fastfail(1); //code should not reach here unless process is being debugged
 	return true;
+#endif
 }
 
 inline bool Debugger::AntiDebug::_IsDebuggerPresent_VEH()
