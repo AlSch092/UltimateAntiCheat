@@ -311,19 +311,18 @@ bool Debugger::AntiDebug::_IsDebuggerPresent_Int2d()
 
 bool Debugger::AntiDebug::_IsDebuggerPresent_DbgBreak()
 {
-	//__try
-	//{
-	//	DebugBreak();
-	//}
-	//__except (EXCEPTION_EXECUTE_HANDLER)
-	//{
-	//	return false;
-	//}
+	__try
+	{
+		DebugBreak();
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+		return false;
+	}
 
-	//Logger::logf("UltimateAnticheat.log", Info, "Calling __fastfail() to prevent further execution, since a debugger was found running.\n");
-	//__fastfail(1); //code should not reach here unless process is being debugged
-	//return true;
-	return false;
+	Logger::logf("UltimateAnticheat.log", Info, "Calling __fastfail() to prevent further execution, since a debugger was found running.\n");
+	__fastfail(1); //code should not reach here unless process is being debugged
+	return true;
 }
 
 inline bool Debugger::AntiDebug::_IsDebuggerPresent_VEH()
