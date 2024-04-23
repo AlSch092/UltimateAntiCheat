@@ -77,6 +77,12 @@ void Detections::Monitor(LPVOID thisPtr)
             Monitor->SetCheater(true);
         }
 
+        if (Detections::DoesIATContainHooked())
+        {
+            Logger::logf("UltimateAnticheat.log", Detection, "IAT was hooked! One or more functions lead to addresses outside their respective modules!\n");
+            Monitor->SetCheater(true);
+        }
+
         Sleep(MonitorLoopMilliseconds);
     }
 
@@ -199,4 +205,14 @@ BOOL Detections::DoesFunctionAppearHooked(const char* moduleName, const char* fu
     }
 
     return FunctionPreambleHooked;
+}
+
+BOOL Detections::DoesIATContainHooked() //we can collect this info inside the TLS callback then compare later versions against that info to check if somoene has modified the IAT at runtime to outside the regular modules
+{
+    list<Module::ImportFunction*> IATFunctions = Process::GetIATEntries();
+
+
+
+
+    return FALSE;
 }
