@@ -47,6 +47,7 @@ namespace Module
 	{
 		HMODULE Module;
 		std::string AssociatedModuleName;
+		std::string FunctionName;
 
 		UINT64 AddressOfData;
 		unsigned int Ordinal;
@@ -78,7 +79,7 @@ public:
 	void SetParentName(wstring parentName) { this->_ParentProcessName = parentName; }
 	void SetParentId(uint32_t id) { this->_ParentProcessId = id; }
 
-	static bool ChangeModuleName(const wchar_t* szModule, const wchar_t* newName);
+	static bool ChangeModuleName(const wstring szModule, const wstring newName);
 	static bool ChangeModuleBase(const wchar_t* szModule, uint64_t moduleBaseAddress);
 	static bool ChangeModulesChecksum(const wchar_t* szModule, DWORD checksum);
 	static void RemovePEHeader(HANDLE moduleBase);

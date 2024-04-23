@@ -216,20 +216,20 @@ list<Module::Section*> Process::GetSections(string module)
     return Sections;
 }
 
-bool Process::ChangeModuleName(const wchar_t* szModule, const wchar_t* newName)
+bool Process::ChangeModuleName(const wstring szModule, const wstring newName)
 {
     PPEB PEB = (PPEB)__readgsqword(0x60);
     _LIST_ENTRY* f = PEB->Ldr->InMemoryOrderModuleList.Flink;
     bool Found = FALSE;
     int count = 0;
 
-    while (!Found && count < 256)
+    while (!Found && count < 256) //traverse module list , stops at 256 loops to prevent infinite looping incase szModule isn't found
     {
         PLDR_DATA_TABLE_ENTRY dataEntry = CONTAINING_RECORD(f, LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);
 
-        if (wcsstr(dataEntry->FullDllName.Buffer, szModule))
+        if (wcsstr(dataEntry->FullDllName.Buffer, szModule.c_str()))
         {
-            wcscpy(dataEntry->FullDllName.Buffer, newName);
+            wcscpy_s(dataEntry->FullDllName.Buffer, szModule.size() + 1, newName.c_str()); //..then modify the string modulename to newName
             Found = TRUE;
             return true;
         }
@@ -240,7 +240,6 @@ bool Process::ChangeModuleName(const wchar_t* szModule, const wchar_t* newName)
 
     return false;
 }
-
 
 bool Process::ChangeModuleBase(const wchar_t* szModule, uint64_t moduleBaseAddress)
 {
@@ -589,9 +588,12 @@ BYTE* Process::GetBytesAtAddress(UINT64 address, UINT size) //remember to free b
     }
 }
 
+/*
+Returns a list of ImportFunction* from the program IAT , for later hook checks
+*/
 list<Module::ImportFunction*> Process::GetIATEntries() 
 {
-    HMODULE hModule = GetModuleHandleW(NULL);; //= LoadLibraryExA(exePath, NULL, DONT_RESOLVE_DLL_REFERENCES);
+    HMODULE hModule = GetModuleHandleW(NULL); //= LoadLibraryExA(exePath, NULL, DONT_RESOLVE_DLL_REFERENCES);
 
     IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER*)hModule;
     IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((BYTE*)hModule + dosHeader->e_lfanew);
@@ -623,7 +625,7 @@ list<Module::ImportFunction*> Process::GetIATEntries()
             }
             else
             {
-                //IMAGE_IMPORT_BY_NAME* importByName = (IMAGE_IMPORT_BY_NAME*)((BYTE*)hModule + iat->u1.AddressOfData);
+                //IMAGE_IMPORT_BY_NAME* importByName = (IMAGE_IMPORT_BY_NAME*)((UINT64)hModule + iat->u1.Function);
                 printf(" Import Function Address: %llx\n", iat->u1.AddressOfData);
                 import->AddressOfData = iat->u1.AddressOfData;
             }
