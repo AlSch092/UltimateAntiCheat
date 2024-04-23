@@ -1,19 +1,8 @@
 /*  UltimateAnticheat.cpp : This file contains the 'main' function. Program execution begins and ends there. main.cpp contains testing of functionality
 
-    U.A.C. is an 'in-development'/educational example of anti-cheat techniques written in C++ for x64 platforms
- 
-    Feature list: 
-    1. Anti-dll injection (multiple methods, including authenticode enforcement and mitigation policy)
-    2. Anti-debugging (multiple methods)
-    3. Anti-tamper  (multiple methods including image remapping & memory integrity checking)
-    4. PEB modification & spoofing
-    5. Server-generated shellcode execution (self-unpacking + containing a key in each message which is required to be sent back, ensuring the shellcode was executed), plus cipher-chaining
-    6. Client-server heartbeats, version checking, licensing, APIs
-    7. Modification of modules: changing loaded module names, symbol names (exports and imports)
-    8. TLS callback for anti-debugging + anti-dll injection and thread management
-    9. WINAPI calls via 'symbolic hashes' -> stores a list of pointers such that we can call winapi routines by a numeric hash instead of its symbol name
-
-    There might be bugs, please raise a github issue if you'd like something in particular added or fixed
+    U.A.C. is an 'in-development'/educational example of anti-cheat techniques written in C++ for x64 platforms.
+    
+    Please view the readme for more information regarding program features.
 
     Author: AlSch092 @ Github.
 
@@ -72,14 +61,20 @@ int main(int argc, char** argv)
 
     AntiCheat* AC = new AntiCheat();
 
-    API::Dispatch(AC, API::DispatchCode::INITIALIZE); //initialize AC -> right now basic tests are run within this call 
+    API::Dispatch(AC, API::DispatchCode::INITIALIZE); //initialize AC , this will start all detections + preventions
 
     UnmanagedGlobals::SupressingNewThreads = AC->GetBarrier()->IsPreventingThreadCreation;
 
     cout << "\n-----------------------------------------------------------------------------------------\n";
     cout << "All tests have been executed, the program will now loop using its detection methods for one minute. Thanks for your interest in the project!\n\n";
 
-    Sleep(60000);
+    Sleep(60000); //let the other threads run for a bit to display monitoring, normally the game's main loop would be here but instead we will wait 60s
+                  //...it's also recommended you run any anti-cheat in the main thread of the game for several reasons
+
+    if (AC->GetMonitor()->IsUserCheater())
+    {
+        Logger::logf("UltimateAnticheat.log", Info, "Detected a cheater in first 60 seconds of runtime");
+    }
 
     API::Dispatch(AC, API::DispatchCode::CLIENT_EXIT); //clean up memory & threads
     return 0;
@@ -134,7 +129,7 @@ void UnmanagedGlobals::RemoveThread(DWORD tid)
         ThreadList.remove(ToRemove);
 }
 
-void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
+void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved) // todo: check if TLSCallback ptr has been changed @ runtime, if so end the program with a detected cheater
 {
     switch (dwReason)
     {
@@ -142,7 +137,7 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
         {
             Logger::logf("UltimateAnticheat.log", Info, " New process attached, current thread %d\n", GetCurrentThreadId());
 
-            if (UnmanagedGlobals::FirstProcessAttach)
+            if (UnmanagedGlobals::FirstProcessAttach) //process creation will trigger PROCESS_ATTACH, so we can put some initialize stuff in here incase main() is hooked or statically modified by the attacker
             {
                 if (!UnmanagedGlobals::SetExceptionHandler)
                 {
@@ -160,12 +155,12 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
             }
             else
             {
-                Logger::logf("UltimateAnticheat.log", Detection, " Some unknown process attached @ TLSCallback ");
+                Logger::logf("UltimateAnticheat.log", Detection, " Some unknown process attached @ TLSCallback "); //this should generally never be triggered in this example
             }
 
         }break;
 
-        case DLL_PROCESS_DETACH: //program exit
+        case DLL_PROCESS_DETACH: //program exit, clean up any memory allocated
         {
             for (Thread* t : UnmanagedGlobals::ThreadList)
             {
