@@ -25,7 +25,7 @@ public:
 		BlacklistedProcesses.push_back(L"windbg.exe");
 		BlacklistedProcesses.push_back(L"Procmon64.exe");
 
-		this->CheaterWasDetected = new ProtectedData<uint8_t>((bool)false);
+		this->CheaterWasDetected = new ObfuscatedData<uint8_t>((bool)false);
 	}
 
 	~Detections()
@@ -76,7 +76,7 @@ public:
 
 private:
 
-	ProtectedData<uint8_t>* CheaterWasDetected = NULL; //using bool as the type does not work properly with obfuscation since the compiler uses true/false, so use uint8_t instead and cast to BOOL when needed
+	ObfuscatedData<uint8_t>* CheaterWasDetected = NULL; //using bool as the type does not work properly with obfuscation since the compiler uses true/false, so use uint8_t instead and cast to BOOL when needed
 
 	Services* _Services = NULL;
 	Integrity* integrityChecker = NULL;
