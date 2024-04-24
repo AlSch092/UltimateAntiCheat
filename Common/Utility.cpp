@@ -6,7 +6,7 @@ char* Utility::GenerateRandomString(int length) //make sure to delete[] memory a
     if (length == 0)
         return NULL;
 
-    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
 
     char* randomString = new char[(length + 1) * sizeof(char)];
 
@@ -25,7 +25,7 @@ wchar_t* Utility::GenerateRandomWString(int length) //make sure to delete[] memo
     if (length == 0)
         return NULL;
 
-    const wchar_t charset[] = L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const wchar_t charset[] = L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
 
     wchar_t* randomString = new wchar_t[(length + 1) * sizeof(wchar_t)];
 
