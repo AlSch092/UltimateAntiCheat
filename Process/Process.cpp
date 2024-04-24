@@ -593,7 +593,7 @@ Returns a list of ImportFunction* from the program IAT , for later hook checks
 */
 list<Module::ImportFunction*> Process::GetIATEntries() 
 {
-    HMODULE hModule = GetModuleHandleW(NULL); //= LoadLibraryExA(exePath, NULL, DONT_RESOLVE_DLL_REFERENCES);
+    HMODULE hModule = GetModuleHandleW(NULL);
 
     IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER*)hModule;
     IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((BYTE*)hModule + dosHeader->e_lfanew);
@@ -608,8 +608,6 @@ list<Module::ImportFunction*> Process::GetIATEntries()
         if (dllName == NULL)
             continue;
 
-        printf("DLL Name: %s\n", dllName);
-
         IMAGE_THUNK_DATA* iat = (IMAGE_THUNK_DATA*)((BYTE*)hModule + importDesc->FirstThunk);
 
         while (iat->u1.AddressOfData != 0) 
@@ -617,19 +615,7 @@ list<Module::ImportFunction*> Process::GetIATEntries()
             Module::ImportFunction* import = new Module::ImportFunction();
             import->AssociatedModuleName = dllName;
             import->Module = GetModuleHandleA(dllName);
-
-            if (IMAGE_SNAP_BY_ORDINAL(iat->u1.Ordinal)) 
-            {
-                printf("  Ordinal: %llX\n", IMAGE_ORDINAL(iat->u1.Ordinal));
-                import->Ordinal = iat->u1.Ordinal;
-            }
-            else
-            {
-                //IMAGE_IMPORT_BY_NAME* importByName = (IMAGE_IMPORT_BY_NAME*)((UINT64)hModule + iat->u1.Function);
-                printf(" Import Function Address: %llx\n", iat->u1.AddressOfData);
-                import->AddressOfData = iat->u1.AddressOfData;
-            }
-
+            import->AddressOfData = iat->u1.AddressOfData;         
             importList.push_back(import);
             iat++;
         }
@@ -638,4 +624,23 @@ list<Module::ImportFunction*> Process::GetIATEntries()
     }
 
     return importList;
+}
+
+DWORD Process::GetModuleSize(HMODULE hModule)
+{
+    if (hModule == NULL) 
+    {
+        return 0;
+    }
+
+    // Get module information
+    MODULEINFO moduleInfo;
+    if (!GetModuleInformation(GetCurrentProcess(), hModule, &moduleInfo, sizeof(moduleInfo))) 
+    {
+        return 0;
+    }
+
+    // Calculate module size
+    DWORD moduleSize = moduleInfo.SizeOfImage;
+    return moduleSize;
 }

@@ -99,6 +99,8 @@ public:
 
 	static BYTE* GetBytesAtAddress(UINT64 address, UINT size);
 
+	static DWORD GetModuleSize(HMODULE module);
+
 	static list<Module::ImportFunction*> GetIATEntries(); //start of IAT hook checks
 
 private:
@@ -117,8 +119,7 @@ private:
 
 	list<Module::Section*> _sections;
 
-	list<Module::MODULE_DATA*> ModuleList;
-	list<uint64_t>* ModuleHashes;
+	list<Module::MODULE_DATA*> ModuleList; //todo: make routine to fill this member
 
 	bool _Elevated;
 };
