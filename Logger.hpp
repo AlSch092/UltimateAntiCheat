@@ -56,10 +56,10 @@ public:
             msg_with_errorcode = msg_with_errorcode + message;
 
             std::time_t now = std::time(nullptr);
-            char* timestamp = new char[64] {0};
+            char timestamp[64];
             std::strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
             
-            logFile << "[" << timestamp << "] " << message << std::endl;
+            logFile << "[" << timestamp << "] " << msg_with_errorcode << std::endl;
 
             if (logFile.fail()) 
             {
@@ -67,7 +67,6 @@ public:
             }
 
             logFile.flush();
-            delete[] timestamp;
         }
         else 
         {
