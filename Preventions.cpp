@@ -77,12 +77,13 @@ Error Preventions::DeployBarrier()
 
     IsPreventingThreadCreation = true; //TLS callback anti-dll injection switch var
 
+#ifndef _DEBUG
     if (!RemapAndCheckPages()) //anti-memory write
     {
         Logger::logf("UltimateAnticheat.log", Err, " Couldn't remap memory @ DeployBarrier!\n");
         retError = Error::CANT_STARTUP;
     }
-
+#endif
     if (PreventDllInjection()) //anti-injection
     {
         Logger::logf("UltimateAnticheat.log", Info, " Wrote over LoadLibrary (kernel32) export names successfully!\n");
