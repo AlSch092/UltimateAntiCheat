@@ -84,7 +84,7 @@ public:
             return;
 
         const int buffSize = 512;
-        char* buffer = new char[buffSize] {0};
+        char buffer[buffSize] {0};
 
         int ret = std::snprintf(buffer, buffSize, format, args...);
         if (ret >= 0 && ret < buffSize)
@@ -95,7 +95,5 @@ public:
         {
             std::cerr << "Error: Failed to format log message." << std::endl;
         }
-
-        delete[] buffer;
     }
 };
