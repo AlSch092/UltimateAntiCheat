@@ -6,14 +6,14 @@ char* Utility::GenerateRandomString(int length) //make sure to delete[] memory a
     if (length == 0)
         return NULL;
 
-    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;";
+    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
     char* randomString = new char[(length + 1) * sizeof(char)];
 
     srand(time(NULL));
 
     for (int i = 0; i < length; ++i) 
-        randomString[i] = charset[rand() % (sizeof(charset) - 1)];
+        randomString[i] = charset[rand() % (strlen(charset) - 1)];
   
     randomString[length] = '\0';
 
@@ -25,14 +25,14 @@ wchar_t* Utility::GenerateRandomWString(int length) //make sure to delete[] memo
     if (length == 0)
         return NULL;
 
-    const wchar_t charset[] = L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;";
+    const wchar_t charset[] = L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-    wchar_t* randomString = new wchar_t[(length + 1) * sizeof(char)];
+    wchar_t* randomString = new wchar_t[(length + 1) * sizeof(wchar_t)];
 
     srand(time(NULL));
 
     for (int i = 0; i < length; ++i)
-        randomString[i] = charset[rand() % (sizeof(charset) - 1)];
+        randomString[i] = charset[rand() % (wcslen(charset) - 1)];
 
     randomString[length] = '\0';
 
@@ -82,4 +82,16 @@ bool Utility::wcscmp_insensitive(const wchar_t* s1, const wchar_t* s2)
     }
 
     return true;
+}
+
+std::string Utility::ConvertWStringToString(const std::wstring& wstr) 
+{
+    // Create a locale object with the system default locale
+    std::locale loc("");
+
+    // Create a codecvt facet for UTF-8 conversion
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
+
+    // Convert the wide string to a narrow string using UTF-8 encoding
+    return conv.to_bytes(wstr);
 }

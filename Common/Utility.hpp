@@ -3,6 +3,9 @@
 #include <stdint.h>
 #include <Windows.h>
 #include <time.h>
+#include <string>
+#include <locale>
+#include <codecvt>
 
 class Utility
 {
@@ -40,4 +43,6 @@ public:
 
 	static char* GenerateRandomString(int length);
 	static wchar_t* GenerateRandomWString(int length);
+
+	static std::string ConvertWStringToString(const std::wstring& wstr);
 };
