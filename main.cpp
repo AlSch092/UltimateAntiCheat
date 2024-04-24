@@ -35,20 +35,6 @@ PIMAGE_TLS_CALLBACK _tls_callback = TLSCallback;
 
 using namespace std;
 
-namespace UnmanagedGlobals //we track thread creation through TLS callback, thus we need some object which is visible within the tlscallback
-{
-    std::list<Thread*> ThreadList; 
-    bool AddThread(DWORD id);
-    void RemoveThread(DWORD tid);
-
-    LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo);
-
-    bool SupressingNewThreads = false;
-    bool SetExceptionHandler = false;
-    bool FirstProcessAttach = true;
-}
-
-
 int main(int argc, char** argv)
 {
     SetConsoleTitle(L"Ultimate Anti-Cheat");
@@ -63,7 +49,7 @@ int main(int argc, char** argv)
 
     API::Dispatch(AC, API::DispatchCode::INITIALIZE); //initialize AC , this will start all detections + preventions
 
-    UnmanagedGlobals::SupressingNewThreads = AC->GetBarrier()->IsPreventingThreadCreation;
+    UnmanagedGlobals::SupressingNewThreads = AC->GetBarrier()->IsPreventingThreads();
 
     cout << "\n-----------------------------------------------------------------------------------------\n";
     cout << "All tests have been executed, the program will now loop using its detection methods for one minute. Thanks for your interest in the project!\n\n";
