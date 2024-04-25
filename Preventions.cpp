@@ -32,6 +32,19 @@ bool Preventions::PreventDllInjection()
     return success;
 }
 
+bool Preventions::PreventShellcodeThreads() //using this technique might pop up a warning about missing the function "CreateThread" (Entry Point Not Found)
+{
+    bool success = FALSE;
+    char* RandString1 = Utility::GenerateRandomString(12);
+
+    if (Exports::ChangeFunctionName("KERNEL32.DLL", "CreateThread", RandString1))
+        success = TRUE;
+
+    delete[] RandString1;
+    return success;
+}
+
+
 BYTE* Preventions::SpoofPEB()
 {
     BYTE* newPEBBytes = CopyAndSetPEB();
@@ -48,7 +61,7 @@ BYTE* Preventions::SpoofPEB()
     return newPEBBytes;
 }
 
-bool Preventions::ChangeModuleName()
+bool Preventions::RandomizeModuleName()
 {
     bool success = false;
 
@@ -59,12 +72,14 @@ bool Preventions::ChangeModuleName()
         return false;
     }
 
-    wchar_t* newModuleName = Utility::GenerateRandomWString(moduleNameSize - 2); //intentionally set to -2 to trip up external programs like CE from enumerating dlls & symbols
+    wchar_t* newModuleName = Utility::GenerateRandomWString(moduleNameSize); //intentionally set to -2 to trip up external programs like CE from enumerating dlls & symbols
 
     if (Process::ChangeModuleName(OriginalModuleName.c_str(), newModuleName)) //in addition to changing export function names, we can also modify the names of loaded modules/libraries.
     {
-        wprintf(L"Changed module name to %s!\n", newModuleName);
         success = true;
+        UnmanagedGlobals::wCurrentModuleName = wstring(newModuleName);
+        UnmanagedGlobals::CurrentModuleName = Utility::ConvertWStringToString(UnmanagedGlobals::wCurrentModuleName);
+        wprintf(L"Changed module name to: %s\n", UnmanagedGlobals::wCurrentModuleName.c_str());
     }
 
     delete[] newModuleName;
@@ -75,7 +90,9 @@ Error Preventions::DeployBarrier()
 {
     Error retError = Error::OK;
 
-    IsPreventingThreadCreation = true; //TLS callback anti-dll injection switch var
+#ifndef _DEBUG
+    IsPreventingThreadCreation = false; //TLS callback anti-dll injection switch var
+#endif
 
 #ifndef _DEBUG
     if (!RemapAndCheckPages()) //anti-memory write
@@ -84,6 +101,7 @@ Error Preventions::DeployBarrier()
         retError = Error::CANT_STARTUP;
     }
 #endif
+
     if (PreventDllInjection()) //anti-injection
     {
         Logger::logf("UltimateAnticheat.log", Info, " Wrote over LoadLibrary (kernel32) export names successfully!\n");
@@ -93,6 +111,16 @@ Error Preventions::DeployBarrier()
         Logger::logf("UltimateAnticheat.log", Err, " Couldn't write over export names @ Preventions::ChangeExportNames\n");
         retError = Error::CANT_APPLY_TECHNIQUE;
     }
+
+    //if (PreventShellcodeThreads()) //prevent lookups to CreateThread symbol from injected code by renaming the export name in memory, but can throw errors to the end user
+    //{
+    //    Logger::logf("UltimateAnticheat.log", Info, " Wrote over CreateThread (kernel32) export name successfully!\n");
+    //}
+    //else
+    //{
+    //    Logger::logf("UltimateAnticheat.log", Err, " Couldn't write over export names @ Preventions::ChangeExportNames\n");
+    //    retError = Error::CANT_APPLY_TECHNIQUE;
+    //}
 
     BYTE* newPEB = SpoofPEB(); //memory should be free'd at end of program
 
@@ -106,9 +134,9 @@ Error Preventions::DeployBarrier()
         retError = Error::CANT_APPLY_TECHNIQUE;
     }
 
-    if (ChangeModuleName()) //should block calls to GetModuleHandle from working unless the cheater keeps up with our new module's name
+    if (RandomizeModuleName()) //should block calls to GetModuleHandle from working unless the cheater keeps up with our new module's name
     {
-        Logger::logf("UltimateAnticheat.log", Info, " Randomized our module's name!\n");
+        Logger::logf("UltimateAnticheat.log", Info, " Randomized our executable's module's name!\n");
     }
     else
     {
