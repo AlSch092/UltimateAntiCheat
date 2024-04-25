@@ -27,7 +27,7 @@ namespace Module
 
 	struct Section
 	{
-		string name;
+		char name[256];
 		unsigned int size;
 		UINT64 address;
 
@@ -64,7 +64,7 @@ public:
 
 	bool GetProgramSections(string module); //fills the _sections parameter
 
-	static list<Module::Section*> GetSections(string module);
+	static list<Module::Section*>* GetSections(string module);
 
 	_MYPEB* GetPEB() { return (_MYPEB*)__readgsqword(0x60); }
 

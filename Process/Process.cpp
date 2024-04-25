@@ -135,59 +135,22 @@ bool Process::HasExportedFunction(string dllName, string functionName)
     return bFound;
 }
 
-bool Process::GetProgramSections(string module)
+list<Module::Section*>* Process::GetSections(string module)
 {
+    list<Module::Section*>* Sections = new list<Module::Section*>();
+
     PIMAGE_SECTION_HEADER sectionHeader;
-    HINSTANCE hInst = GetModuleHandleA(module.c_str());
+    HINSTANCE hInst = NULL;  
     PIMAGE_DOS_HEADER pDoH;
     PIMAGE_NT_HEADERS64 pNtH;
 
+    hInst= GetModuleHandleA(module.c_str());
+    
     pDoH = (PIMAGE_DOS_HEADER)(hInst);
 
     if (pDoH == NULL || hInst == NULL)
     {
-        Logger::logf("UltimateAnticheat.log", Err, " PIMAGE_DOS_HEADER or hInst was NULL at GetProgramSections\n");
-        return false;
-    }
-
-    pNtH = (PIMAGE_NT_HEADERS64)((PIMAGE_NT_HEADERS64)((PBYTE)hInst + (DWORD)pDoH->e_lfanew));
-    sectionHeader = IMAGE_FIRST_SECTION(pNtH);
-
-    int nSections = pNtH->FileHeader.NumberOfSections;
-
-    for (int i = 0; i < nSections; i++)
-    {
-        Module::Section* s = new Module::Section();
-
-        s->address = sectionHeader[i].VirtualAddress;
-        s->name = string((const char*)sectionHeader[i].Name);
-        s->Misc.PhysicalAddress = sectionHeader[i].Misc.PhysicalAddress;
-        s->Misc.VirtualSize = sectionHeader[i].Misc.VirtualSize;
-        s->PointerToRawData = sectionHeader[i].PointerToRawData;
-        s->PointerToRelocations = sectionHeader[i].PointerToRelocations;
-        s->NumberOfLinenumbers = sectionHeader[i].NumberOfLinenumbers;
-        s->PointerToLinenumbers = sectionHeader[i].PointerToLinenumbers;
-
-        this->_sections.push_back(s);
-    }
-
-    return true;
-}
-
-list<Module::Section*> Process::GetSections(string module)
-{
-    list<Module::Section*> Sections;
-
-    PIMAGE_SECTION_HEADER sectionHeader;
-    HINSTANCE hInst = GetModuleHandleA(module.c_str());
-    PIMAGE_DOS_HEADER pDoH;
-    PIMAGE_NT_HEADERS64 pNtH;
-
-    pDoH = (PIMAGE_DOS_HEADER)(hInst);
-
-    if (pDoH == NULL || hInst == NULL)
-    {
-        Logger::logf("UltimateAnticheat.log", Err, " PIMAGE_DOS_HEADER or hInst was NULL at GetProgramSections\n");
+        Logger::logf("UltimateAnticheat.log", Err, " PIMAGE_DOS_HEADER or hInst was NULL at Process::GetSections\n");
         return Sections;
     }
 
@@ -201,8 +164,9 @@ list<Module::Section*> Process::GetSections(string module)
         Module::Section* s = new Module::Section();
 
         s->address = sectionHeader[i].VirtualAddress;
-        s->name = string((const char*)sectionHeader[i].Name);
-        s->Misc.PhysicalAddress = sectionHeader[i].Misc.PhysicalAddress;
+
+        strcpy_s(s->name, (const char*)sectionHeader[i].Name);
+ 
         s->Misc.VirtualSize = sectionHeader[i].Misc.VirtualSize;
         s->size = s->Misc.VirtualSize;
         s->PointerToRawData = sectionHeader[i].PointerToRawData;
@@ -210,7 +174,7 @@ list<Module::Section*> Process::GetSections(string module)
         s->NumberOfLinenumbers = sectionHeader[i].NumberOfLinenumbers;
         s->PointerToLinenumbers = sectionHeader[i].PointerToLinenumbers;
 
-        Sections.push_back(s);
+        Sections->push_back(s);
     }
 
     return Sections;
@@ -633,14 +597,14 @@ DWORD Process::GetModuleSize(HMODULE hModule)
         return 0;
     }
 
-    // Get module information
+    //Get module information
     MODULEINFO moduleInfo;
     if (!GetModuleInformation(GetCurrentProcess(), hModule, &moduleInfo, sizeof(moduleInfo))) 
     {
         return 0;
     }
 
-    // Calculate module size
+    //Calculate module size
     DWORD moduleSize = moduleInfo.SizeOfImage;
     return moduleSize;
 }
