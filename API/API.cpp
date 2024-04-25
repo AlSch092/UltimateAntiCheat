@@ -21,11 +21,11 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessNam
 		AC->GetBarrier()->GetProcessObject()->SetParentName(parentProcessName);
 		errorCode = Error::OK;
 	}
-	else //bad parent process detected, or parent process mismatch, shut down the program after reporting the error to the server
-	{
-		printf("[DETECTION] Parent process was not whitelisted, shutting down program! Make sure parent process is the same as specified in API.hpp. If you are using VS to debug, this might become VsDebugConsole.exe, rather than explorer.exe\n");
-		errorCode = Error::PARENT_PROCESS_MISMATCH;
-	}
+	//else //bad parent process detected, or parent process mismatch, shut down the program after reporting the error to the server
+	//{
+	//	printf("[DETECTION] Parent process was not whitelisted, shutting down program! Make sure parent process is the same as specified in API.hpp. If you are using VS to debug, this might become VsDebugConsole.exe, rather than explorer.exe\n");
+	//	errorCode = Error::PARENT_PROCESS_MISMATCH;
+	//}
 
 	//isLicenseValid = g_AC->GetNetworkClient()->CheckLicense();  	//TODO: check licenseKey against some centralized web server, possibly using HTTP requests. once we have verified our license, we can try to connect using Initialize(
 		
@@ -53,7 +53,7 @@ Error API::Cleanup(AntiCheat* AC)
 		
 		if (t->handle != INVALID_HANDLE_VALUE || t->handle == NULL)
 		{
-			TerminateThread(t->handle, 0); //its better practice to send a signal to the thread and have the thread shut down on its own instead of terminating it from here, since terminatethread, etc can be hooked
+			TerminateThread(t->handle, 0); //todo: use thread signals instead of terminatethread
 			delete t;
 			AC->GetAntiDebugger()->SetDetectionThread(NULL);
 		}
@@ -65,7 +65,7 @@ Error API::Cleanup(AntiCheat* AC)
 
 		if (t->handle != INVALID_HANDLE_VALUE)
 		{
-			TerminateThread(t->handle, 0);
+			TerminateThread(t->handle, 0); //todo: use thread signals instead of terminatethread
 			delete t;
 			AC->GetMonitor()->SetMonitorThread(NULL);
 		}
@@ -97,7 +97,6 @@ Error API::LaunchBasicTests(AntiCheat* AC) //currently in the process to split t
 	}
 
 	AC->GetMonitor()->StartMonitor();
-
 	AC->GetAntiDebugger()->StartAntiDebugThread(); //start debugger checks in a seperate thread
 
 	AC->GetMonitor()->GetServiceManager()->GetServiceModules(); //enumerate services
@@ -109,12 +108,6 @@ Error API::LaunchBasicTests(AntiCheat* AC) //currently in the process to split t
 	}
 
 	AC->TestNetworkHeartbeat(); //tests executing a payload within server-fed data
-
-	if (!AC->GetBarrier()->GetProcessObject()->GetProgramSections("UltimateAnticheat.exe"))
-	{
-		printf("Failed to parse program sections?\n");
-		errorCode = Error::NULL_MEMORY_REFERENCE;
-	}
 
 	if (!Process::CheckParentProcess(AC->GetBarrier()->GetProcessObject()->GetParentName())) //parent process check, the parent process would normally be set using our API methods
 	{
