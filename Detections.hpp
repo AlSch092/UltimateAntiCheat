@@ -4,18 +4,16 @@
 #include "AntiTamper/Integrity.hpp"
 #include "Environment/Services.hpp"
 #include "Obscure/Obfuscation.hpp"
+#include "Common/Globals.hpp"
 
 class Detections
 {
 public:
 
-	Detections(bool StartMonitor)
+	Detections(BOOL StartMonitor)
 	{
-		_Services = new Services(false);
+		_Services = new Services(FALSE);
 		integrityChecker = new Integrity();
-
-		if (StartMonitor)
-			this->StartMonitor();
 
 		BlacklistedProcesses.push_back(L"Cheat Engine.exe"); //these strings can be encrypted for better hiding ability
 		BlacklistedProcesses.push_back(L"CheatEngine.exe"); //in addition, we can scan for window class names, possible exported functions, specific text inside windows, etc.
@@ -26,6 +24,9 @@ public:
 		BlacklistedProcesses.push_back(L"Procmon64.exe");
 
 		this->CheaterWasDetected = new ObfuscatedData<uint8_t>((bool)false);
+
+		if (StartMonitor)
+			this->StartMonitor();
 	}
 
 	~Detections()
@@ -37,14 +38,14 @@ public:
 			delete MonitorThread;
 	}
 
-	void SetCheater(BOOL cheating) { this->CheaterWasDetected->SetData(cheating); }
+	void SetCheater(BOOL cheating) { this->CheaterWasDetected->SetData((uint8_t)cheating); } //need to confirm this works since after adding obfuscation
 	BOOL IsUserCheater() { return this->CheaterWasDetected->GetData(); }
 
 	Services* GetServiceManager() { return this->_Services; }
 	Integrity* GetIntegrityChecker() { return this->integrityChecker; }
 
-	list<Module::Section*> SetSectionHash(const char* module, const char* sectionName);
-	bool CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize);
+	list<Module::Section*>* SetSectionHash(const char* module, const char* sectionName);
+	BOOL CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize);
 
 	static void Monitor(LPVOID thisPtr); //activate all
 
@@ -54,17 +55,19 @@ public:
 	void StartMonitor() 
 	{ 
 		Thread* t = new Thread();
-		t->ShutdownSignalled = false;
+		t->handle = INVALID_HANDLE_VALUE;
+		t->ShutdownSignalled = false; //ShutdownSignalled is used to prevent calling TerminateThread from other threads
 
 		if (MonitorThread == NULL)
 		{
 			t->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, 0, &t->Id);
+			printf("[INFO] Created monitoring thread with ID %d\n", t->Id);
 		}
 
 		if (t->handle == INVALID_HANDLE_VALUE || t->handle == NULL)
 		{
-			Logger::logf("UltimateAnticheat.log", Err, " Failed to create monitor thread  @ Detections::StartMonito\n");
-			exit(-1);
+			Logger::logf("UltimateAnticheat.log", Err, " Failed to create monitor thread  @ Detections::StartMonitor\n");
+			return;
 		}
 
 		this->MonitorThread = t;
@@ -73,6 +76,8 @@ public:
 	BOOL IsBlacklistedProcessRunning(); //process checking, can be circumvented easily
 	BOOL DoesFunctionAppearHooked(const char* moduleName, const char* functionName); //checks for jumps or calls as the first byte on a function
 	static BOOL DoesIATContainHooked();
+
+	string currentModuleName;
 
 private:
 

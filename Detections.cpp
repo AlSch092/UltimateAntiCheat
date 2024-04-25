@@ -2,8 +2,11 @@
 #include "Detections.hpp"
 
 //in an actual game scenario this would be single threaded and included in the game's main execution
-void Detections::Monitor(LPVOID thisPtr) 
+void Detections::Monitor(LPVOID thisPtr)
 {
+    if (thisPtr == NULL)
+        return;
+
     Logger::logf("UltimateAnticheat.log", Info, "Starting  Detections::Monitor \n");
 
     Detections* Monitor = reinterpret_cast<Detections*>(thisPtr);
@@ -14,9 +17,9 @@ void Detections::Monitor(LPVOID thisPtr)
         return;
     }
 
-    list<Module::Section*> sections = Monitor->SetSectionHash("UltimateAnticheat.exe", ".text"); //set our memory hashes of .text
+    list<Module::Section*>* sections = Monitor->SetSectionHash("UltimateAnticheat.exe", ".text"); //set our memory hashes of .text
 
-    if (sections.size() == 0)
+    if (sections->size() == 0)
     {
         Logger::logf("UltimateAnticheat.log", Err, "Sections size was 0 @ Detections::Monitor. Aborting execution!\n");
         return;
@@ -25,7 +28,7 @@ void Detections::Monitor(LPVOID thisPtr)
     UINT64 CachedSectionAddress = 0;
     DWORD CachedSectionSize = 0;
 
-    UINT64 ModuleAddr = (UINT64)GetModuleHandleA("UltimateAntiCheat.exe");
+    UINT64 ModuleAddr = (UINT64)GetModuleHandleA("UltimateAnticheat.exe");
 
     if (ModuleAddr == 0)
     {
@@ -33,20 +36,28 @@ void Detections::Monitor(LPVOID thisPtr)
         return;
     }
 
-    for (Module::Section* s : sections)
+    std::list<Module::Section*>::iterator it;
+
+    for (it = sections->begin(); it != sections->end(); ++it)
     {
-        if (s->name == ".text")
+        Module::Section* s = it._Ptr->_Myval;
+
+        if (s == nullptr)
+            continue;
+
+        if (strcmp(s->name, ".text") == 0)
         {
             CachedSectionAddress = s->address + ModuleAddr;
-            CachedSectionSize = s->size - 100;  //check most of .text section
+            CachedSectionSize = s->size - 100;
+            break;
         }
     }
-  
-    //Main Monitor Loop, continuous detections go in here
+
+    //Main Monitor Loop, continuous detections go in here. we need access to CachedSectionAddress variables so this loop doesnt get its own function.
     bool Monitoring = true;
     const int MonitorLoopMilliseconds = 5000;
 
-    while (Monitoring)
+    while (Monitoring && !Monitor->IsUserCheater())
     {
         if (Monitor->CheckSectionHash(CachedSectionAddress, CachedSectionSize)) //track the .text section for changes -> most expensive CPU-wise
         {
@@ -89,21 +100,43 @@ void Detections::Monitor(LPVOID thisPtr)
     Logger::logf("UltimateAnticheat.log", Info, "Stopping  Detections::Monitor \n");
 }
 
-list<Module::Section*> Detections::SetSectionHash(const char* module, const char* sectionName) //Currently only scans the program headers/peb (first 0x1000 bytes) -> add parameters for startAddress + size to scan
+/*
+SetSectionHash sets the member variable `_MemorySectionHashes` via SetMemoryHashList() call after finding the `sectionName` named section (.text in our case)
+ Returns a list<Section*>  which we can use in later hashing calls to compare sets of these hashes and detect memory tampering within the section
+*/
+list<Module::Section*>* Detections::SetSectionHash(const char* moduleName, const char* sectionName)
 {
-    list<Module::Section*> sections = Process::GetSections(module);
+    if (moduleName == NULL)
+    {
+        return nullptr;
+    }
 
-    UINT64 ModuleAddr = (UINT64)GetModuleHandleA(module);
+    list<Module::Section*>* sections = Process::GetSections(moduleName);
+    
+    UINT64 ModuleAddr = (UINT64)GetModuleHandleA(moduleName);
 
-    if (sections.size() == 0)
+    if (ModuleAddr == 0)
+    {
+        return nullptr;
+    }
+
+    if (sections->size() == 0)
     {
         Logger::logf("UltimateAnticheat.log", Err, "sections.size() of section %s was 0 @ TestMemoryIntegrity\n", sectionName);
         return sections;
     }
 
-    for (Module::Section* s : sections)
+
+    std::list<Module::Section*>::iterator it;
+
+    for (it = sections->begin(); it != sections->end(); ++it) 
     {
-        if (s->name == sectionName)
+        Module::Section* s = it._Ptr->_Myval;
+
+        if (s == nullptr)
+            continue;
+
+        if (strcmp(s->name, sectionName) == 0)
         {
             list<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)s->address + ModuleAddr, s->size - 100); //check most of .text section
 
@@ -111,13 +144,18 @@ list<Module::Section*> Detections::SetSectionHash(const char* module, const char
             {
                 GetIntegrityChecker()->SetMemoryHashList(hashes);
             }
+            break;
         }
     }
 
     return sections;
 }
 
-bool Detections::CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize)
+/*
+    CheckSectionHash  compares our collected hash list from ::SetSectionHash() , we use cached address + size to prevent spoofing (sections can be renamed at runtime by an attacker)
+    Returns true if the two sets of hashes do not match, implying memory was modified
+*/
+BOOL Detections::CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize)
 {
     Logger::logf("UltimateAnticheat.log", Info, "Checking hashes of address: %llx (%d bytes) for memory integrity\n", cachedAddress, cachedSize);
 
@@ -128,12 +166,15 @@ bool Detections::CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize)
     else
     {
         Logger::logf("UltimateAnticheat.log", Detection, " .text section of program is modified!\n");
-        return true;
+        return TRUE;
     }
 
-    return false;
+    return FALSE;
 }
 
+/*
+    IsBlacklistedProcessRunning returns TRUE if a blacklisted program is running in the background
+*/
 BOOL Detections::IsBlacklistedProcessRunning()
 {
     BOOL foundBlacklistedProcess = FALSE;
@@ -170,6 +211,9 @@ BOOL Detections::IsBlacklistedProcessRunning()
     return foundBlacklistedProcess;
 }
 
+/*
+    Returns TRUE if the looked up function contains a jump or call as its first instruction
+*/
 BOOL Detections::DoesFunctionAppearHooked(const char* moduleName, const char* functionName)
 {
     if (moduleName == nullptr || functionName == nullptr)
@@ -207,12 +251,39 @@ BOOL Detections::DoesFunctionAppearHooked(const char* moduleName, const char* fu
     return FunctionPreambleHooked;
 }
 
-BOOL Detections::DoesIATContainHooked() //we can collect this info inside the TLS callback then compare later versions against that info to check if somoene has modified the IAT at runtime to outside the regular modules
+/*
+    Returns TRUE if any routines in the IAT lead to pointers outside their respective modules
+
+    if the attacker writes their hooks in the dll's address space then they can get around this detection
+*/
+BOOL Detections::DoesIATContainHooked()
 {
     list<Module::ImportFunction*> IATFunctions = Process::GetIATEntries();
 
+    for (Module::ImportFunction* IATEntry : IATFunctions)
+    {
+        DWORD moduleSize = Process::GetModuleSize(IATEntry->Module);
 
+        if (moduleSize != 0) //some K32 functions redirect to ntdll.dll ..... this destroys this function
+        {
+            //UINT64 MinAddress = (UINT64)IATEntry->Module;
+            //UINT64 MaxAddress = (UINT64)IATEntry->Module + (UINT64)moduleSize;
 
+            UINT64 MinAddress = 0x00007FF400000000; //crummy workaround for the fact that some routines point to other module functions and throw a false positive in our check (some k32 points to ntdll routines on my windows version)
+            UINT64 MaxAddress = 0x00007FFFFFFFFFFF; //ideal way would be to use the commented lines above and then 'whitelist' whatever functions are known to redirect to other dlls
+
+            if (IATEntry->AddressOfData <= MinAddress || IATEntry->AddressOfData >= MaxAddress)
+            {
+                Logger::logf("UltimateAnticheat.log", Info, " IAT function was hooked: %llX, %s\n", IATEntry->AddressOfData, IATEntry->AssociatedModuleName.c_str());
+                return TRUE;
+            }
+        }
+        else //error, we shouldnt get here!
+        {
+            Logger::logf("UltimateAnticheat.log", Err, " Couldn't fetch  module size @ Detections::DoesIATContainHooked\n");
+            return FALSE;
+        }
+    }
 
     return FALSE;
 }
