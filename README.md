@@ -11,7 +11,7 @@ Research project: make an anti-cheat system to detect and/or prevent things like
 ## Current Detections and protective features:
 - Detects unsigned Modules 
 - Debugger detection (hardware, PEB, exceptions, kernelmode)
-- Integrity checks on program memory (.text section checks, WINAPI hook checks)
+- Integrity checks on program memory (.text section checks, WINAPI hook checks, IAT hook checks)
 - Remapping sections & re-re-mapping checks (anti-tamper)
 - TLS Callback (anti-DLL injection)
 - Parent process check
