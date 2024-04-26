@@ -26,8 +26,7 @@ public:
 
 	Error DeployBarrier(); //activate all protections
 
-	static bool RemapAndCheckPages();
-	
+	static bool RemapProgramSections();
 	static bool PreventDllInjection();
 	static bool PreventShellcodeThreads();
 
