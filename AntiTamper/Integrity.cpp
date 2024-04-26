@@ -35,6 +35,9 @@ list<uint64_t> Integrity::GetMemoryHash(uint64_t Address, int nBytes)
 {
 	std::list<uint64_t> hashList;
 
+	if (Address == 0)
+		return hashList;
+
 	byte* arr = new byte[nBytes];
 
 	memcpy(arr, (void*)Address, nBytes);
@@ -109,7 +112,6 @@ bool Integrity::IsUnknownModulePresent()
 			//check dll name against a pre-determined white-list of DLLs, check if signed too
 			if (!Authenticode::VerifyEmbeddedSignature(str.c_str()))
 			{
-				wprintf(L"Bad signature or no signature found for: %s\n", str.c_str());
 				foundUnknown = true;
 			}
 		}
@@ -126,7 +128,7 @@ bool Integrity::DisableDynamicCode()
 
 	if (!SetProcessMitigationPolicy((PROCESS_MITIGATION_POLICY)2, &dynamicCodePolicy, sizeof(dynamicCodePolicy))) 
 	{ 
-		fprintf(stderr, "Failed to set process mitigation policy. Error code: %lu\n", GetLastError());
+		Logger::logf("UltimateAnticheat.log", Warning, "Failed to set process mitigation policy @ DisableDynamicCode.  Error code: %lu\n", GetLastError());
 		return false;
 	}
 
@@ -141,16 +143,9 @@ bool Integrity::DisableUnsignedCode() //stop some unsigned dlls from being loade
 
 	if (!SetProcessMitigationPolicy((PROCESS_MITIGATION_POLICY)8, &signPolicy, sizeof(signPolicy)))
 	{
-		fprintf(stderr, "Failed to set process mitigation policy. Error code: %lu\n", GetLastError());
+		Logger::logf("UltimateAnticheat.log", Warning, "Failed to set process mitigation policy @ DisableUnsignedCode.  Error code: %lu\n", GetLastError());
 		return false;
 	}
 
 	return true;
-}
-
-bool Integrity::IsFunctionHooked(const char* module, const char* name) //check for jmp's on the first byte of a function, best used on WINAPI
-{
-
-
-	return false;
 }

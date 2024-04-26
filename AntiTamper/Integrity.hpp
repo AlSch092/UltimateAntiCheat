@@ -27,9 +27,9 @@ public:
 	static bool DisableDynamicCode();
 	static bool DisableUnsignedCode();
 
-	static bool IsFunctionHooked(const char* module, const char* name);
-
 	list<wstring> WhitelistedModules;
+
+	wstring InternalModuleName = L"UltimateAnticheat.exe";
 
 	Integrity()
 	{
