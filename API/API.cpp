@@ -13,6 +13,7 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessNam
 		if (AC->GetNetworkClient()->Initialize(API::ServerEndpoint, API::ServerPort) != Error::OK) //initialize client is separate from license key auth
 		{
 			errorCode = Error::CANT_STARTUP;		//don't allow startup if networking doesn't work
+			goto end;
 		}
 	}
 
@@ -21,14 +22,14 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessNam
 		AC->GetBarrier()->GetProcessObject()->SetParentName(parentProcessName);
 		errorCode = Error::OK;
 	}
-	//else //bad parent process detected, or parent process mismatch, shut down the program after reporting the error to the server
-	//{
-	//	printf("[DETECTION] Parent process was not whitelisted, shutting down program! Make sure parent process is the same as specified in API.hpp. If you are using VS to debug, this might become VsDebugConsole.exe, rather than explorer.exe\n");
-	//	errorCode = Error::PARENT_PROCESS_MISMATCH;
-	//}
+	else //bad parent process detected, or parent process mismatch, shut down the program after reporting the error to the server
+	{
+		Logger::logf("UltimateAnticheat.log", Detection, "  Parent process was not whitelisted, shutting down program! Make sure parent process is the same as specified in API.hpp. If you are using VS to debug, this might become VsDebugConsole.exe, rather than explorer.exe");
+		errorCode = Error::PARENT_PROCESS_MISMATCH;
+	}
 
 	//isLicenseValid = g_AC->GetNetworkClient()->CheckLicense();  	//TODO: check licenseKey against some centralized web server, possibly using HTTP requests. once we have verified our license, we can try to connect using Initialize(
-		
+end:	
 	return errorCode;
 }
 
@@ -84,15 +85,13 @@ Error API::LaunchBasicTests(AntiCheat* AC) //currently in the process to split t
 
 	Error errorCode = Error::OK;
 
-	printf("[INFO] Starting API::LaunchBasicTests\n");
-
 	if (AC->GetBarrier()->DeployBarrier() == Error::OK) //activate all techniques to stop cheaters
 	{
-		printf("[INFO] Barrier techniques were applied successfully!\n");
+		Logger::logf("UltimateAnticheat.log", Info, " Barrier techniques were applied successfully!");
 	}
 	else
 	{
-		printf("[ERROR] Could not initialize the barrier.\n");
+		Logger::logf("UltimateAnticheat.log", Err, "Could not initialize the barrier @ API::LaunchBasicTests");
 		errorCode = Error::GENERIC_FAIL;
 	}
 
@@ -103,7 +102,6 @@ Error API::LaunchBasicTests(AntiCheat* AC) //currently in the process to split t
 
 	if (AC->GetMonitor()->GetServiceManager()->GetLoadedDrivers()) //enumerate drivers
 	{
-		printf("Driver enumeration complete!\n");
 		list<wstring> unsigned_drivers = AC->GetMonitor()->GetServiceManager()->GetUnsignedDrivers(); //unsigned drivers, take further action if needed
 	}
 
@@ -111,7 +109,7 @@ Error API::LaunchBasicTests(AntiCheat* AC) //currently in the process to split t
 
 	if (!Process::CheckParentProcess(AC->GetBarrier()->GetProcessObject()->GetParentName())) //parent process check, the parent process would normally be set using our API methods
 	{
-		wprintf(L"[DETECTION] Parent process was not %s! hekker detected!\n", API::whitelistedParentProcess); //sometimes people will launch a game from their own process, which we can easily detect if they haven't spoofed it
+		Logger::logf("UltimateAnticheat.log", Detection, "Parent process was not % s! cheater detected!\n", API::whitelistedParentProcess);
 		errorCode = Error::PARENT_PROCESS_MISMATCH;
 	}
 
@@ -135,12 +133,13 @@ Error __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code)
 
 				if (LaunchBasicTests(AC) != Error::OK)
 				{
-					printf("At least one technique experienced abnormal behavior when launching tests!\n");
+					Logger::logf("UltimateAnticheat.log", Warning, " At least one technique experienced abnormal behavior when launching tests.");
+					return Error::CANT_APPLY_TECHNIQUE;
 				}
 			}
 			else
 			{
-				printf("Couldn't start up, make sure server is running and re-try\n");
+				Logger::logf("UltimateAnticheat.log", Warning, "Couldn't start up, make sure server is running and re-try.");
 				return Error::CANT_CONNECT;
 			}
 		}		break;
@@ -156,18 +155,18 @@ Error __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code)
 
 			if (err == Error::OK) 			
 			{
-				printf("[INFO] Cleanup successful. Shutting down program.\n");
+				Logger::logf("UltimateAnticheat.log", Info, " Cleanup successful. Shutting down program");
 				errorCode = Error::OK;
 			}
 			else
 			{
-				printf("[ERROR] Cleanup unsuccessful. Shutting down program.\n");
+				Logger::logf("UltimateAnticheat.log", Err, "Cleanup unsuccessful. Shutting down program");
 				errorCode = Error::NULL_MEMORY_REFERENCE;
 			}
 		} break;
 
 		default:
-			printf("[WARNING] Unrecognized dispatch code @ API::Dispatch: %d\n", code);
+			Logger::logf("UltimateAnticheat.log", Warning, "Unrecognized dispatch code @ API::Dispatch: %d\n", code);
 			break;
 	};
 
