@@ -19,7 +19,6 @@ Research project: make an anti-cheat system to detect and/or prevent things like
 - Loaded module name random renaming (process manipulation)
 - Exported function names random renaming (process manipulation, anti-injection)
 - Data obfuscation via templated type class
-- Blocks DLL & symbol enumeration within certain tools such as Cheat Engine
 - Encrypted Shellcode payload execution (requires a server to send data to this project)
 - Check for if Windows is in 'Test Signing mode'
 
