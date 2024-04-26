@@ -67,7 +67,7 @@ bool Preventions::RandomizeModuleName()
 
     int moduleNameSize = (int)wcslen(OriginalModuleName.c_str());
 
-    if (moduleNameSize <= 2) //prevent underflow on next statements
+    if (moduleNameSize == 0)
     {
         return false;
     }
