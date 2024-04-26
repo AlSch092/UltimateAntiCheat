@@ -105,7 +105,7 @@ Error API::LaunchBasicTests(AntiCheat* AC) //currently in the process to split t
 		list<wstring> unsigned_drivers = AC->GetMonitor()->GetServiceManager()->GetUnsignedDrivers(); //unsigned drivers, take further action if needed
 	}
 
-	AC->TestNetworkHeartbeat(); //tests executing a payload within server-fed data
+	//AC->TestNetworkHeartbeat(); //tests executing a payload within server-fed data
 
 	if (!Process::CheckParentProcess(AC->GetBarrier()->GetProcessObject()->GetParentName())) //parent process check, the parent process would normally be set using our API methods
 	{
