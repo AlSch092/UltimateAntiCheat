@@ -17,8 +17,7 @@ public:
 
 		BlacklistedProcesses.push_back(L"Cheat Engine.exe"); //these strings can be encrypted for better hiding ability
 		BlacklistedProcesses.push_back(L"CheatEngine.exe"); //in addition, we can scan for window class names, possible exported functions, specific text inside windows, etc.
-		BlacklistedProcesses.push_back(L"cheatengine-x86_64-SSE4-AVX2.exe");
-		
+		BlacklistedProcesses.push_back(L"cheatengine-x86_64-SSE4-AVX2.exe");	
 		BlacklistedProcesses.push_back(L"x64dbg.exe");
 		BlacklistedProcesses.push_back(L"windbg.exe");
 		BlacklistedProcesses.push_back(L"Procmon64.exe");
@@ -61,7 +60,7 @@ public:
 		if (MonitorThread == NULL)
 		{
 			t->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, 0, &t->Id);
-			printf("[INFO] Created monitoring thread with ID %d\n", t->Id);
+			Logger::logf("UltimateAnticheat.log", Info, "Created monitoring thread with ID %d\n", t->Id);
 		}
 
 		if (t->handle == INVALID_HANDLE_VALUE || t->handle == NULL)
@@ -74,8 +73,9 @@ public:
 	}
 
 	BOOL IsBlacklistedProcessRunning(); //process checking, can be circumvented easily
-	BOOL DoesFunctionAppearHooked(const char* moduleName, const char* functionName); //checks for jumps or calls as the first byte on a function
+	static BOOL DoesFunctionAppearHooked(const char* moduleName, const char* functionName); //checks for jumps or calls as the first byte on a function
 	static BOOL DoesIATContainHooked();
+	static BOOL IsTextSectionWritable();
 
 	string currentModuleName;
 
