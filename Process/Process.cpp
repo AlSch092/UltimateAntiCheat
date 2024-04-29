@@ -1,62 +1,26 @@
 #include "Process.hpp"
-
 #pragma comment(lib, "ImageHlp")
 
-uint32_t Process::GetThisProcessId()
-{
-	this->_ProcessId = GetCurrentProcessId();
-	return this->_ProcessId;
-}
-
-uint64_t Process::GetBaseAddress(const wchar_t* module)
-{
-    wstring processName = module;
-    DWORD ProcessId = GetCurrentProcessId();
-
-    HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, ProcessId);
-
-    if (NULL != hProcess)
-    {
-        HMODULE hMod;
-        DWORD cbNeeded;
-
-        if (EnumProcessModulesEx(hProcess, &hMod, sizeof(hMod),
-            &cbNeeded, LIST_MODULES_32BIT | LIST_MODULES_64BIT))
-        {
-            GetModuleBaseName(hProcess, hMod, (LPWSTR)processName.c_str(), (DWORD)processName.length() * 2);
-            if (!_tcsicmp(processName.c_str(), processName.c_str()))
-            {
-                CloseHandle(hProcess);
-                return (uint64_t)hMod;
-            }
-        }
-    }
-
-    if(hProcess != NULL)
-        CloseHandle(hProcess);
-
-    return 0; //unfound case/error
-}
-
-uint32_t Process::GetMemorySize() //returns uint32_t value of combined byte size of all mem regions of the process on disk
+/*
+    GetMemorySize - retrieves memory size of current process module
+    returns the size of current process module or 0 if the function fails.
+*/
+uint32_t Process::GetMemorySize() //returns uint32_t value of combined byte size of all mem regions of the process
 {
     DWORD dOldProt = 0;
     HANDLE hModuleSnap = INVALID_HANDLE_VALUE;
     MODULEENTRY32 moduleEntry;
 
-    // Take a snapshot of all modules in the specified process
     hModuleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetCurrentProcessId());
     if (hModuleSnap == INVALID_HANDLE_VALUE)
         return false;
 
-    // Set the size of the structure before using it
     moduleEntry.dwSize = sizeof(MODULEENTRY32);
 
-    // Retrieve information about the first module (current process)
     if (!Module32First(hModuleSnap, &moduleEntry))
     {
         CloseHandle(hModuleSnap);
-        return false;
+        return 0;
     }
 
     UINT_PTR ulBaseAddress = reinterpret_cast<UINT_PTR>(moduleEntry.modBaseAddr);
@@ -64,8 +28,10 @@ uint32_t Process::GetMemorySize() //returns uint32_t value of combined byte size
 
     return (uint32_t)ulBaseSize;
 }
-
-//returns TRUE if our parameter desiredParent is the same process name as our parent process ID
+/*
+    CheckParentProcess - checks if the parent process is the process name `desiredParent`
+    returns TRUE if our parameter desiredParent is the same process name as our parent process ID
+*/
 BOOL Process::CheckParentProcess(wstring desiredParent)
 {
     if (GetParentProcessId() == GetProcessIdByName(desiredParent))
@@ -74,8 +40,12 @@ BOOL Process::CheckParentProcess(wstring desiredParent)
     return false;
 }
 
-BOOL Process::IsProcessElevated() {
-
+/*
+   IsProcessElevated - Check if we are running as administrator
+   returns TRUE if the current process is elevated
+*/
+BOOL Process::IsProcessElevated() 
+{
     auto fRet = FALSE;
     auto hToken = (HANDLE)NULL;
 
@@ -95,6 +65,10 @@ BOOL Process::IsProcessElevated() {
     return fRet;
 }
 
+/*
+    HasExportedFunction checks a loaded module if it's exported `functionName`. Useful for anti-VEH debuggers, since these generally inject themselves into the process and export initialization routines
+    returns   true if `dllName` has `functionName` exported.
+*/
 bool Process::HasExportedFunction(string dllName, string functionName)
 {
     DWORD* dNameRVAs(0); //addresses of export names
@@ -135,6 +109,10 @@ bool Process::HasExportedFunction(string dllName, string functionName)
     return bFound;
 }
 
+/*
+    GetSections - gathers a list of Module::Section* from the current process
+    returns list<Module::Section*>*, and an empty list if the routine fails
+*/
 list<Module::Section*>* Process::GetSections(string module)
 {
     list<Module::Section*>* Sections = new list<Module::Section*>();
@@ -180,6 +158,12 @@ list<Module::Section*>* Process::GetSections(string module)
     return Sections;
 }
 
+/*
+    ChangeModuleName - Modifies the module name of a loaded module at runtime, which might trip up attackers and make certain parts of their code fail. Please see my project "ChangeModuleName" for more details
+    requirements: ensure the new module name is the same or less length of the one you are changing or else you need to shift memory properly where all module names are being stored, and requires additions to this code.
+    
+    returns `true` on success.
+*/
 bool Process::ChangeModuleName(const wstring szModule, const wstring newName)
 {
     PPEB PEB = (PPEB)__readgsqword(0x60);
@@ -205,6 +189,10 @@ bool Process::ChangeModuleName(const wstring szModule, const wstring newName)
     return false;
 }
 
+/*
+    ChangeModuleBase - Changes the DllBase member in the PLDR_DATA_TABLE_ENTRY structure at Ldr->InMemoryOrderLinks. Not confirmed yet if this can trip up attackers, need to do a bit more testing
+    returns true on success
+*/
 bool Process::ChangeModuleBase(const wchar_t* szModule, uint64_t moduleBaseAddress)
 {
     PPEB PEB = (PPEB)__readgsqword(0x60);
@@ -230,6 +218,10 @@ bool Process::ChangeModuleBase(const wchar_t* szModule, uint64_t moduleBaseAddre
     return false;
 }
 
+/*
+    ChangeModulesChecksum - Changes the `CheckSum` member in the PLDR_DATA_TABLE_ENTRY structure at Ldr->InMemoryOrderLinks
+    returns `true` on success
+*/
 bool Process::ChangeModulesChecksum(const wchar_t* szModule, DWORD checksum)
 {
     PPEB PEB = (PPEB)__readgsqword(0x60);
@@ -256,24 +248,10 @@ bool Process::ChangeModulesChecksum(const wchar_t* szModule, DWORD checksum)
 }
 
 
-void Process::RemovePEHeader(HANDLE moduleBase)
-{
-    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)moduleBase;
-    PIMAGE_NT_HEADERS pNTHeader = (PIMAGE_NT_HEADERS)((PBYTE)pDosHeader + (DWORD)pDosHeader->e_lfanew);
-
-    if (pNTHeader->Signature != IMAGE_NT_SIGNATURE)
-        return;
-
-    if (pNTHeader->FileHeader.SizeOfOptionalHeader)
-    {
-        DWORD Protect;
-        WORD Size = pNTHeader->FileHeader.SizeOfOptionalHeader;
-        VirtualProtect((void*)moduleBase, Size, PAGE_EXECUTE_READWRITE, &Protect);
-        RtlZeroMemory((void*)moduleBase, Size);
-        VirtualProtect((void*)moduleBase, Size, Protect, &Protect);
-    }
-}
-
+/*
+ChangePEEntryPoint - modifies the `OptionalHeader.AddressOfEntryPoint` in the NT headers to throw off runtime querying by attackers
+returns true on success
+*/
 bool Process::ChangePEEntryPoint(DWORD newEntry)
 {
     PIMAGE_DOS_HEADER pDoH;
@@ -312,7 +290,10 @@ bool Process::ChangePEEntryPoint(DWORD newEntry)
     return false;
 }
 
-
+/*
+ChangeImageSize - modifies the `OptionalHeader.SizeOfImage` in the NT headers to throw off runtime querying by attackers
+returns true on success
+*/
 bool Process::ChangeImageSize(DWORD newEntry)
 {
     PIMAGE_DOS_HEADER pDoH;
@@ -359,6 +340,10 @@ bool Process::ChangeImageSize(DWORD newEntry)
     return false;
 }
 
+/*
+ChangeSizeOfCode - modifies the `OptionalHeader.SizeOfCode` in the NT headers to throw off runtime querying by attackers
+returns true on success
+*/
 bool Process::ChangeSizeOfCode(DWORD newEntry) //modify the 'sizeofcode' variable in the optionalheader
 {
     PIMAGE_DOS_HEADER pDoH;
@@ -402,6 +387,10 @@ bool Process::ChangeSizeOfCode(DWORD newEntry) //modify the 'sizeofcode' variabl
     return false;
 }
 
+/*
+    ChangeImageBase - Modifies the `OptionalHeader.ImageBase` variable in the NT headers, which might throw off attackers who query this variable
+    returns true on success
+*/
 bool Process::ChangeImageBase(UINT64 newEntry)
 {
     PIMAGE_DOS_HEADER pDoH;
@@ -443,6 +432,10 @@ bool Process::ChangeImageBase(UINT64 newEntry)
     return false;
 }
 
+/*
+GetParentProcessId - Get the process ID of the parents process
+returns the pid of the current process parent process. used to check for illegal launchers (an attacker's launcher code spawned our process, for example)
+*/
 DWORD Process::GetParentProcessId()
 {
     HANDLE hSnapshot = NULL;
@@ -475,6 +468,10 @@ DWORD Process::GetParentProcessId()
     return ppid;
 }
 
+/*
+    GetProcessIdByName - Get pid given a process name
+    returns a DWORD pid if procName is a running process, otherwise returns 0
+*/
 DWORD Process::GetProcessIdByName(wstring procName)
 {
     PROCESSENTRY32 entry;
@@ -495,6 +492,33 @@ DWORD Process::GetProcessIdByName(wstring procName)
     return pid;
 }
 
+
+/*
+RemovePEHeader - Experimental method to zero the memory of the NT headers, not recommended in production code but should trip up quite a few tools in theory
+
+*/
+void Process::RemovePEHeader(HANDLE moduleBase)
+{
+    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)moduleBase;
+    PIMAGE_NT_HEADERS pNTHeader = (PIMAGE_NT_HEADERS)((PBYTE)pDosHeader + (DWORD)pDosHeader->e_lfanew);
+
+    if (pNTHeader->Signature != IMAGE_NT_SIGNATURE)
+        return;
+
+    if (pNTHeader->FileHeader.SizeOfOptionalHeader)
+    {
+        DWORD Protect;
+        WORD Size = pNTHeader->FileHeader.SizeOfOptionalHeader;
+        VirtualProtect((void*)moduleBase, Size, PAGE_EXECUTE_READWRITE, &Protect);
+        RtlZeroMemory((void*)moduleBase, Size);
+        VirtualProtect((void*)moduleBase, Size, Protect, &Protect);
+    }
+}
+
+/*
+    GetSectionAddress - Get the address of a named section of the module with the named `moduleName`
+    returns a memory address of the section if found, and 0 if no section is found or an error occurs
+*/
 UINT64 Process::GetSectionAddress(const char* moduleName, const char* sectionName)
 {
     HMODULE hModule = GetModuleHandleA(moduleName);
@@ -522,7 +546,7 @@ UINT64 Process::GetSectionAddress(const char* moduleName, const char* sectionNam
     }
 
     PIMAGE_SECTION_HEADER pSectionHeader = IMAGE_FIRST_SECTION(pNtHeaders);
-    for (int i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++) 
+    for (int i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++)  //the `NumberOfSections` variable can also be modified @ runtime to throw off attackers and prevent section traversal!
     {
         if (strcmp((const char*)pSectionHeader->Name, sectionName) == 0)
         {
@@ -536,6 +560,10 @@ UINT64 Process::GetSectionAddress(const char* moduleName, const char* sectionNam
     return 0;
 }
 
+/*
+    GetBytesAtAddress - return bytes from an address given `size`.
+    returns a BYTE array filled with values from `address` for `size` number of bytes
+*/
 BYTE* Process::GetBytesAtAddress(UINT64 address, UINT size) //remember to free bytes if not NULL ret
 {
     BYTE* memBytes = new BYTE[size];
@@ -553,7 +581,8 @@ BYTE* Process::GetBytesAtAddress(UINT64 address, UINT size) //remember to free b
 }
 
 /*
-Returns a list of ImportFunction* from the program IAT , for later hook checks
+    GetIATEntries -Returns a list of ImportFunction* from the program IAT , for later hook checks
+    returns a list of Module::ImportFunction* such that lists can be compared for modifications 
 */
 list<Module::ImportFunction*> Process::GetIATEntries() 
 {
@@ -590,6 +619,10 @@ list<Module::ImportFunction*> Process::GetIATEntries()
     return importList;
 }
 
+/*
+    GetModuleSize - get size of a module at address `hModule`
+    returns the size of hModule, and 0 if hModule is invalid or error occurs
+*/
 DWORD Process::GetModuleSize(HMODULE hModule)
 {
     if (hModule == NULL) 
@@ -597,14 +630,12 @@ DWORD Process::GetModuleSize(HMODULE hModule)
         return 0;
     }
 
-    //Get module information
     MODULEINFO moduleInfo;
     if (!GetModuleInformation(GetCurrentProcess(), hModule, &moduleInfo, sizeof(moduleInfo))) 
     {
         return 0;
     }
 
-    //Calculate module size
     DWORD moduleSize = moduleInfo.SizeOfImage;
     return moduleSize;
 }
