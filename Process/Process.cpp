@@ -639,3 +639,53 @@ DWORD Process::GetModuleSize(HMODULE hModule)
     DWORD moduleSize = moduleInfo.SizeOfImage;
     return moduleSize;
 }
+
+bool Process::FillModuleList()
+{
+    HMODULE hModules[256];
+    DWORD cbNeeded = 0;
+
+    // Get the module handles for the current process
+    if (EnumProcessModules(GetCurrentProcess(), hModules, sizeof(hModules), &cbNeeded)) 
+    {
+        for (unsigned int i = 0; i < (cbNeeded / sizeof(HMODULE)); i++) 
+        {
+            Module::MODULE_DATA* module = new Module::MODULE_DATA();
+            
+            TCHAR szModuleName[MAX_PATH];
+            MODULEINFO moduleInfo;
+
+            if (GetModuleFileNameEx(GetCurrentProcess(), hModules[i], szModuleName, sizeof(szModuleName) / sizeof(TCHAR))) 
+            {
+                wcscpy_s(module->name, szModuleName);
+
+                module->hModule = hModules[i];
+
+                if (GetModuleInformation(GetCurrentProcess(), hModules[i], &moduleInfo, sizeof(moduleInfo)))
+                {
+                    module->dllInfo.lpBaseOfDll = moduleInfo.lpBaseOfDll;
+                    module->dllInfo.SizeOfImage = moduleInfo.SizeOfImage;
+                }
+                else
+                {
+                    Logger::logf("UltimateAnticheat.log", Err, "Unable to parse module information @ Process::FillModuleList");
+                    return false;
+                }
+
+                this->ModuleList.push_back(module);
+            }
+            else
+            {
+                Logger::logf("UltimateAnticheat.log", Err, "Unable to parse module named @ Process::FillModuleList");
+                return false;
+            }
+        }
+    }
+    else
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "EnumProcessModules failed @ Process::FillModuleList");
+        return false;
+    }
+
+    return true;
+}

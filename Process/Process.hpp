@@ -20,9 +20,9 @@ namespace Module
 {
 	struct MODULE_DATA
 	{
-		char fileName[MAX_FILE_PATH_LENGTH]; //this could potentially buffer overflow if a large length path is provided, should be changed to dynamic alloc
+		wchar_t name[MAX_FILE_PATH_LENGTH]; //this could potentially buffer overflow if a large length path is provided, should be changed to dynamic alloc
 		MODULEINFO dllInfo;
-		HMODULE module;
+		HMODULE hModule;
 	};
 
 	struct Section
@@ -58,6 +58,16 @@ class Process
 {
 public:
 
+	Process()
+	{
+		_PEB = new _MYPEB();
+		
+		if (!FillModuleList())
+		{
+			Logger::logf("UltimateAnticheat.log", Err, "Unable to traverse loaded modules @ ::Process() .\n");
+		}
+	}
+
 	uint32_t GetMemorySize();
 
 	static list<Module::Section*>* GetSections(string module);
@@ -75,14 +85,14 @@ public:
 	void SetParentName(wstring parentName) { this->_ParentProcessName = parentName; }
 	void SetParentId(uint32_t id) { this->_ParentProcessId = id; }
 
-	static bool ChangeModuleName(const wstring szModule, const wstring newName);
+	static bool ChangeModuleName(const wstring szModule, const wstring newName); //these `ChangeXYZ` routines all modify aspects of the NT headers
 	static bool ChangeModuleBase(const wchar_t* szModule, uint64_t moduleBaseAddress);
 	static bool ChangeModulesChecksum(const wchar_t* szModule, DWORD checksum);
-	static void RemovePEHeader(HANDLE moduleBase);
 	static bool ChangePEEntryPoint(DWORD newEntry);
 	static bool ChangeImageSize(DWORD newImageSize);
 	static bool ChangeSizeOfCode(DWORD newSizeOfCode);
 	static bool ChangeImageBase(UINT64 newImageBase);
+	static void RemovePEHeader(HANDLE moduleBase);
 
 	static bool HasExportedFunction(string dllName, string functionName);
 
@@ -99,19 +109,21 @@ public:
 
 	static list<Module::ImportFunction*> GetIATEntries(); //start of IAT hook checks
 
+	bool FillModuleList();
+
 private:
 
-	_MYPEB* _PEB = new _MYPEB();
+	_MYPEB* _PEB = NULL;
 
-	uint32_t _ProcessId;
-	HANDLE _Mutant;
+	uint32_t _ProcessId = 0;
+	HANDLE _Mutant = INVALID_HANDLE_VALUE;
 
 	wstring _ProcessName;
 	wstring _WindowClassName;
 	wstring _WindowTitle;
 
 	wstring _ParentProcessName;
-	uint32_t _ParentProcessId;
+	uint32_t _ParentProcessId = 0;
 
 	list<Module::Section*> _sections;
 
