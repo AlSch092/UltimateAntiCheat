@@ -1,7 +1,10 @@
 //By AlSch092 @github
 #include "Detections.hpp"
 
-//in an actual game scenario this would be single threaded and included in the game's main execution
+/*
+Detections::Monitor(LPVOID thisPtr)
+  Routine which monitors aspects of the process for fragments of cheating, loops continuously until the thread is signalled to shut down
+*/
 void Detections::Monitor(LPVOID thisPtr)
 {
     if (thisPtr == NULL)
@@ -37,7 +40,6 @@ void Detections::Monitor(LPVOID thisPtr)
     }
 
     std::list<Module::Section*>::iterator it;
-
     for (it = sections->begin(); it != sections->end(); ++it)
     {
         Module::Section* s = it._Ptr->_Myval;
@@ -45,7 +47,7 @@ void Detections::Monitor(LPVOID thisPtr)
         if (s == nullptr)
             continue;
 
-        if (strcmp(s->name, ".text") == 0)
+        if (strcmp(s->name, ".text") == 0) //cache our .text sections address and memory size, since an attacker could possibly spoof the section name or # of sections in ntheaders to prevent section traversing
         {
             CachedSectionAddress = s->address + ModuleAddr;
             CachedSectionSize = s->size - 100;
@@ -57,8 +59,13 @@ void Detections::Monitor(LPVOID thisPtr)
     bool Monitoring = true;
     const int MonitorLoopMilliseconds = 5000;
 
-    while (Monitoring && !Monitor->IsUserCheater())
+    while (Monitoring) //&& !Monitor->IsUserCheater()) //uncomment if you'd like monitoring to stop once a cheater has been detected
     {
+        if (Monitor->GetMonitorThread()->ShutdownSignalled)
+        {
+            goto endMonitor;
+        }
+
         if (Monitor->CheckSectionHash(CachedSectionAddress, CachedSectionSize)) //track the .text section for changes -> most expensive CPU-wise
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Found modified .text section!\n");
@@ -94,9 +101,16 @@ void Detections::Monitor(LPVOID thisPtr)
             Monitor->SetCheater(true);
         }
 
+        if (Detections::IsTextSectionWritable())
+        {
+            Logger::logf("UltimateAnticheat.log", Detection, ".text section was writable, which means someone re-re-mapped our mem regions! If you ran this in DEBUG build, this is normal as we don't remap in DEBUG.\n");
+            Monitor->SetCheater(true);
+        }
+
         Sleep(MonitorLoopMilliseconds);
     }
 
+endMonitor:
     Logger::logf("UltimateAnticheat.log", Info, "Stopping  Detections::Monitor \n");
 }
 
@@ -106,7 +120,7 @@ SetSectionHash sets the member variable `_MemorySectionHashes` via SetMemoryHash
 */
 list<Module::Section*>* Detections::SetSectionHash(const char* moduleName, const char* sectionName)
 {
-    if (moduleName == NULL)
+    if (moduleName == NULL || sectionName == NULL)
     {
         return nullptr;
     }
@@ -138,7 +152,7 @@ list<Module::Section*>* Detections::SetSectionHash(const char* moduleName, const
 
         if (strcmp(s->name, sectionName) == 0)
         {
-            list<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)s->address + ModuleAddr, s->size - 100); //check most of .text section
+            list<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)s->address + ModuleAddr, s->size - 100); //check most of section, a few short to stop edge read cases
 
             if (hashes.size() > 0)
             {
@@ -173,7 +187,8 @@ BOOL Detections::CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize)
 }
 
 /*
-    IsBlacklistedProcessRunning returns TRUE if a blacklisted program is running in the background
+    IsBlacklistedProcessRunning 
+    returns TRUE if a blacklisted program is running in the background, blacklisted processes can be found in the class constructor
 */
 BOOL Detections::IsBlacklistedProcessRunning()
 {
@@ -212,6 +227,7 @@ BOOL Detections::IsBlacklistedProcessRunning()
 }
 
 /*
+*   DoesFunctionAppearHooked - Checks if first bytes of a routine are a jump or call. Please make sure the function you use with this doesnt normally start with a jump or call.
     Returns TRUE if the looked up function contains a jump or call as its first instruction
 */
 BOOL Detections::DoesFunctionAppearHooked(const char* moduleName, const char* functionName)
@@ -252,8 +268,8 @@ BOOL Detections::DoesFunctionAppearHooked(const char* moduleName, const char* fu
 }
 
 /*
-    Returns TRUE if any routines in the IAT lead to pointers outside their respective modules
-
+    DoesIATContainHooked - Returns TRUE if any routines in the IAT lead to addresses outside their respective modules
+    Until I come up with a better solution, we just check against the common memory range where system DLLs such as kernel32 and ntdll load into (0x00007FF400000000 - 0x00007FFFFFFFFFFF or so)
     if the attacker writes their hooks in the dll's address space then they can get around this detection
 */
 BOOL Detections::DoesIATContainHooked()
@@ -264,7 +280,7 @@ BOOL Detections::DoesIATContainHooked()
     {
         DWORD moduleSize = Process::GetModuleSize(IATEntry->Module);
 
-        if (moduleSize != 0) //some K32 functions redirect to ntdll.dll ..... this destroys this function
+        if (moduleSize != 0)
         {
             //UINT64 MinAddress = (UINT64)IATEntry->Module;
             //UINT64 MaxAddress = (UINT64)IATEntry->Module + (UINT64)moduleSize;
@@ -286,4 +302,31 @@ BOOL Detections::DoesIATContainHooked()
     }
 
     return FALSE;
+}
+
+/*
+Detections::IsTextSectionWritable() - Simple memory protections check on page in the .text section
+    returns TRUE if the page was writable, which imples someone re-re-mapped our process memory and wants to write patches.
+*/
+BOOL Detections::IsTextSectionWritable()
+{
+    BOOL isWritable = FALSE;
+
+    UINT64 textAddr = Process::GetSectionAddress(NULL, ".text");
+    MEMORY_BASIC_INFORMATION mbi = { 0 };
+
+    if (textAddr == NULL)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "textAddr was NULL @ Detections::IsTextSectionWritable");
+        return FALSE;
+    }
+
+    VirtualQuery((LPCVOID)textAddr, &mbi, sizeof(MEMORY_BASIC_INFORMATION));
+
+    if (mbi.AllocationProtect != PAGE_EXECUTE_READ)
+    {
+        isWritable = TRUE;
+    }
+
+    return isWritable;
 }
