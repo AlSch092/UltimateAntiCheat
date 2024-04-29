@@ -8,6 +8,7 @@
 #include <winternl.h>
 #include <ImageHlp.h>
 #pragma comment(lib, "ImageHlp")
+#include "../Logger.hpp"
 
 using namespace std;
 
