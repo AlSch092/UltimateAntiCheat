@@ -1,0 +1,191 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="AntiDebug">
+      <UniqueIdentifier>{04370bf5-7e08-4478-af6b-d5c37c9335ea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AntiTamper">
+      <UniqueIdentifier>{d2542090-c5d1-49f9-8ffa-d5745fd61d56}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AntiInject">
+      <UniqueIdentifier>{aa93b31b-4bac-4335-aa97-475a967a5744}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>{9f684714-af94-441a-baa6-d14b6d80c9dc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Process">
+      <UniqueIdentifier>{f11baeed-710c-4c48-b88c-94ce556719be}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Process\Memory">
+      <UniqueIdentifier>{758d299d-bf76-42ea-9255-940730e49f60}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Network">
+      <UniqueIdentifier>{ff5d5e8f-b6a3-49de-bbea-fd6d67a54d88}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Network\Packets">
+      <UniqueIdentifier>{bf416040-a94e-46d1-b4c7-d1e63836a414}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="API">
+      <UniqueIdentifier>{2a48520d-6768-45e2-ba4a-c1c4f4f94063}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scripting">
+      <UniqueIdentifier>{0cf92b40-570d-4503-94fe-886ae01cc450}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Environment">
+      <UniqueIdentifier>{f11964fb-44bf-4c13-a627-f67ab2e79386}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Obscure">
+      <UniqueIdentifier>{801cab93-2306-42a5-bc0e-fc2b7c5a74e9}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AntiDebug\AntiDebugger.cpp">
+      <Filter>AntiDebug</Filter>
+    </ClCompile>
+    <ClCompile Include="Process\PEB.cpp">
+      <Filter>Process</Filter>
+    </ClCompile>
+    <ClCompile Include="Network\NetClient.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="Network\Packets\Packets.cpp">
+      <Filter>Network\Packets</Filter>
+    </ClCompile>
+    <ClCompile Include="Process\Process.cpp">
+      <Filter>Process</Filter>
+    </ClCompile>
+    <ClCompile Include="AntiTamper\Integrity.cpp">
+      <Filter>AntiTamper</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\Utility.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\SHA256.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="API\API.cpp">
+      <Filter>API</Filter>
+    </ClCompile>
+    <ClCompile Include="Process\Exports.cpp">
+      <Filter>Process</Filter>
+    </ClCompile>
+    <ClCompile Include="Environment\Services.cpp">
+      <Filter>Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Obscure\Obfuscation.cpp">
+      <Filter>Obscure</Filter>
+    </ClCompile>
+    <ClCompile Include="Obscure\SymbolicHash.cpp">
+      <Filter>Obscure</Filter>
+    </ClCompile>
+    <ClCompile Include="AntiTamper\NAuthenticode.cpp">
+      <Filter>AntiTamper</Filter>
+    </ClCompile>
+    <ClCompile Include="Preventions.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Detections.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AntiTamper\remap.cpp">
+      <Filter>AntiTamper</Filter>
+    </ClCompile>
+    <ClCompile Include="Process\Thread.cpp">
+      <Filter>Process</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="AntiCheat.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AntiDebug\AntiDebugger.hpp">
+      <Filter>AntiDebug</Filter>
+    </ClInclude>
+    <ClInclude Include="AntiTamper\Integrity.hpp">
+      <Filter>AntiTamper</Filter>
+    </ClInclude>
+    <ClInclude Include="Process\PEB.hpp">
+      <Filter>Process</Filter>
+    </ClInclude>
+    <ClInclude Include="Process\Process.hpp">
+      <Filter>Process</Filter>
+    </ClInclude>
+    <ClInclude Include="Process\Memory\ntdll.h">
+      <Filter>Process\Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Network\NetClient.hpp">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Network\Packets\Packets.hpp">
+      <Filter>Network\Packets</Filter>
+    </ClInclude>
+    <ClInclude Include="Network\Packets\PacketWriter.hpp">
+      <Filter>Network\Packets</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\SHA256.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Utility.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="API\API.hpp">
+      <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="Process\Exports.hpp">
+      <Filter>Process</Filter>
+    </ClInclude>
+    <ClInclude Include="Environment\Services.hpp">
+      <Filter>Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Obscure\Obfuscation.hpp">
+      <Filter>Obscure</Filter>
+    </ClInclude>
+    <ClInclude Include="Obscure\SymbolicHash.hpp">
+      <Filter>Obscure</Filter>
+    </ClInclude>
+    <ClInclude Include="AntiTamper\NAuthenticode.hpp">
+      <Filter>AntiTamper</Filter>
+    </ClInclude>
+    <ClInclude Include="Preventions.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Detections.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Error.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="AntiTamper\remap.hpp">
+      <Filter>AntiTamper</Filter>
+    </ClInclude>
+    <ClInclude Include="Process\Thread.hpp">
+      <Filter>Process</Filter>
+    </ClInclude>
+    <ClInclude Include="Logger.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Globals.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="Shell.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
+  </ItemGroup>
+</Project>

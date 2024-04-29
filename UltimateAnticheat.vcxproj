@@ -29,7 +29,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>PGInstrument</WholeProgramOptimization>
     <EnableASAN>true</EnableASAN>
@@ -37,7 +37,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>PGInstrument</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <EnableASAN>true</EnableASAN>
@@ -133,6 +133,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <Optimization>MaxSpeed</Optimization>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -160,20 +162,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="AntiCheat.cpp" />
     <ClCompile Include="AntiDebug\AntiDebugger.cpp" />
     <ClCompile Include="AntiTamper\Integrity.cpp" />
     <ClCompile Include="AntiTamper\NAuthenticode.cpp" />
     <ClCompile Include="AntiTamper\remap.cpp" />
     <ClCompile Include="API\API.cpp" />
-    <ClCompile Include="Common\MD5.cpp" />
     <ClCompile Include="Common\SHA256.cpp" />
     <ClCompile Include="Common\Utility.cpp" />
     <ClCompile Include="Detections.cpp" />
-    <ClCompile Include="DllMain.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="Environment\Services.cpp" />
     <ClCompile Include="Network\NetClient.cpp" />
     <ClCompile Include="Network\Packets\Packets.cpp" />
@@ -184,6 +180,7 @@
     <ClCompile Include="Process\PEB.cpp" />
     <ClCompile Include="Process\Process.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Process\Thread.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AntiCheat.hpp" />
@@ -193,11 +190,12 @@
     <ClInclude Include="AntiTamper\remap.hpp" />
     <ClInclude Include="API\API.hpp" />
     <ClInclude Include="Common\Error.hpp" />
-    <ClInclude Include="Common\MD5.hpp" />
+    <ClInclude Include="Common\Globals.hpp" />
     <ClInclude Include="Common\SHA256.hpp" />
     <ClInclude Include="Common\Utility.hpp" />
     <ClInclude Include="Detections.hpp" />
     <ClInclude Include="Environment\Services.hpp" />
+    <ClInclude Include="Logger.hpp" />
     <ClInclude Include="Network\NetClient.hpp" />
     <ClInclude Include="Network\Packets\Packets.hpp" />
     <ClInclude Include="Network\Packets\PacketWriter.hpp" />
@@ -208,11 +206,13 @@
     <ClInclude Include="Process\Memory\ntdll.h" />
     <ClInclude Include="Process\PEB.hpp" />
     <ClInclude Include="Process\Process.hpp" />
+    <ClInclude Include="Process\Thread.hpp" />
   </ItemGroup>
   <ItemGroup>
     <MASM Include="Shell.asm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </MASM>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
