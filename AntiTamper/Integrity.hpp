@@ -1,14 +1,13 @@
 #pragma once
 #include "../Common/Utility.hpp"
 #include "../Common/SHA256.hpp"
-#include "../Common/MD5.hpp"
 #include "../Process/Process.hpp"
 #include "NAuthenticode.hpp"
 #include <stdio.h>
 #include <algorithm>
 
 
-//the purpose of this class is to form a list containing our program's computed hashes
+//the purpose of this class is to form a list containing our program's .text section (or other) hashes
 class Integrity
 {
 public:
@@ -29,7 +28,7 @@ public:
 
 	list<wstring> WhitelistedModules;
 
-	wstring InternalModuleName = L"UltimateAnticheat.exe";
+	wstring InternalModuleName = L"UltimateAnticheat.exe"; //store original module name since we randomize it later
 
 	Integrity()
 	{
@@ -46,6 +45,4 @@ private:
 	list<uint64_t> _DllHashes;
 
 	list<uint64_t> _MemorySectionHashes; 
-	
-	Process* _Proc = new Process(); //get memory sections, etc, make hash of each section
 };
