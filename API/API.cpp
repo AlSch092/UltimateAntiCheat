@@ -19,7 +19,7 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessNam
 
 	if (Process::CheckParentProcess(parentProcessName)) //check parent process, kick out if bad
 	{
-		AC->GetBarrier()->GetProcessObject()->SetParentName(parentProcessName);
+		AC->GetMonitor()->GetProcessObj()->SetParentName(parentProcessName);
 		errorCode = Error::OK;
 	}
 	else //bad parent process detected, or parent process mismatch, shut down the program after reporting the error to the server
@@ -107,7 +107,7 @@ Error API::LaunchBasicTests(AntiCheat* AC) //currently in the process to split t
 
 	//AC->TestNetworkHeartbeat(); //tests executing a payload within server-fed data
 
-	if (!Process::CheckParentProcess(AC->GetBarrier()->GetProcessObject()->GetParentName())) //parent process check, the parent process would normally be set using our API methods
+	if (!Process::CheckParentProcess(AC->GetMonitor()->GetProcessObj()->GetParentName())) //parent process check, the parent process would normally be set using our API methods
 	{
 		Logger::logf("UltimateAnticheat.log", Detection, "Parent process was not % s! cheater detected!\n", API::whitelistedParentProcess);
 		errorCode = Error::PARENT_PROCESS_MISMATCH;
