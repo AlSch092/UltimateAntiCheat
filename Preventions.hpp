@@ -15,13 +15,7 @@ public:
 
 	Preventions()
 	{
-		_Proc = new Process();
 		IsPreventingThreadCreation = true; //set this as true after all threads are initialized
-	}
-
-	~Preventions()
-	{
-		delete _Proc;
 	}
 
 	Error DeployBarrier(); //activate all protections
@@ -33,8 +27,6 @@ public:
 	bool RandomizeModuleName();
 	static BYTE* SpoofPEB();
 
-	Process* GetProcessObject() { return this->_Proc; }
-
 	void SetErrorCode(Error err) { this->LastError = err; }
 	Error GetErrorCode() { return this->LastError; }
 
@@ -42,8 +34,6 @@ public:
 	bool IsPreventingThreads() { return this->IsPreventingThreadCreation; }
 
 private:
-	Process* _Proc = NULL;
-
 	Error LastError = Error::OK;
 
 	const wstring OriginalModuleName = L"UltimateAnticheat.exe";
