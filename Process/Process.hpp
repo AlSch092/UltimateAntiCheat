@@ -68,6 +68,12 @@ public:
 		}
 	}
 
+	~Process()
+	{
+		for (Module::MODULE_DATA* s : ModuleList)
+			delete s;
+	}
+
 	uint32_t GetMemorySize();
 
 	static list<Module::Section*>* GetSections(string module);
