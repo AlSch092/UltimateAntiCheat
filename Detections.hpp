@@ -51,6 +51,9 @@ public:
 	Thread* GetMonitorThread() { return this->MonitorThread; }
 	void SetMonitorThread(Thread* h) {  this->MonitorThread = h; }
 
+	Process* GetProcessObj() { return this->_Proc; }
+	void SetProcessObj(Process* obj) { this->_Proc = obj; }
+
 	void StartMonitor() 
 	{ 
 		Thread* t = new Thread();
@@ -89,4 +92,6 @@ private:
 	Thread* MonitorThread = NULL;
 
 	list<wstring> BlacklistedProcesses;
+
+	Process* _Proc = new Process(); //keep track of our sections, loaded modules, etc
 };
