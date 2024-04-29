@@ -640,6 +640,10 @@ DWORD Process::GetModuleSize(HMODULE hModule)
     return moduleSize;
 }
 
+/*
+    FillModuleList - fills the `ModuleList` class member with a list of module information
+    returns true on success
+*/
 bool Process::FillModuleList()
 {
     HMODULE hModules[256];
@@ -648,6 +652,9 @@ bool Process::FillModuleList()
     // Get the module handles for the current process
     if (EnumProcessModules(GetCurrentProcess(), hModules, sizeof(hModules), &cbNeeded)) 
     {
+        if (this->ModuleList.size() >= (cbNeeded / sizeof(HMODULE))) //already filled previously?
+            return false;
+
         for (unsigned int i = 0; i < (cbNeeded / sizeof(HMODULE)); i++) 
         {
             Module::MODULE_DATA* module = new Module::MODULE_DATA();
