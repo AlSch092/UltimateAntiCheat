@@ -183,9 +183,4 @@
       <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
-  <ItemGroup>
-    <MASM Include="Shell.asm">
-      <Filter>Source Files</Filter>
-    </MASM>
-  </ItemGroup>
 </Project>
