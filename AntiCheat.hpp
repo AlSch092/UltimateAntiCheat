@@ -39,13 +39,10 @@ public:
 	Preventions* GetBarrier() { return this->Barrier;  }
 	Detections* GetMonitor() { return this->Monitor; }
 
-	void TestNetworkHeartbeat();
-
 private:
 
 	Detections* Monitor = NULL;
 	Preventions* Barrier = NULL;
-
 	Debugger::AntiDebug* _AntiDebugger = NULL;
 
 	NetClient* Client = NULL;
