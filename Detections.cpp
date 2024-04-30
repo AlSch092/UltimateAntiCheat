@@ -103,7 +103,7 @@ void Detections::Monitor(LPVOID thisPtr)
 
         if (Detections::IsTextSectionWritable())
         {
-            Logger::logf("UltimateAnticheat.log", Detection, ".text section was writable, which means someone re-re-mapped our mem regions! If you ran this in DEBUG build, this is normal as we don't remap in DEBUG.\n");
+            Logger::logf("UltimateAnticheat.log", Detection, ".text section was writable, which means someone re-re-mapped our memory regions!");
             Monitor->SetCheater(true);
         }
 
@@ -131,15 +131,15 @@ list<Module::Section*>* Detections::SetSectionHash(const char* moduleName, const
 
     if (ModuleAddr == 0)
     {
+        Logger::logf("UltimateAnticheat.log", Err, "ModuleAddr was 0 @ SetSectionHash\n", sectionName);
         return nullptr;
     }
 
     if (sections->size() == 0)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "sections.size() of section %s was 0 @ TestMemoryIntegrity\n", sectionName);
-        return sections;
+        Logger::logf("UltimateAnticheat.log", Err, "sections.size() of section %s was 0 @ SetSectionHash\n", sectionName);
+        return nullptr;
     }
-
 
     std::list<Module::Section*>::iterator it;
 
@@ -157,8 +157,13 @@ list<Module::Section*>* Detections::SetSectionHash(const char* moduleName, const
             if (hashes.size() > 0)
             {
                 GetIntegrityChecker()->SetMemoryHashList(hashes);
+                break;
             }
-            break;
+            else
+            {
+                Logger::logf("UltimateAnticheat.log", Err, "hashes.size() was 0 @ SetSectionHash\n", sectionName);
+                return nullptr;
+            }
         }
     }
 
@@ -171,19 +176,24 @@ list<Module::Section*>* Detections::SetSectionHash(const char* moduleName, const
 */
 BOOL Detections::CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize)
 {
+    if (cachedAddress == 0 || cachedSize == 0)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Parameters were 0 @ Detections::CheckSectionHash");
+        return FALSE;
+    }
+
     Logger::logf("UltimateAnticheat.log", Info, "Checking hashes of address: %llx (%d bytes) for memory integrity\n", cachedAddress, cachedSize);
 
     if (GetIntegrityChecker()->Check((uint64_t)cachedAddress, cachedSize, GetIntegrityChecker()->GetMemoryHashList())) //compares hash to one gathered previously
     {
         Logger::logf("UltimateAnticheat.log", Info, "Hashes match: Program's .text section appears genuine.\n");
+        return FALSE;
     }
     else
     {
         Logger::logf("UltimateAnticheat.log", Detection, " .text section of program is modified!\n");
         return TRUE;
     }
-
-    return FALSE;
 }
 
 /*
@@ -233,7 +243,10 @@ BOOL Detections::IsBlacklistedProcessRunning()
 BOOL Detections::DoesFunctionAppearHooked(const char* moduleName, const char* functionName)
 {
     if (moduleName == nullptr || functionName == nullptr)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "moduleName or functionName was NULL @ Detections::DoesFunctionAppearHooked");
         return FALSE;
+    }
 
     BOOL FunctionPreambleHooked = FALSE;
 
@@ -310,8 +323,6 @@ Detections::IsTextSectionWritable() - Simple memory protections check on page in
 */
 BOOL Detections::IsTextSectionWritable()
 {
-    BOOL isWritable = FALSE;
-
     UINT64 textAddr = Process::GetSectionAddress(NULL, ".text");
     MEMORY_BASIC_INFORMATION mbi = { 0 };
 
@@ -325,8 +336,8 @@ BOOL Detections::IsTextSectionWritable()
 
     if (mbi.AllocationProtect != PAGE_EXECUTE_READ)
     {
-        isWritable = TRUE;
+        return TRUE;
     }
 
-    return isWritable;
+    return FALSE;
 }
