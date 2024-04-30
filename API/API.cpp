@@ -46,30 +46,16 @@ Error API::Cleanup(AntiCheat* AC)
 	if (AC == nullptr)
 		return Error::NULL_MEMORY_REFERENCE;
 
-	if (AC->GetAntiDebugger()->GetDetectionThread() != NULL) //stop anti-debugger monitor
+	if (AC->GetAntiDebugger()->GetDetectionThread() != NULL) //stop anti-debugger thread
 	{
-		Thread* t = AC->GetAntiDebugger()->GetDetectionThread();
-		t->ShutdownSignalled = true;
-		//WaitForSingleObject(t->handle, INFINITE);
-		
-		if (t->handle != INVALID_HANDLE_VALUE || t->handle == NULL)
-		{
-			TerminateThread(t->handle, 0); //todo: use thread signals instead of terminatethread
-			delete t;
-			AC->GetAntiDebugger()->SetDetectionThread(NULL);
-		}
+		AC->GetAntiDebugger()->GetDetectionThread()->ShutdownSignalled = true;
+		WaitForSingleObject(AC->GetAntiDebugger()->GetDetectionThreadHandle(), 3000);
 	}
 
-	if (AC->GetMonitor()->GetMonitorThread() != NULL) //stop anti-cheat monitor
+	if (AC->GetMonitor()->GetMonitorThread() != NULL) //stop anti-cheat monitor thread
 	{
-		Thread* t = AC->GetMonitor()->GetMonitorThread();
-
-		if (t->handle != INVALID_HANDLE_VALUE)
-		{
-			TerminateThread(t->handle, 0); //todo: use thread signals instead of terminatethread
-			delete t;
-			AC->GetMonitor()->SetMonitorThread(NULL);
-		}
+		AC->GetMonitor()->GetMonitorThread()->ShutdownSignalled = true;
+		WaitForSingleObject(AC->GetMonitor()->GetMonitorThread()->handle, 6000);
 	}
 
 	delete AC;
@@ -98,14 +84,12 @@ Error API::LaunchBasicTests(AntiCheat* AC) //currently in the process to split t
 	AC->GetMonitor()->StartMonitor();
 	AC->GetAntiDebugger()->StartAntiDebugThread(); //start debugger checks in a seperate thread
 
-	AC->GetMonitor()->GetServiceManager()->GetServiceModules(); //enumerate services
+	AC->GetMonitor()->GetServiceManager()->GetServiceModules(); //enumerate services, drivers
 
 	if (AC->GetMonitor()->GetServiceManager()->GetLoadedDrivers()) //enumerate drivers
 	{
 		list<wstring> unsigned_drivers = AC->GetMonitor()->GetServiceManager()->GetUnsignedDrivers(); //unsigned drivers, take further action if needed
 	}
-
-	//AC->TestNetworkHeartbeat(); //tests executing a payload within server-fed data
 
 	if (!Process::CheckParentProcess(AC->GetMonitor()->GetProcessObj()->GetParentName())) //parent process check, the parent process would normally be set using our API methods
 	{
@@ -155,12 +139,10 @@ Error __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code)
 
 			if (err == Error::OK) 			
 			{
-				Logger::logf("UltimateAnticheat.log", Info, " Cleanup successful. Shutting down program");
 				errorCode = Error::OK;
 			}
 			else
 			{
-				Logger::logf("UltimateAnticheat.log", Err, "Cleanup unsuccessful. Shutting down program");
 				errorCode = Error::NULL_MEMORY_REFERENCE;
 			}
 		} break;
