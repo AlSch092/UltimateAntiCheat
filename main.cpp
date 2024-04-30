@@ -62,7 +62,16 @@ int main(int argc, char** argv)
         Logger::logf("UltimateAnticheat.log", Info, "Detected a cheater in first 60 seconds of runtime");
     }
 
-    API::Dispatch(AC, API::DispatchCode::CLIENT_EXIT); //clean up memory & threads
+    if (API::Dispatch(AC, API::DispatchCode::CLIENT_EXIT) == Error::OK) //clean up memory & threads
+    {
+        Logger::logf("UltimateAnticheat.log", Info, " Cleanup successful. Shutting down program");
+    }
+    else
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Cleanup unsuccessful... Shutting down program");
+    }
+
+    system("pause");
     return 0;
 }
 
@@ -96,7 +105,7 @@ bool UnmanagedGlobals::AddThread(DWORD id)
             return false;
         }
 
-        UnmanagedGlobals::ThreadList.push_back(t);
+        UnmanagedGlobals::ThreadList->push_back(t);
         return true;
     }
 }
@@ -105,14 +114,17 @@ void UnmanagedGlobals::RemoveThread(DWORD tid)
 {
     Thread* ToRemove = NULL;
 
-    for (Thread* t : ThreadList)
+    std::list<Thread*>::iterator it;
+
+    for (it = ThreadList->begin(); it != ThreadList->end(); ++it)
     {
+        Thread* t = it._Ptr->_Myval;
         if (t->Id == tid)
             ToRemove = t;
     }
 
     if (ToRemove != NULL) //remove thread from our list on thread_detach
-        ThreadList.remove(ToRemove);
+        ThreadList->remove(ToRemove);
 }
 
 void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved) // todo: check if TLSCallback ptr has been changed @ runtime, if so end the program with a detected cheater
@@ -148,10 +160,7 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved) 
 
         case DLL_PROCESS_DETACH: //program exit, clean up any memory allocated
         {
-            for (Thread* t : UnmanagedGlobals::ThreadList)
-            {
-                delete t;
-            }
+            UnmanagedGlobals::ThreadList->clear();
         }break;
 
         case DLL_THREAD_ATTACH: //add to our thread list
@@ -181,6 +190,8 @@ LONG WINAPI UnmanagedGlobals::ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo
     {
         Logger::logf("UltimateAnticheat.log", Info, " Breakpoint exception was caught in ExceptionHandler\n");
     }
+
+    Logger::logf("UltimateAnticheat.log", Warning, "Program threw exception: %x\n", exceptionCode);
 
     return EXCEPTION_CONTINUE_SEARCH;
 }
