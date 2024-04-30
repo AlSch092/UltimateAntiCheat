@@ -171,7 +171,10 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved) 
             }
 
             if (UnmanagedGlobals::SupressingNewThreads)
+            {
+                Logger::logf("UltimateAnticheat.log", Info, " Stopping rogue thread from being created @ TLSCallback: %d\n", GetLastError());
                 ExitThread(0); //we can stop DLL injecting + DLL debuggers (such as VEH debugger) this way, but make sure you're handling your threads carefully
+            }
 
         }break;
 
