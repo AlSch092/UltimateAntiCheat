@@ -2,13 +2,40 @@
 #include "Detections.hpp"
 
 /*
+    Detections::StartMonitor - use class member MonitorThread to start our main detections loop
+*/
+void Detections::StartMonitor()
+{
+    if (this->MonitorThread != NULL)
+        return;
+
+    this->MonitorThread = new Thread();
+    this->MonitorThread->handle = INVALID_HANDLE_VALUE;
+    this->MonitorThread->ShutdownSignalled = false; //ShutdownSignalled is used to prevent calling TerminateThread from other threads
+
+    this->MonitorThread->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, 0, &this->MonitorThread->Id);
+
+    Logger::logf("UltimateAnticheat.log", Info, "Created monitoring thread with ID %d\n", this->MonitorThread->Id);
+    
+    if (this->MonitorThread->handle == INVALID_HANDLE_VALUE || this->MonitorThread->handle == NULL)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, " Failed to create monitor thread  @ Detections::StartMonitor\n");
+        return;
+    }
+}
+
+
+/*
 Detections::Monitor(LPVOID thisPtr)
   Routine which monitors aspects of the process for fragments of cheating, loops continuously until the thread is signalled to shut down
 */
 void Detections::Monitor(LPVOID thisPtr)
 {
     if (thisPtr == NULL)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "thisPtr was NULL @ Detections::Monitor. Aborting execution!\n");
         return;
+    }
 
     Logger::logf("UltimateAnticheat.log", Info, "Starting  Detections::Monitor \n");
 
@@ -63,7 +90,8 @@ void Detections::Monitor(LPVOID thisPtr)
     {
         if (Monitor->GetMonitorThread()->ShutdownSignalled)
         {
-            goto endMonitor;
+            Logger::logf("UltimateAnticheat.log", Info, "STOPPING  Detections::Monitor , ending detections thread\n");
+            return;
         }
 
         if (Monitor->CheckSectionHash(CachedSectionAddress, CachedSectionSize)) //track the .text section for changes -> most expensive CPU-wise
@@ -78,16 +106,17 @@ void Detections::Monitor(LPVOID thisPtr)
             Monitor->SetCheater(true);
         }
 
+        //make sure ws2_32.dll is actually loaded if this gives an error, on my build the dll is not loaded but we'll pretend it is
         if (Monitor->DoesFunctionAppearHooked("ws2_32.dll", "send") || Monitor->DoesFunctionAppearHooked("ws2_32.dll", "recv"))   //ensure you use this routine on functions that don't have jumps or calls as their first byte
         {
             Logger::logf("UltimateAnticheat.log", Detection, "networking WINAPI was hooked!\n"); //WINAPI hooks doesn't always determine someone is cheating since AV and other software can write the hooks
             Monitor->SetCheater(true); //..but for simplicity in this project we will set them as a cheater
         }
 
-        if (Monitor->GetIntegrityChecker()->IsUnknownModulePresent()) //authenticode call and check against whitelisted module list
-        {
-            Logger::logf("UltimateAnticheat.log", Detection, "Found unsigned dll loaded : We ideally only want verified, signed dlls in our application!\n");
-        }
+        //if (Monitor->GetIntegrityChecker()->IsUnknownModulePresent()) //authenticode call and check against whitelisted module list
+        //{
+        //    Logger::logf("UltimateAnticheat.log", Detection, "Found at least one unsigned dll loaded : We ideally only want verified, signed dlls in our application!\n");
+        //}
 
         if (Services::IsMachineAllowingSelfSignedDrivers())
         {
@@ -110,8 +139,6 @@ void Detections::Monitor(LPVOID thisPtr)
         Sleep(MonitorLoopMilliseconds);
     }
 
-endMonitor:
-    Logger::logf("UltimateAnticheat.log", Info, "Stopping  Detections::Monitor \n");
 }
 
 /*

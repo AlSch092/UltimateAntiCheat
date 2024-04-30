@@ -54,26 +54,7 @@ public:
 	Process* GetProcessObj() { return this->_Proc; }
 	void SetProcessObj(Process* obj) { this->_Proc = obj; }
 
-	void StartMonitor() 
-	{ 
-		Thread* t = new Thread();
-		t->handle = INVALID_HANDLE_VALUE;
-		t->ShutdownSignalled = false; //ShutdownSignalled is used to prevent calling TerminateThread from other threads
-
-		if (MonitorThread == NULL)
-		{
-			t->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, 0, &t->Id);
-			Logger::logf("UltimateAnticheat.log", Info, "Created monitoring thread with ID %d\n", t->Id);
-		}
-
-		if (t->handle == INVALID_HANDLE_VALUE || t->handle == NULL)
-		{
-			Logger::logf("UltimateAnticheat.log", Err, " Failed to create monitor thread  @ Detections::StartMonitor\n");
-			return;
-		}
-
-		this->MonitorThread = t;
-	}
+	void StartMonitor();
 
 	BOOL IsBlacklistedProcessRunning(); //process checking, can be circumvented easily
 	static BOOL DoesFunctionAppearHooked(const char* moduleName, const char* functionName); //checks for jumps or calls as the first byte on a function

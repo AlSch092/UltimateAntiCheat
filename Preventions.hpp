@@ -13,9 +13,9 @@ class Preventions
 {
 public:
 
-	Preventions()
+	Preventions(bool preventingThreads)
 	{
-		IsPreventingThreadCreation = true; //set this as true after all threads are initialized
+		IsPreventingThreadCreation = preventingThreads;
 	}
 
 	Error DeployBarrier(); //activate all protections

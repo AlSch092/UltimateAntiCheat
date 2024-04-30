@@ -11,7 +11,7 @@ bool Preventions::PreventDllInjection()
     char* RandString3 = Utility::GenerateRandomString(14);
     char* RandString4 = Utility::GenerateRandomString(14);
 
-    //prevents DLL injection from any host process relying on calling LoadLibrary in the target process (we are the target in this case)
+    //prevents DLL injection from any host process relying on calling LoadLibrary in the target process (we are the target in this case) -> can possibly be disruptive to end user
     if (Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryA", RandString1) &&   
         Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryW", RandString2) &&
         Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExA", RandString3) &&
@@ -44,8 +44,7 @@ bool Preventions::PreventShellcodeThreads() //using this technique might pop up 
     return success;
 }
 
-
-BYTE* Preventions::SpoofPEB()
+BYTE* Preventions::SpoofPEB() //experimental, don't use this right now as it causes some thread issues
 {
     BYTE* newPEBBytes = CopyAndSetPEB();
 
@@ -102,15 +101,17 @@ Error Preventions::DeployBarrier()
     }
 #endif
 
-    if (PreventDllInjection()) //anti-injection
-    {
-        Logger::logf("UltimateAnticheat.log", Info, " Wrote over LoadLibrary (kernel32) export names successfully!\n");
-    }
-    else
-    {
-        Logger::logf("UltimateAnticheat.log", Err, " Couldn't write over export names @ Preventions::ChangeExportNames\n");
-        retError = Error::CANT_APPLY_TECHNIQUE;
-    }
+    IsPreventingThreadCreation = true;
+
+    //if (PreventDllInjection()) //anti-injection
+    //{
+    //    Logger::logf("UltimateAnticheat.log", Info, " Wrote over LoadLibrary (kernel32) export names successfully!\n");
+    //}
+    //else
+    //{
+    //    Logger::logf("UltimateAnticheat.log", Err, " Couldn't write over export names @ Preventions::ChangeExportNames\n");
+    //    retError = Error::CANT_APPLY_TECHNIQUE;
+    //}
 
     //if (PreventShellcodeThreads()) //prevent lookups to CreateThread symbol from injected code by renaming the export name in memory, but can throw errors to the end user
     //{
@@ -122,19 +123,19 @@ Error Preventions::DeployBarrier()
     //    retError = Error::CANT_APPLY_TECHNIQUE;
     //}
 
-    BYTE* newPEB = SpoofPEB(); //memory should be free'd at end of program
+    //BYTE* newPEB = SpoofPEB(); //memory should be free'd at end of program  -> CURRENTLY CAUSES ISSUES WITH THREADING, DO NOT USE! 
 
-    if (newPEB != NULL)
-    {
-        Logger::logf("UltimateAnticheat.log", Info, " Spoofed PEB successfully!\n");
-    }
-    else
-    {
-        Logger::logf("UltimateAnticheat.log", Err, " Couldn't spoof PEB @ Preventions::ChangeExportNames\n");
-        retError = Error::CANT_APPLY_TECHNIQUE;
-    }
+    //if (newPEB != NULL)
+    //{
+    //    Logger::logf("UltimateAnticheat.log", Info, " Spoofed PEB successfully!\n");
+    //}
+    //else
+    //{
+    //    Logger::logf("UltimateAnticheat.log", Err, " Couldn't spoof PEB @ Preventions::ChangeExportNames\n");
+    //    retError = Error::CANT_APPLY_TECHNIQUE;
+    //}
 
-    if (RandomizeModuleName()) //should block calls to GetModuleHandle from working unless the cheater keeps up with our new module's name
+    if (RandomizeModuleName()) 
     {
         Logger::logf("UltimateAnticheat.log", Info, " Randomized our executable's module's name!\n");
     }
