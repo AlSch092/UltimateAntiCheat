@@ -3,20 +3,28 @@
 
 void Debugger::AntiDebug::StartAntiDebugThread()
 {
-	Thread* t = new Thread();
+	this->DetectionThread = new Thread();
 
-	t->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Debugger::AntiDebug::CheckForDebugger, (LPVOID)this, 0, &t->Id);
+	this->DetectionThread->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Debugger::AntiDebug::CheckForDebugger, (LPVOID)this, 0, &this->DetectionThread->Id);
 
-	if (t->handle == INVALID_HANDLE_VALUE || t->handle == NULL)
+	if (this->DetectionThread->handle == INVALID_HANDLE_VALUE || this->DetectionThread->handle == NULL)
 	{
 		Logger::logf("UltimateAnticheat.log", Err, "Couldn't start anti-debug thread @ Debugger::AntiDebug::StartAntiDebugThread\n");
 		//optionally shut down here
 	}
+
+	Logger::logf("UltimateAnticheat.log", Info, "Created Debugger detection thread with Id: %d\n", this->DetectionThread->Id);
 }
 
 void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 {
-	Logger::logf("UltimateAnticheat.log", Info, "Starting Debugger detection thread with Id: %d\n", GetCurrentThreadId());
+	if (AD == nullptr)
+	{
+		Logger::logf("UltimateAnticheat.log", Err, "AntiDbg PTR was NULL @ CheckForDebugger");
+		return;
+	}
+
+	Logger::logf("UltimateAnticheat.log", Info, "STARTED Debugger detection thread");
 
 	bool MonitoringDebugger = true;
 
@@ -24,7 +32,7 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 	{
 		Debugger::AntiDebug* AntiDbg = reinterpret_cast<Debugger::AntiDebug*>(AD);
 
-		if (AntiDbg == NULL) //something went wrong, this should not have happened
+		if (AntiDbg == NULL)
 		{
 			Logger::logf("UltimateAnticheat.log", Err, "AntiDbg PTR was NULL @ CheckForDebugger");
 			return;
@@ -234,6 +242,7 @@ bool Debugger::AntiDebug::_IsDebuggerPresentHeapFlags()
 
 bool Debugger::AntiDebug::_IsDebuggerPresentCloseHandle()
 {
+#ifndef _DEBUG
 	__try
 	{
 		CloseHandle((HANDLE)1);
@@ -242,7 +251,7 @@ bool Debugger::AntiDebug::_IsDebuggerPresentCloseHandle()
 	{
 		return true;
 	}
-
+#endif
 	return false;
 }
 

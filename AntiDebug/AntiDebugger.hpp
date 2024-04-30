@@ -36,9 +36,6 @@ namespace Debugger
         
         AntiDebug()
         {
-            this->DetectionThread = new Thread();
-            this->DetectionThread->handle = NULL;
-            this->DetectionThread->Id = 0;
         }
 
         ~AntiDebug()
@@ -49,7 +46,7 @@ namespace Debugger
         list<Detections> GetDebuggerMethodsDetected() { return DebuggerMethodsDetected; }
     
         Thread* GetDetectionThread() { return this->DetectionThread; }
-        HANDLE GetDetectionThreadHandle() { return this->DetectionThread->handle; }
+        HANDLE GetDetectionThreadHandle() { if(this->DetectionThread != NULL) return this->DetectionThread->handle; }
         void SetDetectionThread(HANDLE h) { this->DetectionThread->handle = h; }
 
         inline bool _IsDebuggerPresent() { return IsDebuggerPresent(); }
