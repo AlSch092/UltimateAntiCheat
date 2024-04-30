@@ -22,7 +22,7 @@ public:
 	{	
 		_AntiDebugger = new Debugger::AntiDebug();
 		Monitor = new Detections(false);
-		Barrier = new Preventions();
+		Barrier = new Preventions(true);
 		Client = new NetClient();
 	}
 
