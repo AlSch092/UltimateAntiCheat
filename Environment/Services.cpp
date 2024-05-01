@@ -15,7 +15,7 @@ BOOL Services::GetServiceModules()
 
     if (scmHandle == NULL) 
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to open Service Control Manager: %lu\n", GetLastError());
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to open Service Control Manager @ GetServiceModules: %lu\n", GetLastError());
         return FALSE;
     }
 
@@ -183,7 +183,7 @@ list<wstring> Services::GetUnsignedDrivers()
     IsMachineAllowingSelfSignedDrivers - Opens BCDEdit.exe and pipes output to check if testsigning is enabled. May require running program as administrator.
     returns TRUE if test signing mode was found.
 */
-BOOL Services::IsMachineAllowingSelfSignedDrivers()
+BOOL Services::IsTestsigningEnabled()
 {
     HANDLE hReadPipe, hWritePipe;
     SECURITY_ATTRIBUTES sa;

@@ -51,7 +51,7 @@ public:
 	list<wstring> GetUnsignedDrivers();
 
 	static BOOL IsDriverSigned(wstring driverPath);
-	static BOOL IsMachineAllowingSelfSignedDrivers();
+	static BOOL IsTestsigningEnabled();
 
 private:
 
