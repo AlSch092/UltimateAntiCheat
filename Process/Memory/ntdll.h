@@ -1,12 +1,9 @@
 #pragma once
-#pragma once
-
 #include <Windows.h>
 
 #ifndef _NTDEF_
 typedef _Return_type_success_(return >= 0) LONG NTSTATUS;
 #endif
-
 
 #define NT_SUCCESS(Status) ((NTSTATUS)(Status) >= 0)
 
@@ -21,7 +18,6 @@ typedef _Return_type_success_(return >= 0) LONG NTSTATUS;
     (((((ULONG_PTR)(Pointer)) & (((Alignment)-1))) == 0) ? TRUE : FALSE)
 
 #define NtCurrentProcess()  ((HANDLE)(LONG_PTR)-1)
-
 
 typedef struct _UNICODE_STRING
 {
@@ -52,10 +48,7 @@ typedef enum _MEMORY_INFORMATION_CLASS
 } MEMORY_INFORMATION_CLASS, * PMEMORY_INFORMATION_CLASS;
 
 
-EXTERN_C
-NTSTATUS
-NTAPI
-NtCreateSection(
+EXTERN_C NTSTATUS NTAPI NtCreateSection(
     _Out_    PHANDLE            SectionHandle,
     _In_     ACCESS_MASK        DesiredAccess,
     _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes,
@@ -65,10 +58,7 @@ NtCreateSection(
     _In_opt_ HANDLE             FileHandle
 );
 
-EXTERN_C
-NTSTATUS
-NTAPI
-NtMapViewOfSection(
+EXTERN_C NTSTATUS NTAPI NtMapViewOfSection(
     _In_        HANDLE          SectionHandle,
     _In_        HANDLE          ProcessHandle,
     _Inout_     PVOID * BaseAddress,
@@ -81,24 +71,6 @@ NtMapViewOfSection(
     _In_        ULONG           Win32Protect
 );
 
-EXTERN_C
-NTSTATUS
-NTAPI
-NtUnmapViewOfSection(
-    _In_        HANDLE  ProcessHandle,
-    _In_opt_    PVOID   BaseAddress
-);
-
-EXTERN_C
-NTSTATUS
-NTAPI
-NtClose(
-    _In_ HANDLE Handle
-);
-
-EXTERN_C
-PIMAGE_NT_HEADERS
-NTAPI
-RtlImageNtHeader(
-    _In_ PVOID BaseAddress
-);
+EXTERN_C NTSTATUS NTAPI NtUnmapViewOfSection(_In_        HANDLE  ProcessHandle, _In_opt_    PVOID   BaseAddress);
+EXTERN_C NTSTATUS NTAPI NtClose(_In_ HANDLE Handle );
+EXTERN_C PIMAGE_NT_HEADERS NTAPI RtlImageNtHeader(_In_ PVOID BaseAddress);
