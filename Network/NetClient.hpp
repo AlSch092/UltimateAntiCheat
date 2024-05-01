@@ -21,12 +21,12 @@ how can we implement something 'as powerful' as a driver?
 #include <winsock2.h>
 #include <Iphlpapi.h>
 #include <list>
-
-#include "../Common/Error.hpp"
-#include "Packets/Packets.hpp"
-
 #include <stdint.h>
 #include <string>
+
+#include "../Common/Error.hpp"
+#include "../Logger.hpp"
+#include "Packets/Packets.hpp"
 
 #pragma comment(lib, "ws2_32")
 #pragma comment(lib, "iphlpapi.lib")
@@ -42,18 +42,25 @@ public:
 
 	NetClient()
 	{
+		HandshakeCompleted = false;
+		Initialized = false;
 	}
 
 	NetClient(const char* serverEndpoint, uint16_t port)
 	{
 		Ip = serverEndpoint;
 		Port = port;
+
+		HandshakeCompleted = false;
+		Initialized = false;
 	}
 
 	Error Initialize(string ip, uint16_t port); //connects, sends CS_HELLO, verifies the response of a version number from server
 	Error EndConnection(int reason); //sends CS_GOODBYE and disconnects the socket
 
 	Error SendData(PacketWriter* outPacket); //all data sent to the server after CS_HELLO should go through this
+
+	Error QueryMemory(PacketWriter* p); //query specific memory address, send its bytes values back to server
 
 	static void ProcessRequests(LPVOID Param); //calls recv in a loop to handle requests, and if this routine is not running the program should be exited
 
@@ -85,13 +92,13 @@ private:
 	uint16_t Port = 0;
 
 	unsigned int ConnectedDuration = 0;
-	unsigned long ConnectedAt = 0; //unix timestamp
+	unsigned long long ConnectedAt = 0; //unix timestamp
 
 	string Hostname;
 	string HardwareID;
 	string MACAddress;
 
-	Error Status = Error::OK;
+	Error LastError = Error::OK;
 
 	HANDLE RecvLoopThread = NULL;
 	DWORD recvThreadId = 0;

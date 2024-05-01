@@ -1,6 +1,10 @@
 //By AlSch092 @github
 #include "NetClient.hpp"
 
+/*
+	Initialize - Initializes the network client
+	returns Error::OK on success
+*/
 Error NetClient::Initialize(string ip, uint16_t port)
 {
 	WSADATA wsaData;
@@ -87,6 +91,10 @@ Error NetClient::Initialize(string ip, uint16_t port)
 	return Error::OK;
 }
 
+/*
+	EndConnection - Ends the net connection with the server
+	returns Error::OK on success
+*/
 Error NetClient::EndConnection(int reason)
 {
 	PacketWriter* p = Packets::Builder::ClientGoodbye(reason);
@@ -115,6 +123,10 @@ Error NetClient::EndConnection(int reason)
 	return err;
 }
 
+/*
+	SendData - Sends `outPacket` parameter to the server
+	returns Error::OK on success
+*/
 Error NetClient::SendData(PacketWriter* outPacket)
 {
 	if (outPacket->GetBuffer() == nullptr || outPacket == nullptr)
@@ -137,6 +149,9 @@ Error NetClient::SendData(PacketWriter* outPacket)
 	return err;
 }
 
+/*
+	ProcessRequests - reads packet sent from the server in a loop
+*/
 void NetClient::ProcessRequests(LPVOID Param)
 {
 	bool receiving = true;
@@ -159,10 +174,15 @@ void NetClient::ProcessRequests(LPVOID Param)
 				Client->HandleInboundPacket(p);
 			}
 		}
+
+		Sleep(1000);
 	}
 }
 
-string NetClient::GetHostname() //fetch client hostname on local network
+/*
+	GetHostname - returns local ip of host
+*/
+string NetClient::GetHostname()
 {
 	struct IPv4
 	{
@@ -220,34 +240,42 @@ string NetClient::GetHostname() //fetch client hostname on local network
 	return sIpv4;
 }
 
-string NetClient::GetMACAddress() //fetches adapter MAC
+/*
+	GetMACAddress - Generates MAC address of the network adapter
+	returns empty string on failure
+*/
+string NetClient::GetMACAddress()
 {
 	PIP_ADAPTER_INFO AdapterInfo;
 	DWORD dwBufLen = sizeof(IP_ADAPTER_INFO);
-	char* mac_addr = (char*)malloc(18);
+	char* mac_addr = (char*)malloc(sizeof(char)*255);
 
 	AdapterInfo = (IP_ADAPTER_INFO*)malloc(sizeof(IP_ADAPTER_INFO));
 	if (AdapterInfo == NULL)
 	{
-		printf("Error allocating memory needed to call GetAdaptersinfo\n");
+		Logger::logf("UltimateAnticheat.log", Err, "Error allocating memory needed to call GetAdaptersinfo @ GetMACAddress");
 		free(mac_addr);
 		return "";
 	}
 
-	if (GetAdaptersInfo(AdapterInfo, &dwBufLen) == ERROR_BUFFER_OVERFLOW) {
+	if (GetAdaptersInfo(AdapterInfo, &dwBufLen) == ERROR_BUFFER_OVERFLOW) 
+	{
 		free(AdapterInfo);
 		AdapterInfo = (IP_ADAPTER_INFO*)malloc(dwBufLen);
-		if (AdapterInfo == NULL) {
-			printf("Error allocating memory needed to call GetAdaptersinfo\n");
+		if (AdapterInfo == NULL) 
+		{
+			Logger::logf("UltimateAnticheat.log", Err, "Error allocating memory needed to call GetAdaptersinfo @ GetMACAddress");
 			free(mac_addr);
 			return "";
 		}
 	}
 
-	if (GetAdaptersInfo(AdapterInfo, &dwBufLen) == NO_ERROR) {
+	if (GetAdaptersInfo(AdapterInfo, &dwBufLen) == NO_ERROR) 
+	{
 
 		PIP_ADAPTER_INFO pAdapterInfo = AdapterInfo;
-		do {
+		do 
+		{
 			sprintf(mac_addr, "%02X:%02X:%02X:%02X:%02X:%02X",
 				pAdapterInfo->Address[0], pAdapterInfo->Address[1],
 				pAdapterInfo->Address[2], pAdapterInfo->Address[3],
@@ -259,6 +287,9 @@ string NetClient::GetMACAddress() //fetches adapter MAC
 	return mac_addr; // caller must free!
 }
 
+/*
+	GetHardwareID - Generates and returns a unique identifier based on PC name and hardware components
+*/
 string NetClient::GetHardwareID()
 {
 	std::string HWID = "";
@@ -304,6 +335,9 @@ string NetClient::GetHardwareID()
 	return HWID;
 }
 
+/*
+	HandleInboundPacket - read packet `p`  and take action based on its opcode
+*/
 Error NetClient::HandleInboundPacket(PacketWriter* p)
 {
 	if (p->GetBuffer() == NULL || p == nullptr)
@@ -330,10 +364,14 @@ Error NetClient::HandleInboundPacket(PacketWriter* p)
 		{
 			if (!ExecutePacketPayload(p))
 			{
-				printf("Client bad behavior (did not execute correctly)\n");
+				Logger::logf("UltimateAnticheat.log", Err, "Client bad behavior (did not execute correctly) @ HandleInboundPacket");
 				err = Error::SERVER_KICKED;
 			}
 		}break;
+
+		case Packets::Opcodes::SC_QUERYMEMORY: //server requests byte data @ address
+
+			break;
 
 		default:
 			err = Error::BAD_OPCODE;
@@ -343,17 +381,10 @@ Error NetClient::HandleInboundPacket(PacketWriter* p)
 	return err;
 }
 
-uint64_t NetClient::MakeHashFromServerResponse(PacketWriter* p) //todo: finish this
-{
-	uint64_t responseHash = 0;
-	return 0;
-}
-
 /*
  NetClient::ExecutePacketPayload -> Tells the client to execute a server-generated payload (here we are simulating a packet coming in), to calculate a key which is then sent back to the server. Ensures that the client is actually running the anti-cheat program as it is a challenge-response protocol.
 
  -> every next packet is unencrypted using the key from the previous packet, and this key should be sent to the server to prove the client is executing the anticheat module (can still be spoofed by a cheater)
-
 */
 bool NetClient::ExecutePacketPayload(PacketWriter* p)
 {
@@ -405,4 +436,30 @@ bool NetClient::ExecutePacketPayload(PacketWriter* p)
 	
 	delete[] buffer;
 	return result;
+}
+
+Error NetClient::QueryMemory(PacketWriter* p)
+{
+	//const unsigned char* buff = p->GetBuffer();
+	//
+	//if (buff == NULL)
+	//	return Error::NULL_MEMORY_REFERENCE;
+
+	//int size = 0;
+	//UINT64 address = 0;
+	//BYTE* bytes = Process::GetBytesAtAddress(address, 100);
+
+	//for (int i = 0; i < 100; i++)
+	//{
+	//	printf("%x ", bytes[i]);
+	//}
+
+	//printf("\n");
+	return Error::OK;
+}
+
+uint64_t NetClient::MakeHashFromServerResponse(PacketWriter* p) //todo: finish this
+{
+	uint64_t responseHash = 0;
+	return 0;
 }
