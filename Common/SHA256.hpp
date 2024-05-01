@@ -1,10 +1,12 @@
+//Part of UltimateAnticheat - AlSch092 @ Github
 #ifndef SHA256_H
 #define SHA256_H
 
 #include <string>
 #include <array>
 
-class SHA256 {
+class SHA256 
+{
 
 public:
 	SHA256();
@@ -14,10 +16,8 @@ public:
 
 	uint8_t* digest();
 
-	static std::string toString(const uint8_t* digest);
-
 private:
-	uint8_t  m_data[64];
+	uint8_t  m_data[64] = { 0 };
 	uint32_t m_blocklen;
 	uint32_t m_bitlen;
 	uint32_t m_state[8]; //A, B, C, D, E, F, G, H
