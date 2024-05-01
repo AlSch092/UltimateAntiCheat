@@ -1,10 +1,10 @@
 #include "Packets.hpp"
 
-PacketWriter* Packets::Builder::ClientHello(string HWID, string Ipv4, string MACAddress)
+PacketWriter* Packets::Builder::ClientHello(string HWID, string hostname, string MACAddress)
 {
 	PacketWriter* p = new PacketWriter(Packets::Opcodes::CS_HELLO);
 	p->WriteString(HWID);
-	p->WriteString(Ipv4);
+	p->WriteString(hostname);
 	p->WriteString(MACAddress);
 	return p;
 }

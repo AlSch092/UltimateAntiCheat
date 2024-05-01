@@ -28,7 +28,8 @@ namespace Packets
 			SC_HEARTBEAT,
 			SC_INFOLOGGING,
 			SC_SHELLCODE, //shellcode sent from the server is where the real fun begins, and seperates 'typical' anti-cheats from the truly glorious ones.
-			SC_GENERATEKEY
+			SC_GENERATEKEY,
+			SC_QUERYMEMORY, //query bytes at a specific memory address, used to detect tampering
 		};	
 	}
 

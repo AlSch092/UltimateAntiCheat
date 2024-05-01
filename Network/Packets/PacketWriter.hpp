@@ -8,7 +8,8 @@
 
 typedef uint16_t header_t;
 
-class PacketWriter {
+class PacketWriter 
+{
 public:
 	PacketWriter() : m_pos(0), m_buffer(new unsigned char[bufferLen]), m_length(bufferLen) { }
 	PacketWriter(uint16_t h) : m_pos(0), m_buffer(new unsigned char[bufferLen]), m_length(bufferLen) { Write(h); }
@@ -27,6 +28,12 @@ public:
 		{
 			Write<byte>(bData[i]);
 		}
+	}
+
+	~PacketWriter()
+	{
+		if (this->m_buffer != NULL)
+			delete[] this->m_buffer;
 	}
 
 	void ReadString(std::string value);
@@ -58,20 +65,23 @@ private:
 };
 
 template <typename T>
-void PacketWriter::Write(T value) {
+void PacketWriter::Write(T value) 
+{
 	(*(T*)GetBuffer(m_pos, +sizeof(T))) = value;
 	m_pos += sizeof(T);
 }
 
 
 inline
-std::ostream& operator <<(std::ostream& out, const PacketWriter& packet) {
+std::ostream& operator <<(std::ostream& out, const PacketWriter& packet) 
+{
 	out << packet.ToString();
 	return out;
 }
 
 inline
-std::string PacketWriter::ToString() const {
+std::string PacketWriter::ToString() const 
+{
 	std::string ret;
 	if (GetSize() > 0) {
 		std::stringstream out;
@@ -89,10 +99,13 @@ std::string PacketWriter::ToString() const {
 }
 
 inline
-unsigned char* PacketWriter::GetBuffer(int pos, int len) {
-	if (m_length < pos + len) {
+unsigned char* PacketWriter::GetBuffer(int pos, int len) 
+{
+	if (m_length < pos + len) 
+	{
 		// Buffer is not large enough
-		while (m_length < pos + len) {
+		while (m_length < pos + len) 
+		{
 			m_length *= 2; // Double the capacity each time the buffer is full
 		}
 		unsigned char* newBuffer = new unsigned char[m_length];
@@ -104,47 +117,50 @@ unsigned char* PacketWriter::GetBuffer(int pos, int len) {
 }
 
 inline
-void PacketWriter::WriteString(const std::string& str, size_t len) {
+void PacketWriter::WriteString(const std::string& str, size_t len) 
+{
 	size_t slen = str.size();
-	if (len < slen) {
+	if (len < slen) 
+	{
 		throw std::invalid_argument("WriteString used with a length shorter than string size");
 	}
 	strncpy_s((char*)GetBuffer(m_pos, static_cast<int>(len)), len, str.c_str(), slen); //IF WE HAVE SOME ERROR, check to see if adding _s did it
-	for (size_t i = slen; i < len; i++) {
+	for (size_t i = slen; i < len; i++) 
+	{
 		m_buffer[m_pos + i] = 0;
 	}
 	m_pos += static_cast<int>(len);
 }
 
-inline
-void PacketWriter::WriteWideString(const std::wstring& str, size_t len) {
-
+inline void PacketWriter::WriteWideString(const std::wstring& str, size_t len) 
+{
 	size_t slen = str.size();
 
-	if (len < slen) {
+	if (len < slen) 
+	{
 		throw std::invalid_argument("WriteString used with a length shorter than string size");
 	}
 
-	wcscpy((wchar_t*)GetBuffer(m_pos, static_cast<int>(len * 2)), str.c_str());
+	wcscpy_s((wchar_t*)GetBuffer(m_pos, static_cast<int>(len * 2)), len * 2, str.c_str());
 
-	m_pos += len * 2;
+	m_pos += (int)(len * 2);
 }
 
 
-inline
-void PacketWriter::WriteNoLengthString(const std::string& str) {
+inline void PacketWriter::WriteNoLengthString(const std::string& str) 
+{
 	WriteString(str, str.size());
 }
 
-inline
-void PacketWriter::WriteString(const std::string& str) {
+inline void PacketWriter::WriteString(const std::string& str) 
+{
 	size_t len = str.size();
-	Write<uint16_t>(len);
+	Write<uint16_t>((uint16_t)len);
 	WriteString(str, str.size());
 }
 
-inline
-void PacketWriter::WriteZeros(int zeros) {
+inline void PacketWriter::WriteZeros(int zeros) 
+{
 
 	for (int i = 0; i < zeros; i++)
 	{
@@ -153,7 +169,8 @@ void PacketWriter::WriteZeros(int zeros) {
 }
 
 template <typename T>
-void PacketWriter::Fill(int times) {
+void PacketWriter::Fill(int times) 
+{
 	for (int i = 0; i < times; i++) {
 		Write<T>(times);
 	}
