@@ -173,7 +173,6 @@
     <ClCompile Include="Environment\Services.cpp" />
     <ClCompile Include="Network\NetClient.cpp" />
     <ClCompile Include="Network\Packets\Packets.cpp" />
-    <ClCompile Include="Obscure\Obfuscation.cpp" />
     <ClCompile Include="Obscure\SymbolicHash.cpp" />
     <ClCompile Include="Preventions.cpp" />
     <ClCompile Include="Process\Exports.cpp" />

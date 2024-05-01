@@ -40,9 +40,6 @@
     <Filter Include="API">
       <UniqueIdentifier>{2a48520d-6768-45e2-ba4a-c1c4f4f94063}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Scripting">
-      <UniqueIdentifier>{0cf92b40-570d-4503-94fe-886ae01cc450}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Environment">
       <UniqueIdentifier>{f11964fb-44bf-4c13-a627-f67ab2e79386}</UniqueIdentifier>
     </Filter>
@@ -86,9 +83,6 @@
     </ClCompile>
     <ClCompile Include="Environment\Services.cpp">
       <Filter>Environment</Filter>
-    </ClCompile>
-    <ClCompile Include="Obscure\Obfuscation.cpp">
-      <Filter>Obscure</Filter>
     </ClCompile>
     <ClCompile Include="Obscure\SymbolicHash.cpp">
       <Filter>Obscure</Filter>
