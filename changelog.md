@@ -1,5 +1,5 @@
 ## Updates
-- April 30, '24: Fixed any memory & threading issues, removed PEB spoofing & exported function renaming to ensure program works smoothly for everyone
+- April 30, '24: Fixed any memory & threading issues, removed PEB spoofing & exported function renaming to ensure program works smoothly for everyone - export function renaming can sometimes pop up an error box to the end user about "Entry Point Not Found", if this error box can be supressed somehow then we can re-add the technique since it successfully prevents DLL Injection. PEB spoofing was found to create issues with thread creation at random occurences. 
 - April 24, '24: IAT hook checking, further code cleanup and error checking
 - April 7, '24: Added TestSigning / Windows 'test mode' detection to prevent unsigned drivers
 - April 3, '24: Added WINAPI hook checking, blacklisted process checking
