@@ -14,6 +14,8 @@ void Debugger::AntiDebug::StartAntiDebugThread()
 	}
 
 	Logger::logf("UltimateAnticheat.log", Info, "Created Debugger detection thread with Id: %d\n", this->DetectionThread->Id);
+
+	this->DetectionThread->CurrentlyRunning = true;
 }
 
 void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
@@ -41,6 +43,7 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 		if (AntiDbg->DetectionThread->ShutdownSignalled)
 		{
 			Logger::logf("UltimateAnticheat.log", Info, "Shutting down Debugger detection thread with Id: %d\n", AntiDbg->DetectionThread->Id);
+			AntiDbg->DetectionThread->CurrentlyRunning = false;
 			return; //exit thread
 		}
 
@@ -194,7 +197,7 @@ bool Debugger::AntiDebug::_IsKernelDebuggerPresent()
 	ZW_QUERY_SYSTEM_INFORMATION ZwQuerySystemInformation;
 	SYSTEM_KERNEL_DEBUGGER_INFORMATION Info;
 
-	HMODULE hModule = LoadLibraryA("ntdll.dll");
+	HMODULE hModule = GetModuleHandleA("ntdll.dll");
 
 	if (hModule == NULL)
 	{
