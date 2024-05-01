@@ -13,7 +13,7 @@ bool Thread::IsThreadRunning(HANDLE threadHandle)
         return (exitCode == STILL_ACTIVE);
     }
 
-    printf("[ERROR] GetExitCodeThread failed @ IsThreadRunning: %d\n", GetLastError());
+    Logger::logf("UltimateAnticheat.log", Err, " GetExitCodeThread failed @ IsThreadRunning: %d\n", GetLastError());
     return false;
 }
 
@@ -29,6 +29,6 @@ bool Thread::IsThreadSuspended(HANDLE threadHandle)
         return (context.ContextFlags == CONTEXT_CONTROL && context.ContextFlags != 0);
     }
 
-    printf("[ERROR] GetExitCodeThread failed @ IsThreadSuspended: %d\n", GetLastError());
+    Logger::logf("UltimateAnticheat.log", Err, "GetExitCodeThread failed @ IsThreadSuspended: %d\n", GetLastError());
     return false;
 }
