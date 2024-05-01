@@ -114,7 +114,7 @@ public:
             msg_with_errorcode = msg_with_errorcode + message;
 
             std::time_t now = std::time(nullptr);
-            wchar_t timestamp[64];
+            wchar_t timestamp[128]{ 0 };
             std::wcsftime(timestamp, sizeof(timestamp), L"%Y-%m-%d %H:%M:%S", std::localtime(&now));
 
             logFile << L"[" << timestamp << L"] " << msg_with_errorcode << std::endl;
@@ -164,10 +164,10 @@ public:
         const int buffSize = 1024;
         wchar_t buffer[buffSize]{ 0 };
 
-        int ret = std::snwprintf(buffer, buffSize, format, args...);
+        int ret = _snwprintf(buffer, buffSize, format, args...);
         if (ret >= 0 && ret < buffSize)
         {
-            log(filename, type, std::string(buffer));
+            logw(filename, type, std::wstring(buffer));
         }
         else
         {
