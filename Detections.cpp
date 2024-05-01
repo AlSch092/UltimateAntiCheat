@@ -22,6 +22,8 @@ void Detections::StartMonitor()
         Logger::logf("UltimateAnticheat.log", Err, " Failed to create monitor thread  @ Detections::StartMonitor\n");
         return;
     }
+
+    this->MonitorThread->CurrentlyRunning = true;
 }
 
 
@@ -91,6 +93,7 @@ void Detections::Monitor(LPVOID thisPtr)
         if (Monitor->GetMonitorThread()->ShutdownSignalled)
         {
             Logger::logf("UltimateAnticheat.log", Info, "STOPPING  Detections::Monitor , ending detections thread\n");
+            Monitor->GetMonitorThread()->CurrentlyRunning = false;
             return;
         }
 
@@ -109,16 +112,16 @@ void Detections::Monitor(LPVOID thisPtr)
         //make sure ws2_32.dll is actually loaded if this gives an error, on my build the dll is not loaded but we'll pretend it is
         if (Monitor->DoesFunctionAppearHooked("ws2_32.dll", "send") || Monitor->DoesFunctionAppearHooked("ws2_32.dll", "recv"))   //ensure you use this routine on functions that don't have jumps or calls as their first byte
         {
-            Logger::logf("UltimateAnticheat.log", Detection, "networking WINAPI was hooked!\n"); //WINAPI hooks doesn't always determine someone is cheating since AV and other software can write the hooks
+            Logger::logf("UltimateAnticheat.log", Detection, "Networking WINAPI (send | recv) was hooked!\n"); //WINAPI hooks doesn't always determine someone is cheating since AV and other software can write the hooks
             Monitor->SetCheater(true); //..but for simplicity in this project we will set them as a cheater
         }
 
-        //if (Monitor->GetIntegrityChecker()->IsUnknownModulePresent()) //authenticode call and check against whitelisted module list
-        //{
-        //    Logger::logf("UltimateAnticheat.log", Detection, "Found at least one unsigned dll loaded : We ideally only want verified, signed dlls in our application!\n");
-        //}
+        if (Monitor->GetIntegrityChecker()->IsUnknownModulePresent()) //authenticode call and check against whitelisted module list
+        {
+            Logger::logf("UltimateAnticheat.log", Detection, "Found at least one unsigned dll loaded : We ideally only want verified, signed dlls in our application!\n");
+        }
 
-        if (Services::IsMachineAllowingSelfSignedDrivers())
+        if (Services::IsTestsigningEnabled())
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Testsigning is enabled! In most cases we don't allow the game/process to continue if testsigning is enabled.\n");
             Monitor->SetCheater(true);
