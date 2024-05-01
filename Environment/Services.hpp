@@ -8,8 +8,8 @@
 #include <Softpub.h>
 #include <wincrypt.h>
 #include <stdlib.h>
+#include "../Logger.hpp"
 #pragma comment(lib, "wintrust")
-
 
 using namespace std;
 
@@ -21,6 +21,9 @@ struct Service
 	bool isRunning;
 };
 
+/*
+The Services class deals with keeping track of loaded drivers & services on the system
+*/
 class Services
 {
 public:
@@ -48,12 +51,10 @@ public:
 	list<wstring> GetUnsignedDrivers();
 
 	static BOOL IsDriverSigned(wstring driverPath);
-
 	static BOOL IsMachineAllowingSelfSignedDrivers();
 
 private:
 
 	list<Service*> ServiceList;
-
 	list <wstring> DriverPaths;
 };

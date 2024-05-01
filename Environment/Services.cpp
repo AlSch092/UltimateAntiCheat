@@ -1,5 +1,9 @@
 #include "Services.hpp"
 
+/*
+    GetServiceModules - Fills the `DriverPaths` class member variable with a list of drivers loaded on the system
+    returns TRUE if the function succeeded
+*/
 BOOL Services::GetServiceModules()
 {
     SC_HANDLE scmHandle = NULL, serviceHandle = NULL;
@@ -11,39 +15,39 @@ BOOL Services::GetServiceModules()
 
     if (scmHandle == NULL) 
     {
-        printf("Failed to open Service Control Manager: %lu\n", GetLastError());
-        return 1;
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to open Service Control Manager: %lu\n", GetLastError());
+        return FALSE;
     }
 
     result = EnumServicesStatusEx( scmHandle, SC_ENUM_PROCESS_INFO,SERVICE_WIN32, SERVICE_STATE_ALL, NULL,0, &bytesNeeded,&servicesReturned,&resumeHandle,NULL);
 
     if (!result && GetLastError() != ERROR_MORE_DATA) 
     {
-        printf("Failed to enumerate services (preliminary call): %lu\n", GetLastError());
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to enumerate services @ GetServiceModules: %lu\n", GetLastError());
         CloseServiceHandle(scmHandle);
-        return 1;
+        return FALSE;
     }
 
     services = (ENUM_SERVICE_STATUS_PROCESS*)malloc(bytesNeeded);
     
     if (services == NULL) 
     {
-        printf("Memory allocation failed @ GetServiceModules\n");
+        Logger::logf("UltimateAnticheat.log", Err, "Memory allocation failed @ GetServiceModules");
         CloseServiceHandle(scmHandle);
-        return 1;
+        return FALSE;
     }
 
     result = EnumServicesStatusEx(scmHandle,SC_ENUM_PROCESS_INFO,SERVICE_WIN32,SERVICE_STATE_ALL,(LPBYTE)services,bytesNeeded,&bytesNeeded,&servicesReturned,&resumeHandle,NULL);
 
     if (!result) 
     {
-        printf("Failed to enumerate services: %lu\n", GetLastError());
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to enumerate services @ GetServiceModules: %lu\n", GetLastError());
         free(services);
         CloseServiceHandle(scmHandle);
         return FALSE;
     }
 
-    for (DWORD i = 0; i < servicesReturned; i++) 
+    for (DWORD i = 0; i < servicesReturned; i++)  //iterate services and add to our managed list
     {
         Service* service = new Service();
         service->pid = services[i].ServiceStatusProcess.dwProcessId;
@@ -74,6 +78,10 @@ BOOL Services::GetServiceModules()
 	return TRUE;
 }
 
+/*
+    GetLoadedDrivers - Fills the `DriverPaths` class member variable with a list of drivers loaded on the system
+    returns TRUE if the function succeeded
+*/
 BOOL Services::GetLoadedDrivers()
 {
     DWORD cbNeeded;
@@ -82,7 +90,7 @@ BOOL Services::GetLoadedDrivers()
 
     if (!EnumDeviceDrivers((LPVOID*)drivers, sizeof(drivers), &cbNeeded)) 
     {
-        printf("Failed to enumerate device drivers\n");
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to enumerate device drivers @ GetLoadedDrivers");
         return FALSE;
     }
 
@@ -99,7 +107,7 @@ BOOL Services::GetLoadedDrivers()
         }
         else 
         {
-            printf("Failed to get driver information @ GetLoadedDrivers : error %d\n", GetLastError());
+            Logger::logf("UltimateAnticheat.log", Err, "Failed to get driver information @ GetLoadedDrivers : error %d\n", GetLastError());
             return FALSE;
         }
     }
@@ -107,6 +115,9 @@ BOOL Services::GetLoadedDrivers()
 	return TRUE;
 }
 
+/*
+    IsDriverSigned - returns TRUE if the driver at `driverPath` is signed using WinVerifyTrust
+*/
 BOOL Services::IsDriverSigned(wstring driverPath) 
 {
     GUID guidAction = WINTRUST_ACTION_GENERIC_VERIFY_V2;
@@ -129,13 +140,16 @@ BOOL Services::IsDriverSigned(wstring driverPath)
 
     if (lStatus != ERROR_SUCCESS)
     {
-        //printf("WinVerifyTrust failed with error code %ld\n", lStatus);
+        Logger::logf("UltimateAnticheat.log", Err, "WinVerifyTrust failed with error code %ld\n", lStatus);
         return FALSE;
     }
 
     return TRUE;
 }
 
+/*
+    GetUnsignedDrivers - returns a list of unsigned driver names loaded on the machine
+*/
 list<wstring> Services::GetUnsignedDrivers()
 {
     list<wstring> unsignedDrivers;
@@ -144,7 +158,7 @@ list<wstring> Services::GetUnsignedDrivers()
     {
         if (!GetLoadedDrivers())
         {
-            printf("Failed to get driver list @ GetUnsignedDrivers : error %d\n", GetLastError());
+            Logger::logf("UltimateAnticheat.log", Err, "Failed to get driver list @ GetUnsignedDrivers : error %d\n", GetLastError());
             return unsignedDrivers;
         }
     }
@@ -153,19 +167,22 @@ list<wstring> Services::GetUnsignedDrivers()
     {
         if (!IsDriverSigned(driverPath))
         {
-            //wprintf(L"[WARNING] Found unsigned or outdated certificate on driver: %s\n", driverPath.c_str());
+            Logger::logfw("UltimateAnticheat.log", Err, L"[WARNING] Found unsigned or outdated certificate on driver: %s\n", driverPath.c_str());
             unsignedDrivers.push_back(driverPath);
         }
         else
         {
-            wprintf(L"[INFO] Driver is signed: %s\n", driverPath.c_str());
+            Logger::logfw("UltimateAnticheat.log", Err, L"[INFO] Driver is signed: %s\n", driverPath.c_str());
         }
     }
 
     return unsignedDrivers;
 }
 
-//Opens BCDEdit.exe and pipes output to check if testsigning is enabled
+/*
+    IsMachineAllowingSelfSignedDrivers - Opens BCDEdit.exe and pipes output to check if testsigning is enabled. May require running program as administrator.
+    returns TRUE if test signing mode was found.
+*/
 BOOL Services::IsMachineAllowingSelfSignedDrivers()
 {
     HANDLE hReadPipe, hWritePipe;
@@ -186,20 +203,20 @@ BOOL Services::IsMachineAllowingSelfSignedDrivers()
     charCount = GetWindowsDirectoryA(volumePath, MAX_PATH);
     if (charCount == 0) 
     {
-        printf("[ERROR] Failed to retrieve Windows directory path @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to retrieve Windows directory path @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
         return FALSE;
     }
 
     CHAR volumeName[MAX_PATH];
     if (!GetVolumePathNameA(volumePath, volumeName, MAX_PATH)) 
     {
-        printf("[ERROR] Failed to retrieve volume path name @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to retrieve volume path name @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
         return FALSE;
     }
 
     if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0)) //use a pipe to read output of bcdedit command
     {
-        printf("[ERROR] CreatePipe failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
+        Logger::logf("UltimateAnticheat.log", Err, "CreatePipe failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
         return foundTestsigning;
     }
 
@@ -213,7 +230,7 @@ BOOL Services::IsMachineAllowingSelfSignedDrivers()
 
     if (!CreateProcessA(fullpath_bcdedit.c_str(), NULL, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
     {
-        printf("[ERROR] CreateProcess failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
+        Logger::logf("UltimateAnticheat.log", Err, "CreateProcess failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
         CloseHandle(hReadPipe);
         CloseHandle(hWritePipe);
         return foundTestsigning;
@@ -226,7 +243,7 @@ BOOL Services::IsMachineAllowingSelfSignedDrivers()
 
     if (!ReadFile(hReadPipe, szOutput, 1024 - 1, &bytesRead, NULL)) //now read our pipe
     {
-        printf("[ERROR] ReadFile failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
+        Logger::logf("UltimateAnticheat.log", Err, "ReadFile failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
         CloseHandle(hReadPipe);
         return foundTestsigning;
     }
@@ -239,12 +256,12 @@ BOOL Services::IsMachineAllowingSelfSignedDrivers()
     }
     else if (strstr(szOutput, "The boot configuration data store could not be opened") != NULL)
     {
-        printf("[ERROR] Failed to run bcdedit @ IsMachineAllowingSelfSignedDrivers\n");
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to run bcdedit @ IsMachineAllowingSelfSignedDrivers. Please make sure program is run as administrator\n");
         foundTestsigning = FALSE;
     }
     else
-    { 
-        printf("Windows is in regular mode.\n");
+    {
+        Logger::logf("UltimateAnticheat.log", Info, "Windows is in regular mode.");
         foundTestsigning = FALSE;
     }
 
