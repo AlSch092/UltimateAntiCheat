@@ -1,5 +1,9 @@
 #include "API.hpp"
 
+/*
+	Initialize - Initializes the anti-cheat module by connecting to the auth server (if available) and sending it the game's unique code, and checking the parent process to ensure a rogue launcher wasn't used
+	returns Error::OK on success.
+*/
 Error API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessName, bool isServerAvailable)
 {
 	Error errorCode = Error::OK;
@@ -20,7 +24,6 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessNam
 	if (Process::CheckParentProcess(parentProcessName)) //check parent process, kick out if bad
 	{
 		AC->GetMonitor()->GetProcessObj()->SetParentName(parentProcessName);
-		errorCode = Error::OK;
 	}
 	else //bad parent process detected, or parent process mismatch, shut down the program after reporting the error to the server
 	{
@@ -33,14 +36,10 @@ end:
 	return errorCode;
 }
 
-Error API::SendHeartbeat(AntiCheat* AC) //todo: finish this!
-{
-	if (AC == NULL)
-		return Error::NULL_MEMORY_REFERENCE;
-
-	return Error::OK;
-}
-
+/*
+	Cleanup - signals thread shutdowns and deletes memory associated with the Anticheat* object `AC`
+	returns Error::OK on success
+*/
 Error API::Cleanup(AntiCheat* AC)
 {
 	if (AC == nullptr)
@@ -63,7 +62,8 @@ Error API::Cleanup(AntiCheat* AC)
 }
 
 /*
-
+	LaunchDefenses - Initialize detections, preventions, and ADbg techniques
+	returns Error::OK on success
 */
 Error API::LaunchDefenses(AntiCheat* AC) //currently in the process to split these tests into Detections or Preventions
 {
@@ -87,7 +87,7 @@ Error API::LaunchDefenses(AntiCheat* AC) //currently in the process to split the
 	AC->GetMonitor()->StartMonitor();
 	AC->GetAntiDebugger()->StartAntiDebugThread(); //start debugger checks in a seperate thread
 
-	AC->GetMonitor()->GetServiceManager()->GetServiceModules(); //enumerate services, drivers
+	AC->GetMonitor()->GetServiceManager()->GetServiceModules(); //enumerate services
 
 	if (AC->GetMonitor()->GetServiceManager()->GetLoadedDrivers()) //enumerate drivers
 	{
@@ -103,7 +103,10 @@ Error API::LaunchDefenses(AntiCheat* AC) //currently in the process to split the
 	return errorCode;
 }
 
-//meant to be called by process hosting the anti-cheat module - interface between AC and game
+/*
+	Dispatch - handles sending requests through the AntiCheat class `AC`. If building this project as a .dll, you can call this exported routine from your game module to initialize & send heartbeats
+	returns Error::OK on successful execution
+*/
 Error __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code)
 {
 	Error errorCode = Error::OK;
@@ -112,7 +115,7 @@ Error __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code)
 	{
 		case INITIALIZE:
 		{
-			errorCode = Initialize(AC, "LICENSE-ABC123", whitelistedParentProcess, false); //if explorer.exe isn't our parent process, shut 'er down!
+			errorCode = Initialize(AC, "GAMECODE-UNIQUE12345", whitelistedParentProcess, false); //if explorer.exe isn't our parent process, shut 'er down!
 
 			if (errorCode == Error::OK)
 			{
@@ -156,4 +159,18 @@ Error __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code)
 	};
 
 	return errorCode;
+}
+
+/*
+	SendHeartbeat - Generates a 'cookie' based on the server's request and sends it to the connected AC server. Without a solid heartbeat in place, any anticheat can be circumvented without emulation required. Ironically we haven't finished this routine yet.
+	returns Error::OK  on success
+*/
+Error API::SendHeartbeat(AntiCheat* AC) //todo: finish this!
+{
+	if (AC == NULL)
+		return Error::NULL_MEMORY_REFERENCE;
+
+	//use the NetClient class member to send a heartbeat
+
+	return Error::OK;
 }
