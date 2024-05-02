@@ -3,7 +3,7 @@
 
 using namespace std;
 
-//API is exported dispatch routine needed for a game to initialize this anti-cheat program
+//API is exported dispatch routine needed for a game to initialize this anti-cheat class
 namespace API
 {
 	enum DispatchCode
@@ -29,7 +29,7 @@ namespace API
 	Error Cleanup(AntiCheat* AC);
 	Error SendHeartbeat(AntiCheat* AC);
 
-	Error LaunchBasicTests(AntiCheat* AC);
+	Error LaunchDefenses(AntiCheat* AC);
 	
 	Error __declspec(dllexport) Dispatch(AntiCheat* AC, DispatchCode code);
 }

@@ -49,20 +49,23 @@ Error API::Cleanup(AntiCheat* AC)
 	if (AC->GetAntiDebugger()->GetDetectionThread() != NULL) //stop anti-debugger thread
 	{
 		AC->GetAntiDebugger()->GetDetectionThread()->ShutdownSignalled = true;
-		WaitForSingleObject(AC->GetAntiDebugger()->GetDetectionThreadHandle(), 3000);
+		WaitForSingleObject(AC->GetAntiDebugger()->GetDetectionThreadHandle(), 3000); //this thread normally sleeps for 2000ms each loop, so we wait 3000ms for good measures
 	}
 
 	if (AC->GetMonitor()->GetMonitorThread() != NULL) //stop anti-cheat monitor thread
 	{
 		AC->GetMonitor()->GetMonitorThread()->ShutdownSignalled = true;
-		WaitForSingleObject(AC->GetMonitor()->GetMonitorThread()->handle, 6000);
+		WaitForSingleObject(AC->GetMonitor()->GetMonitorThread()->handle, 6000); //this thread normally sleeps for 5000ms each loop, so we wait 6000ms for good measures
 	}
 
 	delete AC;
 	return Error::OK;
 }
 
-Error API::LaunchBasicTests(AntiCheat* AC) //currently in the process to split these tests into Detections or Preventions
+/*
+
+*/
+Error API::LaunchDefenses(AntiCheat* AC) //currently in the process to split these tests into Detections or Preventions
 {
 	if (AC == NULL)
 		return Error::NULL_MEMORY_REFERENCE;
@@ -115,7 +118,7 @@ Error __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code)
 			{
 				isPostInitialization = true;
 
-				if (LaunchBasicTests(AC) != Error::OK)
+				if (LaunchDefenses(AC) != Error::OK)
 				{
 					Logger::logf("UltimateAnticheat.log", Warning, " At least one technique experienced abnormal behavior when launching tests.");
 					return Error::CANT_APPLY_TECHNIQUE;
