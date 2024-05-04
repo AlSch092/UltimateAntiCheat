@@ -48,9 +48,7 @@ namespace Module
 		HMODULE Module;
 		std::string AssociatedModuleName;
 		std::string FunctionName;
-
 		UINT64 AddressOfData;
-		unsigned int Ordinal;
 	};
 }
 
@@ -98,6 +96,7 @@ public:
 	static bool ChangeImageSize(DWORD newImageSize);
 	static bool ChangeSizeOfCode(DWORD newSizeOfCode);
 	static bool ChangeImageBase(UINT64 newImageBase);
+	static bool ModifyTLSCallbackPtr(UINT64 NewTLSFunction);
 	static void RemovePEHeader(HANDLE moduleBase);
 
 	static bool HasExportedFunction(string dllName, string functionName);

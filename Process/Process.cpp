@@ -696,3 +696,23 @@ bool Process::FillModuleList()
 
     return true;
 }
+
+bool Process::ModifyTLSCallbackPtr(UINT64 NewTLSFunction)
+{
+    HMODULE hModule = GetModuleHandle(NULL);
+    IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER*)hModule;
+    IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((BYTE*)dosHeader + dosHeader->e_lfanew);
+
+    IMAGE_TLS_DIRECTORY* tlsDir = (IMAGE_TLS_DIRECTORY*)((BYTE*)hModule + ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].VirtualAddress);
+
+    UINT64 addr = tlsDir->AddressOfIndex;
+
+    DWORD dwOldProt = 0;
+    if (VirtualProtect((LPVOID)tlsDir->AddressOfCallBacks, sizeof(UINT64), PAGE_EXECUTE_READWRITE, &dwOldProt))
+    {
+        memcpy((void*)(tlsDir->AddressOfCallBacks), (const void*)&NewTLSFunction, sizeof(UINT64));
+        return true;
+    }
+
+    return false;
+}
