@@ -21,6 +21,7 @@ Research project: make an anti-cheat system to detect and/or prevent things like
 - Data obfuscation via templated type class
 - Encrypted Shellcode payload execution (requires a server to send data to this project)
 - Check for if Windows is in 'Test Signing mode'
+- TLS Callback spoofing (changing TLS callbacks @ runtime)
 
 ## Requirements
 - For remapping to work in this project, /O2 must be enabled for optimization. Choosing other options might cause the program to throw exceptions.
