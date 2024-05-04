@@ -13,7 +13,8 @@
 #include "API/API.hpp"
 
 void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
-                                                                                  
+void NTAPI __stdcall FakeTLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
+
 #ifdef _M_IX86
 #pragma comment (linker, "/INCLUDE:__tls_used")
 #pragma comment (linker, "/INCLUDE:__tls_callback")
@@ -29,7 +30,7 @@ const
 #pragma data_seg (".CRT$XLB")
 #endif
 
-PIMAGE_TLS_CALLBACK _tls_callback = TLSCallback;
+PIMAGE_TLS_CALLBACK _tls_callback = FakeTLSCallback; //We're modifying our TLS callback @ runtime to trick static reversing
 #pragma data_seg ()
 #pragma const_seg ()
 
@@ -46,6 +47,8 @@ int main(int argc, char** argv)
     cout << "----------------------------------------------------------------------------------------------------------\n";
 
     AntiCheat* AC = new AntiCheat();
+
+    Process::ModifyTLSCallbackPtr((UINT64)&TLSCallback);
 
     API::Dispatch(AC, API::DispatchCode::INITIALIZE); //initialize AC , this will start all detections + preventions
 
@@ -127,61 +130,86 @@ void UnmanagedGlobals::RemoveThread(DWORD tid)
         ThreadList->remove(ToRemove);
 }
 
-void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved) // todo: check if TLSCallback ptr has been changed @ runtime, if so end the program with a detected cheater
+/*
+The TLS callback triggers on process + thread attachment & detachment, which means we can catch any threads made by an attacker in our process space.
+We can end attacker threads using ExitThread(), and let in our threads which are managed. An attacker can circumvent this by modifying the pointers to TLS callbacks which the program usually keeps track of
+*/
+void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 {
     switch (dwReason)
     {
-        case DLL_PROCESS_ATTACH:
+    case DLL_PROCESS_ATTACH:
+    {
+        Logger::logf("UltimateAnticheat.log", Info, " New process attached, current thread %d\n", GetCurrentThreadId());
+
+        if (UnmanagedGlobals::FirstProcessAttach) //process creation will trigger PROCESS_ATTACH, so we can put some initialize stuff in here incase main() is hooked or statically modified by the attacker
         {
-            Logger::logf("UltimateAnticheat.log", Info, " New process attached, current thread %d\n", GetCurrentThreadId());
-
-            if (UnmanagedGlobals::FirstProcessAttach) //process creation will trigger PROCESS_ATTACH, so we can put some initialize stuff in here incase main() is hooked or statically modified by the attacker
+            if (!UnmanagedGlobals::SetExceptionHandler)
             {
-                if (!UnmanagedGlobals::SetExceptionHandler)
+                SetUnhandledExceptionFilter(UnmanagedGlobals::ExceptionHandler);
+
+                if (!AddVectoredExceptionHandler(1, UnmanagedGlobals::ExceptionHandler))
                 {
-                    SetUnhandledExceptionFilter(UnmanagedGlobals::ExceptionHandler);
-
-                    if (!AddVectoredExceptionHandler(1, UnmanagedGlobals::ExceptionHandler))
-                    {
-                        Logger::logf("UltimateAnticheat.log", Err, " Failed to register Vectored Exception Handler @ TLSCallback: %d\n", GetLastError());
-                    }
-
-                    UnmanagedGlobals::SetExceptionHandler = true;
+                    Logger::logf("UltimateAnticheat.log", Err, " Failed to register Vectored Exception Handler @ TLSCallback: %d\n", GetLastError());
                 }
 
-                UnmanagedGlobals::FirstProcessAttach = false;
-            }
-            else
-            {
-                Logger::logf("UltimateAnticheat.log", Detection, " Some unknown process attached @ TLSCallback "); //this should generally never be triggered in this example
+                UnmanagedGlobals::SetExceptionHandler = true;
             }
 
-        }break;
-
-        case DLL_PROCESS_DETACH: //program exit, clean up any memory allocated
+            UnmanagedGlobals::FirstProcessAttach = false;
+        }
+        else
         {
-            UnmanagedGlobals::ThreadList->clear();
-        }break;
+            Logger::logf("UltimateAnticheat.log", Detection, " Some unknown process attached @ TLSCallback "); //this should generally never be triggered in this example
+        }
 
-        case DLL_THREAD_ATTACH: //add to our thread list
-        {        
-            if (!UnmanagedGlobals::AddThread(GetCurrentThreadId()))
-            {
-                Logger::logf("UltimateAnticheat.log", Err, " Failed to add thread to ThreadList @ TLSCallback: %d\n", GetLastError());
-            }
+    }break;
 
-            if (UnmanagedGlobals::SupressingNewThreads)
-            {
-                Logger::logf("UltimateAnticheat.log", Info, " Stopping rogue thread from being created @ TLSCallback: %d\n", GetLastError());
-                ExitThread(0); //we can stop DLL injecting + DLL debuggers (such as VEH debugger) this way, but make sure you're handling your threads carefully
-            }
+    case DLL_PROCESS_DETACH: //program exit, clean up any memory allocated
+    {
+        UnmanagedGlobals::ThreadList->clear();
+    }break;
 
-        }break;
-
-        case DLL_THREAD_DETACH:
+    case DLL_THREAD_ATTACH: //add to our thread list
+    {
+        if (!UnmanagedGlobals::AddThread(GetCurrentThreadId()))
         {
-            UnmanagedGlobals::RemoveThread(GetCurrentThreadId());
-        }break;
+            Logger::logf("UltimateAnticheat.log", Err, " Failed to add thread to ThreadList @ TLSCallback: %d\n", GetLastError());
+        }
+
+        if (UnmanagedGlobals::SupressingNewThreads)
+        {
+            Logger::logf("UltimateAnticheat.log", Info, " Stopping rogue thread from being created @ TLSCallback: %d\n", GetLastError());
+            ExitThread(0); //we can stop DLL injecting + DLL debuggers (such as VEH debugger) this way, but make sure you're handling your threads carefully
+        }
+
+    }break;
+
+    case DLL_THREAD_DETACH:
+    {
+        UnmanagedGlobals::RemoveThread(GetCurrentThreadId());
+    }break;
+    };
+}
+
+/*
+    FakeTLSCallback - Experimental method to set the TLS callback at runtime to something different than what was specified at compile time.
+    Seems to Work fine with no issues when testing
+*/
+void NTAPI __stdcall FakeTLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved) // todo: check if TLSCallback ptr has been changed @ runtime, if so end the program with a detected cheater
+{
+    switch (dwReason)
+    {
+    case DLL_PROCESS_ATTACH:
+    {
+        Logger::logf("UltimateAnticheat.log", Info, " New process attached, current thread %d\n", GetCurrentThreadId());
+    }break;
+
+    case DLL_THREAD_ATTACH: 
+    {
+        ExitThread(0); //no thread should reach here 
+    }break;
+
     };
 }
 
