@@ -697,6 +697,10 @@ bool Process::FillModuleList()
     return true;
 }
 
+/*
+    ModifyTLSCallbackPtr - changes the program TLS callback at runtime by modifying the data directory ptr (IMAGE_DIRECTORY_ENTRY_TLS)
+    returns true on success
+*/
 bool Process::ModifyTLSCallbackPtr(UINT64 NewTLSFunction)
 {
     HMODULE hModule = GetModuleHandle(NULL);
@@ -705,13 +709,22 @@ bool Process::ModifyTLSCallbackPtr(UINT64 NewTLSFunction)
 
     IMAGE_TLS_DIRECTORY* tlsDir = (IMAGE_TLS_DIRECTORY*)((BYTE*)hModule + ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].VirtualAddress);
 
-    UINT64 addr = tlsDir->AddressOfIndex;
+    if (tlsDir == nullptr)
+        return false;
 
     DWORD dwOldProt = 0;
     if (VirtualProtect((LPVOID)tlsDir->AddressOfCallBacks, sizeof(UINT64), PAGE_EXECUTE_READWRITE, &dwOldProt))
     {
-        memcpy((void*)(tlsDir->AddressOfCallBacks), (const void*)&NewTLSFunction, sizeof(UINT64));
-        return true;
+        __try
+        {
+            memcpy((void*)(tlsDir->AddressOfCallBacks), (const void*)&NewTLSFunction, sizeof(UINT64));
+            return true;
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER)
+        {
+            Logger::logf("UltimateAnticheat.log", Err, "Failed to write TLS callback ptr  @ Process::ModifyTLSCallbackPtr");
+            return false;
+        }
     }
 
     return false;
