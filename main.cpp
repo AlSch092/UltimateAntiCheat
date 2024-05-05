@@ -53,10 +53,9 @@ int main(int argc, char** argv)
     if (API::Dispatch(AC, API::DispatchCode::INITIALIZE) != Error::OK) //initialize AC , this will start all detections + preventions
     {
         Logger::logf("UltimateAnticheat.log", Err, "Could not initialize program, shutting down.");
+        system("pause");
         return 0;
     }
-
-    API::Dispatch(AC, API::DispatchCode::INITIALIZE);
 
     UnmanagedGlobals::SupressingNewThreads = AC->GetBarrier()->IsPreventingThreads();
 
