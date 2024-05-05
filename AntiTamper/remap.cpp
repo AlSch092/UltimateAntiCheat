@@ -1,6 +1,6 @@
-//Thank you to @changeofpace for this
 #include "remap.hpp"
 #include "../Process/Memory/ntdll.h"
+
 
 //=============================================================================
 // Private Types
@@ -131,12 +131,12 @@ RmpRemapImage(
     REMAP_ROUTINE fpRemapRoutine = NULL;
     BOOL status = TRUE;
 
-    printf("Remapping image at 0x%IX\n", ImageBase);
+    Logger::logf("UltimateAnticheat.log", Info, "Remapping image at 0x%IX\n", ImageBase);
 
     pNtHeaders = RtlImageNtHeader((PVOID)ImageBase);
     if (!pNtHeaders)
     {
-        printf("RtlImageNtHeader failed. (BaseAddress = 0x%IX)\n",
+        Logger::logf("UltimateAnticheat.log", Err, "RtlImageNtHeader failed. (BaseAddress = 0x%IX)\n",
             ImageBase);
         status = FALSE;
         goto exit;
@@ -145,14 +145,12 @@ RmpRemapImage(
     status = RmppVerifyPeSectionAlignment(pNtHeaders);
     if (!status)
     {
-        printf("RmppVerifyPeSectionAlignment failed.\n");
+        Logger::logf("UltimateAnticheat.log",Err ,"RmppVerifyPeSectionAlignment failed.\n");
         goto exit;
     }
 
-    //
-    // Allocate an executable and writable buffer where the remap routine will
-    //  execute.
-    //
+
+    //Allocate an executable and writable buffer where the remap routine will execute.
     pRemapRegion = VirtualAlloc(
         NULL,
         pNtHeaders->OptionalHeader.SizeOfImage,
@@ -160,12 +158,10 @@ RmpRemapImage(
         PAGE_EXECUTE_READWRITE);
     if (!pRemapRegion)
     {
-        printf("VirtualAlloc failed: %u\n", GetLastError());
+        Logger::logf("UltimateAnticheat.log", Err, "VirtualAlloc failed: %u\n", GetLastError());
         status = FALSE;
         goto exit;
     }
-
-    //printf("RemapRegion:    0x%IX\n", (ULONG_PTR)pRemapRegion);
 
     //
     // Copy the image to the remap region.
@@ -178,9 +174,7 @@ RmpRemapImage(
     fpRemapRoutine = (REMAP_ROUTINE)(
         (ULONG_PTR)pRemapRegion +
         (ULONG_PTR)RmppRemapImageRoutine -
-        ImageBase);
-
-    //printf("RemapRoutine:   0x%IX\n", (ULONG_PTR)fpRemapRoutine);
+        ImageBase); 
 
     //
     // Invoke the remap routine inside the remap region.
@@ -188,7 +182,7 @@ RmpRemapImage(
     status = fpRemapRoutine(pRemapRegion);
     if (!status)
     {
-        printf("RmppRemapImageRoutine failed.\n");
+        Logger::logf("UltimateAnticheat.log", Err,"RmppRemapImageRoutine failed.\n");
         goto exit;
     }
 
@@ -198,7 +192,7 @@ RmpRemapImage(
     status = RmppValidateRemappedImageProtection(ImageBase);
     if (!status)
     {
-        printf("RmppValidateRemappedImageProtection failed.\n");
+        Logger::logf("UltimateAnticheat.log", Err, "RmppValidateRemappedImageProtection failed.\n");
         goto exit;
     }
 
@@ -207,7 +201,7 @@ exit:
     {
         if (!VirtualFree(pRemapRegion, 0, MEM_RELEASE))
         {
-            printf("VirtualFree failed: %u\n", GetLastError());
+            Logger::logf("UltimateAnticheat.log", Err, "VirtualFree failed: %u\n", GetLastError());
         }
     }
 
@@ -236,8 +230,6 @@ RmppVerifyPeSectionAlignment(
     ULONG_PTR SectionBase = 0;
     BOOL status = TRUE;
 
-    //printf("Verifying pe section alignment:\n");
-
     //
     // Query the system allocation granularity.
     //
@@ -251,18 +243,12 @@ RmppVerifyPeSectionAlignment(
             pNtHeaders->OptionalHeader.ImageBase +
             pSectionHeader[i].VirtualAddress;
 
-        printf("    %-8.8s    0x%IX - 0x%IX,  0x%08X\n",
-            pSectionHeader[i].Name,
-            SectionBase,
-            SectionBase + pSectionHeader[i].Misc.VirtualSize,
-            pSectionHeader[i].Misc.VirtualSize);
-
         status = POINTER_IS_ALIGNED(
             SectionBase,
             SystemInfo.dwAllocationGranularity);
         if (!status)
         {
-            printf("Unexpected section alignment. (SectionBase = 0x%IX)\n",
+            Logger::logf("UltimateAnticheat.log", Err, "Unexpected section alignment. (SectionBase = 0x%IX)\n",
                 SectionBase);
             goto exit;
         }
@@ -276,7 +262,7 @@ RmppVerifyPeSectionAlignment(
         SystemInfo.dwAllocationGranularity);
     if (!status)
     {
-        printf("Unexpected section alignment. (SectionBase = 0x%IX)\n",
+        Logger::logf("UltimateAnticheat.log", Err, "Unexpected section alignment. (SectionBase = 0x%IX)\n",
             SectionBase);
         goto exit;
     }
@@ -310,12 +296,6 @@ RmppCopyPeSections(
     //
     for (WORD i = 0; i < pNtHeaders->FileHeader.NumberOfSections; ++i)
     {
-        //printf("Copying %-8.8s from 0x%IX to 0x%IX,  0x%08X\n",
-           // pSectionHeader[i].Name,
-            //SourceBase + pSectionHeader[i].VirtualAddress,
-            //DestinationBase + pSectionHeader[i].VirtualAddress,
-            //pSectionHeader[i].Misc.VirtualSize);
-
         RtlCopyMemory(
             (PVOID)(DestinationBase + pSectionHeader[i].VirtualAddress),
             (PVOID)(SourceBase + pSectionHeader[i].VirtualAddress),
@@ -357,7 +337,7 @@ RmppRemapImageRoutine(
     pNtHeaders = RtlImageNtHeader(pRemapRegion);
     if (!pNtHeaders)
     {
-        printf("RtlImageNtHeader failed. (BaseAddress = 0x%IX)\n",
+        Logger::logf("UltimateAnticheat.log", Err, "RtlImageNtHeader failed. (BaseAddress = 0x%IX)\n",
             pRemapRegion);
         status = FALSE;
         goto exit;
@@ -378,7 +358,7 @@ RmppRemapImageRoutine(
         NULL);
     if (!NT_SUCCESS(ntstatus))
     {
-        printf("NtCreateSection failed: 0x%X\n", ntstatus);
+        Logger::logf("UltimateAnticheat.log", Err, "NtCreateSection failed: 0x%X\n", ntstatus);
         status = FALSE;
         goto exit;
     }
@@ -399,7 +379,7 @@ RmppRemapImageRoutine(
         PAGE_READWRITE);
     if (!NT_SUCCESS(ntstatus))
     {
-        printf("NtMapViewOfSection failed: 0x%X\n", ntstatus);
+        Logger::logf("UltimateAnticheat.log", Err, "NtMapViewOfSection failed: 0x%X\n", ntstatus);
         status = FALSE;
         goto exit;
     }
@@ -415,7 +395,7 @@ RmppRemapImageRoutine(
     ntstatus = NtUnmapViewOfSection(NtCurrentProcess(), pViewBase);
     if (!NT_SUCCESS(ntstatus))
     {
-        printf("NtUnmapViewOfSection failed: 0x%X\n", ntstatus);
+        Logger::logf("UltimateAnticheat.log", Err, "NtUnmapViewOfSection failed: 0x%X\n", ntstatus);
         status = FALSE;
         goto exit;
     }
@@ -428,7 +408,7 @@ RmppRemapImageRoutine(
     ntstatus = NtUnmapViewOfSection(NtCurrentProcess(), (PVOID)ImageBase);
     if (!NT_SUCCESS(ntstatus))
     {
-        printf("NtUnmapViewOfSection failed: 0x%X\n", ntstatus);
+        Logger::logf("UltimateAnticheat.log", Err, "NtUnmapViewOfSection failed: 0x%X\n", ntstatus);
         status = FALSE;
         goto exit;
     }
@@ -452,11 +432,9 @@ RmppRemapImageRoutine(
             Protection);
         if (!status)
         {
-            printf("RmppMapProtectedView failed.\n");
+            Logger::logf("UltimateAnticheat.log", Err, "RmppMapProtectedView failed.\n");
             goto exit;
         }
-
-        printf("Mapped protected view at: %llx\n", ImageBase + pSectionHeader[i].VirtualAddress);
     }
 
     //
@@ -470,7 +448,7 @@ RmppRemapImageRoutine(
         PAGE_READONLY);
     if (!status)
     {
-        printf("RmppMapProtectedView failed.\n");
+        Logger::logf("UltimateAnticheat.log", Err, "RmppMapProtectedView failed.\n");
         goto exit;
     }
 
@@ -480,7 +458,7 @@ exit:
         ntstatus = NtClose(hSection);
         if (!NT_SUCCESS(ntstatus))
         {
-            printf("NtClose failed: 0x%X\n", ntstatus);
+            Logger::logf("UltimateAnticheat.log", Err, "NtClose failed: 0x%X\n", ntstatus);
         }
     }
 
@@ -567,7 +545,7 @@ RmppMapProtectedView(
         Protection);
     if (!NT_SUCCESS(ntstatus))
     {
-        printf(
+        Logger::logf("UltimateAnticheat.log", Err,
             "NtMapViewOfSection failed: 0x%X (Base = 0x%IX, Offset = 0x%IX, Size = 0x%IX)\n",
             ntstatus,
             pViewBase,
@@ -596,12 +574,12 @@ RmppValidateRemappedImageProtection(
     PIMAGE_SECTION_HEADER pSectionHeader = NULL;
     BOOL status = TRUE;
 
-    printf("Validating remapped image protection.\n");
+    Logger::logf("UltimateAnticheat.log", Err, "Validating remapped image protection.\n");
 
     pNtHeaders = RtlImageNtHeader((PVOID)ImageBase);
     if (!pNtHeaders)
     {
-        printf("RtlImageNtHeader failed. (BaseAddress = 0x%IX)\n",
+        Logger::logf("UltimateAnticheat.log", Err, "RtlImageNtHeader failed. (BaseAddress = 0x%IX)\n",
             ImageBase);
         status = FALSE;
         goto exit;
@@ -615,7 +593,7 @@ RmppValidateRemappedImageProtection(
             (PVOID)(ImageBase + pSectionHeader[i].VirtualAddress));
         if (!status)
         {
-            printf("RmppValidateRemappedPeSectionProtection failed.\n");
+            Logger::logf("UltimateAnticheat.log", Err, "RmppValidateRemappedPeSectionProtection failed.\n");
             goto exit;
         }
     }
@@ -626,7 +604,7 @@ RmppValidateRemappedImageProtection(
     status = RmppValidateRemappedPeSectionProtection((PVOID)ImageBase);
     if (!status)
     {
-        printf("RmppValidateRemappedPeSectionProtection failed.\n");
+        Logger::logf("UltimateAnticheat.log", Err, "RmppValidateRemappedPeSectionProtection failed.\n");
         goto exit;
     }
 
@@ -655,7 +633,7 @@ RmppValidateRemappedPeSectionProtection(
     //
     if (!VirtualQuery(pSectionBase, &MemoryBasicInfo, sizeof(MemoryBasicInfo)))
     {
-        printf("VirtualQuery failed: %u (BaseAddress = 0x%IX)\n",
+        Logger::logf("UltimateAnticheat.log", Err, "VirtualQuery failed: %u (BaseAddress = 0x%IX)\n",
             GetLastError(),
             pSectionBase);
         status = FALSE;
@@ -687,7 +665,7 @@ RmppValidateRemappedPeSectionProtection(
         &PreviousProtect);
     if (status)
     {
-        printf(
+        Logger::logf("UltimateAnticheat.log", Err,
             "Section is not protected. (BaseAddress = 0x%IX, Protect = 0x%X)\n",
             pSectionBase,
             PreviousProtect);

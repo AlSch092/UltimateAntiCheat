@@ -1,9 +1,7 @@
-//Thank you to @changeofpace for this work/code
-
 #pragma once
-#include <Windows.h>
-#include <stdio.h>
 
+#include <Windows.h>
+#include "../Logger.hpp"
 //=============================================================================
 // Public Interface
 //=============================================================================
