@@ -23,5 +23,5 @@ Research project: make an anti-cheat system to detect and/or prevent things like
 - TLS Callback spoofing (changing TLS callbacks @ runtime)
 - Encrypted Shellcode payload execution (requires a server to send data to this project)
 
-  ## Upcoming Features:
-  - Client/Server architecture with basic heartbeat mechanism
+## Upcoming Features:
+- Client/Server architecture with basic heartbeat mechanism
