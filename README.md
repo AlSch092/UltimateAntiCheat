@@ -18,10 +18,10 @@ Research project: make an anti-cheat system to detect and/or prevent things like
 - Blacklisted Processes checks & whitelisted loaded modules check
 - Loaded module name random renaming (process manipulation)
 - Exported function names random renaming (process manipulation, anti-injection)
-- Data obfuscation via templated type class
-- Encrypted Shellcode payload execution (requires a server to send data to this project)
+- Data/obfuscation class to help hide sensitive variables
 - Check for if Windows is in 'Test Signing mode'
 - TLS Callback spoofing (changing TLS callbacks @ runtime)
+- Encrypted Shellcode payload execution (requires a server to send data to this project)
 
-## Requirements
-- For remapping to work in this project, /O2 must be enabled for optimization. Choosing other options might cause the program to throw exceptions.
+  ## Upcoming Features:
+  - Client/Server architecture with basic heartbeat mechanism
