@@ -46,11 +46,17 @@ int main(int argc, char** argv)
     cout << "|       Made by AlSch092 @Github, with special thanks to changeOfPace for re-mapping method              |\n";
     cout << "----------------------------------------------------------------------------------------------------------\n";
 
-    AntiCheat* AC = new AntiCheat();
+    AntiCheat* AC = new AntiCheat(); //memory is deleted inside the API::Dispatch call (with CLIENT_EXIT)
 
-    Process::ModifyTLSCallbackPtr((UINT64)&TLSCallback);
+    Process::ModifyTLSCallbackPtr((UINT64)&TLSCallback); //TLSCallback is our real callback, FakeTLSCallback is set at compile time since people will try to patch over bytes in the callback to inject their dlls
 
-    API::Dispatch(AC, API::DispatchCode::INITIALIZE); //initialize AC , this will start all detections + preventions
+    if (API::Dispatch(AC, API::DispatchCode::INITIALIZE) != Error::OK) //initialize AC , this will start all detections + preventions
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Could not initialize program, shutting down.");
+        return 0;
+    }
+
+    API::Dispatch(AC, API::DispatchCode::INITIALIZE);
 
     UnmanagedGlobals::SupressingNewThreads = AC->GetBarrier()->IsPreventingThreads();
 
@@ -58,7 +64,7 @@ int main(int argc, char** argv)
     cout << "All tests have been executed, the program will now loop using its detection methods for one minute. Thanks for your interest in the project!\n\n";
 
     Sleep(60000); //let the other threads run for a bit to display monitoring, normally the game's main loop would be here but instead we will wait 60s
-                  //...it's also recommended you run any anti-cheat in the main thread of the game for several reasons
+                  //...it's also recommended you run any anti-cheat in the main thread of the game for several reasons, in this example we are not!
 
     if (AC->GetMonitor()->IsUserCheater())
     {
@@ -74,10 +80,12 @@ int main(int argc, char** argv)
         Logger::logf("UltimateAnticheat.log", Err, "Cleanup unsuccessful... Shutting down program");
     }
 
-    system("pause");
     return 0;
 }
 
+/*
+    AddThread - adds a Thread* object to our global thread list
+*/
 bool UnmanagedGlobals::AddThread(DWORD id)
 {
     DWORD tid = GetCurrentThreadId();
@@ -113,6 +121,9 @@ bool UnmanagedGlobals::AddThread(DWORD id)
     }
 }
 
+/*
+    RemoveThread - Removes Thread* with threadid `tid` from our global thread list
+*/
 void UnmanagedGlobals::RemoveThread(DWORD tid)
 {
     Thread* ToRemove = NULL;
@@ -213,6 +224,9 @@ void NTAPI __stdcall FakeTLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserv
     };
 }
 
+/*
+    ExceptionHandler - User defined exception handler which catches program-wide exceptions, mostly unused currently
+*/
 LONG WINAPI UnmanagedGlobals::ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo)  //handler that will be called whenever an unhandled exception occurs in any thread of the process
 {
     DWORD exceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
