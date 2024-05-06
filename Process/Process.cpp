@@ -588,7 +588,20 @@ list<Module::ImportFunction*> Process::GetIATEntries()
 {
     HMODULE hModule = GetModuleHandleW(NULL);
 
+    if (hModule == NULL)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Couldn't fetch module handle @ Process::GetIATEntries ");
+        return (list<Module::ImportFunction*>)NULL;
+    }
+
     IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER*)hModule;
+
+    if (dosHeader == nullptr)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Couldn't fetch dosHeader @ Process::GetIATEntries ");
+        return (list<Module::ImportFunction*>)NULL;
+    }
+
     IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((BYTE*)hModule + dosHeader->e_lfanew);
     IMAGE_IMPORT_DESCRIPTOR* importDesc = (IMAGE_IMPORT_DESCRIPTOR*)((BYTE*)hModule + ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
 
@@ -728,4 +741,68 @@ bool Process::ModifyTLSCallbackPtr(UINT64 NewTLSFunction)
     }
 
     return false;
+}
+
+/*
+    _GetProcAddress - Attempt to retrieve address of function of `Module`, given `lpProcName`
+    Meant to be used for function lookups without calling GetProcAddress explicitly (may require dynamic analysis instead of static for an attacker)
+*/
+FARPROC Process::_GetProcAddress(LPCSTR Module, LPCSTR lpProcName)
+{
+    if (Module == nullptr || lpProcName == nullptr)
+        return (FARPROC)NULL;
+
+    DWORD* dNameRVAs(0); //array: addresses of export names
+    DWORD* dFunctionRVAs(0);
+    WORD* dOrdinalRVAs(0);
+
+    _IMAGE_EXPORT_DIRECTORY* ImageExportDirectory = NULL;
+    unsigned long cDirSize = 0;
+    _LOADED_IMAGE LoadedImage;
+    char* sName = NULL;
+
+    UINT64 AddressFound = NULL;
+
+    UINT64 ModuleBase = (UINT64)GetModuleHandleA(Module); //last remaining artifacts for detection. TODO: Use PEB to fetch this instead of API
+
+    if (ModuleBase == NULL)
+        return NULL;
+
+    if (MapAndLoad(Module, NULL, &LoadedImage, TRUE, TRUE))
+    {
+        ImageExportDirectory = (_IMAGE_EXPORT_DIRECTORY*)ImageDirectoryEntryToData(LoadedImage.MappedAddress, false, IMAGE_DIRECTORY_ENTRY_EXPORT, &cDirSize);
+
+        if (ImageExportDirectory != NULL)
+        {
+            dNameRVAs = (DWORD*)ImageRvaToVa(LoadedImage.FileHeader, LoadedImage.MappedAddress, ImageExportDirectory->AddressOfNames, NULL);
+            dFunctionRVAs = (DWORD*)ImageRvaToVa(LoadedImage.FileHeader, LoadedImage.MappedAddress, ImageExportDirectory->AddressOfFunctions, NULL);
+            dOrdinalRVAs = (WORD*)ImageRvaToVa(LoadedImage.FileHeader, LoadedImage.MappedAddress, ImageExportDirectory->AddressOfNameOrdinals, NULL);
+
+            for (size_t i = 0; i < ImageExportDirectory->NumberOfFunctions; i++)
+            {
+                sName = (char*)ImageRvaToVa(LoadedImage.FileHeader, LoadedImage.MappedAddress, dNameRVAs[i], NULL);
+
+                if (strcmp(sName, lpProcName) == 0)
+                {
+                    AddressFound = ModuleBase + dFunctionRVAs[dOrdinalRVAs[i]];
+                    break;
+                }
+            }
+        }
+        else
+        {
+            Logger::logf("UltimateAnticheat.log", Err, "ImageExportDirectory was NULL @ Process::_GetProcAddress with module %s and function %s", Module, lpProcName);
+            UnMapAndLoad(&LoadedImage);
+            return NULL;
+        }
+
+        UnMapAndLoad(&LoadedImage);
+    }
+    else
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "MapAndLoad failed @ Process::_GetProcAddress with module %s and function %s", Module, lpProcName);
+        return (FARPROC)NULL;
+    }
+
+    return (FARPROC)AddressFound;
 }

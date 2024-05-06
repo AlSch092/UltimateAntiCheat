@@ -101,6 +101,8 @@ public:
 
 	static bool HasExportedFunction(string dllName, string functionName);
 
+	static FARPROC _GetProcAddress(PCSTR Module, LPCSTR lpProcName); //GetProcAddress without winAPI call
+
 	static DWORD GetParentProcessId();
 	static BOOL CheckParentProcess(wstring desiredParent);
 
