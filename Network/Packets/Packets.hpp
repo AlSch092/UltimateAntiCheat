@@ -13,11 +13,11 @@ namespace Packets
 		{
 			CS_HELLO = 1,
 			CS_GOODBYE,
-			CS_CLIENTHASH,
 			CS_HEARTBEAT,
 			CS_INFO_LOGGING,
 			CS_BINARY_HASH,
-			CS_BAD_BEHAVIOUR
+			CS_BAD_BEHAVIOUR,
+			CS_QUERY_MEMORY,
 		};
 
 		enum SC //server2client
@@ -29,7 +29,7 @@ namespace Packets
 			SC_INFOLOGGING,
 			SC_SHELLCODE, //shellcode sent from the server is where the real fun begins, and seperates 'typical' anti-cheats from the truly glorious ones.
 			SC_GENERATEKEY,
-			SC_QUERYMEMORY, //query bytes at a specific memory address, used to detect tampering
+			SC_QUERY_MEMORY, //query bytes at a specific memory address, used to detect tampering
 		};	
 	}
 
