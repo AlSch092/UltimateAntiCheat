@@ -37,7 +37,7 @@ Error NetClient::Initialize(string ip, uint16_t port)
 
 	PacketWriter* p = Packets::Builder::ClientHello(this->HardwareID.c_str(), this->GetHostname().c_str(), this->GetMACAddress().c_str());
 
-	int BytesSent = send(Socket, (const char*)p->GetBuffer(), p->GetSize(), 0);
+	int BytesSent = send(Socket, (const char*)p->GetBuffer(), p->GetSize(), 0); //let's hope fragmenting doesnt occur, i've never ran into it before at the application layer for small sized packets
 
 	delete p;
 
@@ -115,17 +115,17 @@ Error NetClient::EndConnection(int reason)
 		closesocket(Socket);
 	}
 
+	this->ConnectedDuration = GetTickCount64() - this->ConnectedAt;
+
 	WSACleanup();
 	shutdown(Socket, 0);
-
-	delete p->GetBuffer();
-	delete p;
 	return err;
 }
 
 /*
 	SendData - Sends `outPacket` parameter to the server
 	returns Error::OK on success
+	Function deletes memory of outPacket on success 
 */
 Error NetClient::SendData(PacketWriter* outPacket)
 {
@@ -137,7 +137,7 @@ Error NetClient::SendData(PacketWriter* outPacket)
 
 	Error err = Error::OK;
 
-	int BytesSent = send(Socket, (const char*)outPacket->GetBuffer(), outPacket->GetSize(), 0);
+	int BytesSent = send(Socket, (const char*)outPacket->GetBuffer(), outPacket->GetSize(), 0); //if this ever fragments i'll add a check
 
 	int nRecvDataLength = 0;
 
@@ -146,6 +146,7 @@ Error NetClient::SendData(PacketWriter* outPacket)
 		err = Error::INCOMPLETE_SEND;
 	}
 
+	delete outPacket;
 	return err;
 }
 
@@ -155,6 +156,7 @@ Error NetClient::SendData(PacketWriter* outPacket)
 void NetClient::ProcessRequests(LPVOID Param)
 {
 	bool receiving = true;
+	const int ms_between_loops = 1000;
 
 	NetClient* Client = reinterpret_cast<NetClient*>(Param);
 
@@ -175,7 +177,7 @@ void NetClient::ProcessRequests(LPVOID Param)
 			}
 		}
 
-		Sleep(1000);
+		Sleep(ms_between_loops);
 	}
 }
 
@@ -364,13 +366,18 @@ Error NetClient::HandleInboundPacket(PacketWriter* p)
 		{
 			if (!ExecutePacketPayload(p))
 			{
-				Logger::logf("UltimateAnticheat.log", Err, "Client bad behavior (did not execute correctly) @ HandleInboundPacket");
+				Logger::logf("UltimateAnticheat.log", Err, "Client displays bad behavior (payload did not execute correctly) @ HandleInboundPacket");
 				err = Error::SERVER_KICKED;
 			}
 		}break;
 
-		case Packets::Opcodes::SC_QUERYMEMORY: //server requests byte data @ address
+		case Packets::Opcodes::SC_QUERY_MEMORY: //server requests byte data @ address
 
+			if (QueryMemory(p) != Error::OK)
+			{
+				Logger::logf("UltimateAnticheat.log", Err, "Could not query memory bytes for server auth @ HandleInboundPacket");
+				err = Error::GENERIC_FAIL;
+			}
 			break;
 
 		default:
@@ -407,7 +414,7 @@ bool NetClient::ExecutePacketPayload(PacketWriter* p)
 
 	if (!VirtualProtect(&buffer[0], bSize, PAGE_EXECUTE_READWRITE, &dwProt))
 	{
-		printf("VMP Failed at UnpackAndExecute!\n");
+		Logger::logf("UltimateAnticheat.log", Err, "VirtualProtect Failed @ NetClient::UnpackAndExecute");
 		delete[] buffer;
 		return false;
 	}
@@ -440,25 +447,52 @@ bool NetClient::ExecutePacketPayload(PacketWriter* p)
 
 Error NetClient::QueryMemory(PacketWriter* p)
 {
-	//const unsigned char* buff = p->GetBuffer();
-	//
-	//if (buff == NULL)
-	//	return Error::NULL_MEMORY_REFERENCE;
+	const int InPacketSize = 10; //sum of sizes of all fields for SC_QUERY_MEMORY type packet. we can turn this into Protobuf if we want to get fancy and make it annoying for attackers to emulate
 
-	//int size = 0;
-	//UINT64 address = 0;
-	//BYTE* bytes = Process::GetBytesAtAddress(address, 100);
+	if (p == nullptr)
+	{
+		return Error::NULL_MEMORY_REFERENCE;
+	}
 
-	//for (int i = 0; i < 100; i++)
-	//{
-	//	printf("%x ", bytes[i]);
-	//}
+	const unsigned char* buff = p->GetBuffer();
+	
+	if (buff == NULL || p->GetSize() < InPacketSize)
+	{
+		return Error::DATA_LENGTH_MISMATCH;
+	}
 
-	//printf("\n");
-	return Error::OK;
+	int size = 0;
+	UINT64 address = 0;
+
+	memcpy((void*)&address, (void*)&buff[2], sizeof(uint64_t)); //first 8 bytes of paylaod = address.  once I am not as lazy I'll make a PacketReader class to clean this up, memcpy can also possibly throw exceptions
+	memcpy((void*)&size, (void*)&buff[10], sizeof(uint32_t)); //bytes 8-12 -> size of requested byte query
+
+	if (size == 0 || address == 0)
+	{
+		Logger::logf("UltimateAnticheat.log", Err, "Failed to fetch bytes at memory address (size or address was 0) @ NetClient::QueryMemory");
+		return Error::INCOMPLETE_SEND;
+	}
+
+	BYTE* bytes = Process::GetBytesAtAddress(address, size);
+
+	if (bytes == nullptr)
+	{
+		Logger::logf("UltimateAnticheat.log", Err, "Failed to fetch bytes at memory address @ NetClient::QueryMemory");
+		return Error::NULL_MEMORY_REFERENCE;
+	}
+
+	//now write `bytes` to a packet and send, completing the transaction
+	PacketWriter* outBytes = new PacketWriter((Packets::Opcodes::CS_QUERY_MEMORY));
+	outBytes->WriteByteStringWithLength(bytes, size);
+	
+	delete[] bytes;
+	return SendData(outBytes);
 }
 
-uint64_t NetClient::MakeHashFromServerResponse(PacketWriter* p) //todo: finish this
+/*
+	...we should store hashes of each server response and encrypt outbound data using said hashes to achieve a dynamic key per each transaction
+*/
+uint64_t NetClient::MakeHashFromServerResponse(PacketWriter* p) //todo: finish this, 
 {
 	uint64_t responseHash = 0;
 	return 0;
