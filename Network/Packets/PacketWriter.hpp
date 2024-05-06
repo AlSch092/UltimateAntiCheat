@@ -36,8 +36,6 @@ public:
 			delete[] this->m_buffer;
 	}
 
-	void ReadString(std::string value);
-
 	template<typename T>
 	void Write(T value);
 	template<typename T>
@@ -47,6 +45,8 @@ public:
 	void WriteWideString(const std::wstring& str, size_t len);
 	void WriteNoLengthString(const std::string& str);
 	void WriteZeros(int zeros);
+	void WriteByteString(const byte* in_buf, size_t len);
+	void WriteByteStringWithLength(const byte* in_buf, size_t len);
 
 	inline
 		const unsigned char* GetBuffer() const {
@@ -83,13 +83,16 @@ inline
 std::string PacketWriter::ToString() const 
 {
 	std::string ret;
-	if (GetSize() > 0) {
+	if (GetSize() > 0) 
+	{
 		std::stringstream out;
 		const unsigned char* p = GetBuffer();
 		size_t buflen = GetSize() - 1;
-		for (size_t i = 0; i <= buflen; i++) {
+		for (size_t i = 0; i <= buflen; i++) 
+		{
 			out << std::hex << std::uppercase << std::setw(2) << std::setfill('0') << static_cast<int16_t>(p[i]);
-			if (i < buflen) {
+			if (i < buflen) 
+			{
 				out << " ";
 			}
 		}
@@ -114,6 +117,30 @@ unsigned char* PacketWriter::GetBuffer(int pos, int len)
 	}
 
 	return m_buffer + pos;
+}
+
+inline void PacketWriter::WriteByteString(const byte* in_buf, size_t len)
+{
+	if (in_buf == nullptr)
+		return;
+
+	for (int i = 0; i < (int)len; i++)
+	{
+		Write<byte>(in_buf[i]);
+	}
+}
+
+inline void PacketWriter::WriteByteStringWithLength(const byte* in_buf, size_t len)
+{
+	if (in_buf == nullptr)
+		return;
+
+	Write<uint16_t>(len);
+
+	for (int i = 0; i < (int)len; i++)
+	{
+		Write<byte>(in_buf[i]);
+	}
 }
 
 inline
