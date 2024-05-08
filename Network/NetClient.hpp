@@ -56,8 +56,6 @@ public:
 	uint64_t MakeHashFromServerResponse(PacketWriter* p);
 	Error HandleInboundPacket(PacketWriter* p);
 
-	bool ExecutePacketPayload(PacketWriter* p); //unpacks receive packet which contains a secret key + payload
-
 	bool HandshakeCompleted = false;
 	bool Initialized = false;
 
@@ -88,5 +86,7 @@ private:
 	DWORD recvThreadId = 0;
 
 	list<uint64_t> HeartbeatHashes; //each next reply should be built using the hash of the last response, similar to a blockchain . if this goes out of sync at any point, server d/cs client
+
+	const BYTE EncryptionKeyTable[18] { 0x01, 0x05, 0x8E, 0x1A, 0xF5, 0x8B, 0x2C, 0x8B, 0x12, 0x04, 0xE1, 0xEF, 0x98, 0x4A, 0x5C, 0x11, 0x02, 0xFB};
 };
 

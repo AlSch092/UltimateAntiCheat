@@ -37,42 +37,37 @@ Error NetClient::Initialize(string ip, uint16_t port)
 
 	PacketWriter* p = Packets::Builder::ClientHello(this->HardwareID.c_str(), this->GetHostname().c_str(), this->GetMACAddress().c_str());
 
-	int BytesSent = send(Socket, (const char*)p->GetBuffer(), p->GetSize(), 0); //let's hope fragmenting doesnt occur, i've never ran into it before at the application layer for small sized packets
+	Error sendResult = SendData(p);
 
-	delete p;
+	if (sendResult != Error::OK)
+	{
+		closesocket(Socket);
+		WSACleanup();
+		shutdown(Socket, 0);
+		return Error::CANT_SEND;
+	}
 
 	int nRecvDataLength;
 
-	if (BytesSent == p->GetSize())
+	while ((nRecvDataLength = recv(Socket, (char*)recvBuffer, DEFAULT_RECV_LENGTH, 0)) == 0); //in a larger project, recv handling would be its own function, not jam-packed into a single routine like here.
+
+	if (nRecvDataLength > MINIMUM_PACKET_SIZE && recvBuffer[0] != 0)
 	{
-		while ((nRecvDataLength = recv(Socket, (char*)recvBuffer, DEFAULT_RECV_LENGTH, 0)) == 0); //in a larger project, recv handling would be its own function, not jam-packed into a single routine like here.
-
-		if (nRecvDataLength > MINIMUM_PACKET_SIZE && recvBuffer[0] != 0)
+		try
 		{
-			try
-			{
-				uint16_t packetLength = 0;
-				memcpy((void*)&packetLength, (const void*)recvBuffer[0], sizeof(uint16_t));
+			uint16_t packetLength = 0;
+			memcpy((void*)&packetLength, (const void*)recvBuffer[0], sizeof(uint16_t));
 
-				PacketWriter* recvP = new PacketWriter(recvBuffer, packetLength); //todo: make constructor where we can pass in a byte* and it auto copies 
-				Error err = HandleInboundPacket(recvP); //Handle incoming packet. after the initial handshake is done, this will be called from our recv loop.
+			PacketWriter* recvP = new PacketWriter(recvBuffer, packetLength); //todo: make constructor where we can pass in a byte* and it auto copies 
+			Error err = HandleInboundPacket(recvP); //Handle incoming packet. after the initial handshake is done, this will be called from our recv loop.
 
-				delete recvP;
-			}
-			catch (std::exception e)
-			{
-				return Error::DATA_LENGTH_MISMATCH;
-			}
+			delete recvP;
+		}
+		catch (std::exception e)
+		{
+			return Error::DATA_LENGTH_MISMATCH;
 		}
 	}
-	else
-	{
-		return Error::INCOMPLETE_SEND;
-		//error, didnt send enough bytes. maybe packets were modified along the way by the user, or some blip in the wire occured.
-	}
-
-	//we can choose to either disconnect or leave the connection open at this point. we still will be sending more data shortly
-	//...for now we will leave the connection open
 
 	this->Ip = ip;
 	this->Port = port;
@@ -278,11 +273,8 @@ string NetClient::GetMACAddress()
 		PIP_ADAPTER_INFO pAdapterInfo = AdapterInfo;
 		do 
 		{
-			sprintf(mac_addr, "%02X:%02X:%02X:%02X:%02X:%02X",
-				pAdapterInfo->Address[0], pAdapterInfo->Address[1],
-				pAdapterInfo->Address[2], pAdapterInfo->Address[3],
-				pAdapterInfo->Address[4], pAdapterInfo->Address[5]);
-			pAdapterInfo = pAdapterInfo->Next;
+			if(mac_addr != nullptr)
+				sprintf(mac_addr, "%02X:%02X:%02X:%02X:%02X:%02X", pAdapterInfo->Address[0], pAdapterInfo->Address[1], pAdapterInfo->Address[2], pAdapterInfo->Address[3], pAdapterInfo->Address[4], pAdapterInfo->Address[5]); pAdapterInfo = pAdapterInfo->Next;
 		} while (pAdapterInfo);
 	}
 	free(AdapterInfo);
@@ -354,22 +346,13 @@ Error NetClient::HandleInboundPacket(PacketWriter* p)
 
 	switch (opcode) //parse server-to-client packets
 	{
-		case Packets::Opcodes::SC_HELLO: //todo: finish this
+		case Packets::Opcodes::SC_HELLO: //AC initialization can possibly be put into this handler. server is confirming game license code was fine
 			
 			break;
 
-		case Packets::Opcodes::SC_HEARTBEAT: //todo: finish this
+		case Packets::Opcodes::SC_HEARTBEAT: //todo: finish this: generate heartbeat and send
 
 			break;
-
-		case Packets::Opcodes::SC_SHELLCODE:
-		{
-			if (!ExecutePacketPayload(p))
-			{
-				Logger::logf("UltimateAnticheat.log", Err, "Client displays bad behavior (payload did not execute correctly) @ HandleInboundPacket");
-				err = Error::SERVER_KICKED;
-			}
-		}break;
 
 		case Packets::Opcodes::SC_QUERY_MEMORY: //server requests byte data @ address
 
@@ -386,63 +369,6 @@ Error NetClient::HandleInboundPacket(PacketWriter* p)
 	}
 
 	return err;
-}
-
-/*
- NetClient::ExecutePacketPayload -> Tells the client to execute a server-generated payload (here we are simulating a packet coming in), to calculate a key which is then sent back to the server. Ensures that the client is actually running the anti-cheat program as it is a challenge-response protocol.
-
- -> every next packet is unencrypted using the key from the previous packet, and this key should be sent to the server to prove the client is executing the anticheat module (can still be spoofed by a cheater)
-*/
-bool NetClient::ExecutePacketPayload(PacketWriter* p)
-{
-	DWORD dwProt = 0;
-	bool result = false;
-	UINT64 decryptKey = 0;
-
-	int bSize = p->GetSize();
-	
-	if (bSize < sizeof(uint64_t)) //stop buffer overflows
-		return false;
-
-	LPBYTE buffer = new byte[bSize];
-
-	uint16_t opcode = Packets::Opcodes::SC_GENERATEKEY;
-
-	//for testing purposes we can make our own packet buffer then execute it instead of needing a server
-	memcpy((void*)&buffer[0], (void*)&opcode, sizeof(uint16_t));
-	memcpy((void*)&buffer[2], (void*)(p->GetBuffer() + 2), bSize - 2);
-
-	if (!VirtualProtect(&buffer[0], bSize, PAGE_EXECUTE_READWRITE, &dwProt))
-	{
-		Logger::logf("UltimateAnticheat.log", Err, "VirtualProtect Failed @ NetClient::UnpackAndExecute");
-		delete[] buffer;
-		return false;
-	}
-
-	UINT64 (*secretKeyFunction)();
-	secretKeyFunction = (UINT64(*)())(buffer + 2); //first 2 bytes of buffer are the opcode, so skip that
-	
-	//decrypt the routine using the hash of the previous result
-	if(HeartbeatHashes.size() > 0)
-		decryptKey = HeartbeatHashes.back();
-
-	for (int i = 0; i < bSize; i++) //each packet gets encrypted with the XOR of the last packet's secret key. the first time will be 0.
-	{
-		buffer[i] ^= (BYTE)decryptKey;
-	}
-
-	UINT64 secretKey = secretKeyFunction(); //shellcode call
-
-	HeartbeatHashes.push_back(secretKey);
-
-	//now send the key back to the server, if its wrong we get kicked. we simply execute the packet and the server can keep changing the key + routine OTA
-	Error err = SendData(Packets::Builder::Heartbeat(secretKey));
-
-	if (err == Error::OK) //result will stay false if no server is present
-		result = true;
-	
-	delete[] buffer;
-	return result;
 }
 
 Error NetClient::QueryMemory(PacketWriter* p)
