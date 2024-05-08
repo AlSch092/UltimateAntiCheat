@@ -1,5 +1,5 @@
+//By Alsch092 @ github
 #pragma once
-
 enum Error
 {
 	OK,
@@ -13,6 +13,7 @@ enum Error
 	INCOMPLETE_SEND,
 	INCOMPLETE_RECV,
 	NO_RECV_THREAD,
+	BAD_HEARTBEAT,
 	BAD_OPCODE,
 	BAD_SOCKET,
 	DATA_LENGTH_MISMATCH,
@@ -23,3 +24,6 @@ enum Error
 	BAD_MODULE,
 	GENERIC_FAIL,
 };
+
+
+
