@@ -11,25 +11,21 @@ namespace Packets
 	{
 		enum CS //client2server
 		{
-			CS_HELLO = 1,
-			CS_GOODBYE,
+			CS_HELLO,
+			CS_GOODBYE, //there is no SC_GOODBYE
 			CS_HEARTBEAT,
-			CS_INFO_LOGGING,
-			CS_BINARY_HASH,
-			CS_BAD_BEHAVIOUR,
+			CS_INFO_LOGGING, //hostname + mac address + hardware ID
+			CS_FLAGGED_CHEATER, 
 			CS_QUERY_MEMORY,
 		};
 
 		enum SC //server2client
 		{
-			SC_HELLO = 1,
-			SC_GOODBYE,
-			SC_CLIENTHASH,
+			SC_HELLO,
 			SC_HEARTBEAT,
-			SC_INFOLOGGING,
-			SC_SHELLCODE, //shellcode sent from the server is where the real fun begins, and seperates 'typical' anti-cheats from the truly glorious ones.
-			SC_GENERATEKEY,
-			SC_QUERY_MEMORY, //query bytes at a specific memory address, used to detect tampering
+			SC_INFO_LOGGING,
+			SC_FLAGGED_CHEATER,
+			SC_QUERY_MEMORY,
 		};	
 	}
 
@@ -37,8 +33,8 @@ namespace Packets
 	{
 		PacketWriter* ClientHello(string HWID, string Ipv4, string MACAddress);
 		PacketWriter* ClientGoodbye(int reason);
-		PacketWriter* Heartbeat(uint64_t responseKey);
-		PacketWriter* BinaryHashes(list<uint64_t> HashList); //integrity checking of .text section
-		PacketWriter* DetectedBadBehavior(int flagsDetected); //we can pack our detected things into an int on each bit
+		PacketWriter* Heartbeat(const char* cookie_str);
+		PacketWriter* DetectedCheater(int flags); //we can pack our detected things into an int on each bit
+		PacketWriter* QueryMemory(byte* bytestring, int size);
 	}
 }

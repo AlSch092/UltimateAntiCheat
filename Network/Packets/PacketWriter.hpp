@@ -188,7 +188,6 @@ inline void PacketWriter::WriteString(const std::string& str)
 
 inline void PacketWriter::WriteZeros(int zeros) 
 {
-
 	for (int i = 0; i < zeros; i++)
 	{
 		Write<byte>(0);

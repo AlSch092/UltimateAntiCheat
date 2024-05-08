@@ -16,21 +16,29 @@ PacketWriter* Packets::Builder::ClientGoodbye(int reason)
 	return p;
 }
 
-PacketWriter* Packets::Builder::BinaryHashes(list<uint64_t> HashList) //todo: finish these
+PacketWriter* Packets::Builder::DetectedCheater(int flags) //todo: finish these
 {
-	PacketWriter* p = new PacketWriter(Packets::Opcodes::CS_BINARY_HASH);
+	PacketWriter* p = new PacketWriter(Packets::Opcodes::CS_FLAGGED_CHEATER);
+	p->Write<int>(flags);
 	return p;
 }
 
-PacketWriter* Packets::Builder::DetectedBadBehavior(int flagsDetected) //todo: finish these
-{
-	PacketWriter* p = new PacketWriter(Packets::Opcodes::CS_BAD_BEHAVIOUR);
-	return p;
-}
-
-PacketWriter* Packets::Builder::Heartbeat(uint64_t responseKey) //todo: add more into this packet, such as integrity checking or detected flags.
+PacketWriter* Packets::Builder::Heartbeat(const char* cookie_str) //todo: add more into this packet, such as integrity checking or detected flags.
 {
 	PacketWriter* p = new PacketWriter(Packets::Opcodes::CS_HEARTBEAT);
-	p->Write<uint64_t>(responseKey);
+	p->WriteString(cookie_str);
+	return p;
+}
+
+PacketWriter* Packets::Builder::QueryMemory(byte* bytestring, int size)
+{
+	PacketWriter* p = new PacketWriter(Packets::Opcodes::CS_QUERY_MEMORY);
+	p->Write<uint16_t>(size);
+
+	for (int i = 0; i < size; i++)
+	{
+	    p->Write<BYTE>(bytestring[i]);
+	}
+
 	return p;
 }
