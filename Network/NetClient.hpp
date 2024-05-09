@@ -45,15 +45,15 @@ public:
 
 	Error Initialize(string ip, uint16_t port); //connects, sends CS_HELLO, verifies the response of a version number from server
 	Error EndConnection(int reason); //sends CS_GOODBYE and disconnects the socket
-	Error SendData(PacketWriter* outPacket); //all data sent to the server after CS_HELLO should go through this
+	Error SendData(PacketWriter* outPacket); //all data sent to the server should go through this
 
 	Error QueryMemory(PacketWriter* p); //query specific memory address, send its bytes values back to server
+	__forceinline const char*  MakeHeartbeat(PacketWriter* p);
 
 	static string GetHostname();
 	string GetMACAddress();
 	string GetHardwareID();
 
-	uint64_t MakeHashFromServerResponse(PacketWriter* p);
 	Error HandleInboundPacket(PacketWriter* p);
 
 	bool HandshakeCompleted = false;
@@ -62,9 +62,10 @@ public:
 	SOCKET GetClientSocket() { return this->Socket; }
 	string GetConnectedIP() { return this->Ip; }
 	uint16_t GetConnectedPort() { return this->Port; }
-	list<uint64_t> GetResponseHashList() { return this->HeartbeatHashes; }
 
 private:
+
+	const int HeartbeatSize = 128;
 
 	SOCKET Socket = SOCKET_ERROR;
 
@@ -84,9 +85,5 @@ private:
 
 	HANDLE RecvLoopThread = NULL;
 	DWORD recvThreadId = 0;
-
-	list<uint64_t> HeartbeatHashes; //each next reply should be built using the hash of the last response, similar to a blockchain . if this goes out of sync at any point, server d/cs client
-
-	const BYTE EncryptionKeyTable[18] { 0x01, 0x05, 0x8E, 0x1A, 0xF5, 0x8B, 0x2C, 0x8B, 0x12, 0x04, 0xE1, 0xEF, 0x98, 0x4A, 0x5C, 0x11, 0x02, 0xFB};
 };
 

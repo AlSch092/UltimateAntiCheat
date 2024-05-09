@@ -347,21 +347,35 @@ Error NetClient::HandleInboundPacket(PacketWriter* p)
 	switch (opcode) //parse server-to-client packets
 	{
 		case Packets::Opcodes::SC_HELLO: //AC initialization can possibly be put into this handler. server is confirming game license code was fine
-			
+			HandshakeCompleted = true;
 			break;
 
-		case Packets::Opcodes::SC_HEARTBEAT: //todo: finish this: generate heartbeat and send
+		case Packets::Opcodes::SC_HEARTBEAT: //auth cookie every few minutes
+		{
+			const char* ResponseCookie = MakeHeartbeat(p);
 
-			break;
+			if (ResponseCookie != NULL)
+			{
+				PacketWriter* Response = Packets::Builder::Heartbeat(ResponseCookie);
+
+				if (SendData(Response) != Error::OK)
+				{
+					Logger::logf("UltimateAnticheat.log", Err, "Could not query memory bytes for server auth @ HandleInboundPacket");
+					err = Error::BAD_HEARTBEAT;
+				}
+
+				delete[] ResponseCookie;
+			}
+		}break;
 
 		case Packets::Opcodes::SC_QUERY_MEMORY: //server requests byte data @ address
-
+		{
 			if (QueryMemory(p) != Error::OK)
 			{
 				Logger::logf("UltimateAnticheat.log", Err, "Could not query memory bytes for server auth @ HandleInboundPacket");
 				err = Error::GENERIC_FAIL;
 			}
-			break;
+		}break;
 
 		default:
 			err = Error::BAD_OPCODE;
@@ -371,6 +385,10 @@ Error NetClient::HandleInboundPacket(PacketWriter* p)
 	return err;
 }
 
+/*
+	QueryMemory - Server requested client to read bytes @ some memory address
+	returns Error::OK on success
+*/
 Error NetClient::QueryMemory(PacketWriter* p)
 {
 	const int InPacketSize = 10; //sum of sizes of all fields for SC_QUERY_MEMORY type packet. we can turn this into Protobuf if we want to get fancy and make it annoying for attackers to emulate
@@ -407,19 +425,42 @@ Error NetClient::QueryMemory(PacketWriter* p)
 		return Error::NULL_MEMORY_REFERENCE;
 	}
 
-	//now write `bytes` to a packet and send, completing the transaction
-	PacketWriter* outBytes = new PacketWriter((Packets::Opcodes::CS_QUERY_MEMORY));
-	outBytes->WriteByteStringWithLength(bytes, size);
-	
+	PacketWriter* outBytes = Packets::Builder::QueryMemory(bytes, size); //now write `bytes` to a packet and send, completing the transaction
 	delete[] bytes;
 	return SendData(outBytes);
 }
 
 /*
-	...we should store hashes of each server response and encrypt outbound data using said hashes to achieve a dynamic key per each transaction
+	MakeHeartbeat - Generates a response to server heartbeat requests
+	returns a char* array containing the auth cookie
 */
-uint64_t NetClient::MakeHashFromServerResponse(PacketWriter* p) //todo: finish this, 
+__forceinline const char* NetClient::MakeHeartbeat(PacketWriter* p)
 {
-	uint64_t responseHash = 0;
-	return 0;
+	const int ValidPacketSize = 130; // 2 bytes opcode, 128 bytes for cookie
+	
+	if (p == nullptr)
+		return NULL;
+
+	if (p->GetSize() != ValidPacketSize)
+	{
+		Logger::logf("UltimateAnticheat.log", Err, " Packet size was wrong @ NetClient::MakeHeartbeat");
+		return NULL;
+	}
+
+	byte Transformer = 0xE4; //the heartbeat response is the request xor'd with Transformer, transformer is added to by each value of the request
+							 //once this is confirmed working well we can try to implement something more complex
+	char* HeartbeatRequest = new char[128];
+	char* HeartbeatResponse = new char[128];
+
+	const byte* buf = p->GetBuffer();
+
+	for (int i = 0; i < 128; i++)
+	{
+		HeartbeatRequest[i] = buf[2 + i];
+		Transformer += (byte)HeartbeatRequest[i];
+		HeartbeatResponse[i] = HeartbeatRequest[i] ^ Transformer;
+	}
+
+	delete[] HeartbeatRequest;
+	return HeartbeatResponse;
 }
