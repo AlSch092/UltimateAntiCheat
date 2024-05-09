@@ -144,35 +144,31 @@ inline void PacketWriter::WriteByteStringWithLength(const byte* in_buf, size_t l
 }
 
 inline
-void PacketWriter::WriteString(const std::string& str, size_t len) 
-{
+void PacketWriter::WriteString(const std::string& str, size_t len) {
 	size_t slen = str.size();
-	if (len < slen) 
-	{
+	if (len < slen) {
 		throw std::invalid_argument("WriteString used with a length shorter than string size");
 	}
-	strncpy_s((char*)GetBuffer(m_pos, static_cast<int>(len)), len, str.c_str(), slen); //IF WE HAVE SOME ERROR, check to see if adding _s did it
-	for (size_t i = slen; i < len; i++) 
-	{
+	strncpy((char*)GetBuffer(m_pos, len), str.c_str(), slen);
+	for (size_t i = slen; i < len; i++) {
 		m_buffer[m_pos + i] = 0;
 	}
-	m_pos += static_cast<int>(len);
+	m_pos += len;
 }
 
-inline void PacketWriter::WriteWideString(const std::wstring& str, size_t len) 
-{
+inline
+void PacketWriter::WriteWideString(const std::wstring& str, size_t len) {
+
 	size_t slen = str.size();
 
-	if (len < slen) 
-	{
+	if (len < slen) {
 		throw std::invalid_argument("WriteString used with a length shorter than string size");
 	}
 
-	wcscpy_s((wchar_t*)GetBuffer(m_pos, static_cast<int>(len * 2)), len * 2, str.c_str());
+	wcscpy((wchar_t*)GetBuffer(m_pos, len * 2), str.c_str());
 
-	m_pos += (int)(len * 2);
+	m_pos += len * 2;
 }
-
 
 inline void PacketWriter::WriteNoLengthString(const std::string& str) 
 {
