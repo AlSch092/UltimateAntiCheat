@@ -1,4 +1,5 @@
 ## Updates
+- May 10, '24: Client and server now communicate correctly, heartbeats will be sent every 60s to the client. Server code will be posted in the "Server" directory of the project, and will be its own C# program. Design will soon be changed to integrate the `AntiCheat` class to the networking portions.
 - May 4, '24: Added TLS callback spoofing, which is compiling the program with a fake TLS callback and then modifying the pointer at runtime to our real callback.
 - April 30, '24: Fixed any memory & threading issues, removed PEB spoofing & exported function renaming to ensure program works smoothly for everyone - export function renaming can sometimes pop up an error box to the end user about "Entry Point Not Found", if this error box can be supressed somehow then we can re-add the technique since it successfully prevents DLL Injection. PEB spoofing was found to create issues with thread creation at random occurences. 
 - April 24, '24: IAT hook checking, further code cleanup and error checking
