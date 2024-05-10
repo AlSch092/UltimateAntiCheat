@@ -21,7 +21,7 @@ Research project: make an anti-cheat system to detect and/or prevent things like
 - Data/obfuscation class to help hide sensitive variables
 - Check for if Windows is in 'Test Signing mode'
 - TLS Callback spoofing (changing TLS callbacks @ runtime)
-- Encrypted Shellcode payload execution (requires a server to send data to this project)
+- Networked heartbeat system to ensure client is running the AC module
 
 ## Upcoming Features:
-- Client/Server architecture with heartbeat mechanism
+- Integration of client/Server architecture with anticheat class
