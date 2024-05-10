@@ -5,7 +5,7 @@
 	Initialize - Initializes the network client
 	returns Error::OK on success
 */
-Error NetClient::Initialize(string ip, uint16_t port)
+Error NetClient::Initialize(string ip, uint16_t port, string gameCode)
 {
 	WSADATA wsaData;
 	SOCKET Socket = INVALID_SOCKET;
@@ -35,7 +35,7 @@ Error NetClient::Initialize(string ip, uint16_t port)
 		return Error::CANT_CONNECT;
 	}
 
-	PacketWriter* p = Packets::Builder::ClientHello(this->HardwareID.c_str(), this->GetHostname().c_str(), this->GetMACAddress().c_str());
+	PacketWriter* p = Packets::Builder::ClientHello(gameCode, this->HardwareID, this->GetHostname(), this->GetMACAddress());
 
 	Error sendResult = SendData(p);
 
@@ -47,41 +47,18 @@ Error NetClient::Initialize(string ip, uint16_t port)
 		return Error::CANT_SEND;
 	}
 
-	int nRecvDataLength;
-
-	while ((nRecvDataLength = recv(Socket, (char*)recvBuffer, DEFAULT_RECV_LENGTH, 0)) == 0); //in a larger project, recv handling would be its own function, not jam-packed into a single routine like here.
-
-	if (nRecvDataLength > MINIMUM_PACKET_SIZE && recvBuffer[0] != 0)
-	{
-		try
-		{
-			uint16_t packetLength = 0;
-			memcpy((void*)&packetLength, (const void*)recvBuffer[0], sizeof(uint16_t));
-
-			PacketWriter* recvP = new PacketWriter(recvBuffer, packetLength); //todo: make constructor where we can pass in a byte* and it auto copies 
-			Error err = HandleInboundPacket(recvP); //Handle incoming packet. after the initial handshake is done, this will be called from our recv loop.
-
-			delete recvP;
-		}
-		catch (std::exception e)
-		{
-			return Error::DATA_LENGTH_MISMATCH;
-		}
-	}
-
-	this->Ip = ip;
-	this->Port = port;
-
-	this->ConnectedAt = GetTickCount64();
-	this->ConnectedDuration = 0;
-
-	//create a thread for handling server replies
-	this->RecvLoopThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&NetClient::ProcessRequests, this, 0, &this->recvThreadId);
+	this->RecvLoopThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&NetClient::ProcessRequests, this, 0, &this->recvThreadId); //todo: change RecvLoopThread to Thread* class obj
 
 	if (this->RecvLoopThread == NULL || this->recvThreadId == NULL)
 	{
 		return Error::NO_RECV_THREAD;
 	}
+	
+	this->Ip = ip;
+	this->Port = port;
+
+	this->ConnectedAt = GetTickCount64();
+	this->ConnectedDuration = 0;
 
 	return Error::OK;
 }
@@ -153,9 +130,11 @@ void NetClient::ProcessRequests(LPVOID Param)
 	bool receiving = true;
 	const int ms_between_loops = 1000;
 
+	Logger::logf("UltimateAnticheat.log", Info, "Started thread on NetClient::ProcessRequests with id %d.", GetCurrentThreadId());
+
 	NetClient* Client = reinterpret_cast<NetClient*>(Param);
 
-	char recvBuf[DEFAULT_RECV_LENGTH] = { 0 };
+	unsigned char recvBuf[DEFAULT_RECV_LENGTH] = { 0 };
 
 	while (receiving)
 	{
@@ -163,12 +142,13 @@ void NetClient::ProcessRequests(LPVOID Param)
 
 		if (s)
 		{
-			int bytesIn = recv(s, recvBuf, DEFAULT_RECV_LENGTH, 0);
+			int bytesIn = recv(s, (char*)recvBuf, DEFAULT_RECV_LENGTH, 0);
 
 			if (bytesIn != SOCKET_ERROR)
 			{
-				PacketWriter* p = new PacketWriter(recvBuf, bytesIn);
+				PacketReader* p = new PacketReader(recvBuf, bytesIn);
 				Client->HandleInboundPacket(p);
+				delete p;
 			}
 		}
 
@@ -332,27 +312,29 @@ string NetClient::GetHardwareID()
 /*
 	HandleInboundPacket - read packet `p`  and take action based on its opcode
 */
-Error NetClient::HandleInboundPacket(PacketWriter* p)
+Error NetClient::HandleInboundPacket(PacketReader* p)
 {
-	if (p->GetBuffer() == NULL || p == nullptr)
+	if (p == nullptr)
 		return Error::NULL_MEMORY_REFERENCE;
 
 	Error err = Error::OK;
 
-	uint16_t opcode = 0;
-	const unsigned char* packetData = p->GetBuffer();
-
-	memcpy((void*)&opcode, packetData, sizeof(uint16_t));
+	uint16_t opcode = p->readShort();
 
 	switch (opcode) //parse server-to-client packets
 	{
 		case Packets::Opcodes::SC_HELLO: //AC initialization can possibly be put into this handler. server is confirming game license code was fine
+		{
+			uint16_t softwareVersion = p->readShort();
 			HandshakeCompleted = true;
-			break;
+			Logger::logf("UltimateAnticheat.log", Info, "Got reply from server with version: %d", softwareVersion);
+		}break;
 
 		case Packets::Opcodes::SC_HEARTBEAT: //auth cookie every few minutes
 		{
-			const char* ResponseCookie = MakeHeartbeat(p);
+			string cookie = p->readString(128);
+			
+			const char* ResponseCookie = MakeHeartbeat(cookie);
 
 			if (ResponseCookie != NULL)
 			{
@@ -370,7 +352,10 @@ Error NetClient::HandleInboundPacket(PacketWriter* p)
 
 		case Packets::Opcodes::SC_QUERY_MEMORY: //server requests byte data @ address
 		{
-			if (QueryMemory(p) != Error::OK)
+			uint64_t address = p->readLong();
+			uint32_t size = p->readInt();
+
+			if (QueryMemory(address, size) != Error::OK)
 			{
 				Logger::logf("UltimateAnticheat.log", Err, "Could not query memory bytes for server auth @ HandleInboundPacket");
 				err = Error::GENERIC_FAIL;
@@ -389,28 +374,8 @@ Error NetClient::HandleInboundPacket(PacketWriter* p)
 	QueryMemory - Server requested client to read bytes @ some memory address
 	returns Error::OK on success
 */
-Error NetClient::QueryMemory(PacketWriter* p)
+Error NetClient::QueryMemory(uint64_t address, uint32_t size)
 {
-	const int InPacketSize = 10; //sum of sizes of all fields for SC_QUERY_MEMORY type packet. we can turn this into Protobuf if we want to get fancy and make it annoying for attackers to emulate
-
-	if (p == nullptr)
-	{
-		return Error::NULL_MEMORY_REFERENCE;
-	}
-
-	const unsigned char* buff = p->GetBuffer();
-	
-	if (buff == NULL || p->GetSize() < InPacketSize)
-	{
-		return Error::DATA_LENGTH_MISMATCH;
-	}
-
-	int size = 0;
-	UINT64 address = 0;
-
-	memcpy((void*)&address, (void*)&buff[2], sizeof(uint64_t)); //first 8 bytes of paylaod = address.  once I am not as lazy I'll make a PacketReader class to clean this up, memcpy can also possibly throw exceptions
-	memcpy((void*)&size, (void*)&buff[10], sizeof(uint32_t)); //bytes 8-12 -> size of requested byte query
-
 	if (size == 0 || address == 0)
 	{
 		Logger::logf("UltimateAnticheat.log", Err, "Failed to fetch bytes at memory address (size or address was 0) @ NetClient::QueryMemory");
@@ -434,29 +399,18 @@ Error NetClient::QueryMemory(PacketWriter* p)
 	MakeHeartbeat - Generates a response to server heartbeat requests
 	returns a char* array containing the auth cookie
 */
-__forceinline const char* NetClient::MakeHeartbeat(PacketWriter* p)
+__forceinline const char* NetClient::MakeHeartbeat(string cookie)
 {
-	const int ValidPacketSize = 130; // 2 bytes opcode, 128 bytes for cookie
-	
-	if (p == nullptr)
-		return NULL;
-
-	if (p->GetSize() != ValidPacketSize)
-	{
-		Logger::logf("UltimateAnticheat.log", Err, " Packet size was wrong @ NetClient::MakeHeartbeat");
-		return NULL;
-	}
+	byte* b = (byte*)cookie.c_str();
 
 	byte Transformer = 0xE4; //the heartbeat response is the request xor'd with Transformer, transformer is added to by each value of the request
 							 //once this is confirmed working well we can try to implement something more complex
 	char* HeartbeatRequest = new char[128];
 	char* HeartbeatResponse = new char[128];
 
-	const byte* buf = p->GetBuffer();
-
 	for (int i = 0; i < 128; i++)
 	{
-		HeartbeatRequest[i] = buf[2 + i];
+		HeartbeatRequest[i] = b[i];
 		Transformer += (byte)HeartbeatRequest[i];
 		HeartbeatResponse[i] = HeartbeatRequest[i] ^ Transformer;
 	}

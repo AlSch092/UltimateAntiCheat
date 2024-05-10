@@ -43,18 +43,18 @@ public:
 
 	static void ProcessRequests(LPVOID Param); //calls recv in a loop to handle requests, and if this routine is not running the program should be exited
 
-	Error Initialize(string ip, uint16_t port); //connects, sends CS_HELLO, verifies the response of a version number from server
+	Error Initialize(string ip, uint16_t port, string gameCode); //connects, sends CS_HELLO, verifies the response of a version number from server
 	Error EndConnection(int reason); //sends CS_GOODBYE and disconnects the socket
 	Error SendData(PacketWriter* outPacket); //all data sent to the server should go through this
 
-	Error QueryMemory(PacketWriter* p); //query specific memory address, send its bytes values back to server
-	__forceinline const char*  MakeHeartbeat(PacketWriter* p);
+	Error QueryMemory(uint64_t address, uint32_t size); //query specific memory address, send its bytes values back to server
+	__forceinline const char*  MakeHeartbeat(string cookie);
 
 	static string GetHostname();
 	string GetMACAddress();
 	string GetHardwareID();
 
-	Error HandleInboundPacket(PacketWriter* p);
+	Error HandleInboundPacket(PacketReader* p);
 
 	bool HandshakeCompleted = false;
 	bool Initialized = false;
@@ -74,7 +74,7 @@ private:
 	string Ip;
 	uint16_t Port = 0;
 
-	unsigned int ConnectedDuration = 0;
+	unsigned long long ConnectedDuration = 0;
 	unsigned long long ConnectedAt = 0; //unix timestamp
 
 	string Hostname;
