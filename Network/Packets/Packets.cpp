@@ -1,11 +1,12 @@
 #include "Packets.hpp"
 
-PacketWriter* Packets::Builder::ClientHello(string HWID, string hostname, string MACAddress)
+PacketWriter* Packets::Builder::ClientHello(string gameCode, string HWID, string hostname, string MACAddress)
 {
 	PacketWriter* p = new PacketWriter(Packets::Opcodes::CS_HELLO);
-	p->WriteString(HWID);
-	p->WriteString(hostname);
-	p->WriteString(MACAddress);
+	p->WriteString(gameCode.c_str());
+	p->WriteString(HWID.c_str());
+	p->WriteString(hostname.c_str());
+	p->WriteString(MACAddress.c_str());
 	return p;
 }
 
