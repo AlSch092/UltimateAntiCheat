@@ -1,4 +1,4 @@
-//By AlSch092 @ Github - UltimateAnticheat Server
+﻿//UltimateAnticheat Server - By AlSch092 @ Github
 using System;
 using UACServer.Network;
 
@@ -11,7 +11,7 @@ namespace UACServer
             const string listen_addr = "0.0.0.0";
             const int port = 5445;
 
-            TCPServer server = new TCPServer();
+            AnticheatServer server = new AnticheatServer();
             server.Start(listen_addr, port);
 
             Logger.Log("UACServer.log", "Press any key to stop the server...");
