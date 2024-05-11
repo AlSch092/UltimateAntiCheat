@@ -1,4 +1,5 @@
-﻿using System;
+﻿//UltimateAnticheat Server - By AlSch092 @ Github
+using System;
 
 namespace UACServer
 {

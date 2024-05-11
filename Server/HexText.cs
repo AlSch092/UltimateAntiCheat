@@ -1,4 +1,4 @@
-﻿//By AlSch092 @ Github - UltimateAnticheat Server
+﻿//UltimateAnticheat Server - By AlSch092 @ Github
 using System;
 using System.Runtime.Remoting.Metadata.W3cXsd2001;
 using System.Text;
