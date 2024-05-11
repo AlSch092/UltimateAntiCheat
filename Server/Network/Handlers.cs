@@ -1,4 +1,4 @@
-﻿//By AlSch092 @ Github - UltimateAnticheat Server
+﻿//UltimateAnticheat Server - By AlSch092 @ Github
 
 using System;
 using System.Text;
@@ -32,13 +32,13 @@ namespace UACServer.Network
             return true;
         }
 
-        public static void HandleClientGoodbye(AntiCheatClient c)
+        public static void HandleClientGoodbye(AntiCheatClient c) //todo: finish this
         {
         }
 
         public static bool HandleClientHeartbeat(AntiCheatClient c, string heartbeat)
         {
-            byte Transformer = 0xE4;
+            byte Transformer = 0x18;
             const int cookie_size = 128;
 
             if (heartbeat.Length != cookie_size)
@@ -49,16 +49,16 @@ namespace UACServer.Network
 
             for(int i = 0; i < cookie_size; i++)
             {
-                Transformer += byteArray[i];
-                byteArrayTransformed[i] = (byte)(byteArray[i] ^ Transformer);
+                byte b = (byte)((byte)byteArray[i] ^ Transformer);
+                byteArrayTransformed[i] = b;
             }
 
             //check client response against what we sent originally, it should match
-            string last_heartbeat = c.heartbeat_responses[c.heartbeat_responses.Count - 1]; //get last entry in list
+            string last_heartbeat = c.heartbeat_responses[c.current_heartbeat_count]; //get last entry in list
 
             string untransformed_cookie = Encoding.UTF8.GetString(byteArrayTransformed);
 
-            if(last_heartbeat.CompareTo(untransformed_cookie) != 0)
+            if (last_heartbeat != untransformed_cookie)
             {
                 return false;
             }

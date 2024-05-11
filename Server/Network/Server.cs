@@ -1,4 +1,5 @@
-﻿using System;
+﻿//UltimateAnticheat Server - By AlSch092 @ Github
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -8,7 +9,7 @@ using System.Threading;
 
 namespace UACServer.Network
 {
-    class TCPServer
+    class AnticheatServer
     {
         private const short versionNum = 100;
 
@@ -86,7 +87,13 @@ namespace UACServer.Network
                 string message = Encoding.ASCII.GetString(buffer, 0, bytesRead);
                 Logger.Log("UACServer.log", $"Received from client {((IPEndPoint)client.Client.RemoteEndPoint).Address}: {message}");
 
-                HandlePacket(c, buffer, bytesRead);
+                if(!HandlePacket(c, buffer, bytesRead))
+                {
+                    Logger.Log("UACServer.log", "Client heartbeat was incorrect, disconnecting client " +  c.hardware_id);
+                    c.net_client.Client.Disconnect(false);
+                    c.net_client.Dispose();
+                    return;
+                }
 
                 // Send something to client every 60 seconds after receiving the first piece of data
                 ThreadPool.QueueUserWorkItem(state =>
@@ -96,7 +103,24 @@ namespace UACServer.Network
                     while (isRunning)
                     {
                         Thread.Sleep(heartbeatDelay); // 60 seconds between heartbeats
-                        SendHeartbeat(c);                       
+
+                        if (clientToSend.Connected)
+                        {
+                            Console.WriteLine("Sending heartbeat...");
+                            if (SendHeartbeat(c))
+                            {                      
+                                return;
+                            }
+                            else
+                            {
+                                clientToSend.Client.Disconnect(false);
+                                return;
+                            }                           
+                        }
+                        else
+                        {
+                            return;
+                        }
                     }
                 }, asyncState);
 
@@ -106,11 +130,16 @@ namespace UACServer.Network
             {
                 Logger.Log("UACServer.log", $"Client {((IPEndPoint)client.Client.RemoteEndPoint).Address} disconnected."); //disconnected client
 
+                AntiCheatClient toRemove = null;
+
                 foreach (AntiCheatClient ca in clients)
                 {
                     if (ca.net_client == client)
-                        clients.Remove(ca);
+                        toRemove = ca;
                 }
+
+                if(toRemove != null)
+                    clients.Remove(toRemove);
 
                 client.Close();
             }
@@ -138,7 +167,7 @@ namespace UACServer.Network
 
             PacketWriter p = Factory.MakeHeartbeat(cookie);
 
-            c.heartbeat_responses.Add(cookie); //save heartbeats so that we can compare client responses to them.
+            c.heartbeat_responses.Add(cookie); //save heartbeats so that we can compare client responses to them fpr .
 
             return SendBytes(c, p);
         }
@@ -154,27 +183,28 @@ namespace UACServer.Network
             switch ((Opcodes.CS)opcode)
             {
                 case Opcodes.CS.CS_HELLO: //client hello
+                {
+                    if (!Handlers.HandleClientHello(c, p))
                     {
-                        if (!Handlers.HandleClientHello(c, p))
-                        {
-                            Logger.Log("UACServer.log", "Client hello transaction failed: gamecode/license was not correct.");
-                            return false;
-                        }
-
-                        if(!SendClientHello(c))
-                        {
-                            Logger.Log("UACServer.log", "Client hello transaction failed: failure sending bytes to client");
-                            return false;
-                        }
+                        Logger.Log("UACServer.log", "Client hello transaction failed: gamecode/license was not correct.");
+                        return false;
                     }
-                    break;
+
+                    if(!SendClientHello(c))
+                    {
+                        Logger.Log("UACServer.log", "Client hello transaction failed: failure sending bytes to client");
+                        return false;
+                    }
+                }
+                break;
 
                 case Opcodes.CS.CS_GOODBYE: //client disconnect
                     Handlers.HandleClientGoodbye(c);
                     break;
 
                 case Opcodes.CS.CS_HEARTBEAT: //heartbeat
-
+                {
+                    short cookie_len = p.ReadShort();
                     string cookie_str = p.ReadString(128);
 
                     if (!Handlers.HandleClientHeartbeat(c, cookie_str))
@@ -182,7 +212,10 @@ namespace UACServer.Network
                         Logger.Log("UACServer.log", "Client heartbeat transaction failed: client heartbeat cookie was incorrect.");
                         return false;
                     }
-                    break;
+
+                    c.current_heartbeat_count++;
+                }
+                break;
 
                 case Opcodes.CS.CS_FLAGGED_CHEATER:
                     c.flagged_cheater = true; //...then ban the cheater at some random time within the next 12h

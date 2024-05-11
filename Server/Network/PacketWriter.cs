@@ -1,4 +1,4 @@
-﻿//By AlSch092 @ Github - UltimateAnticheat Server
+﻿//UltimateAnticheat Server - By AlSch092 @ Github
 using System;
 using System.IO;
 

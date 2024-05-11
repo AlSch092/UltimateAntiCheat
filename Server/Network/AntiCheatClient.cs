@@ -18,6 +18,7 @@ namespace UACServer
 
         private bool authorized = false;
         private bool heartbeat_received = false;
+        public int current_heartbeat_count = 0;
 
         public List<string> heartbeat_responses;
 
