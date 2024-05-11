@@ -1,3 +1,4 @@
+//By AlSch092 @ Github
 #include "API.hpp"
 
 /*
@@ -12,9 +13,9 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessNam
 	if (AC == NULL)
 		return Error::NULL_MEMORY_REFERENCE;
 
-	if (isServerAvailable) //for testing/teaching purposes, we can get rid of the need to a server as most GitHub users trying the project out won't have the server code
+	if (isServerAvailable) //server code will be published soon
 	{
-		if (AC->GetNetworkClient()->Initialize(API::ServerEndpoint, API::ServerPort) != Error::OK) //initialize client is separate from license key auth
+		if (AC->GetNetworkClient()->Initialize(API::ServerEndpoint, API::ServerPort, licenseKey) != Error::OK) //initialize client is separate from license key auth
 		{
 			errorCode = Error::CANT_STARTUP;		//don't allow startup if networking doesn't work
 			goto end;
@@ -27,11 +28,10 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessNam
 	}
 	else //bad parent process detected, or parent process mismatch, shut down the program after reporting the error to the server
 	{
-		Logger::logf("UltimateAnticheat.log", Detection, "  Parent process was not whitelisted, shutting down program! Make sure parent process is the same as specified in API.hpp. If you are using VS to debug, this might become VsDebugConsole.exe, rather than explorer.exe");
+		Logger::logf("UltimateAnticheat.log", Detection, "Parent process was not whitelisted, shutting down program! Make sure parent process is the same as specified in API.hpp. If you are using VS to debug, this might become VsDebugConsole.exe, rather than explorer.exe");
 		errorCode = Error::PARENT_PROCESS_MISMATCH;
 	}
 
-	//isLicenseValid = g_AC->GetNetworkClient()->CheckLicense();  	//TODO: check licenseKey against some centralized web server, possibly using HTTP requests. once we have verified our license, we can try to connect using Initialize(
 end:	
 	return errorCode;
 }
@@ -114,8 +114,8 @@ Error __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code)
 	switch (code)
 	{
 		case INITIALIZE:
-		{
-			errorCode = Initialize(AC, "GAMECODE-UNIQUE12345", whitelistedParentProcess, false); //if explorer.exe isn't our parent process, shut 'er down!
+		{			
+			errorCode = Initialize(AC, "GAMECODE-XyIlqRmRj", whitelistedParentProcess, serverAvailable); //if explorer.exe isn't our parent process, shut 'er down!
 
 			if (errorCode == Error::OK)
 			{
@@ -129,15 +129,10 @@ Error __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code)
 			}
 			else
 			{
-				Logger::logf("UltimateAnticheat.log", Warning, "Couldn't start up, make sure server is running and re-try.");
+				Logger::logf("UltimateAnticheat.log", Warning, "Couldn't start up, either the parent process was wrong or no auth server was present.");
 				return Error::CANT_CONNECT;
 			}
-		}		break;
-
-		case HEARTBEAT:
-		{
-			errorCode = SendHeartbeat(AC);
-		}	break;
+		}break;
 
 		case CLIENT_EXIT:
 		{

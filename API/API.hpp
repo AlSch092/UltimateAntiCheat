@@ -1,3 +1,4 @@
+//By AlSch092 @ Github
 #pragma once
 #include "../AntiCheat.hpp"
 
@@ -9,11 +10,10 @@ namespace API
 	enum DispatchCode
 	{
 		INITIALIZE,
-		FAILED_INITIALIZE,
 		CLIENT_EXIT,
-		CLIENT_DISCONNECT,
-		HEARTBEAT,
 	};
+
+	static bool serverAvailable = false; //change this to false if you don't want to use networking
 
 	static bool isPostInitialization = false;
 
