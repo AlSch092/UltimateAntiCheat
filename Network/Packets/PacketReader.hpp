@@ -49,6 +49,8 @@ private:
     template<typename T>
     T read() 
     {
+        if (bufferSize == 0)
+            return 0;
         static_assert(std::is_trivially_copyable<T>::value, "Type T must be trivially copyable");
 
         if (position + sizeof(T) > bufferSize) 

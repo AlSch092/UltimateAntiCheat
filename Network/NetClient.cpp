@@ -150,6 +150,13 @@ void NetClient::ProcessRequests(LPVOID Param)
 				Client->HandleInboundPacket(p);
 				delete p;
 			}
+			else
+				receiving = false;
+		}
+		else if(s == SOCKET_ERROR)
+		{
+			Logger::logf("UltimateAnticheat.log", Err, "Socket error @  NetClient::ProcessRequests");
+			receiving = false; //todo: send signals to rest of anticheat to shutdown
 		}
 
 		Sleep(ms_between_loops);
@@ -332,8 +339,13 @@ Error NetClient::HandleInboundPacket(PacketReader* p)
 
 		case Packets::Opcodes::SC_HEARTBEAT: //auth cookie every few minutes
 		{
+			short cookie_len = p->readShort();
+
+			if (cookie_len != 128)
+				return Error::INCOMPLETE_RECV;
+
 			string cookie = p->readString(128);
-			
+
 			const char* ResponseCookie = MakeHeartbeat(cookie);
 
 			if (ResponseCookie != NULL)
@@ -342,11 +354,16 @@ Error NetClient::HandleInboundPacket(PacketReader* p)
 
 				if (SendData(Response) != Error::OK)
 				{
-					Logger::logf("UltimateAnticheat.log", Err, "Could not query memory bytes for server auth @ HandleInboundPacket");
+					Logger::logf("UltimateAnticheat.log", Err, "Could not send heartbeat @ HandleInboundPacket");
 					err = Error::BAD_HEARTBEAT;
 				}
 
 				delete[] ResponseCookie;
+			}
+			else
+			{
+				Logger::logf("UltimateAnticheat.log", Err, "Failed to generate heartbeat @ HandleInboundPacket");
+				err = Error::BAD_HEARTBEAT;
 			}
 		}break;
 
@@ -403,18 +420,17 @@ __forceinline const char* NetClient::MakeHeartbeat(string cookie)
 {
 	byte* b = (byte*)cookie.c_str();
 
-	byte Transformer = 0xE4; //the heartbeat response is the request xor'd with Transformer, transformer is added to by each value of the request
+	byte Transformer = 0x18; //the heartbeat response is the request xor'd with Transformer, transformer is added to by each value of the request
 							 //once this is confirmed working well we can try to implement something more complex
-	char* HeartbeatRequest = new char[128];
-	char* HeartbeatResponse = new char[128];
+
+	char* HeartbeatResponse = new char[128] {0};
 
 	for (int i = 0; i < 128; i++)
 	{
-		HeartbeatRequest[i] = b[i];
-		Transformer += (byte)HeartbeatRequest[i];
-		HeartbeatResponse[i] = HeartbeatRequest[i] ^ Transformer;
+		byte val = (byte)((byte)b[i]);
+		val ^= Transformer;
+		HeartbeatResponse[i] = val;
 	}
 
-	delete[] HeartbeatRequest;
 	return HeartbeatResponse;
 }
