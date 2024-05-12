@@ -94,16 +94,18 @@ Error Preventions::DeployBarrier()
 #endif
 
 #ifndef _DEBUG
-    if (!RemapProgramSections()) //anti-memory write
+    if (!RemapProgramSections()) //anti-memory write through sections remapping, thanks changeofpace
     {
         Logger::logf("UltimateAnticheat.log", Err, " Couldn't remap memory @ DeployBarrier!\n");
         retError = Error::CANT_STARTUP;
     }
 #endif
 
-    IsPreventingThreadCreation = true;
+    IsPreventingThreadCreation = true; //used in TLS callback to prevent thread creation (can stop shellcode + module injection)
 
-    //if (PreventDllInjection()) //anti-injection
+    //anything commented out below means it needs further testing to ensure no side effects occur, 
+
+    //if (PreventDllInjection()) //anti-injection by renaming exports of LoadLibrary
     //{
     //    Logger::logf("UltimateAnticheat.log", Info, " Wrote over LoadLibrary (kernel32) export names successfully!\n");
     //}
@@ -123,7 +125,7 @@ Error Preventions::DeployBarrier()
     //    retError = Error::CANT_APPLY_TECHNIQUE;
     //}
 
-    //BYTE* newPEB = SpoofPEB(); //memory should be free'd at end of program  -> CURRENTLY CAUSES ISSUES WITH THREADING, DO NOT USE! 
+    //BYTE* newPEB = SpoofPEB(); //memory should be free'd at end of program  -> CURRENTLY CAUSES ISSUES WITH THREADING, need to look at it deeper
 
     //if (newPEB != NULL)
     //{
@@ -135,7 +137,7 @@ Error Preventions::DeployBarrier()
     //    retError = Error::CANT_APPLY_TECHNIQUE;
     //}
 
-    if (RandomizeModuleName()) 
+    if (RandomizeModuleName()) //randomize our main module name at runtime
     {
         Logger::logf("UltimateAnticheat.log", Info, " Randomized our executable's module's name!\n");
     }
@@ -177,9 +179,44 @@ bool Preventions::RemapProgramSections()
     else
     {
         Logger::logf("UltimateAnticheat.log", Err, " Imagebase was NULL @ RemapAndCheckPages!\n");
-        exit(Error::NULL_MEMORY_REFERENCE);
+        return false;
     }
 
     return remap_succeeded;
 }
 
+/*
+    StopMultipleProcessInstances - Uses shared memory to prevent multiple instances of the process. 
+    returns true on success
+    ... Using a mutex instead may result in attackers closing the mutex handle with popular tools such as Process Hacker
+*/
+bool Preventions::StopMultipleProcessInstances()
+{
+    HANDLE hSharedMemory = CreateFileMappingA(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(int), " "); //shared memory with blank name
+    
+    if (hSharedMemory == NULL) 
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to create shared memory. Error code: %lu\n", GetLastError());
+        return false;
+    }
+
+    int* pIsRunning = (int*)MapViewOfFile(hSharedMemory, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(int));
+    
+    if (pIsRunning == NULL) 
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to map view of file. Error code : % lu\n", GetLastError());
+        CloseHandle(hSharedMemory);
+        return false;
+    }
+
+    if (*pIsRunning != 1337) //duplicate instance found, these instructions can be obfuscated if desired
+    {
+        UnmapViewOfFile(pIsRunning);
+        CloseHandle(hSharedMemory);
+        return false;
+    }
+
+    *pIsRunning = 1337;
+    
+    return true;
+}

@@ -25,7 +25,10 @@ public:
 	static bool PreventShellcodeThreads();
 
 	bool RandomizeModuleName();
-	static BYTE* SpoofPEB();
+	
+	static BYTE* SpoofPEB(); //not advisable to use this currently
+
+	static bool StopMultipleProcessInstances(); //stop multi-boxing via shared memory
 
 	void SetErrorCode(Error err) { this->LastError = err; }
 	Error GetErrorCode() { return this->LastError; }
