@@ -63,6 +63,8 @@ namespace UACServer.Network
                 return false;
             }
 
+
+            Console.WriteLine("Heartbeat from client {0} was successful", c.id);
             return true;
         }
 

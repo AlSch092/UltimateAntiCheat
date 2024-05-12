@@ -23,10 +23,8 @@ namespace UACServer.Network
             listener.Start();
             isRunning = true;
 
-            Logger.Log("UACServer.log", "Server started. Listening for connections...");
-
-            // Start accepting client connections asynchronously
-            listener.BeginAcceptTcpClient(HandleClientConnected, null);
+            Logger.Log("UACServer.log", "Server started. Listening for connections...");  
+            listener.BeginAcceptTcpClient(HandleClientConnected, null); //listen for client connections asynchronously
         }
 
         private void HandleClientConnected(IAsyncResult result)
@@ -39,17 +37,16 @@ namespace UACServer.Network
             Logger.Log("UACServer.log", $"Client connected: {((IPEndPoint)client.Client.RemoteEndPoint).Address}");
 
             AntiCheatClient c = new AntiCheatClient();
+            c.id = new Random().Next(0, int.MaxValue); //right now not concerned about duplicate id's, chance is very low to encounter this
             c.net_client = client;
             c.ip_addr = ((IPEndPoint)client.Client.RemoteEndPoint).Address;
             c.connected_at = Environment.TickCount;
             this.clients.Add(c);
 
-            // Start asynchronously listening for messages from this client
             byte[] buffer = new byte[1024];
             client.GetStream().BeginRead(buffer, 0, buffer.Length, HandleMessageReceived, new object[] { client, buffer });
 
-            // Continue accepting more client connections
-            listener.BeginAcceptTcpClient(HandleClientConnected, null);
+            listener.BeginAcceptTcpClient(HandleClientConnected, null); //Continue accepting more client connections
         }
 
         private void HandleMessageReceived(IAsyncResult result)
@@ -57,7 +54,7 @@ namespace UACServer.Network
             if (!isRunning)
                 return;
 
-            const int heartbeatDelay = 60000;
+            const int heartbeatDelay = 60000; //1 minute between hb's
 
             object[] asyncState = (object[])result.AsyncState;
             TcpClient client = (TcpClient)asyncState[0];
@@ -73,6 +70,8 @@ namespace UACServer.Network
             catch (IOException ex)
             {
                 Logger.Log("UACServer.log", "IOExcpetion @ HandleMessageReceived(): " + ex.Message);
+                Console.WriteLine("Removing client from list");
+                this.clients.Remove(c);
                 return;
             }
 

@@ -7,6 +7,8 @@ namespace UACServer
 {
     public class AntiCheatClient
     {
+        public int id; //unique id
+
         public IPAddress ip_addr;
 
         public bool flagged_cheater = false;
