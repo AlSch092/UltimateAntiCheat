@@ -27,4 +27,4 @@ UltimateAntiCheat is an open-source anti-cheat system made to detect and prevent
 - Finalization of client/Server integration with anticheat class
 
 ## Enabling/Disabling Networking:
-Networking is currently being added to the project, and the server can be found in the `Server` folder as its own solution. Using networking will be optional, and can be turned on/off through the variable `bool serverAvailable` in the file `API/API.hpp`. If you choose to use networking, please follow the instructions in the README.md file of the server.
+Networking is currently being added to the project; the server can be found in the `Server` folder as its own solution. Using networking is optional, and can be turned on/off through the variable `bool serverAvailable` in the file `API/API.hpp`. If you choose to use networking, please follow the instructions in the README.md file of the server.
