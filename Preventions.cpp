@@ -209,7 +209,7 @@ bool Preventions::StopMultipleProcessInstances()
         return false;
     }
 
-    if (*pIsRunning != 1337) //duplicate instance found, these instructions can be obfuscated if desired
+    if (*pIsRunning == 1337) //duplicate instance found, these instructions can be obfuscated if desired
     {
         UnmapViewOfFile(pIsRunning);
         CloseHandle(hSharedMemory);
