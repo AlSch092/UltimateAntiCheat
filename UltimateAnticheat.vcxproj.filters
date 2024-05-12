@@ -19,9 +19,6 @@
     <Filter Include="AntiTamper">
       <UniqueIdentifier>{d2542090-c5d1-49f9-8ffa-d5745fd61d56}</UniqueIdentifier>
     </Filter>
-    <Filter Include="AntiInject">
-      <UniqueIdentifier>{aa93b31b-4bac-4335-aa97-475a967a5744}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Common">
       <UniqueIdentifier>{9f684714-af94-441a-baa6-d14b6d80c9dc}</UniqueIdentifier>
     </Filter>
@@ -175,6 +172,9 @@
     </ClInclude>
     <ClInclude Include="Common\Globals.hpp">
       <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Network\Packets\PacketReader.hpp">
+      <Filter>Network\Packets</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
