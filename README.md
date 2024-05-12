@@ -9,7 +9,7 @@ UltimateAntiCheat is an open-source anti-cheat system made to detect and prevent
    If there is anything not working for you (throws exceptions, can't build, etc) please raise an issue and I will answer it ASAP. If you have code suggestions or techniques you'd like to see added, or want assistance with adding anti-cheat to your game, please send me an email. More techniques and better design will be added to the project time permitting. The file changelog.md contains a dated updates list.
 
 ## Current Detections and protective features:
-- Detects unsigned Modules 
+- Detects unsigned modules loaded into the process
 - Debugger detection (hardware, PEB, exceptions, kernelmode)
 - Integrity checks on program memory (.text section checks, WINAPI hook checks, IAT hook checks)
 - Remapping sections & re-re-mapping checks (anti-tamper)
@@ -22,6 +22,7 @@ UltimateAntiCheat is an open-source anti-cheat system made to detect and prevent
 - Check for if Windows is in 'Test Signing mode'
 - TLS Callback spoofing (changing TLS callbacks @ runtime)
 - Networked heartbeat system to ensure client is running the AC module (currently in-progress)
+- Stops multiple instances of the process from being run by mapping shared memory
 
 ## Upcoming Features:
 - Finalization of client/Server integration with anticheat class
