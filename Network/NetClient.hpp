@@ -30,6 +30,7 @@ public:
 	{
 		HandshakeCompleted = false;
 		Initialized = false;
+		RecvLoopThread = new Thread();
 	}
 
 	NetClient(const char* serverEndpoint, uint16_t port)
@@ -39,6 +40,12 @@ public:
 
 		HandshakeCompleted = false;
 		Initialized = false;
+		RecvLoopThread = new Thread();
+	}
+
+	~NetClient()
+	{
+		delete RecvLoopThread;
 	}
 
 	static void ProcessRequests(LPVOID Param); //calls recv in a loop to handle requests, and if this routine is not running the program should be exited
@@ -63,6 +70,8 @@ public:
 	string GetConnectedIP() { return this->Ip; }
 	uint16_t GetConnectedPort() { return this->Port; }
 
+	Thread* GetRecvThread() { return this->RecvLoopThread; }
+
 private:
 
 	const int HeartbeatSize = 128;
@@ -83,7 +92,7 @@ private:
 
 	Error LastError = Error::OK;
 
-	HANDLE RecvLoopThread = NULL;
+	Thread* RecvLoopThread = NULL;
 	DWORD recvThreadId = 0;
 };
 

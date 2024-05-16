@@ -10,6 +10,7 @@ Error NetClient::Initialize(string ip, uint16_t port, string gameCode)
 	WSADATA wsaData;
 	SOCKET Socket = INVALID_SOCKET;
 	SOCKADDR_IN SockAddr;
+	Error result = Error::OK;
 
 	this->HardwareID = this->GetHardwareID();
 
@@ -47,10 +48,23 @@ Error NetClient::Initialize(string ip, uint16_t port, string gameCode)
 		return Error::CANT_SEND;
 	}
 
-	this->RecvLoopThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&NetClient::ProcessRequests, this, 0, &this->recvThreadId); //todo: change RecvLoopThread to Thread* class obj
+	Thread* RecvThread = GetRecvThread();
 
-	if (this->RecvLoopThread == NULL || this->recvThreadId == NULL)
+	if (RecvThread == NULL)
 	{
+		Logger::logf("UltimateAnticheat.log", Err, "RecvThread was NULL @ NetClient::Initialize");
+		closesocket(Socket);
+		WSACleanup();
+		shutdown(Socket, 0);
+		return Error::GENERIC_FAIL;
+	}
+
+	RecvThread->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&NetClient::ProcessRequests, this, 0, &RecvThread->Id); //todo: change RecvLoopThread to Thread* class obj
+
+	if (RecvThread->handle == NULL || RecvThread->handle == INVALID_HANDLE_VALUE)
+	{
+		Logger::logf("UltimateAnticheat.log", Err, "Couldn't create recvThread @ NetClient::Initialize");
+
 		return Error::NO_RECV_THREAD;
 	}
 	
@@ -138,6 +152,11 @@ void NetClient::ProcessRequests(LPVOID Param)
 
 	while (receiving)
 	{
+		if (Client->GetRecvThread()->ShutdownSignalled)
+		{
+			goto end;
+		}
+
 		SOCKET s = Client->GetClientSocket();
 
 		if (s)
@@ -161,6 +180,11 @@ void NetClient::ProcessRequests(LPVOID Param)
 
 		Sleep(ms_between_loops);
 	}
+
+end:
+	closesocket(Client->GetClientSocket());
+	WSACleanup();
+	shutdown(Client->GetClientSocket(), 0);
 }
 
 /*
@@ -421,7 +445,7 @@ __forceinline const char* NetClient::MakeHeartbeat(string cookie)
 	byte* b = (byte*)cookie.c_str();
 
 	byte Transformer = 0x18; //the heartbeat response is the request xor'd with Transformer, transformer is added to by each value of the request
-							 //once this is confirmed working well we can try to implement something more complex
+							 //once this is confirmed working properly we can try to implement something more complex
 
 	char* HeartbeatResponse = new char[128] {0};
 
