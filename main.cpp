@@ -55,6 +55,11 @@ int main(int argc, char** argv)
         return 0;
     }
 
+    if (AC->IsAnyThreadSuspended()) //make sure that all our necessary threads aren't suspended by an attacker
+    {
+        Logger::logf("UltimateAnticheat.log", Detection, "Atleast one of our threads was found suspended");
+    }
+
     UnmanagedGlobals::SupressingNewThreads = AC->GetBarrier()->IsPreventingThreads();
 
     cout << "\n-----------------------------------------------------------------------------------------\n";
@@ -167,7 +172,7 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 
             if (UnmanagedGlobals::SupressingNewThreads)
             {
-                Logger::logf("UltimateAnticheat.log", Info, " Stopping rogue thread from being created @ TLSCallback: %d\n", GetLastError());
+                Logger::logf("UltimateAnticheat.log", Info, " Stopping unknown thread from being created @ TLSCallback: %d\n", GetLastError());
                 ExitThread(0); //we can stop DLL injecting + DLL debuggers (such as VEH debugger) this way, but make sure you're handling your threads carefully
             }
 

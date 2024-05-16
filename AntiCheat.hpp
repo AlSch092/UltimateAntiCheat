@@ -39,11 +39,29 @@ public:
 	Preventions* GetBarrier() { return this->Barrier;  }
 	Detections* GetMonitor() { return this->Monitor; }
 
+	bool IsAnyThreadSuspended()
+	{
+		if (Thread::IsThreadSuspended(Monitor->GetMonitorThread()->handle))
+		{
+			return true;
+		}
+		else if (Thread::IsThreadSuspended(_AntiDebugger->GetDetectionThreadHandle()))
+		{
+			return true;
+		}
+		else if (Thread::IsThreadSuspended(Client->GetRecvThread()->handle))
+		{
+			return true;
+		}
+
+		return false;
+	}
+
 private:
 
 	Detections* Monitor = NULL;
 	Preventions* Barrier = NULL;
 	Debugger::AntiDebug* _AntiDebugger = NULL;
 
-	NetClient* Client = NULL;
+	NetClient* Client = NULL; //for client-server comms
 };
