@@ -17,18 +17,26 @@ bool Thread::IsThreadRunning(HANDLE threadHandle)
     return false;
 }
 
+/*
+    IsThreadSuspended - checks if a thread is suspending it by attempting to suspend it
+    has its drawbacks since it suspends threads, but it works fine
+*/
 bool Thread::IsThreadSuspended(HANDLE threadHandle)
 {
-    if (threadHandle == NULL)
-        return false;
+    DWORD suspendCount = SuspendThread(threadHandle); //OS handles suspend count so we can't fetch this from memory in the current process
 
-    CONTEXT context;
-    context.ContextFlags = CONTEXT_ALL;
-    if (GetThreadContext(threadHandle, &context))
+    if (suspendCount == (DWORD)-1)
     {
-        return (context.ContextFlags == CONTEXT_CONTROL && context.ContextFlags != 0);
+        return false;
     }
-
-    Logger::logf("UltimateAnticheat.log", Err, "GetExitCodeThread failed @ IsThreadSuspended: %d\n", GetLastError());
-    return false;
+    else if (suspendCount > 0)
+    {
+        ResumeThread(threadHandle);
+        return true;
+    }
+    else
+    {
+        ResumeThread(threadHandle);
+        return false;
+    }  
 }

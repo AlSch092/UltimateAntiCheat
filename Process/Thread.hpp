@@ -3,6 +3,7 @@
 #include <windows.h>
 #include "../Logger.hpp"
 
+
 /*
 	Thread class represents a process thread, we aim to track threads in our process such that we can determine possible rogue threads
 	Any helper functions related to threads are also defined in this class
