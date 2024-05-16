@@ -10,7 +10,7 @@ UltimateAntiCheat is an open-source anti-cheat system made to detect and prevent
 
 ## Current Detections and protective features:
 - Detects unsigned modules loaded into the process
-- Debugger detection (hardware, PEB, exceptions, kernelmode)
+- Debugger detection (hardware/DR, PEB, VEH, kernelmode)
 - Integrity checks on program memory (.text section checks, WINAPI hook checks, IAT hook checks)
 - Remapping sections & re-re-mapping checks (anti-tamper)
 - TLS Callback (anti-DLL injection)
@@ -20,12 +20,9 @@ UltimateAntiCheat is an open-source anti-cheat system made to detect and prevent
 - Exported function names random renaming (process manipulation, anti-injection)
 - Data/obfuscation class to help hide sensitive variables
 - Check for if Windows is in 'Test Signing mode'
-- TLS Callback spoofing (changing TLS callbacks @ runtime)
-- Networked heartbeat system to ensure client is running the AC module (currently in-progress)
+- TLS Callback spoofing (changing TLS callbacks at runtime)
+- Networked heartbeat system to ensure client is running the AC module
 - Stops multiple instances of the process from being run by mapping shared memory
-
-## Upcoming Features:
-- Finalization of client/Server integration with anticheat class
 
 ## Enabling/Disabling Networking:
 Networking is currently being added to the project; the server can be found in the `Server` folder as its own solution. Using networking is optional, and can be turned on/off through the variable `bool serverAvailable` in the file `API/API.hpp`. If you choose to use networking, please follow the instructions in the README.md file of the server.
