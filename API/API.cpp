@@ -57,6 +57,12 @@ Error API::Cleanup(AntiCheat* AC)
 		WaitForSingleObject(AC->GetMonitor()->GetMonitorThread()->handle, 6000); //this thread normally sleeps for 5000ms each loop, so we wait 6000ms for good measures
 	}
 
+	if (AC->GetNetworkClient()->GetRecvThread() != NULL) //stop anti-cheat monitor thread
+	{
+		AC->GetNetworkClient()->GetRecvThread()->ShutdownSignalled = true;
+		WaitForSingleObject(AC->GetMonitor()->GetMonitorThread()->handle, 5000); //this thread normally sleeps for 5000ms each loop, so we wait 6000ms for good measures
+	}
+
 	delete AC;
 	return Error::OK;
 }
