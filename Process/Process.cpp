@@ -110,12 +110,12 @@ bool Process::HasExportedFunction(string dllName, string functionName)
 }
 
 /*
-    GetSections - gathers a list of Module::Section* from the current process
-    returns list<Module::Section*>*, and an empty list if the routine fails
+    GetSections - gathers a list of ProcessData::Section* from the current process
+    returns list<ProcessData::Section*>*, and an empty list if the routine fails
 */
-list<Module::Section*>* Process::GetSections(string module)
+list<ProcessData::Section*>* Process::GetSections(string module)
 {
-    list<Module::Section*>* Sections = new list<Module::Section*>();
+    list<ProcessData::Section*>* Sections = new list<ProcessData::Section*>();
 
     PIMAGE_SECTION_HEADER sectionHeader;
     HINSTANCE hInst = NULL;  
@@ -139,7 +139,7 @@ list<Module::Section*>* Process::GetSections(string module)
 
     for (int i = 0; i < nSections; i++)
     {
-        Module::Section* s = new Module::Section();
+        ProcessData::Section* s = new ProcessData::Section();
 
         s->address = sectionHeader[i].VirtualAddress;
 
@@ -582,16 +582,16 @@ BYTE* Process::GetBytesAtAddress(UINT64 address, UINT size) //remember to free b
 
 /*
     GetIATEntries -Returns a list of ImportFunction* from the program IAT , for later hook checks
-    returns a list of Module::ImportFunction* such that lists can be compared for modifications 
+    returns a list of ProcessData::ImportFunction* such that lists can be compared for modifications 
 */
-list<Module::ImportFunction*> Process::GetIATEntries() 
+list<ProcessData::ImportFunction*> Process::GetIATEntries() 
 {
     HMODULE hModule = GetModuleHandleW(NULL);
 
     if (hModule == NULL)
     {
         Logger::logf("UltimateAnticheat.log", Err, "Couldn't fetch module handle @ Process::GetIATEntries ");
-        return (list<Module::ImportFunction*>)NULL;
+        return (list<ProcessData::ImportFunction*>)NULL;
     }
 
     IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER*)hModule;
@@ -599,13 +599,13 @@ list<Module::ImportFunction*> Process::GetIATEntries()
     if (dosHeader == nullptr)
     {
         Logger::logf("UltimateAnticheat.log", Err, "Couldn't fetch dosHeader @ Process::GetIATEntries ");
-        return (list<Module::ImportFunction*>)NULL;
+        return (list<ProcessData::ImportFunction*>)NULL;
     }
 
     IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((BYTE*)hModule + dosHeader->e_lfanew);
     IMAGE_IMPORT_DESCRIPTOR* importDesc = (IMAGE_IMPORT_DESCRIPTOR*)((BYTE*)hModule + ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
 
-    list <Module::ImportFunction*> importList;
+    list <ProcessData::ImportFunction*> importList;
 
     while (importDesc->OriginalFirstThunk != 0) 
     {    
@@ -618,7 +618,7 @@ list<Module::ImportFunction*> Process::GetIATEntries()
 
         while (iat->u1.AddressOfData != 0) 
         {
-            Module::ImportFunction* import = new Module::ImportFunction();
+            ProcessData::ImportFunction* import = new ProcessData::ImportFunction();
             import->AssociatedModuleName = dllName;
             import->Module = GetModuleHandleA(dllName);
             import->AddressOfData = iat->u1.AddressOfData;         
@@ -670,7 +670,7 @@ bool Process::FillModuleList()
 
         for (unsigned int i = 0; i < (cbNeeded / sizeof(HMODULE)); i++) 
         {
-            Module::MODULE_DATA* module = new Module::MODULE_DATA();
+            ProcessData::MODULE_DATA* module = new ProcessData::MODULE_DATA();
             
             TCHAR szModuleName[MAX_PATH];
             MODULEINFO moduleInfo;
@@ -805,4 +805,72 @@ FARPROC Process::_GetProcAddress(LPCSTR Module, LPCSTR lpProcName)
     }
 
     return (FARPROC)AddressFound;
+}
+
+/*
+    GetProcessHandles - fetches all open handles from the current process as a list<> object
+    returns a list of PSYSTEM_HANDLE_INFORMATION on success, nullptr on failure
+*/
+list<ProcessData::SYSTEM_HANDLE>* Process::GetProcessHandles(DWORD processId)
+{
+    if (processId == 0)
+        return nullptr;
+
+    list<ProcessData::SYSTEM_HANDLE>* HandleList = new list<ProcessData::SYSTEM_HANDLE>();
+
+    HMODULE hNtDll = GetModuleHandle(TEXT("ntdll.dll"));
+    if (hNtDll == NULL)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to get handle to ntdll.dll @ GetProcessHandles");
+        delete HandleList;
+        return nullptr;
+    }
+
+    ProcessData::pfnNtQuerySystemInformation pNtQuerySystemInformation = (ProcessData::pfnNtQuerySystemInformation)GetProcAddress(hNtDll, "NtQuerySystemInformation");
+    if (pNtQuerySystemInformation == NULL) 
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to get address of NtQuerySystemInformation @ GetProcessHandles");
+        delete HandleList;
+        return nullptr;
+    }
+
+    ULONG bufferSize = 0x10000; // Start with a 64KB buffer
+    ProcessData::PSYSTEM_HANDLE_INFORMATION pHandleInfo = NULL;
+    NTSTATUS status = 0;
+
+    do 
+    {
+        pHandleInfo = (ProcessData::PSYSTEM_HANDLE_INFORMATION)realloc(pHandleInfo, bufferSize);
+        if (pHandleInfo == NULL)
+        {
+            Logger::logf("UltimateAnticheat.log", Err, "Failed to allocate memory @ GetProcessHandles");
+            delete HandleList;
+            return nullptr;
+        }
+
+        // Query system handle information
+        status = pNtQuerySystemInformation(SystemHandleInformation, pHandleInfo, bufferSize, &bufferSize);
+    } while (status == STATUS_INFO_LENGTH_MISMATCH);
+
+    if (status != 0) 
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "NtQuerySystemInformation failed: 0x%08X\n", status);
+        free(pHandleInfo);
+        delete HandleList;
+        return nullptr;
+    }
+
+    int nHandles = 0;
+
+    for (ULONG i = 0; i < pHandleInfo->NumberOfHandles; ++i) 
+    {
+        if (pHandleInfo->Handles[i].ProcessId == GetCurrentProcessId())
+        {
+            HandleList->push_back(pHandleInfo->Handles[i]);
+            nHandles++;
+        }
+    }
+
+    free(pHandleInfo);
+    return HandleList;
 }

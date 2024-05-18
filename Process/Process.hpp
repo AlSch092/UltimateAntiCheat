@@ -1,6 +1,5 @@
 //Process.hpp by Alsch092 @ Github
 #pragma once
-#define _CRT_SECURE_NO_WARNINGS
 #include "PEB.hpp"
 #include "Thread.hpp"
 #include "../Logger.hpp"
@@ -13,14 +12,19 @@
 
 using namespace std;
 
+#define _CRT_SECURE_NO_WARNINGS
+
 #define MAX_DLLS_LOADED 128
 #define MAX_FILE_PATH_LENGTH 512
 
-namespace Module
+#define SystemHandleInformation 16
+#define STATUS_INFO_LENGTH_MISMATCH ((NTSTATUS)0xC0000004L)
+
+namespace ProcessData
 {
 	struct MODULE_DATA
 	{
-		wchar_t name[MAX_FILE_PATH_LENGTH]; //this could potentially buffer overflow if a large length path is provided, should be changed to dynamic alloc
+		wchar_t name[MAX_FILE_PATH_LENGTH];
 		MODULEINFO dllInfo;
 		HMODULE hModule;
 	};
@@ -50,8 +54,30 @@ namespace Module
 		std::string FunctionName;
 		UINT64 AddressOfData;
 	};
+
+	typedef NTSTATUS(WINAPI* pfnNtQuerySystemInformation)(ULONG SystemInformationClass, PVOID SystemInformation, ULONG SystemInformationLength, PULONG ReturnLength);
+
+	typedef struct _SYSTEM_HANDLE
+	{
+		ULONG       ProcessId;
+		BYTE        ObjectTypeNumber;
+		BYTE        Flags;
+		USHORT      Handle;
+		PVOID       Object;
+		ACCESS_MASK GrantedAccess;
+	} SYSTEM_HANDLE, * PSYSTEM_HANDLE;
+
+	typedef struct _SYSTEM_HANDLE_INFORMATION
+	{
+		ULONG NumberOfHandles;
+		SYSTEM_HANDLE Handles[1];
+	} SYSTEM_HANDLE_INFORMATION, * PSYSTEM_HANDLE_INFORMATION;
 }
 
+/*
+	The `Process` class provides a representation of the current process and provides several static utility functions
+	Aspects of a process such as sections, modules, threads, etc are contained in this class
+*/
 class Process
 {
 public:
@@ -68,13 +94,13 @@ public:
 
 	~Process()
 	{
-		for (Module::MODULE_DATA* s : ModuleList)
+		for (ProcessData::MODULE_DATA* s : ModuleList)
 			delete s;
 	}
 
 	uint32_t GetMemorySize();
 
-	static list<Module::Section*>* GetSections(string module);
+	static list<ProcessData::Section*>* GetSections(string module);
 
 	_MYPEB* GetPEB() { return (_MYPEB*)__readgsqword(0x60); }
 
@@ -114,7 +140,9 @@ public:
 
 	static DWORD GetModuleSize(HMODULE module);
 
-	static list<Module::ImportFunction*> GetIATEntries(); //start of IAT hook checks
+	static list<ProcessData::ImportFunction*> GetIATEntries(); //start of IAT hook checks
+
+	static list<ProcessData::SYSTEM_HANDLE>* GetProcessHandles(DWORD processId);
 
 	bool FillModuleList();
 
@@ -132,9 +160,9 @@ private:
 	wstring _ParentProcessName;
 	uint32_t _ParentProcessId = 0;
 
-	list<Module::Section*> _sections;
+	list<ProcessData::Section*> _sections;
 
-	list<Module::MODULE_DATA*> ModuleList; //todo: make routine to fill this member
+	list<ProcessData::MODULE_DATA*> ModuleList; //todo: make routine to fill this member
 
 	bool _Elevated;
 };
