@@ -122,6 +122,7 @@ public:
 	static bool ChangeImageSize(DWORD newImageSize);
 	static bool ChangeSizeOfCode(DWORD newSizeOfCode);
 	static bool ChangeImageBase(UINT64 newImageBase);
+	static bool ChangeNumberOfSections(string module, DWORD newSectionsCount);
 	static bool ModifyTLSCallbackPtr(UINT64 NewTLSFunction);
 	static void RemovePEHeader(HANDLE moduleBase);
 

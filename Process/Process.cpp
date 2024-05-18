@@ -341,8 +341,8 @@ bool Process::ChangeImageSize(DWORD newEntry)
 }
 
 /*
-ChangeSizeOfCode - modifies the `OptionalHeader.SizeOfCode` in the NT headers to throw off runtime querying by attackers
-returns true on success
+    ChangeSizeOfCode - modifies the `OptionalHeader.SizeOfCode` in the NT headers to throw off runtime querying by attackers
+    returns true on success
 */
 bool Process::ChangeSizeOfCode(DWORD newEntry) //modify the 'sizeofcode' variable in the optionalheader
 {
@@ -385,6 +385,49 @@ bool Process::ChangeSizeOfCode(DWORD newEntry) //modify the 'sizeofcode' variabl
     }
     
     return false;
+}
+
+/*
+    ChangeNumberOfSections - changes the number of sections in the NT Headers to `newSectionsCount`, which can stop attackers from traversing sections in our program
+    returns true on success
+*/
+bool Process::ChangeNumberOfSections(string module, DWORD newSectionsCount)
+{
+    PIMAGE_SECTION_HEADER sectionHeader = 0;
+    HINSTANCE hInst = NULL;
+    PIMAGE_DOS_HEADER pDoH = 0;
+    PIMAGE_NT_HEADERS64 pNtH = 0;
+
+    hInst = GetModuleHandleA(module.c_str());
+
+    pDoH = (PIMAGE_DOS_HEADER)(hInst);
+
+    if (pDoH == NULL || hInst == NULL)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, " PIMAGE_DOS_HEADER or hInst was NULL @ Process::ChangeNumberOfSections");
+        return false;
+    }
+
+    pNtH = (PIMAGE_NT_HEADERS64)((PIMAGE_NT_HEADERS64)((PBYTE)hInst + (DWORD)pDoH->e_lfanew));
+    sectionHeader = IMAGE_FIRST_SECTION(pNtH);
+
+    DWORD dwOldProt = 0;
+
+    if (!VirtualProtect((LPVOID)&pNtH->FileHeader.NumberOfSections, sizeof(DWORD), PAGE_EXECUTE_READWRITE, &dwOldProt))
+    {
+        Logger::logf("UltimateAnticheat.log", Err, " VirtualProtect failed @ Process::ChangeNumberOfSections");
+        return false;
+    }
+
+    memcpy((void*)&pNtH->FileHeader.NumberOfSections, (void*)&newSectionsCount, sizeof(DWORD));
+
+    if (!VirtualProtect((LPVOID)&pNtH->FileHeader.NumberOfSections, sizeof(DWORD), dwOldProt, &dwOldProt))
+    {
+        Logger::logf("UltimateAnticheat.log", Err, " VirtualProtect (2nd call) failed @ Process::ChangeNumberOfSections");
+        return false;
+    }
+
+    return true;
 }
 
 /*
@@ -453,7 +496,8 @@ DWORD Process::GetParentProcessId()
 
         do 
         {
-            if (pe32.th32ProcessID == pid) {
+            if (pe32.th32ProcessID == pid) 
+            {
                 ppid = pe32.th32ParentProcessID;
                 break;
             }
