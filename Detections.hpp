@@ -6,6 +6,11 @@
 #include "Obscure/Obfuscation.hpp"
 #include "Common/Globals.hpp"
 
+__forceinline char XOR(char a, unsigned char key)
+{
+	return a ^= key;
+}
+
 class Detections
 {
 public:
@@ -15,7 +20,7 @@ public:
 		_Services = new Services(FALSE);
 		integrityChecker = new Integrity();
 
-		BlacklistedProcesses.push_back(L"Cheat Engine.exe"); //these strings can be encrypted for better hiding ability
+		BlacklistedProcesses.push_back(L"Cheat Engine.exe"); //todo: hide these strings
 		BlacklistedProcesses.push_back(L"CheatEngine.exe"); //in addition, we can scan for window class names, possible exported functions, specific text inside windows, etc.
 		BlacklistedProcesses.push_back(L"cheatengine-x86_64-SSE4-AVX2.exe");	
 		BlacklistedProcesses.push_back(L"x64dbg.exe");
@@ -33,17 +38,17 @@ public:
 		delete _Services;
 		delete integrityChecker;
 
-		if (MonitorThread != NULL)
+		if (MonitorThread != NULL) //by the time this destructor is called the monitorthread should be exited, but adding in a 'thread running' check might still be handy here
 			delete MonitorThread;
 	}
 
-	void SetCheater(BOOL cheating) { this->CheaterWasDetected->SetData((uint8_t)cheating); } //need to confirm this works since after adding obfuscation
+	void SetCheater(BOOL cheating) { this->CheaterWasDetected->SetData((uint8_t)cheating); } //obfuscated bool/int variable
 	BOOL IsUserCheater() { return this->CheaterWasDetected->GetData(); }
 
 	Services* GetServiceManager() { return this->_Services; }
 	Integrity* GetIntegrityChecker() { return this->integrityChecker; }
 
-	list<Module::Section*>* SetSectionHash(const char* module, const char* sectionName);
+	list<ProcessData::Section*>* SetSectionHash(const char* module, const char* sectionName);
 	BOOL CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize);
 
 	static void Monitor(LPVOID thisPtr); //activate all
