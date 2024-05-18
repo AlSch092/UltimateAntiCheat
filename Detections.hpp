@@ -6,11 +6,6 @@
 #include "Obscure/Obfuscation.hpp"
 #include "Common/Globals.hpp"
 
-__forceinline char XOR(char a, unsigned char key)
-{
-	return a ^= key;
-}
-
 class Detections
 {
 public:
@@ -51,7 +46,7 @@ public:
 	list<ProcessData::Section*>* SetSectionHash(const char* module, const char* sectionName);
 	BOOL CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize);
 
-	static void Monitor(LPVOID thisPtr); //activate all
+	static void Monitor(LPVOID thisPtr); //activate all -> thread function
 
 	Thread* GetMonitorThread() { return this->MonitorThread; }
 	void SetMonitorThread(Thread* h) {  this->MonitorThread = h; }
