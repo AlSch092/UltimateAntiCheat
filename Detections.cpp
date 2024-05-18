@@ -49,7 +49,7 @@ void Detections::Monitor(LPVOID thisPtr)
         return;
     }
 
-    list<Module::Section*>* sections = Monitor->SetSectionHash("UltimateAnticheat.exe", ".text"); //set our memory hashes of .text
+    list<ProcessData::Section*>* sections = Monitor->SetSectionHash("UltimateAnticheat.exe", ".text"); //set our memory hashes of .text
 
     if (sections->size() == 0)
     {
@@ -68,10 +68,10 @@ void Detections::Monitor(LPVOID thisPtr)
         return;
     }
 
-    std::list<Module::Section*>::iterator it;
+    std::list<ProcessData::Section*>::iterator it;
     for (it = sections->begin(); it != sections->end(); ++it)
     {
-        Module::Section* s = it._Ptr->_Myval;
+        ProcessData::Section* s = it._Ptr->_Myval;
 
         if (s == nullptr)
             continue;
@@ -135,7 +135,7 @@ void Detections::Monitor(LPVOID thisPtr)
 
         if (Detections::IsTextSectionWritable())
         {
-            Logger::logf("UltimateAnticheat.log", Detection, ".text section was writable, which means someone re-re-mapped our memory regions!");
+            Logger::logf("UltimateAnticheat.log", Detection, ".text section was writable, which means someone re-re-mapped our memory regions! (or you ran this in DEBUG build)");
             Monitor->SetCheater(true);
         }
 
@@ -148,14 +148,14 @@ void Detections::Monitor(LPVOID thisPtr)
 SetSectionHash sets the member variable `_MemorySectionHashes` via SetMemoryHashList() call after finding the `sectionName` named section (.text in our case)
  Returns a list<Section*>  which we can use in later hashing calls to compare sets of these hashes and detect memory tampering within the section
 */
-list<Module::Section*>* Detections::SetSectionHash(const char* moduleName, const char* sectionName)
+list<ProcessData::Section*>* Detections::SetSectionHash(const char* moduleName, const char* sectionName)
 {
     if (moduleName == NULL || sectionName == NULL)
     {
         return nullptr;
     }
 
-    list<Module::Section*>* sections = Process::GetSections(moduleName);
+    list<ProcessData::Section*>* sections = Process::GetSections(moduleName);
     
     UINT64 ModuleAddr = (UINT64)GetModuleHandleA(moduleName);
 
@@ -171,11 +171,11 @@ list<Module::Section*>* Detections::SetSectionHash(const char* moduleName, const
         return nullptr;
     }
 
-    std::list<Module::Section*>::iterator it;
+    std::list<ProcessData::Section*>::iterator it;
 
     for (it = sections->begin(); it != sections->end(); ++it) 
     {
-        Module::Section* s = it._Ptr->_Myval;
+        ProcessData::Section* s = it._Ptr->_Myval;
 
         if (s == nullptr)
             continue;
@@ -230,7 +230,7 @@ BOOL Detections::CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize)
     IsBlacklistedProcessRunning 
     returns TRUE if a blacklisted program is running in the background, blacklisted processes can be found in the class constructor
 */
-BOOL Detections::IsBlacklistedProcessRunning()
+BOOL __forceinline Detections::IsBlacklistedProcessRunning()
 {
     BOOL foundBlacklistedProcess = FALSE;
 
@@ -270,7 +270,7 @@ BOOL Detections::IsBlacklistedProcessRunning()
 *   DoesFunctionAppearHooked - Checks if first bytes of a routine are a jump or call. Please make sure the function you use with this doesnt normally start with a jump or call.
     Returns TRUE if the looked up function contains a jump or call as its first instruction
 */
-BOOL Detections::DoesFunctionAppearHooked(const char* moduleName, const char* functionName)
+BOOL __forceinline Detections::DoesFunctionAppearHooked(const char* moduleName, const char* functionName)
 {
     if (moduleName == nullptr || functionName == nullptr)
     {
@@ -315,11 +315,11 @@ BOOL Detections::DoesFunctionAppearHooked(const char* moduleName, const char* fu
     Until I come up with a better solution, we just check against the common memory range where system DLLs such as kernel32 and ntdll load into (0x00007FF400000000 - 0x00007FFFFFFFFFFF or so)
     if the attacker writes their hooks in the dll's address space then they can get around this detection
 */
-BOOL Detections::DoesIATContainHooked()
+BOOL __forceinline Detections::DoesIATContainHooked()
 {
-    list<Module::ImportFunction*> IATFunctions = Process::GetIATEntries();
+    list<ProcessData::ImportFunction*> IATFunctions = Process::GetIATEntries();
 
-    for (Module::ImportFunction* IATEntry : IATFunctions)
+    for (ProcessData::ImportFunction* IATEntry : IATFunctions)
     {
         DWORD moduleSize = Process::GetModuleSize(IATEntry->Module);
 
@@ -351,7 +351,7 @@ BOOL Detections::DoesIATContainHooked()
 Detections::IsTextSectionWritable() - Simple memory protections check on page in the .text section
     returns TRUE if the page was writable, which imples someone re-re-mapped our process memory and wants to write patches.
 */
-BOOL Detections::IsTextSectionWritable()
+BOOL __forceinline Detections::IsTextSectionWritable()
 {
     UINT64 textAddr = Process::GetSectionAddress(NULL, ".text");
     MEMORY_BASIC_INFORMATION mbi = { 0 };
