@@ -442,6 +442,12 @@ Error NetClient::QueryMemory(uint64_t address, uint32_t size)
 */
 __forceinline const char* NetClient::MakeHeartbeat(string cookie)
 {
+	if (!Process::IsReturnAddressInModule(*(UINT64*)_AddressOfReturnAddress(), NULL)) //return address check
+	{
+		Logger::logf("UltimateAnticheat.log", Detection, "Return address was outside of module @ NetClient::MakeHeartbeat : some attacker might be trying to spoof heartbeats");
+		return nullptr;
+	}
+
 	byte* b = (byte*)cookie.c_str();
 
 	byte Transformer = 0x18; //the heartbeat response is the request xor'd with Transformer, transformer is added to by each value of the request

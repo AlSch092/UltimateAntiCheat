@@ -5,6 +5,7 @@
 #include <list>
 #include <stdint.h>
 #include <string>
+#include <intrin.h>
 
 #include "../Common/Error.hpp"
 #include "../Logger.hpp"
