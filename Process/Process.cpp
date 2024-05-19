@@ -918,3 +918,42 @@ list<ProcessData::SYSTEM_HANDLE>* Process::GetProcessHandles(DWORD processId)
     free(pHandleInfo);
     return HandleList;
 }
+
+/*
+    IsReturnAddressInModule - returns true if RetAddr is module's mem region
+    Used to detect attackers calling our functions such as heartbeat generation, since they may try to spoof or emulate the net client
+*/
+bool Process::IsReturnAddressInModule(UINT64 RetAddr, const wchar_t* module)
+{
+    if (RetAddr == 0)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "RetAddr was 0 @ : Process::IsReturnAddressInModule");
+        return false;
+    }
+
+    HMODULE retBase = 0;
+
+    if (module == NULL)
+    {
+        retBase = (HMODULE)GetModuleHandleW(NULL);
+    }
+    else
+    {
+        retBase = (HMODULE)GetModuleHandleW(module);
+    }
+
+    DWORD size = Process::GetModuleSize(retBase);
+
+    if (size == 0)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "size was 0 @ : Process::IsReturnAddressInModule");
+        return false;
+    }
+
+    if (RetAddr >= (UINT64)retBase && RetAddr < ((UINT64)retBase + size))
+    {
+        return true;
+    }
+
+    return false;
+}

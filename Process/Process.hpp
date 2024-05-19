@@ -147,6 +147,8 @@ public:
 
 	bool FillModuleList();
 
+	static bool IsReturnAddressInModule(UINT64 RetAddr, const wchar_t* module);
+
 private:
 
 	_MYPEB* _PEB = NULL;
