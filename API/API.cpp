@@ -110,7 +110,7 @@ Error API::LaunchDefenses(AntiCheat* AC) //currently in the process to split the
 }
 
 /*
-	Dispatch - handles sending requests through the AntiCheat class `AC`. If building this project as a .dll, you can call this exported routine from your game module to initialize & send heartbeats
+	Dispatch - handles sending requests through the AntiCheat class `AC`, mainly for initialization & cleanup
 	returns Error::OK on successful execution
 */
 Error __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code)
@@ -160,18 +160,4 @@ Error __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code)
 	};
 
 	return errorCode;
-}
-
-/*
-	SendHeartbeat - Generates a 'cookie' based on the server's request and sends it to the connected AC server. Without a solid heartbeat in place, any anticheat can be circumvented without emulation required. Ironically we haven't finished this routine yet.
-	returns Error::OK  on success
-*/
-Error API::SendHeartbeat(AntiCheat* AC) //todo: finish this!
-{
-	if (AC == NULL)
-		return Error::NULL_MEMORY_REFERENCE;
-
-	//use the NetClient class member to send a heartbeat
-
-	return Error::OK;
 }

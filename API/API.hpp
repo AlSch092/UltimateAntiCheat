@@ -27,8 +27,6 @@ namespace API
 
 	Error Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessName, bool isServerConnected);
 	Error Cleanup(AntiCheat* AC);
-	Error SendHeartbeat(AntiCheat* AC);
-
 	Error LaunchDefenses(AntiCheat* AC);
 	
 	Error __declspec(dllexport) Dispatch(AntiCheat* AC, DispatchCode code);
