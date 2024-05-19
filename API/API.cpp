@@ -60,7 +60,7 @@ Error API::Cleanup(AntiCheat* AC)
 	if (AC->GetNetworkClient()->GetRecvThread() != NULL) //stop anti-cheat monitor thread
 	{
 		AC->GetNetworkClient()->GetRecvThread()->ShutdownSignalled = true;
-		WaitForSingleObject(AC->GetMonitor()->GetMonitorThread()->handle, 5000); //this thread normally sleeps for 5000ms each loop, so we wait 6000ms for good measures
+		WaitForSingleObject(AC->GetNetworkClient()->GetRecvThread()->handle, 5000); //this thread normally sleeps for 5000ms each loop, so we wait 6000ms for good measures
 	}
 
 	delete AC;
@@ -125,8 +125,6 @@ Error __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code)
 
 			if (errorCode == Error::OK)
 			{
-				isPostInitialization = true;
-
 				if (LaunchDefenses(AC) != Error::OK)
 				{
 					Logger::logf("UltimateAnticheat.log", Warning, " At least one technique experienced abnormal behavior when launching tests.");

@@ -13,11 +13,9 @@ namespace API
 		CLIENT_EXIT,
 	};
 
-	static bool serverAvailable = false; //change this to false if you don't want to use networking
+	static bool serverAvailable = true; //change this to false if you don't want to use networking
 
-	static bool isPostInitialization = false;
-
-	static const char* ServerEndpoint = "127.0.0.1";
+	static const char* ServerEndpoint = "127.0.0.1"; //change to 0.0.0.0 if you want to host remotely
 	static unsigned short ServerPort = 5445;
 #ifdef _DEBUG
 	static const wchar_t* whitelistedParentProcess = L"VsDebugConsole.exe"; //if debugging in VS, otherwise change to explorer.exe
@@ -29,7 +27,7 @@ namespace API
 	Error Cleanup(AntiCheat* AC);
 	Error LaunchDefenses(AntiCheat* AC);
 	
-	Error __declspec(dllexport) Dispatch(AntiCheat* AC, DispatchCode code);
+	Error __declspec(dllexport) Dispatch(AntiCheat* AC, DispatchCode code); //incase the user wants to build as a .dll, we export this routine to expose the AntiCheat class to a host game process
 }
 
 
