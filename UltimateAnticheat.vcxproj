@@ -50,7 +50,6 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
@@ -143,6 +142,10 @@
       <AdditionalDependencies>ntdll.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <TreatLinkerWarningAsErrors>false</TreatLinkerWarningAsErrors>
     </Link>
+    <PostBuildEvent>
+      <Command>copy "$(ProjectDir)\splash.png" "$(ProjectDir)\..\x64\Debug\splash.png"</Command>
+      <Message>Copy Splash Image</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -161,6 +164,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>ntdll.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy "$(ProjectDir)\splash.png" "$(ProjectDir)\..\x64\Release\splash.png"</Command>
+      <Message>Copy Splash Image</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AntiDebug\AntiDebugger.cpp" />
@@ -181,6 +188,7 @@
     <ClCompile Include="Process\Process.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Process\Thread.cpp" />
+    <ClCompile Include="SplashScreen.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AntiCheat.hpp" />
@@ -208,6 +216,7 @@
     <ClInclude Include="Process\PEB.hpp" />
     <ClInclude Include="Process\Process.hpp" />
     <ClInclude Include="Process\Thread.hpp" />
+    <ClInclude Include="SplashScreen.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

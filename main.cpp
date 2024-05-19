@@ -11,6 +11,7 @@
 #pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper)
 
 #include "API/API.hpp"
+#include "SplashScreen.hpp"
 
 void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
 void NTAPI __stdcall FakeTLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
@@ -38,7 +39,11 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
+    const int MillisecondsBeforeShutdown = 60000;
+
     SetConsoleTitle(L"Ultimate Anti-Cheat");
+
+    CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Splash::InitializeSplash, 0, 0, 0); //open splash window
 
     cout << "----------------------------------------------------------------------------------------------------------\n";
     cout << "|                               Welcome to Ultimate Anti-Cheat!                                          |\n";
@@ -51,13 +56,13 @@ int main(int argc, char** argv)
     if (API::Dispatch(AC, API::DispatchCode::INITIALIZE) != Error::OK) //initialize AC , this will start all detections + preventions
     {
         Logger::logf("UltimateAnticheat.log", Err, "Could not initialize program: API::Dispatch failed. Shutting down.");
-        system("pause");
-        return 0;
+        goto cleanup;
     }
 
     if (AC->IsAnyThreadSuspended()) //make sure that all our necessary threads aren't suspended by an attacker
     {
-        Logger::logf("UltimateAnticheat.log", Detection, "Atleast one of our threads was found suspended");
+        Logger::logf("UltimateAnticheat.log", Detection, "Atleast one of our threads was found suspended! All threads must be running for proper module functionality.");
+        goto cleanup;
     }
 
     UnmanagedGlobals::SupressingNewThreads = AC->GetBarrier()->IsPreventingThreads();
@@ -65,14 +70,14 @@ int main(int argc, char** argv)
     cout << "\n-----------------------------------------------------------------------------------------\n";
     cout << "All protections have been deployed, the program will now loop using its detection methods. Thanks for your interest in the project!\n\n";
 
-    const int MillisecondsBeforeShutdown = 60000;
-
     Sleep(MillisecondsBeforeShutdown); //let the other threads run for a bit to display monitoring, normally the game's main loop would be here but instead we will wait 60s
 
     if (AC->GetMonitor()->IsUserCheater())
     {
         Logger::logf("UltimateAnticheat.log", Info, "Detected a cheater in first %d milliseconds of runtime", MillisecondsBeforeShutdown);
     }
+
+cleanup: //jump to here on any error with AC initialization
 
     if (API::Dispatch(AC, API::DispatchCode::CLIENT_EXIT) == Error::OK) //clean up memory & threads
     {
@@ -146,7 +151,8 @@ void UnmanagedGlobals::RemoveThread(DWORD tid)
 
 /*
 The TLS callback triggers on process + thread attachment & detachment, which means we can catch any threads made by an attacker in our process space.
-We can end attacker threads using ExitThread(), and let in our threads which are managed. An attacker can circumvent this by modifying the pointers to TLS callbacks which the program usually keeps track of
+We can end attacker threads using ExitThread(), and let in our threads which are managed.
+...An attacker can circumvent this by modifying the pointers to TLS callbacks which the program usually keeps track of, which requires re-remapping
 */
 void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 {
@@ -187,7 +193,6 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 
 /*
     FakeTLSCallback - Sets the TLS callback at runtime to something different than what was specified at compile time.
-    ...Seems to work fine with no issues when testing!
 */
 void NTAPI __stdcall FakeTLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved) // todo: check if TLSCallback ptr has been changed @ runtime, if so end the program with a detected cheater
 {
