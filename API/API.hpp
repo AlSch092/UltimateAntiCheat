@@ -13,7 +13,7 @@ namespace API
 		CLIENT_EXIT,
 	};
 
-	static bool serverAvailable = true; //change this to false if you don't want to use networking
+	static bool serverAvailable = false; //change this to false if you don't want to use networking
 
 	static const char* ServerEndpoint = "127.0.0.1"; //change to 0.0.0.0 if you want to host remotely
 	static unsigned short ServerPort = 5445;
