@@ -13,7 +13,7 @@ UltimateAntiCheat is an open-source anti-cheat system made to detect and prevent
 - Debugger detection (hardware/DR, PEB, VEH, kernelmode)
 - Integrity checks on program memory (.text section checks, WINAPI hook checks, IAT hook checks)
 - Remapping sections & re-re-mapping checks (anti-tamper)
-- TLS Callback (anti-DLL injection)
+- TLS Callback (anti-DLL/shellcode injection)
 - Parent process check
 - Blacklisted Processes checks & whitelisted loaded modules check
 - Loaded module name random renaming (process manipulation)
