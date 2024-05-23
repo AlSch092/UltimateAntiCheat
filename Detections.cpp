@@ -139,6 +139,12 @@ void Detections::Monitor(LPVOID thisPtr)
             Monitor->SetCheater(true);
         }
 
+        if (Detections::CheckOpenHandles())
+        {
+            Logger::logf("UltimateAnticheat.log", Detection, ".text section was writable, which means someone re-re-mapped our memory regions! (or you ran this in DEBUG build)");
+            Monitor->SetCheater(true);
+        }
+
         Sleep(MonitorLoopMilliseconds);
     }
 
@@ -370,4 +376,26 @@ BOOL __forceinline Detections::IsTextSectionWritable()
     }
 
     return FALSE;
+}
+
+/*
+    CheckOpenHandles - Checks if any processes have open handles to our process
+    returns true if some other process has an open process handle to the current process
+*/
+bool Detections::CheckOpenHandles()
+{
+    bool foundHandle = false;
+    std::vector<Handles::_SYSTEM_HANDLE> handles = Handles::DetectOpenHandlesToProcess();
+
+    for (auto& handle : handles)
+    {
+        if (Handles::DoesProcessHaveOpenHandleTous(handle.ProcessId, handles))
+        {
+            wstring procName = Process::GetProcessName(handle.ProcessId);
+            Logger::logfw("UltimateAnticheat.log", Detection, L"Process %s has open process handle to our process.", procName.c_str());
+            foundHandle = true;
+        }
+    }
+
+    return foundHandle;
 }

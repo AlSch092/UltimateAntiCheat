@@ -37,6 +37,8 @@ public:
 			delete MonitorThread;
 	}
 
+	string currentModuleName;
+
 	void SetCheater(BOOL cheating) { this->CheaterWasDetected->SetData((uint8_t)cheating); } //obfuscated bool/int variable
 	BOOL IsUserCheater() { return this->CheaterWasDetected->GetData(); }
 
@@ -54,14 +56,16 @@ public:
 	Process* GetProcessObj() { return this->_Proc; }
 	void SetProcessObj(Process* obj) { this->_Proc = obj; }
 
-	void StartMonitor();
+	void StartMonitor(); //begin threading
 
 	BOOL IsBlacklistedProcessRunning(); //process checking, can be circumvented easily
+	
 	static BOOL DoesFunctionAppearHooked(const char* moduleName, const char* functionName); //checks for jumps or calls as the first byte on a function
 	static BOOL DoesIATContainHooked();
+	
 	static BOOL IsTextSectionWritable();
 
-	string currentModuleName;
+	static bool CheckOpenHandles(); //detect any open handles to our process, very useful since this will detect most external cheats
 
 private:
 
