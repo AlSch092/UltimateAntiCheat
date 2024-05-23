@@ -14,6 +14,9 @@
 #include "Preventions.hpp"
 #include "Logger.hpp"
 
+/*
+	The `AntiCheat` class is a container for the necessary classes of our program, including the monitor, barrier, netclient, and anti-debugger
+*/
 class AntiCheat
 {
 public:
@@ -39,18 +42,24 @@ public:
 	Preventions* GetBarrier() { return this->Barrier;  }
 	Detections* GetMonitor() { return this->Monitor; }
 
-	bool IsAnyThreadSuspended()
+	/*
+		IsAnyThreadSuspended - Checks the looping threads of class members to ensure the program is running as normal. An attacker may try to suspend threads to either remap or disable functionalities
+	*/
+	__forceinline bool IsAnyThreadSuspended()
 	{
 		if (Thread::IsThreadSuspended(Monitor->GetMonitorThread()->handle))
 		{
+			Logger::logf("UltimateAnticheat.log", Detection, "Monitor was found suspended! Abnormal program execution.");
 			return true;
 		}
 		else if (Thread::IsThreadSuspended(_AntiDebugger->GetDetectionThreadHandle()))
 		{
+			Logger::logf("UltimateAnticheat.log", Detection, "Anti-debugger was found suspended! Abnormal program execution.");
 			return true;
 		}
 		else if (Thread::IsThreadSuspended(Client->GetRecvThread()->handle))
 		{
+			Logger::logf("UltimateAnticheat.log", Detection, "Netclient comms thread was found suspended! Abnormal program execution.");
 			return true;
 		}
 
@@ -59,9 +68,8 @@ public:
 
 private:
 
-	Detections* Monitor = NULL;
-	Preventions* Barrier = NULL;
+	Detections* Monitor = NULL; //cheat detections
+	Preventions* Barrier = NULL; //cheat preventions
 	Debugger::AntiDebug* _AntiDebugger = NULL;
-
 	NetClient* Client = NULL; //for client-server comms
 };
