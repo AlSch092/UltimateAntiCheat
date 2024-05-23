@@ -1,3 +1,4 @@
+//thanks to changeofpace for remapping method
 #pragma once
 
 #include <Windows.h>

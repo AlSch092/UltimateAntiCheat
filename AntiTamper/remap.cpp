@@ -574,7 +574,7 @@ RmppValidateRemappedImageProtection(
     PIMAGE_SECTION_HEADER pSectionHeader = NULL;
     BOOL status = TRUE;
 
-    Logger::logf("UltimateAnticheat.log", Err, "Validating remapped image protection.\n");
+    Logger::logf("UltimateAnticheat.log", Info, "Validating remapped image protection.\n");
 
     pNtHeaders = RtlImageNtHeader((PVOID)ImageBase);
     if (!pNtHeaders)
