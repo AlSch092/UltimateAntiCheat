@@ -1,4 +1,5 @@
 ## Updates
+- May 23, '24: Added open process handle checking. Our program can now detect external programs which have called `OpenProcess` to our process.
 - May 20, '24: Added splash screen to make the program feel like commercial AC, added return address check functionality to prevent remote function calling, added checks on thread suspension
 - May 10, '24: Client and server now communicate correctly, heartbeats will be sent every 60s to the client. Server code will be posted in the "Server" directory of the project, and will be its own C# program. Design will soon be changed to integrate the `AntiCheat` class to the networking portions.
 - May 4, '24: Added TLS callback spoofing, which is compiling the program with a fake TLS callback and then modifying the pointer at runtime to our real callback.
