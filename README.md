@@ -9,13 +9,14 @@ UltimateAntiCheat is an open-source anti-cheat system made to detect and prevent
    If there is anything not working for you (throws exceptions, can't build, etc) please raise an issue and I will answer it ASAP. If you have code suggestions or techniques you'd like to see added, or want assistance with adding anti-cheat to your game, please send me an email. More techniques and better design will be added to the project time permitting. The file changelog.md contains a dated updates list.
 
 ## Current Detections and protective features:
+- Detects Open Process Handles to our process (`OpenProcess` detection)
 - Detects unsigned modules loaded into the process
 - Debugger detection (hardware/DR, PEB, VEH, kernelmode)
-- Integrity checks on program memory (.text section checks, WINAPI hook checks, IAT hook checks)
+- Integrity checks on program memory (`.text` section checks, WINAPI hook checks, IAT hook checks)
 - Remapping sections & re-re-mapping checks (anti-tamper)
 - TLS Callback (anti-DLL/shellcode injection)
 - Parent process check
-- Blacklisted Processes checks & whitelisted loaded modules check
+- Blacklisted running process checks & whitelisted loaded modules check
 - Loaded module name random renaming (process manipulation)
 - Exported function names random renaming (process manipulation, anti-injection)
 - Data/obfuscation class to help hide sensitive variables
