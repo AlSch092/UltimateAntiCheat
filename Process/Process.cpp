@@ -889,3 +889,40 @@ bool Process::IsReturnAddressInModule(UINT64 RetAddr, const wchar_t* module)
 
     return false;
 }
+
+/*
+       GetProcessName - Returns the string name of a process with id `pid`
+*/
+wstring Process::GetProcessName(DWORD pid)
+{
+    std::wstring processName;
+    HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+    if (hProcess) 
+    {
+        HMODULE hMod;
+        DWORD cbNeeded;
+        if (EnumProcessModules(hProcess, &hMod, sizeof(hMod), &cbNeeded)) 
+        {       
+            WCHAR processNameBuffer[MAX_PATH];
+            if (GetModuleBaseName(hProcess, hMod, processNameBuffer, sizeof(processNameBuffer) / sizeof(WCHAR))) 
+            {
+                processName = processNameBuffer;
+            }
+            else 
+            {
+                Logger::logf("UltimateAnticheat.log", Err, "GetModuleBaseName failed with error %d @  Process::GetProcessName", GetLastError());
+            }
+        }
+        else 
+        {
+            Logger::logf("UltimateAnticheat.log", Err, "EnumProcessModules failed with error %d @  Process::GetProcessName", GetLastError());
+        }
+        CloseHandle(hProcess);
+    }
+    else 
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "OpenProcess failed with error %d @  Process::GetProcessName", GetLastError());
+    }
+
+    return processName;
+}

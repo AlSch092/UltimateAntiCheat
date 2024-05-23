@@ -129,6 +129,8 @@ public:
 
 	static bool IsReturnAddressInModule(UINT64 RetAddr, const wchar_t* module);
 
+	static wstring GetProcessName(DWORD pid);
+
 private:
 
 	_MYPEB* _PEB = NULL;
