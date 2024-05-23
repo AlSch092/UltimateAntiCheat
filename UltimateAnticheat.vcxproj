@@ -184,6 +184,7 @@
     <ClCompile Include="Obscure\SymbolicHash.cpp" />
     <ClCompile Include="Preventions.cpp" />
     <ClCompile Include="Process\Exports.cpp" />
+    <ClCompile Include="Process\Handles.cpp" />
     <ClCompile Include="Process\PEB.cpp" />
     <ClCompile Include="Process\Process.cpp" />
     <ClCompile Include="main.cpp" />
@@ -212,6 +213,7 @@
     <ClInclude Include="Obscure\SymbolicHash.hpp" />
     <ClInclude Include="Preventions.hpp" />
     <ClInclude Include="Process\Exports.hpp" />
+    <ClInclude Include="Process\Handles.hpp" />
     <ClInclude Include="Process\Memory\ntdll.h" />
     <ClInclude Include="Process\PEB.hpp" />
     <ClInclude Include="Process\Process.hpp" />
