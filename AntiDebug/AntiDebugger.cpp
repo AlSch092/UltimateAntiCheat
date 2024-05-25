@@ -92,7 +92,7 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 			Logger::logf("UltimateAnticheat.log", Detection, "Debugger found WaitDebugEvent.\n");
 		}
 
-		if (AntiDbg->_IsDebuggerPresent_VEH())
+		if (AntiDbg->_IsDebuggerPresent_VEH()) //also patches over InitializeVEH's first byte if the dll is found
 		{
 			AntiDbg->DebuggerMethodsDetected.push_back(Detections::VEH_DEBUGGER);
 			Logger::logf("UltimateAnticheat.log", Detection, "VEH debugger found!\n");
@@ -335,12 +335,16 @@ bool Debugger::AntiDebug::_IsDebuggerPresent_DbgBreak()
 		return false;
 	}
 
-	Logger::logf("UltimateAnticheat.log", Info, "Calling __fastfail() to prevent further execution, since a debugger was found running.\n");
+	Logger::logf("UltimateAnticheat.log", Info, "Calling __fastfail() to prevent further execution since a debugger was found running.\n");
 	__fastfail(1); //code should not reach here unless process is being debugged
 	return true;
 #endif
 }
 
+/*
+	_IsDebuggerPresent_VEH - Checks if vehdebug-x86_64.dll is loaded and exporting InitiallizeVEH. If so, the first byte of this routine is patched and the module's internal name is changed to STOP_CHEATING
+	returns true if CE's VEH debugger is found, but this won't stop home-rolled VEH debuggers via APC injection
+*/
 inline bool Debugger::AntiDebug::_IsDebuggerPresent_VEH()
 {
 	bool bFound = false;
@@ -354,6 +358,25 @@ inline bool Debugger::AntiDebug::_IsDebuggerPresent_VEH()
 		if (veh_addr > 0)
 		{
 			bFound = true;
+
+			DWORD dwOldProt = 0;
+
+			if (!VirtualProtect((void*)veh_addr, 1, PAGE_EXECUTE_READWRITE, &dwOldProt))
+			{
+				Logger::logf("UltimateAnticheat.log", Warning, "VirtualProtect failed @ _IsDebuggerPresent_VEH");
+			}
+
+			memcpy((void*)veh_addr, "\xC3", sizeof(BYTE)); //patch first byte of `InitializeVEH` with a ret, stops call to InitializeVEH from succeeding.
+
+			if (!VirtualProtect((void*)veh_addr, 1, dwOldProt, &dwOldProt)) //change back to old prot's
+			{
+				Logger::logf("UltimateAnticheat.log", Warning, "VirtualProtect failed @ _IsDebuggerPresent_VEH");
+			}
+
+			if (Process::ChangeModuleName(L"vehdebug-x86_64.dll", L"STOP_CHEATING"))
+			{
+				Logger::logf("UltimateAnticheat.log", Info, "Changed module name of vehdebug-x86_64.dll to STOP_CHEATING to prevent VEH debugging.");
+			}
 		}
 	}
 
