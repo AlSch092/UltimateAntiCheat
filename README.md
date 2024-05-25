@@ -1,4 +1,4 @@
-![SampleOutput2](https://github.com/AlSch092/UltimateAntiCheat/assets/94417808/64187afd-b87c-4c07-9eb5-0215977e7ff8)
+![SampleOutput](https://github.com/AlSch092/UltimateAntiCheat/assets/94417808/8e2112b8-2c82-4a38-aca8-ec54aa7d7516)
 
 # UltimateAntiCheat: An Educational Anti-Cheat built in C++ (x64)
 
