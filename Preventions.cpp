@@ -24,10 +24,10 @@ bool Preventions::PreventDllInjection()
         success = FALSE;
     }
 
-    delete[] RandString1;
-    delete[] RandString2;
-    delete[] RandString3;
-    delete[] RandString4;
+    delete[] RandString1; RandString1 = nullptr;
+    delete[] RandString2; RandString2 = nullptr;
+    delete[] RandString3; RandString3 = nullptr;
+    delete[] RandString4; RandString4 = nullptr;
 
     return success;
 }
@@ -41,6 +41,7 @@ bool Preventions::PreventShellcodeThreads() //using this technique might pop up 
         success = TRUE;
 
     delete[] RandString1;
+    RandString1 = nullptr;
     return success;
 }
 
@@ -78,7 +79,7 @@ bool Preventions::RandomizeModuleName()
         success = true;
         UnmanagedGlobals::wCurrentModuleName = wstring(newModuleName);
         UnmanagedGlobals::CurrentModuleName = Utility::ConvertWStringToString(UnmanagedGlobals::wCurrentModuleName);
-        wprintf(L"Changed module name to: %s\n", UnmanagedGlobals::wCurrentModuleName.c_str());
+        Logger::logfw("UltimateAnticheat.log", Err, L"Changed module name to: %s\n", UnmanagedGlobals::wCurrentModuleName.c_str());
     }
 
     delete[] newModuleName;
