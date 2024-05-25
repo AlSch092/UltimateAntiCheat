@@ -28,8 +28,8 @@ void Detections::StartMonitor()
 
 
 /*
-Detections::Monitor(LPVOID thisPtr)
-  Routine which monitors aspects of the process for fragments of cheating, loops continuously until the thread is signalled to shut down
+    Detections::Monitor(LPVOID thisPtr)
+     Routine which monitors aspects of the process for fragments of cheating, loops continuously until the thread is signalled to shut down
 */
 void Detections::Monitor(LPVOID thisPtr)
 {
@@ -97,13 +97,13 @@ void Detections::Monitor(LPVOID thisPtr)
             return;
         }
 
-        if (Monitor->CheckSectionHash(CachedSectionAddress, CachedSectionSize)) //track the .text section for changes -> most expensive CPU-wise
+        if (Monitor->CheckSectionHash(CachedSectionAddress, CachedSectionSize)) //compare hashes of .text for modifications
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Found modified .text section!\n");
             Monitor->SetCheater(true); //report back to server that someone's cheating
         }
 
-        if (Monitor->IsBlacklistedProcessRunning())
+        if (Monitor->IsBlacklistedProcessRunning()) //external applications running on machine
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Found blacklisted process!\n");
             Monitor->SetCheater(true);
@@ -121,33 +121,32 @@ void Detections::Monitor(LPVOID thisPtr)
             Logger::logf("UltimateAnticheat.log", Detection, "Found at least one unsigned dll loaded : We ideally only want verified, signed dlls in our application!\n");
         }
 
-        if (Services::IsTestsigningEnabled())
+        if (Services::IsTestsigningEnabled()) //test signing enabled, self-signed drivers
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Testsigning is enabled! In most cases we don't allow the game/process to continue if testsigning is enabled.\n");
             Monitor->SetCheater(true);
         }
 
-        if (Detections::DoesIATContainHooked())
+        if (Detections::DoesIATContainHooked()) //iat hook check
         {
             Logger::logf("UltimateAnticheat.log", Detection, "IAT was hooked! One or more functions lead to addresses outside their respective modules!\n");
             Monitor->SetCheater(true);
         }
 
-        if (Detections::IsTextSectionWritable())
+        if (Detections::IsTextSectionWritable()) //page protections check
         {
             Logger::logf("UltimateAnticheat.log", Detection, ".text section was writable, which means someone re-re-mapped our memory regions! (or you ran this in DEBUG build)");
             Monitor->SetCheater(true);
         }
 
-        if (Detections::CheckOpenHandles())
+        if (Detections::CheckOpenHandles()) //open handles to our process check
         {
-            Logger::logf("UltimateAnticheat.log", Detection, ".text section was writable, which means someone re-re-mapped our memory regions! (or you ran this in DEBUG build)");
+            Logger::logf("UltimateAnticheat.log", Detection, "Found open process handles to our process from other processes");
             Monitor->SetCheater(true);
         }
 
         Sleep(MonitorLoopMilliseconds);
     }
-
 }
 
 /*
