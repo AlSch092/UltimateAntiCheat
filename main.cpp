@@ -1,11 +1,9 @@
-/*  UltimateAnticheat.cpp : This file contains the 'main' function. Program execution begins and ends there. main.cpp contains testing of functionality
-
-    U.A.C. is an 'in-development'/educational example of anti-cheat techniques written in C++ for x64 platforms.
+/*  
+    U.A.C. is an 'in-development' example of an anti-cheat module written in C++ for x64 platforms.
     
     Please view the readme for more information regarding program features.
 
-    Author: AlSch092 @ Github.
-
+    Author: AlSch092 @ Github
 */
 
 #pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper)
@@ -65,16 +63,16 @@ int main(int argc, char** argv)
         goto cleanup;
     }
 
-    UnmanagedGlobals::SupressingNewThreads = AC->GetBarrier()->IsPreventingThreads();
+    UnmanagedGlobals::SupressingNewThreads = AC->GetBarrier()->IsPreventingThreads(); //if this is set to TRUE, we can stop the creation of any new threads via the TLS callback
 
-    cout << "\n-----------------------------------------------------------------------------------------\n";
+    cout << "\n----------------------------------------------------------------------------------------------------------\n";
     cout << "All protections have been deployed, the program will now loop using its detection methods. Thanks for your interest in the project!\n\n";
 
     Sleep(MillisecondsBeforeShutdown); //let the other threads run for a bit to display monitoring, normally the game's main loop would be here but instead we will wait 60s
 
     if (AC->GetMonitor()->IsUserCheater())
     {
-        Logger::logf("UltimateAnticheat.log", Info, "Detected a cheater in first %d milliseconds of runtime", MillisecondsBeforeShutdown);
+        Logger::logf("UltimateAnticheat.log", Info, "Detected a cheater in first %d milliseconds of runtime!", MillisecondsBeforeShutdown);
     }
 
 cleanup: //jump to here on any error with AC initialization
@@ -111,7 +109,7 @@ bool UnmanagedGlobals::AddThread(DWORD id)
     }
     else
     {
-        Thread* t = new Thread();
+        Thread* t = new Thread(); //memory must be free'd after done using, this function does not free mem
         t->Id = tid;
 
         if (GetThreadContext(threadHandle, &context))
@@ -121,6 +119,7 @@ bool UnmanagedGlobals::AddThread(DWORD id)
         else
         {
             Logger::logf("UltimateAnticheat.log", Warning, " GetThreadContext failed @ TLS Callback: Thread %d \n", tid);
+            delete t;
             return false;
         }
 
@@ -169,17 +168,41 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
             delete UnmanagedGlobals::ThreadList;
         }break;
 
-        case DLL_THREAD_ATTACH: //add to our thread list
-        {
+        case DLL_THREAD_ATTACH: //add to our thread list, or if thread is not executing valid address range, patch over execution address
+        {         
             if (!UnmanagedGlobals::AddThread(GetCurrentThreadId()))
             {
-                Logger::logf("UltimateAnticheat.log", Err, " Failed to add thread to ThreadList @ TLSCallback: %d\n", GetLastError());
+                Logger::logf("UltimateAnticheat.log", Err, " Failed to add thread to ThreadList @ TLSCallback: thread id %d\n", GetCurrentThreadId());
             }
 
             if (UnmanagedGlobals::SupressingNewThreads)
             {
-                Logger::logf("UltimateAnticheat.log", Info, " Stopping unknown thread from being created @ TLSCallback: %d\n", GetLastError());
-                ExitThread(0); //we can stop DLL injecting + DLL debuggers (such as VEH debugger) this way, but make sure you're handling your threads carefully
+                UINT64 ThreadExecutionAddress = (UINT64)_AddressOfReturnAddress(); //check down the stack for the thread execution address, compare it to good module range, and if not in range then we've detected a rogue thread
+                const UINT64 ThreadExecutionAddressStackOffset = 0x378;
+                
+                ThreadExecutionAddress += ThreadExecutionAddressStackOffset; //offset in stack to execution thread addr
+                ThreadExecutionAddress = *(UINT64*)ThreadExecutionAddress;
+
+                if (ThreadExecutionAddress > 0x7FF700000000 && ThreadExecutionAddress < 0x7FFFFFFFFFFF) //I'll make this into a check of whitelisted ranges soon!
+                {
+                            //thread can be optionally be whitelisted here since its executing a function in our 'good' address space
+                    return; //some loaded dll is making a thread, whitelisted address space
+                }
+
+                Logger::logf("UltimateAnticheat.log", Info, " Stopping unknown thread from being created  @ TLSCallback: thread id %d", GetCurrentThreadId());
+                Logger::logf("UltimateAnticheat.log", Info, " Thread id %d wants to execute function @ %llX. Patching over this address.", GetCurrentThreadId(), ThreadExecutionAddress);
+
+                DWORD dwOldProt = 0;
+
+                if(!VirtualProtect((LPVOID)ThreadExecutionAddress, sizeof(byte), PAGE_EXECUTE_READWRITE, &dwOldProt))
+                {
+                    Logger::logf("UltimateAnticheat.log", Warning, "Failed to call VirtualProtect on ThreadStart address @ TLSCallback: %llX", ThreadExecutionAddress);
+                }
+                else
+                {
+                    if(ThreadExecutionAddress != 0)
+                        *(BYTE*)ThreadExecutionAddress = 0xC3; //write over any functions which are scheduled to execute next by this thread and not inside our whitelisted address range
+                }
             }
 
         }break;
@@ -188,7 +211,7 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
         {
             UnmanagedGlobals::RemoveThread(GetCurrentThreadId());
         }break;
-        };
+    };
 }
 
 /*
