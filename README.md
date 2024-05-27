@@ -2,7 +2,7 @@
 
 # UltimateAntiCheat: An Educational Anti-Cheat built in C++ (x64)
 
-UltimateAntiCheat is an open-source anti-cheat system made to detect and prevent common attack vectors in game hacking, which includes: memory editing, module injection, debugging, unsigned drivers & modules, and more. The project also features a client-server design with a heartbeat being sent every 60 seconds to clients.
+UltimateAntiCheat is an open source anti-cheat system made to detect and prevent common attack vectors in game hacking, which includes: memory editing, module injection, debugging, unsigned drivers & modules, and more. The project also features a client-server design with a heartbeat being sent every 60 seconds to clients.
 
    This project is meant to serve as an educational tool and is not intended to be commercial software or overly complex to crack. This example includes basic but fundamental protections, and we aim to cover all attack surfaces such that the attacker is not able to gain a foothold into our process without being detected. Any modification to a single aspect will lead to being detected: for example, if someone tries to debug our code from usermode, they will likely re-map and perform memory edits to try and disable debugger detection which leads to their memory edit or remapping being detected. UltimateAntiCheat runs in usermode and has no driver associated with it. It's recommended that if possible you run VMProtect or a similar program on the compiled binary for added security through obscurity.
 
