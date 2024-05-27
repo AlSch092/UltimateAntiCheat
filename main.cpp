@@ -183,11 +183,21 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
                 ThreadExecutionAddress += ThreadExecutionAddressStackOffset; //offset in stack to execution thread addr
                 ThreadExecutionAddress = *(UINT64*)ThreadExecutionAddress;
 
-                if (ThreadExecutionAddress > 0x7FF700000000 && ThreadExecutionAddress < 0x7FFFFFFFFFFF) //I'll make this into a check of whitelisted ranges soon!
+                auto modules = Process::GetLoadedModules();
+
+                for (std::vector<ProcessData::MODULE_DATA>::iterator it = modules->begin(); it != modules->end(); ++it)
                 {
-                            //thread can be optionally be whitelisted here since its executing a function in our 'good' address space
-                    return; //some loaded dll is making a thread, whitelisted address space
+                    UINT64 LowAddr = (UINT64)it->dllInfo.lpBaseOfDll;
+                    UINT64 HighAddr = (UINT64)it->dllInfo.lpBaseOfDll + it->dllInfo.SizeOfImage;
+
+                    if (ThreadExecutionAddress > LowAddr && ThreadExecutionAddress < HighAddr)
+                    {
+                        delete modules; modules = nullptr;
+                        return; //some loaded dll is making a thread, whitelisted address space
+                    }
                 }
+
+                delete modules; modules = nullptr;
 
                 Logger::logf("UltimateAnticheat.log", Info, " Stopping unknown thread from being created  @ TLSCallback: thread id %d", GetCurrentThreadId());
                 Logger::logf("UltimateAnticheat.log", Info, " Thread id %d wants to execute function @ %llX. Patching over this address.", GetCurrentThreadId(), ThreadExecutionAddress);

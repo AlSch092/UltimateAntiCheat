@@ -51,6 +51,12 @@ void Detections::Monitor(LPVOID thisPtr)
 
     list<ProcessData::Section*>* sections = Monitor->SetSectionHash("UltimateAnticheat.exe", ".text"); //set our memory hashes of .text
 
+    if (sections == nullptr)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Sections was NULLPTR @ Detections::Monitor. Aborting execution!\n");
+        return;
+    }
+
     if (sections->size() == 0)
     {
         Logger::logf("UltimateAnticheat.log", Err, "Sections size was 0 @ Detections::Monitor. Aborting execution!\n");
@@ -60,7 +66,7 @@ void Detections::Monitor(LPVOID thisPtr)
     UINT64 CachedSectionAddress = 0;
     DWORD CachedSectionSize = 0;
 
-    UINT64 ModuleAddr = (UINT64)GetModuleHandleA("UltimateAnticheat.exe");
+    UINT64 ModuleAddr = (UINT64)GetModuleHandleA(NULL);
 
     if (ModuleAddr == 0)
     {
@@ -324,32 +330,42 @@ BOOL __forceinline Detections::DoesIATContainHooked()
 {
     list<ProcessData::ImportFunction*> IATFunctions = Process::GetIATEntries();
 
+    auto modules = Process::GetLoadedModules();
+
+    if (modules == nullptr)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, " Couldn't fetch  module list @ Detections::DoesIATContainHooked");
+        return FALSE;
+    }
+
     for (ProcessData::ImportFunction* IATEntry : IATFunctions)
     {
         DWORD moduleSize = Process::GetModuleSize(IATEntry->Module);
 
         if (moduleSize != 0)
         {
-            //UINT64 MinAddress = (UINT64)IATEntry->Module;
-            //UINT64 MaxAddress = (UINT64)IATEntry->Module + (UINT64)moduleSize;
-
-            UINT64 MinAddress = 0x00007FF400000000; //crummy workaround for the fact that some routines point to other module functions and throw a false positive in our check (some k32 points to ntdll routines on my windows version)
-            UINT64 MaxAddress = 0x00007FFFFFFFFFFF; //ideal way would be to use the commented lines above and then 'whitelist' whatever functions are known to redirect to other dlls
-
-            if (IATEntry->AddressOfData <= MinAddress || IATEntry->AddressOfData >= MaxAddress)
+            for (std::vector<ProcessData::MODULE_DATA>::iterator it = modules->begin(); it != modules->end(); ++it)
             {
-                Logger::logf("UltimateAnticheat.log", Info, " IAT function was hooked: %llX, %s\n", IATEntry->AddressOfData, IATEntry->AssociatedModuleName.c_str());
-                return TRUE;
+                UINT64 LowAddr = (UINT64)it->dllInfo.lpBaseOfDll;
+                UINT64 HighAddr = (UINT64)it->dllInfo.lpBaseOfDll + it->dllInfo.SizeOfImage;
+
+                if (IATEntry->AddressOfData > LowAddr && IATEntry->AddressOfData < HighAddr)
+                {
+                    delete modules; modules = nullptr;
+                    return FALSE; //IAT function was found to be inside address range of loaded DLL, thus its not hooked
+                }
             }
         }
         else //error, we shouldnt get here!
         {
-            Logger::logf("UltimateAnticheat.log", Err, " Couldn't fetch  module size @ Detections::DoesIATContainHooked\n");
+            Logger::logf("UltimateAnticheat.log", Err, " Couldn't fetch  module size @ Detections::DoesIATContainHooked");
+            delete modules; modules = nullptr;
             return FALSE;
         }
     }
 
-    return FALSE;
+    delete modules; modules = nullptr;
+    return TRUE;
 }
 
 /*
