@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34003.232
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UltimateAnticheat", "UltimateAnticheat.vcxproj", "{344D69C4-3DE6-4D23-8FAF-66D8DC95CD9C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{344D69C4-3DE6-4D23-8FAF-66D8DC95CD9C}.Debug|x64.ActiveCfg = Debug|x64
+		{344D69C4-3DE6-4D23-8FAF-66D8DC95CD9C}.Debug|x64.Build.0 = Debug|x64
+		{344D69C4-3DE6-4D23-8FAF-66D8DC95CD9C}.Debug|x86.ActiveCfg = Debug|Win32
+		{344D69C4-3DE6-4D23-8FAF-66D8DC95CD9C}.Debug|x86.Build.0 = Debug|Win32
+		{344D69C4-3DE6-4D23-8FAF-66D8DC95CD9C}.Release|x64.ActiveCfg = Release|x64
+		{344D69C4-3DE6-4D23-8FAF-66D8DC95CD9C}.Release|x64.Build.0 = Release|x64
+		{344D69C4-3DE6-4D23-8FAF-66D8DC95CD9C}.Release|x86.ActiveCfg = Release|Win32
+		{344D69C4-3DE6-4D23-8FAF-66D8DC95CD9C}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F0FB014B-1856-4EC9-95EC-0D2ECBEE5FB5}
+	EndGlobalSection
+EndGlobal
