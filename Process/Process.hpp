@@ -84,7 +84,13 @@ public:
 
 	static list<ProcessData::Section*>* GetSections(string module);
 
-	_MYPEB* GetPEB() { return (_MYPEB*)__readgsqword(0x60); }
+	static _MYPEB* GetPEB() { return (_MYPEB*)__readgsqword(0x60); }
+	
+	static wstring GetProcessName(DWORD pid);
+	static DWORD GetProcessIdByName(wstring procName);
+
+	static DWORD GetParentProcessId();
+	static BOOL CheckParentProcess(wstring desiredParent);
 
 	static BOOL IsProcessElevated();
 
@@ -112,11 +118,6 @@ public:
 
 	static FARPROC _GetProcAddress(PCSTR Module, LPCSTR lpProcName); //GetProcAddress without winAPI call
 
-	static DWORD GetParentProcessId();
-	static BOOL CheckParentProcess(wstring desiredParent);
-
-	static DWORD GetProcessIdByName(wstring procName);
-
 	static UINT64 GetSectionAddress(const char* moduleName, const char* sectionName);
 
 	static BYTE* GetBytesAtAddress(UINT64 address, UINT size);
@@ -129,7 +130,7 @@ public:
 
 	static bool IsReturnAddressInModule(UINT64 RetAddr, const wchar_t* module);
 
-	static wstring GetProcessName(DWORD pid);
+	static std::vector<ProcessData::MODULE_DATA>* GetLoadedModules();
 
 private:
 

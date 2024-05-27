@@ -178,6 +178,8 @@ bool Process::ChangeModuleName(const wstring szModule, const wstring newName)
         if (wcsstr(dataEntry->FullDllName.Buffer, szModule.c_str()))
         {
             wcscpy_s(dataEntry->FullDllName.Buffer, szModule.size() + 1, newName.c_str()); //..then modify the string modulename to newName
+            dataEntry->FullDllName.Length = newName.length() + 1;
+            dataEntry->FullDllName.MaximumLength = newName.length() + 1;
             Found = TRUE;
             return true;
         }
@@ -620,6 +622,7 @@ BYTE* Process::GetBytesAtAddress(UINT64 address, UINT size) //remember to free b
     __except (EXCEPTION_EXECUTE_HANDLER)
     {
         delete[] memBytes;
+        memBytes = nullptr;
         return NULL;
     }
 }
@@ -925,4 +928,63 @@ wstring Process::GetProcessName(DWORD pid)
     }
 
     return processName;
+}
+
+/*
+    GetLoadedModules - returns a vector<ProcessData::MODULE_DATA>*  representing a set of loaded modules in the current process
+    returns nullptr on failure
+*/
+std::vector<ProcessData::MODULE_DATA>* Process::GetLoadedModules()
+{
+    HMODULE hModules[256];
+    DWORD cbNeeded = 0;
+
+    std::vector<ProcessData::MODULE_DATA>* moduleList = new std::vector<ProcessData::MODULE_DATA>();
+
+    if (EnumProcessModules(GetCurrentProcess(), hModules, sizeof(hModules), &cbNeeded))
+    {
+        for (unsigned int i = 0; i < (cbNeeded / sizeof(HMODULE)); i++)
+        {
+            ProcessData::MODULE_DATA module;
+
+            TCHAR szModuleName[MAX_PATH];
+            MODULEINFO moduleInfo;
+
+            if (GetModuleFileNameEx(GetCurrentProcess(), hModules[i], szModuleName, sizeof(szModuleName) / sizeof(TCHAR)))
+            {
+                wcscpy_s(module.name, szModuleName);
+
+                module.hModule = hModules[i];
+
+                if (GetModuleInformation(GetCurrentProcess(), hModules[i], &moduleInfo, sizeof(moduleInfo)))
+                {
+                    module.dllInfo.lpBaseOfDll = moduleInfo.lpBaseOfDll;
+                    module.dllInfo.SizeOfImage = moduleInfo.SizeOfImage;
+                }
+                else
+                {
+                    Logger::logf("UltimateAnticheat.log", Warning, "Unable to parse module information @ Process::GetLoadedModules");
+                    module.dllInfo.lpBaseOfDll = NULL;
+                    module.dllInfo.SizeOfImage = NULL;
+                }
+
+                moduleList->push_back(module);
+            }
+            else
+            {
+                Logger::logf("UltimateAnticheat.log", Err, "Unable to parse module named @ Process::GetLoadedModules");
+                delete moduleList; moduleList = nullptr;
+                return nullptr;
+            }
+        }
+    }
+    else
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "EnumProcessModules failed @ Process::GetLoadedModules");
+        delete moduleList; moduleList = nullptr;
+        return nullptr;
+    }
+
+    return moduleList;
+    
 }
