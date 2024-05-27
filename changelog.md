@@ -1,5 +1,5 @@
 ## Updates
-- May 28, '24: Added `ret` patch over first byte of executed thread function in TLS callbacks if the address is not in a whitelisted range. This stops code injection and certain tools such as Cheat Engine's VEH debugger from working (since InitializeVEH will always hit a `ret` on its first instruction)
+- May 28, '24: Added `ret` patch over first byte of executed thread function in TLS callbacks if the address is not in a whitelisted range. Similar method to what was added on May 25, but will apply to any thread function trying to execute since we directly patch it inside the TLS callback. For example, if CreateRemoteThread is called on address 0x12345, the TLS callback will place a `ret` at 0x12345.
 
 - May 25, '24: Added extended defenses against Cheat Engine's VEH debugger by patching over the first byte of `InitializeVEH` and renaming the module name of `vehdebug-x86_64.dll`.
 
