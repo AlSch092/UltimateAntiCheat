@@ -21,10 +21,9 @@ public:
 	Error DeployBarrier(); //activate all protections
 
 	static bool RemapProgramSections();
-	static bool PreventDllInjection();
-	static bool PreventShellcodeThreads();
-
-	bool RandomizeModuleName();
+	static bool PreventDllInjection(); //experimental, gives warning popup
+	static bool PreventShellcodeThreads(); //experimental, gives warning popup
+	static bool StopAPCInjection();
 	
 	static BYTE* SpoofPEB(); //not advisable to use this currently
 
@@ -36,10 +35,12 @@ public:
 	void SetThreadCreationPrevention(bool onoff) { this->IsPreventingThreadCreation = onoff; }
 	bool IsPreventingThreads() { return this->IsPreventingThreadCreation; }
 
+	bool RandomizeModuleName(); //uses OriginalModuleName param
+
 private:
 	Error LastError = Error::OK;
 
 	const wstring OriginalModuleName = L"UltimateAnticheat.exe";
 
-	bool IsPreventingThreadCreation = false; //used in TLS callback if we want to supress or track new threads
+	bool IsPreventingThreadCreation; //used in TLS callback if we want to supress or track new threads
 };

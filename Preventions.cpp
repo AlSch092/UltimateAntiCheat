@@ -79,7 +79,7 @@ bool Preventions::RandomizeModuleName()
         success = true;
         UnmanagedGlobals::wCurrentModuleName = wstring(newModuleName);
         UnmanagedGlobals::CurrentModuleName = Utility::ConvertWStringToString(UnmanagedGlobals::wCurrentModuleName);
-        Logger::logfw("UltimateAnticheat.log", Err, L"Changed module name to: %s\n", UnmanagedGlobals::wCurrentModuleName.c_str());
+        Logger::logfw("UltimateAnticheat.log", Info, L"Changed module name to: %s\n", UnmanagedGlobals::wCurrentModuleName.c_str());
     }
 
     delete[] newModuleName;
@@ -103,6 +103,22 @@ Error Preventions::DeployBarrier()
 #endif
 
     IsPreventingThreadCreation = true; //used in TLS callback to prevent thread creation (can stop shellcode + module injection)
+
+    if (RandomizeModuleName()) //randomize our main module name at runtime
+    {
+        Logger::logf("UltimateAnticheat.log", Info, " Randomized our executable's module's name!");
+    }
+    else
+    {
+        Logger::logf("UltimateAnticheat.log", Err, " Couldn't change our module's name @ Preventions::ChangeModuleName");
+        retError = Error::CANT_APPLY_TECHNIQUE;
+    }
+
+    if (!StopAPCInjection()) //patch over ntdll.dll Ordinal8 unnamed function
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Couldn't apply anti-APC technique @ Preventions::ChangeModuleName");
+        retError = Error::CANT_APPLY_TECHNIQUE;
+    }
 
     //anything commented out below means it needs further testing to ensure no side effects occur, 
 
@@ -137,16 +153,6 @@ Error Preventions::DeployBarrier()
     //    Logger::logf("UltimateAnticheat.log", Err, " Couldn't spoof PEB @ Preventions::ChangeExportNames\n");
     //    retError = Error::CANT_APPLY_TECHNIQUE;
     //}
-
-    if (RandomizeModuleName()) //randomize our main module name at runtime
-    {
-        Logger::logf("UltimateAnticheat.log", Info, " Randomized our executable's module's name!\n");
-    }
-    else
-    {
-        Logger::logf("UltimateAnticheat.log", Err, " Couldn't change our module's name @ Preventions::ChangeModuleName\n");
-        retError = Error::CANT_APPLY_TECHNIQUE;
-    }
 
     return retError;
 }
@@ -219,5 +225,56 @@ bool Preventions::StopMultipleProcessInstances()
 
     *pIsRunning = 1337;
     
+    return true;
+}
+
+/*
+    StopAPCInjection - prevents APC injection by patching over the first byte of ntdll.Ordinal8. More information about the APC payload can be fetched through hooking
+    returns false on failure, true on successful patch
+    WARNING: if your program/game relies on APC for functionality then this technique won't be suitable for you
+*/
+bool Preventions::StopAPCInjection()
+{
+    HMODULE ntdll = GetModuleHandleA("ntdll.dll");
+
+    if (!ntdll)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to fetch ntdll module @ StopAPCInjection. Error code : % lu\n", GetLastError());
+        return false;
+    }
+
+    const int Ordinal = 8;
+    UINT64 Oridinal8 = (UINT64)GetProcAddress(ntdll, MAKEINTRESOURCEA(Ordinal)); //TODO: make sure Ordinal8 exists on other versions of windows and is the same function
+
+    if (!Oridinal8)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to fetch ntdll.Ordinal8 address @ StopAPCInjection");
+        return false;
+    }
+
+    __try
+    {
+        DWORD dwOldProt = 0;
+
+        if (!VirtualProtect((LPVOID)Oridinal8, sizeof(byte), PAGE_EXECUTE_READWRITE, &dwOldProt))
+        {
+            Logger::logf("UltimateAnticheat.log", Warning, "Failed to call VirtualProtect on Oridinal8 address @ StopAPCInjection: %llX", Oridinal8);
+            return false;
+        }
+        else
+        {
+            if (Oridinal8 != 0)
+                *(BYTE*)Oridinal8 = 0xC3;
+
+            VirtualProtect((LPVOID)Oridinal8, sizeof(byte), dwOldProt, &dwOldProt);
+        }
+
+    }
+    __except(EXCEPTION_EXECUTE_HANDLER)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to patch over Ordinal8 address @ StopAPCInjection");
+        return false;
+    }
+
     return true;
 }
