@@ -1,4 +1,6 @@
 ## Updates
+- May 28, '24: Program can now block APC injection by patching over ntdll.dll's Ordinal8 (called by KiUserApcDispatcher). This routine can also be hooked to reveal the injected APC payload's address. If your game/program relies on APC for normal execution, this technique might not be suitable.
+
 - May 28, '24: Added `ret` patch over first byte of executed thread function in TLS callbacks if the address is not in a whitelisted range. Similar method to what was added on May 25, but will apply to any thread function trying to execute since we directly patch it inside the TLS callback. For example, if CreateRemoteThread is called on address 0x12345, the TLS callback will place a `ret` at 0x12345.
 
 - May 25, '24: Added extended defenses against Cheat Engine's VEH debugger by patching over the first byte of `InitializeVEH` and renaming the module name of `vehdebug-x86_64.dll`.
