@@ -10,6 +10,7 @@ UltimateAntiCheat is an open source anti-cheat system made to detect and prevent
 
 ## Current Detections and protective features:
 - Detects Open Process Handles to our process (`OpenProcess` detection)
+- Blocks APC injection (`nt.dll.Ordinal8` patching)
 - Detects unsigned modules loaded into the process
 - Debugger detection (hardware/DR, PEB, kernelmode)
 - Anti Cheat Engine VEH debugger (`initializeVEH` patching, module name renaming)
