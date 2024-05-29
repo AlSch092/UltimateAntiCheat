@@ -383,6 +383,7 @@ Error NetClient::HandleInboundPacket(PacketReader* p)
 				}
 
 				delete[] ResponseCookie;
+				ResponseCookie = nullptr; //remove use-after-free possibility
 			}
 			else
 			{
@@ -412,6 +413,16 @@ Error NetClient::HandleInboundPacket(PacketReader* p)
 }
 
 /*
+	FlagCheater - tells server the client has detected cheating
+	returns Error::OK on success
+*/
+Error NetClient::FlagCheater(DetectionFlags flag)
+{
+	PacketWriter* outBytes = Packets::Builder::DetectedCheater(flag);
+	return SendData(outBytes);
+}
+
+/*
 	QueryMemory - Server requested client to read bytes @ some memory address
 	returns Error::OK on success
 */
@@ -433,6 +444,7 @@ Error NetClient::QueryMemory(uint64_t address, uint32_t size)
 
 	PacketWriter* outBytes = Packets::Builder::QueryMemory(bytes, size); //now write `bytes` to a packet and send, completing the transaction
 	delete[] bytes;
+	bytes = nullptr;
 	return SendData(outBytes);
 }
 

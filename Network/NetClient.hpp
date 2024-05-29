@@ -55,6 +55,7 @@ public:
 	Error EndConnection(int reason); //sends CS_GOODBYE and disconnects the socket
 	Error SendData(PacketWriter* outPacket); //all data sent to the server should go through this
 
+	Error FlagCheater(DetectionFlags flag);
 	Error QueryMemory(uint64_t address, uint32_t size); //query specific memory address, send its bytes values back to server
 	__forceinline const char*  MakeHeartbeat(string cookie);
 
