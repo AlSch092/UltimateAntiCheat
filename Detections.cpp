@@ -323,7 +323,6 @@ BOOL __forceinline Detections::DoesFunctionAppearHooked(const char* moduleName, 
 
 /*
     DoesIATContainHooked - Returns TRUE if any routines in the IAT lead to addresses outside their respective modules
-    Until I come up with a better solution, we just check against the common memory range where system DLLs such as kernel32 and ntdll load into (0x00007FF400000000 - 0x00007FFFFFFFFFFF or so)
     if the attacker writes their hooks in the dll's address space then they can get around this detection
 */
 BOOL __forceinline Detections::DoesIATContainHooked()
@@ -343,7 +342,7 @@ BOOL __forceinline Detections::DoesIATContainHooked()
         DWORD moduleSize = Process::GetModuleSize(IATEntry->Module);
 
         if (moduleSize != 0)
-        {
+        {   //some IAT functions in k32 can point to ntdll, thus we have to compare IAT to each other whitelisted DLL range
             for (std::vector<ProcessData::MODULE_DATA>::iterator it = modules->begin(); it != modules->end(); ++it)
             {
                 UINT64 LowAddr = (UINT64)it->dllInfo.lpBaseOfDll;
@@ -407,8 +406,21 @@ bool Detections::CheckOpenHandles()
         if (Handles::DoesProcessHaveOpenHandleTous(handle.ProcessId, handles))
         {
             wstring procName = Process::GetProcessName(handle.ProcessId);
+            int size = sizeof(Handles::Whitelisted) / sizeof(UINT64);
+
+            for (int i = 0; i < size; i++)
+            {
+                if (wcscmp(Handles::Whitelisted[i], procName.c_str()) == 0) //whitelisted program has open handle
+                {
+                    goto inner_break;
+                }
+            }
+
             Logger::logfw("UltimateAnticheat.log", Detection, L"Process %s has open process handle to our process.", procName.c_str());
             foundHandle = true;
+
+        inner_break:
+            continue;
         }
     }
 
