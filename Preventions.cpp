@@ -12,7 +12,7 @@ bool Preventions::PreventDllInjection()
     char* RandString4 = Utility::GenerateRandomString(14);
 
     //prevents DLL injection from any host process relying on calling LoadLibrary in the target process (we are the target in this case) -> can possibly be disruptive to end user
-    if (Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryA", RandString1) &&   
+    if (Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryA", RandString1) &&
         Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryW", RandString2) &&
         Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExA", RandString3) &&
         Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExW", RandString4))
@@ -86,7 +86,7 @@ bool Preventions::RandomizeModuleName()
     return success;
 }
 
-Error Preventions::DeployBarrier() 
+Error Preventions::DeployBarrier()
 {
     Error retError = Error::OK;
 
@@ -110,15 +110,18 @@ Error Preventions::DeployBarrier()
     }
     else
     {
-        Logger::logf("UltimateAnticheat.log", Err, " Couldn't change our module's name @ Preventions::ChangeModuleName");
+        Logger::logf("UltimateAnticheat.log", Err, " Couldn't change our module's name @ Preventions::DeployBarrier");
         retError = Error::CANT_APPLY_TECHNIQUE;
     }
 
     if (!StopAPCInjection()) //patch over ntdll.dll Ordinal8 unnamed function
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Couldn't apply anti-APC technique @ Preventions::ChangeModuleName");
+        Logger::logf("UltimateAnticheat.log", Err, "Couldn't apply anti-APC technique @ Preventions::DeployBarrier");
         retError = Error::CANT_APPLY_TECHNIQUE;
     }
+
+    //third parameter (dynamic code) set to true -> prevents VirtualProtect from succeeding on .text sections of loaded modules. while this can be very useful, it breaks our TLS callback protections since we patch over the first byte of new thread's execution addresses
+    Preventions::EnableProcessMitigations(true, true, false, true, true); 
 
     //anything commented out below means it needs further testing to ensure no side effects occur, 
 
@@ -128,7 +131,7 @@ Error Preventions::DeployBarrier()
     //}
     //else
     //{
-    //    Logger::logf("UltimateAnticheat.log", Err, " Couldn't write over export names @ Preventions::ChangeExportNames\n");
+    //    Logger::logf("UltimateAnticheat.log", Err, " Couldn't write over export names @ Preventions::DeployBarrier\n");
     //    retError = Error::CANT_APPLY_TECHNIQUE;
     //}
 
@@ -138,7 +141,7 @@ Error Preventions::DeployBarrier()
     //}
     //else
     //{
-    //    Logger::logf("UltimateAnticheat.log", Err, " Couldn't write over export names @ Preventions::ChangeExportNames\n");
+    //    Logger::logf("UltimateAnticheat.log", Err, " Couldn't write over export names @ Preventions::DeployBarrier\n");
     //    retError = Error::CANT_APPLY_TECHNIQUE;
     //}
 
@@ -150,7 +153,7 @@ Error Preventions::DeployBarrier()
     //}
     //else
     //{
-    //    Logger::logf("UltimateAnticheat.log", Err, " Couldn't spoof PEB @ Preventions::ChangeExportNames\n");
+    //    Logger::logf("UltimateAnticheat.log", Err, " Couldn't spoof PEB @ Preventions::DeployBarrier\n");
     //    retError = Error::CANT_APPLY_TECHNIQUE;
     //}
 
@@ -193,23 +196,23 @@ bool Preventions::RemapProgramSections()
 }
 
 /*
-    StopMultipleProcessInstances - Uses shared memory to prevent multiple instances of the process. 
+    StopMultipleProcessInstances - Uses shared memory to prevent multiple instances of the process.
     returns true on success
     ... Using a mutex instead may result in attackers closing the mutex handle with popular tools such as Process Hacker
 */
 bool Preventions::StopMultipleProcessInstances()
 {
     HANDLE hSharedMemory = CreateFileMappingA(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(int), " "); //shared memory with blank name
-    
-    if (hSharedMemory == NULL) 
+
+    if (hSharedMemory == NULL)
     {
         Logger::logf("UltimateAnticheat.log", Err, "Failed to create shared memory. Error code: %lu\n", GetLastError());
         return false;
     }
 
     int* pIsRunning = (int*)MapViewOfFile(hSharedMemory, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(int));
-    
-    if (pIsRunning == NULL) 
+
+    if (pIsRunning == NULL)
     {
         Logger::logf("UltimateAnticheat.log", Err, "Failed to map view of file. Error code : % lu\n", GetLastError());
         CloseHandle(hSharedMemory);
@@ -224,7 +227,7 @@ bool Preventions::StopMultipleProcessInstances()
     }
 
     *pIsRunning = 1337;
-    
+
     return true;
 }
 
@@ -270,11 +273,77 @@ bool Preventions::StopAPCInjection()
         }
 
     }
-    __except(EXCEPTION_EXECUTE_HANDLER)
+    __except (EXCEPTION_EXECUTE_HANDLER)
     {
         Logger::logf("UltimateAnticheat.log", Err, "Failed to patch over Ordinal8 address @ StopAPCInjection");
         return false;
     }
 
     return true;
+}
+
+/*
+    EnableProcessMitigations - enforces policies which are actioned by the system & loader to prevent dynamic code generation & execution (unsigned code will be rejected by the loader)
+*/
+void Preventions::EnableProcessMitigations(bool useDEP, bool useASLR, bool useDynamicCode, bool useStrictHandles, bool useSystemCallDisable)
+{
+    if (useDEP)
+    {
+        PROCESS_MITIGATION_DEP_POLICY depPolicy = { 0 };     // DEP Policy
+        depPolicy.Enable = 1;
+        depPolicy.Permanent = 1;
+
+        if (!SetProcessMitigationPolicy(ProcessDEPPolicy, &depPolicy, sizeof(depPolicy)))
+        {
+            Logger::logf("UltimateAnticheat.log", Warning, "Failed to set DEP policy @ EnableProcessMitigations: %d", GetLastError());
+        }
+    }
+
+    if (useASLR)
+    {
+        PROCESS_MITIGATION_ASLR_POLICY aslrPolicy = { 0 };     //ASLR Policy
+        aslrPolicy.EnableBottomUpRandomization = 1;
+        aslrPolicy.EnableForceRelocateImages = 1;
+        aslrPolicy.EnableHighEntropy = 1;
+        aslrPolicy.DisallowStrippedImages = 1;
+
+        if (!SetProcessMitigationPolicy(ProcessASLRPolicy, &aslrPolicy, sizeof(aslrPolicy)))
+        {
+            Logger::logf("UltimateAnticheat.log", Warning, "Failed to set ASLR policy @ EnableProcessMitigations: %d", GetLastError());
+        }
+    }
+
+    if (useDynamicCode)
+    {
+        PROCESS_MITIGATION_DYNAMIC_CODE_POLICY dynamicCodePolicy = { 0 };     //Dynamic Code Policy -> can prevent VirtualProtect calls on .text sections of loaded modules from working
+        dynamicCodePolicy.ProhibitDynamicCode = 1;
+
+        if (!SetProcessMitigationPolicy(ProcessDynamicCodePolicy, &dynamicCodePolicy, sizeof(dynamicCodePolicy)))
+        {
+            Logger::logf("UltimateAnticheat.log", Warning, "Failed to set dynamic code policy @ EnableProcessMitigations: %d", GetLastError());
+        }
+    }
+
+    if (useStrictHandles)
+    {
+        PROCESS_MITIGATION_STRICT_HANDLE_CHECK_POLICY handlePolicy = { 0 };     // Strict Handle Check Policy
+        handlePolicy.RaiseExceptionOnInvalidHandleReference = 1;
+        handlePolicy.HandleExceptionsPermanentlyEnabled = 1;
+
+        if (!SetProcessMitigationPolicy(ProcessStrictHandleCheckPolicy, &handlePolicy, sizeof(handlePolicy)))
+        {
+            Logger::logf("UltimateAnticheat.log", Warning, "Failed to set strict handle check policy @ EnableProcessMitigations: %d", GetLastError());
+        }
+    }
+
+    if (useSystemCallDisable)
+    {
+        PROCESS_MITIGATION_SYSTEM_CALL_DISABLE_POLICY syscallPolicy = { 0 };     // System Call Disable Policy
+        syscallPolicy.DisallowWin32kSystemCalls = 1;
+
+        if (!SetProcessMitigationPolicy(ProcessSystemCallDisablePolicy, &syscallPolicy, sizeof(syscallPolicy)))
+        {
+            Logger::logf("UltimateAnticheat.log", Warning, "Failed to set system call disable policy @ EnableProcessMitigations: %d", GetLastError());
+        }
+    }
 }

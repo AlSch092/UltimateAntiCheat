@@ -24,7 +24,8 @@ public:
 	static bool PreventDllInjection(); //experimental, gives warning popup
 	static bool PreventShellcodeThreads(); //experimental, gives warning popup
 	static bool StopAPCInjection();
-	
+	static void EnableProcessMitigations(bool useDEP, bool useASLR, bool useDynamicCode, bool useStrictHandles, bool useSystemCallDisable); //interesting technique which uses the loader & system to block certain types of attacks, such as unsigned modules being injected
+
 	static BYTE* SpoofPEB(); //not advisable to use this currently
 
 	static bool StopMultipleProcessInstances(); //stop multi-boxing via shared memory
