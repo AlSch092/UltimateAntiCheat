@@ -13,23 +13,29 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessNam
 	if (AC == NULL)
 		return Error::NULL_MEMORY_REFERENCE;
 
-	if (isServerAvailable) //server code will be published soon
+	if (Process::CheckParentProcess(parentProcessName)) //check parent process, kick out if bad
 	{
+		AC->GetMonitor()->GetProcessObj()->SetParentName(parentProcessName);
+	}
+	else //bad parent process detected, or parent process mismatch, shut down the program (and optionally report the error to the server)
+	{
+		Logger::logf("UltimateAnticheat.log", Detection, "Parent process was not whitelisted, shutting down program! Make sure parent process is the same as specified in API.hpp. If you are using VS to debug, this might become VsDebugConsole.exe, rather than explorer.exe");
+		errorCode = Error::PARENT_PROCESS_MISMATCH;
+	}
+
+	if (isServerAvailable)
+	{
+		Logger::logf("UltimateAnticheat.log", Info, "Starting networking component...");
+
 		if (AC->GetNetworkClient()->Initialize(API::ServerEndpoint, API::ServerPort, licenseKey) != Error::OK) //initialize client is separate from license key auth
 		{
 			errorCode = Error::CANT_STARTUP;		//don't allow startup if networking doesn't work
 			goto end;
 		}
 	}
-
-	if (Process::CheckParentProcess(parentProcessName)) //check parent process, kick out if bad
+	else
 	{
-		AC->GetMonitor()->GetProcessObj()->SetParentName(parentProcessName);
-	}
-	else //bad parent process detected, or parent process mismatch, shut down the program after reporting the error to the server
-	{
-		Logger::logf("UltimateAnticheat.log", Detection, "Parent process was not whitelisted, shutting down program! Make sure parent process is the same as specified in API.hpp. If you are using VS to debug, this might become VsDebugConsole.exe, rather than explorer.exe");
-		errorCode = Error::PARENT_PROCESS_MISMATCH;
+		Logger::logf("UltimateAnticheat.log", Info, "Networking is currently disabled, no heartbeats will occurs");
 	}
 
 end:	
