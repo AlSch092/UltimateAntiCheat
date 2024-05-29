@@ -82,8 +82,6 @@ Error API::LaunchDefenses(AntiCheat* AC) //currently in the process to split the
 	if (AC == NULL)
 		return Error::NULL_MEMORY_REFERENCE;
 
-	ULONG_PTR ImageBase = (ULONG_PTR)GetModuleHandle(NULL);
-
 	Error errorCode = Error::OK;
 
 	if (AC->GetBarrier()->DeployBarrier() == Error::OK) //activate all techniques to stop cheaters
