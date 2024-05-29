@@ -37,5 +37,11 @@ namespace Handles
     std::vector<SYSTEM_HANDLE>  DetectOpenHandlesToProcess();
 
     bool DoesProcessHaveOpenHandleTous(DWORD pid, std::vector <Handles::SYSTEM_HANDLE> handleList);
+
+#ifdef _DEBUG
+    static const wchar_t* Whitelisted[] = { {L"conhost.exe"}, {L"devenv.exe"}, {L"VsDebugConsole.exe"} };
+#else
+    static const wchar_t* Whitelisted[] = { {L"conhost.exe"} };
+#endif
 }
 
