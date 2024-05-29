@@ -15,11 +15,11 @@ void Detections::StartMonitor()
 
     this->MonitorThread->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, 0, &this->MonitorThread->Id);
 
-    Logger::logf("UltimateAnticheat.log", Info, "Created monitoring thread with ID %d\n", this->MonitorThread->Id);
+    Logger::logf("UltimateAnticheat.log", Info, "Created monitoring thread with ID %d", this->MonitorThread->Id);
     
     if (this->MonitorThread->handle == INVALID_HANDLE_VALUE || this->MonitorThread->handle == NULL)
     {
-        Logger::logf("UltimateAnticheat.log", Err, " Failed to create monitor thread  @ Detections::StartMonitor\n");
+        Logger::logf("UltimateAnticheat.log", Err, " Failed to create monitor thread  @ Detections::StartMonitor");
         return;
     }
 
@@ -35,17 +35,17 @@ void Detections::Monitor(LPVOID thisPtr)
 {
     if (thisPtr == NULL)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "thisPtr was NULL @ Detections::Monitor. Aborting execution!\n");
+        Logger::logf("UltimateAnticheat.log", Err, "thisPtr was NULL @ Detections::Monitor. Aborting execution!");
         return;
     }
 
-    Logger::logf("UltimateAnticheat.log", Info, "Starting  Detections::Monitor \n");
+    Logger::logf("UltimateAnticheat.log", Info, "Starting  Detections::Monitor");
 
     Detections* Monitor = reinterpret_cast<Detections*>(thisPtr);
 
     if (Monitor == nullptr)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Monitor Ptr was NULL @ Detections::Monitor. Aborting execution!\n");
+        Logger::logf("UltimateAnticheat.log", Err, "Monitor Ptr was NULL @ Detections::Monitor. Aborting execution!");
         return;
     }
 
@@ -53,13 +53,13 @@ void Detections::Monitor(LPVOID thisPtr)
 
     if (sections == nullptr)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Sections was NULLPTR @ Detections::Monitor. Aborting execution!\n");
+        Logger::logf("UltimateAnticheat.log", Err, "Sections was NULLPTR @ Detections::Monitor. Aborting execution!");
         return;
     }
 
     if (sections->size() == 0)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Sections size was 0 @ Detections::Monitor. Aborting execution!\n");
+        Logger::logf("UltimateAnticheat.log", Err, "Sections size was 0 @ Detections::Monitor. Aborting execution!");
         return;
     }
 
@@ -85,7 +85,7 @@ void Detections::Monitor(LPVOID thisPtr)
         if (strcmp(s->name, ".text") == 0) //cache our .text sections address and memory size, since an attacker could possibly spoof the section name or # of sections in ntheaders to prevent section traversing
         {
             CachedSectionAddress = s->address + ModuleAddr;
-            CachedSectionSize = s->size - 100;
+            CachedSectionSize = s->size;
             break;
         }
     }
@@ -98,7 +98,7 @@ void Detections::Monitor(LPVOID thisPtr)
     {
         if (Monitor->GetMonitorThread()->ShutdownSignalled)
         {
-            Logger::logf("UltimateAnticheat.log", Info, "STOPPING  Detections::Monitor , ending detections thread\n");
+            Logger::logf("UltimateAnticheat.log", Info, "STOPPING  Detections::Monitor , ending detections thread");
             Monitor->GetMonitorThread()->CurrentlyRunning = false;
             return;
         }
@@ -193,7 +193,7 @@ list<ProcessData::Section*>* Detections::SetSectionHash(const char* moduleName, 
 
         if (strcmp(s->name, sectionName) == 0)
         {
-            list<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)s->address + ModuleAddr, s->size - 100); //check most of section, a few short to stop edge read cases
+            list<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)s->address + ModuleAddr, s->size); //check most of section, a few short to stop edge read cases
 
             if (hashes.size() > 0)
             {
