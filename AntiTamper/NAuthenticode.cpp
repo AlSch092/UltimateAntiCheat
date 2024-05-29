@@ -146,8 +146,6 @@ BOOL Authenticode::VerifyEmbeddedSignature(LPCWSTR pwszSourceFile)
             // The UI was disabled in dwUIChoice or the admin policy 
             // has disabled user trust. lStatus contains the 
             // publisher or time stamp chain error.
-            wprintf_s(L"Error is: 0x%x.\n",
-                lStatus);
             break;
     }
 
