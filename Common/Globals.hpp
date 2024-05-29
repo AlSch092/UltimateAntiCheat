@@ -4,7 +4,7 @@
 
 namespace UnmanagedGlobals
 {
-	static std::wstring wCurrentModuleName;
+    static std::wstring wCurrentModuleName;
     static std::string CurrentModuleName;
 
     static std::list<Thread*>* ThreadList = new std::list<Thread*>();
