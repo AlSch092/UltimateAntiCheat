@@ -3,12 +3,13 @@
 #include "PEB.hpp"
 #include "Thread.hpp"
 #include "Handles.hpp"
-#include <stdint.h>
 #include <string>
 #include <Psapi.h>
 #include <tchar.h>
 #include <TlHelp32.h>
 #include <list>
+#include <ImageHlp.h>
+#pragma comment(lib, "ImageHlp")
 
 using namespace std;
 
@@ -22,6 +23,23 @@ using namespace std;
 
 namespace ProcessData
 {
+	typedef enum _PROCESS_INFORMATION_CLASS 
+	{
+		ProcessMemoryPriority,
+		ProcessMemoryExhaustionInfo,
+		ProcessAppMemoryInfo,
+		ProcessInPrivateInfo,
+		ProcessPowerThrottling,
+		ProcessReservedValue1,
+		ProcessTelemetryCoverageInfo,
+		ProcessProtectionLevelInfo,
+		ProcessLeapSecondInfo,
+		ProcessMachineTypeInfo,
+		ProcessOverrideSubsequentPrefetchParameter,
+		ProcessMaxOverridePrefetchParameter,
+		ProcessInformationClassMax
+	} PROCESS_INFORMATION_CLASS;
+
 	struct MODULE_DATA
 	{
 		wchar_t name[MAX_FILE_PATH_LENGTH];
@@ -72,6 +90,9 @@ public:
 		{
 			Logger::logf("UltimateAnticheat.log", Err, "Unable to traverse loaded modules @ ::Process() .\n");
 		}
+
+		SetParentName(GetProcessName(GetParentProcessId()));
+		SetElevated(IsProcessElevated());
 	}
 
 	~Process()
@@ -79,6 +100,8 @@ public:
 		for (ProcessData::MODULE_DATA* s : ModuleList)
 			delete s;
 	}
+
+	bool FillModuleList();
 
 	uint32_t GetMemorySize();
 
@@ -103,7 +126,7 @@ public:
 	void SetParentName(wstring parentName) { this->_ParentProcessName = parentName; }
 	void SetParentId(uint32_t id) { this->_ParentProcessId = id; }
 
-	static bool ChangeModuleName(const wstring szModule, const wstring newName); //these `ChangeXYZ` routines all modify aspects of the NT headers
+	static bool ChangeModuleName(const wstring szModule, const wstring newName); //these `ChangeXYZ` routines all modify aspects of the PEB
 	static bool ChangeModuleBase(const wchar_t* szModule, uint64_t moduleBaseAddress);
 	static bool ChangeModulesChecksum(const wchar_t* szModule, DWORD checksum);
 	static bool ChangePEEntryPoint(DWORD newEntry);
@@ -126,18 +149,17 @@ public:
 
 	static list<ProcessData::ImportFunction*> GetIATEntries(); //start of IAT hook checks
 
-	bool FillModuleList();
-
 	static bool IsReturnAddressInModule(UINT64 RetAddr, const wchar_t* module);
 
 	static std::vector<ProcessData::MODULE_DATA>* GetLoadedModules();
+	
+	static HMODULE GetModuleHandle_Ldr(const wchar_t* moduleName);
 
 private:
 
 	_MYPEB* _PEB = NULL;
 
 	uint32_t _ProcessId = 0;
-	HANDLE _Mutant = INVALID_HANDLE_VALUE;
 
 	wstring _ProcessName;
 	wstring _WindowClassName;

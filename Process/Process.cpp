@@ -1,5 +1,4 @@
 #include "Process.hpp"
-#pragma comment(lib, "ImageHlp")
 
 /*
     GetMemorySize - retrieves memory size of current process module
@@ -166,14 +165,14 @@ list<ProcessData::Section*>* Process::GetSections(string module)
 */
 bool Process::ChangeModuleName(const wstring szModule, const wstring newName)
 {
-    PPEB PEB = (PPEB)__readgsqword(0x60);
+    MYPEB* PEB = (MYPEB*)__readgsqword(0x60);
     _LIST_ENTRY* f = PEB->Ldr->InMemoryOrderModuleList.Flink;
     bool Found = FALSE;
     int count = 0;
 
     while (!Found && count < 256) //traverse module list , stops at 256 loops to prevent infinite looping incase szModule isn't found
     {
-        PLDR_DATA_TABLE_ENTRY dataEntry = CONTAINING_RECORD(f, LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);
+        MY_PLDR_DATA_TABLE_ENTRY dataEntry = CONTAINING_RECORD(f, MY_LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);
 
         if (wcsstr(dataEntry->FullDllName.Buffer, szModule.c_str()))
         {
@@ -197,14 +196,14 @@ bool Process::ChangeModuleName(const wstring szModule, const wstring newName)
 */
 bool Process::ChangeModuleBase(const wchar_t* szModule, uint64_t moduleBaseAddress)
 {
-    PPEB PEB = (PPEB)__readgsqword(0x60);
+    MYPEB* PEB = (MYPEB*)__readgsqword(0x60);
     _LIST_ENTRY* f = PEB->Ldr->InMemoryOrderModuleList.Flink;
     bool Found = FALSE;
     int count = 0;
 
     while (!Found && count < 256)
     {
-        PLDR_DATA_TABLE_ENTRY dataEntry = CONTAINING_RECORD(f, LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);
+        MY_PLDR_DATA_TABLE_ENTRY dataEntry = CONTAINING_RECORD(f, MY_LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);
 
         if (wcsstr(dataEntry->FullDllName.Buffer, szModule))
         {
@@ -226,14 +225,14 @@ bool Process::ChangeModuleBase(const wchar_t* szModule, uint64_t moduleBaseAddre
 */
 bool Process::ChangeModulesChecksum(const wchar_t* szModule, DWORD checksum)
 {
-    PPEB PEB = (PPEB)__readgsqword(0x60);
+    MYPEB* PEB = (MYPEB*)__readgsqword(0x60);
     _LIST_ENTRY* f = PEB->Ldr->InMemoryOrderModuleList.Flink;
     bool Found = FALSE;
     int count = 0;
 
     while (!Found && count < 256)
     {
-        PLDR_DATA_TABLE_ENTRY dataEntry = CONTAINING_RECORD(f, LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);
+        MY_PLDR_DATA_TABLE_ENTRY dataEntry = CONTAINING_RECORD(f, MY_LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);
 
         if (wcsstr(dataEntry->FullDllName.Buffer, szModule))
         {
@@ -794,7 +793,7 @@ bool Process::ModifyTLSCallbackPtr(UINT64 NewTLSFunction)
     _GetProcAddress - Attempt to retrieve address of function of `Module`, given `lpProcName`
     Meant to be used for function lookups without calling GetProcAddress explicitly (may require dynamic analysis instead of static for an attacker)
 */
-FARPROC Process::_GetProcAddress(LPCSTR Module, LPCSTR lpProcName)
+FARPROC Process::_GetProcAddress(PCSTR Module, LPCSTR lpProcName)
 {
     if (Module == nullptr || lpProcName == nullptr)
         return (FARPROC)NULL;
@@ -987,4 +986,38 @@ std::vector<ProcessData::MODULE_DATA>* Process::GetLoadedModules()
 
     return moduleList;
     
+}
+
+/*
+    GetModuleHandle_Ldr - returns base address of a module as HMODULE type
+    returns NULL on failure
+*/
+HMODULE Process::GetModuleHandle_Ldr(const wchar_t* moduleName)
+{
+    MYPEB* peb = (MYPEB*)__readgsqword(0x60);
+    uintptr_t kernel32Base = 0;
+
+    LIST_ENTRY* current_record = NULL;
+    LIST_ENTRY* start = &(peb->Ldr->InLoadOrderModuleList);
+
+    current_record = start->Flink;
+
+    while (true)
+    {
+        MY_LDR_DATA_TABLE_ENTRY* module_entry = (MY_LDR_DATA_TABLE_ENTRY*)CONTAINING_RECORD(current_record, MY_LDR_DATA_TABLE_ENTRY, InLoadOrderLinks);
+
+        current_record = current_record->Flink;
+
+        if (wcsstr(module_entry->FullDllName.Buffer, moduleName) != NULL)
+        {
+            return (HMODULE)module_entry->DllBase;
+        }
+
+        if (current_record == start)
+        {
+            return (HMODULE)NULL;
+        }
+    }
+
+    return (HMODULE)NULL;
 }
