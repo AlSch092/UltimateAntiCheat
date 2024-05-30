@@ -218,7 +218,7 @@ BOOL Services::IsTestsigningEnabled()
 
     szOutput[bytesRead] = '\0';
 
-    if (strstr(szOutput, "testsigning             Yes") != NULL)  //this works on Windows 10, I can't guarantee it does on other versions of windows
+    if (strstr(szOutput, "testsigning") != NULL && strstr(szOutput, "Yes") != NULL)  //this works on Windows 10, I can't guarantee it does on other versions of windows
     {
         foundTestsigning = TRUE;
     }
@@ -235,4 +235,94 @@ BOOL Services::IsTestsigningEnabled()
 
     CloseHandle(hReadPipe);
     return foundTestsigning;
+}
+
+/*
+    IsDebugModeEnabled - Opens BCDEdit.exe and pipes output to check if debug mode is enabled. May require running program as administrator.
+    returns TRUE if debug  mode is enabled.
+*/
+BOOL Services::IsDebugModeEnabled()
+{
+    HANDLE hReadPipe, hWritePipe;
+    SECURITY_ATTRIBUTES sa;
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+    char szOutput[1024];
+    DWORD bytesRead;
+    BOOL foundKDebugMode = FALSE;
+
+    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+    sa.bInheritHandle = TRUE;
+    sa.lpSecurityDescriptor = NULL;
+
+    CHAR volumePath[MAX_PATH];
+    DWORD charCount;
+
+    charCount = GetWindowsDirectoryA(volumePath, MAX_PATH);
+    if (charCount == 0)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to retrieve Windows directory path @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
+        return FALSE;
+    }
+
+    CHAR volumeName[MAX_PATH];
+    if (!GetVolumePathNameA(volumePath, volumeName, MAX_PATH))
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to retrieve volume path name @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
+        return FALSE;
+    }
+
+    if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0)) //use a pipe to read output of bcdedit command
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "CreatePipe failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
+        return foundKDebugMode;
+    }
+
+    memset(&si, 0, sizeof(si));
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdOutput = hWritePipe;
+
+    string bcdedit_location = "Windows\\System32\\bcdedit.exe";
+    string fullpath_bcdedit = (volumeName + bcdedit_location);
+
+    if (!CreateProcessA(fullpath_bcdedit.c_str(), NULL, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "CreateProcess failed @ Services::IsDebugModeEnabled: %d\n", GetLastError());
+        CloseHandle(hReadPipe);
+        CloseHandle(hWritePipe);
+        return foundKDebugMode;
+    }
+
+    //..wait for the process to finish
+    WaitForSingleObject(pi.hProcess, INFINITE);
+
+    CloseHandle(hWritePipe);
+
+    if (!ReadFile(hReadPipe, szOutput, 1024 - 1, &bytesRead, NULL)) //now read our pipe
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "ReadFile failed @ Services::IsDebugModeEnabled: %d\n", GetLastError());
+        CloseHandle(hReadPipe);
+        return foundKDebugMode;
+    }
+
+    szOutput[bytesRead] = '\0';
+
+    if (strstr(szOutput, "debug") != NULL && strstr(szOutput, "Yes") != NULL)  //this works on Windows 10, I can't guarantee it does on other versions of windows
+    {
+        foundKDebugMode = TRUE;
+    }
+    else if (strstr(szOutput, "The boot configuration data store could not be opened") != NULL)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to run bcdedit @ IsDebugModeEnabled. Please make sure program is run as administrator\n");
+        foundKDebugMode = FALSE;
+    }
+    else
+    {
+        Logger::logf("UltimateAnticheat.log", Detection, "Debug mode was found enabled");
+        foundKDebugMode = FALSE;
+    }
+
+    CloseHandle(hReadPipe);
+    return foundKDebugMode;
 }

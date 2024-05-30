@@ -48,6 +48,7 @@ public:
 	list<wstring> GetUnsignedDrivers();
 
 	static BOOL IsTestsigningEnabled();
+	static BOOL IsDebugModeEnabled();
 
 private:
 
