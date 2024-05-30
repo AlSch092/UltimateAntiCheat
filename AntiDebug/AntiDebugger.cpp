@@ -68,7 +68,7 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 			Logger::logf("UltimateAnticheat.log", Detection, "Debugger found: HARDWARE_REGISTERS.\n");
 		}
 
-		if (AntiDbg->_IsDebuggerPresentHeapFlags())
+		if (AntiDbg->_IsDebuggerPresent_HeapFlags())
 		{
 			AntiDbg->DebuggerMethodsDetected.push_back(Detections::HEAP_FLAG);
 			Logger::logf("UltimateAnticheat.log", Detection, "Debugger found: HEAP_FLAG.\n");
@@ -110,7 +110,7 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 			Logger::logf("UltimateAnticheat.log", Detection, "ProcessDebugFlags found!\n");
 		}
 
-		if (AntiDbg->_IsDebuggerPresentCloseHandle())
+		if (AntiDbg->_IsDebuggerPresent_CloseHandle())
 		{
 			AntiDbg->DebuggerMethodsDetected.push_back(Detections::CLOSEHANDLE);
 			Logger::logf("UltimateAnticheat.log", Detection, "Debugger was found via CloseHandle!\n");
@@ -220,7 +220,19 @@ bool Debugger::AntiDebug::_IsKernelDebuggerPresent()
 	return false;
 }
 
-bool Debugger::AntiDebug::_IsDebuggerPresentHeapFlags()
+bool Debugger::AntiDebug::_IsKernelDebuggerPresent_SharedKData()
+{
+	_KUSER_SHARED_DATA* sharedData = USER_SHARED_DATA;
+
+	if (sharedData->DbgKdEnabled) 	//Check the kernel debugger enabled flag
+	{
+		return true;
+	}
+
+	return false;
+}
+
+bool Debugger::AntiDebug::_IsDebuggerPresent_HeapFlags()
 {
 	DWORD_PTR pPeb64 = (DWORD_PTR)__readgsqword(0x60);
 
@@ -243,7 +255,7 @@ bool Debugger::AntiDebug::_IsDebuggerPresentHeapFlags()
 	return false;
 }
 
-bool Debugger::AntiDebug::_IsDebuggerPresentCloseHandle()
+bool Debugger::AntiDebug::_IsDebuggerPresent_CloseHandle()
 {
 #ifndef _DEBUG
 	__try
@@ -268,26 +280,11 @@ bool Debugger::AntiDebug::_IsDebuggerPresent_RemoteDebugger()
 	return false;
 }
 
-bool Debugger::AntiDebug::_IsDebuggerPresent_IllegalInstruction()
-{
-	return false;
-}
-
 bool Debugger::AntiDebug::_IsDebuggerPresent_Int2c()
 {
-	unsigned char cBuf[] = { 0x0F, 0x0B, 0xC3 };
-
-	DWORD pOldProt = 0;
-	if (!VirtualProtect((LPVOID)cBuf, 3, PAGE_EXECUTE_READWRITE, &pOldProt))
-	{
-		Logger::logf("UltimateAnticheat.log", Err, "VirtualProtect failed at _IsDebuggerPresent_Int2c: %d\n", GetLastError());
-		return false;
-	}
-
 	__try
 	{
-		void (*fun_ptr)() = (void(*)(void))(&cBuf);
-		fun_ptr();
+		__int2c();
 	}
 	__except (EXCEPTION_EXECUTE_HANDLER)
 	{
