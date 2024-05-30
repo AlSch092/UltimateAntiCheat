@@ -106,13 +106,31 @@ void Detections::Monitor(LPVOID thisPtr)
         if (Monitor->CheckSectionHash(CachedSectionAddress, CachedSectionSize)) //compare hashes of .text for modifications
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Found modified .text section!\n");
-            Monitor->SetCheater(true); //report back to server that someone's cheating
+            Monitor->SetCheater(true);
+            
+            NetClient* client = Monitor->GetNetClient();  //report back to server that someone's cheating
+            if (client != nullptr)
+            {
+                if (client->FlagCheater(DetectionFlags::CODE_INTEGRITY) != Error::OK)
+                {
+                    Logger::logf("UltimateAnticheat.log", Err, "Failed to notify server of cheating status.");
+                }
+            }
         }
 
         if (Monitor->IsBlacklistedProcessRunning()) //external applications running on machine
         {
-            Logger::logf("UltimateAnticheat.log", Detection, "Found blacklisted process!\n");
+            Logger::logf("UltimateAnticheat.log", Detection, "Found blacklisted process!");
             Monitor->SetCheater(true);
+
+            NetClient* client = Monitor->GetNetClient();  //report back to server that someone's cheating
+            if (client != nullptr)
+            {
+                if (client->FlagCheater(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM) != Error::OK)
+                {
+                    Logger::logf("UltimateAnticheat.log", Err, "Failed to notify server of cheating status.");
+                }
+            }
         }
 
         //make sure ws2_32.dll is actually loaded if this gives an error, on my build the dll is not loaded but we'll pretend it is
@@ -120,35 +138,89 @@ void Detections::Monitor(LPVOID thisPtr)
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Networking WINAPI (send | recv) was hooked!\n"); //WINAPI hooks doesn't always determine someone is cheating since AV and other software can write the hooks
             Monitor->SetCheater(true); //..but for simplicity in this project we will set them as a cheater
+
+            NetClient* client = Monitor->GetNetClient();  //report back to server that someone's cheating
+            if (client != nullptr)
+            {
+                if (client->FlagCheater(DetectionFlags::CODE_INTEGRITY) != Error::OK)
+                {
+                    Logger::logf("UltimateAnticheat.log", Err, "Failed to notify server of cheating status.");
+                }
+            }
         }
 
         if (Monitor->GetIntegrityChecker()->IsUnknownModulePresent()) //authenticode call and check against whitelisted module list
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Found at least one unsigned dll loaded : We ideally only want verified, signed dlls in our application!\n");
+
+            NetClient* client = Monitor->GetNetClient();  //report back to server that someone's cheating
+            if (client != nullptr)
+            {
+                if (client->FlagCheater(DetectionFlags::INJECTED_ILLEGAL_PROGRAM) != Error::OK)
+                {
+                    Logger::logf("UltimateAnticheat.log", Err, "Failed to notify server of cheating status.");
+                }
+            }
         }
 
         if (Services::IsTestsigningEnabled()) //test signing enabled, self-signed drivers
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Testsigning is enabled! In most cases we don't allow the game/process to continue if testsigning is enabled.\n");
             Monitor->SetCheater(true);
+
+            NetClient* client = Monitor->GetNetClient();  //report back to server that someone's cheating
+            if (client != nullptr)
+            {
+                if (client->FlagCheater(DetectionFlags::UNSIGNED_DRIVERS) != Error::OK)
+                {
+                    Logger::logf("UltimateAnticheat.log", Err, "Failed to notify server of cheating status.");
+                }
+            }
         }
 
         if (Detections::DoesIATContainHooked()) //iat hook check
         {
             Logger::logf("UltimateAnticheat.log", Detection, "IAT was hooked! One or more functions lead to addresses outside their respective modules!\n");
             Monitor->SetCheater(true);
+
+            NetClient* client = Monitor->GetNetClient();  //report back to server that someone's cheating
+            if (client != nullptr)
+            {
+                if (client->FlagCheater(DetectionFlags::CODE_INTEGRITY) != Error::OK)
+                {
+                    Logger::logf("UltimateAnticheat.log", Err, "Failed to notify server of cheating status.");
+                }
+            }
         }
 
         if (Detections::IsTextSectionWritable()) //page protections check
         {
             Logger::logf("UltimateAnticheat.log", Detection, ".text section was writable, which means someone re-re-mapped our memory regions! (or you ran this in DEBUG build)");
             Monitor->SetCheater(true);
+
+            NetClient* client = Monitor->GetNetClient();  //report back to server that someone's cheating
+            if (client != nullptr)
+            {
+                if (client->FlagCheater(DetectionFlags::PAGE_PROTECTIONS) != Error::OK)
+                {
+                    Logger::logf("UltimateAnticheat.log", Err, "Failed to notify server of cheating status.");
+                }
+            }
         }
 
         if (Detections::CheckOpenHandles()) //open handles to our process check
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Found open process handles to our process from other processes");
             Monitor->SetCheater(true);
+
+            NetClient* client = Monitor->GetNetClient();  //report back to server that someone's cheating
+            if (client != nullptr)
+            {
+                if (client->FlagCheater(DetectionFlags::OPEN_PROCESS_HANDLES) != Error::OK) //cheat engine attachment can be detected this way
+                {
+                    Logger::logf("UltimateAnticheat.log", Err, "Failed to notify server of cheating status.");
+                }
+            }
         }
 
         Sleep(MonitorLoopMilliseconds);
@@ -393,7 +465,7 @@ BOOL __forceinline Detections::IsTextSectionWritable()
 }
 
 /*
-    CheckOpenHandles - Checks if any processes have open handles to our process
+    CheckOpenHandles - Checks if any processes have open handles to our process, excluding whitelisted processes such as conhost.exe
     returns true if some other process has an open process handle to the current process
 */
 bool Detections::CheckOpenHandles()

@@ -9,7 +9,6 @@
 #endif
 #endif
 
-#include "Network/NetClient.hpp"
 #include "Detections.hpp"
 #include "Preventions.hpp"
 #include "Logger.hpp"
@@ -24,9 +23,12 @@ public:
 	AntiCheat()
 	{	
 		_AntiDebugger = new Debugger::AntiDebug();
-		Monitor = new Detections(false);
-		Barrier = new Preventions(true);
+		
 		Client = new NetClient();
+
+		Monitor = new Detections(false, Client);
+		
+		Barrier = new Preventions(true); //true = prevent new threads from being made
 	}
 
 	~AntiCheat()
@@ -35,6 +37,11 @@ public:
 		delete Barrier;
 		delete _AntiDebugger;
 		delete Client;
+
+		Monitor = nullptr;
+		Barrier = nullptr;
+		_AntiDebugger = nullptr;
+		Client = nullptr;
 	}
 
 	Debugger::AntiDebug* GetAntiDebugger() { return this->_AntiDebugger; }
@@ -44,6 +51,7 @@ public:
 
 	/*
 		IsAnyThreadSuspended - Checks the looping threads of class members to ensure the program is running as normal. An attacker may try to suspend threads to either remap or disable functionalities
+		returns true if any thread is found suspended
 	*/
 	__forceinline bool IsAnyThreadSuspended()
 	{
@@ -68,8 +76,8 @@ public:
 
 private:
 
-	Detections* Monitor = NULL; //cheat detections
-	Preventions* Barrier = NULL; //cheat preventions
-	Debugger::AntiDebug* _AntiDebugger = NULL;
-	NetClient* Client = NULL; //for client-server comms
+	Detections* Monitor = nullptr; //cheat detections
+	Preventions* Barrier = nullptr; //cheat preventions
+	Debugger::AntiDebug* _AntiDebugger = nullptr;
+	NetClient* Client = nullptr; //for client-server comms
 };

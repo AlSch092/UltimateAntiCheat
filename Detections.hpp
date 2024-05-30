@@ -1,16 +1,20 @@
 //By AlSch092 @github
 #pragma once
+#include "Network/NetClient.hpp"
 #include "AntiDebug/AntiDebugger.hpp"
 #include "AntiTamper/Integrity.hpp"
 #include "Environment/Services.hpp"
 #include "Obscure/Obfuscation.hpp"
 #include "Common/Globals.hpp"
 
+/*
+	The detections class contains a set of static functions to help detect fragments of cheating, along with a thread for looping detections
+*/
 class Detections
 {
 public:
 
-	Detections(BOOL StartMonitor)
+	Detections(BOOL StartMonitor, NetClient* client)
 	{
 		_Services = new Services(FALSE);
 		integrityChecker = new Integrity();
@@ -24,6 +28,9 @@ public:
 
 		this->CheaterWasDetected = new ObfuscatedData<uint8_t>((bool)false);
 
+		if (client != nullptr)
+			netClient = client;
+
 		if (StartMonitor)
 			this->StartMonitor();
 	}
@@ -36,6 +43,8 @@ public:
 		if (MonitorThread != NULL) //by the time this destructor is called the monitorthread should be exited, but adding in a 'thread running' check might still be handy here
 			delete MonitorThread;
 	}
+
+	NetClient* GetNetClient() { return this->netClient; }
 
 	string currentModuleName;
 
@@ -79,4 +88,6 @@ private:
 	list<wstring> BlacklistedProcesses;
 
 	Process* _Proc = new Process(); //keep track of our sections, loaded modules, etc
+
+	NetClient* netClient = nullptr; //send any detections to the server
 };
