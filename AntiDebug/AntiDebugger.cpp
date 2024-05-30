@@ -1,6 +1,8 @@
 //By AlSch092 @github
 #include "AntiDebugger.hpp"
 
+#define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
+
 void Debugger::AntiDebug::StartAntiDebugThread()
 {
 	this->DetectionThread = new Thread();
@@ -42,7 +44,7 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 
 		if (AntiDbg->DetectionThread->ShutdownSignalled)
 		{
-			Logger::logf("UltimateAnticheat.log", Info, "Shutting down Debugger detection thread with Id: %d\n", AntiDbg->DetectionThread->Id);
+			Logger::logf("UltimateAnticheat.log", Info, "Shutting down Debugger detection thread with Id: %d", AntiDbg->DetectionThread->Id);
 			AntiDbg->DetectionThread->CurrentlyRunning = false;
 			return; //exit thread
 		}
@@ -53,67 +55,67 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 		if (basicDbg)
 		{
 			AntiDbg->DebuggerMethodsDetected.push_back(Detections::WINAPI_DEBUGGER);
-			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: WINAPI_DEBUGGER!\n");
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: WINAPI_DEBUGGER!");
 		}
 
 		if (AntiDbg->_IsDebuggerPresent_PEB())
 		{
 			AntiDbg->DebuggerMethodsDetected.push_back(Detections::PEB_FLAG);
-			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: PEB_FLAG!\n");
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: PEB_FLAG!");
 		}
 
 		if (AntiDbg->_IsHardwareDebuggerPresent())
 		{
 			AntiDbg->DebuggerMethodsDetected.push_back(Detections::HARDWARE_REGISTERS);
-			Logger::logf("UltimateAnticheat.log", Detection, "Debugger found: HARDWARE_REGISTERS.\n");
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: HARDWARE_REGISTERS.");
 		}
 
 		if (AntiDbg->_IsDebuggerPresent_HeapFlags())
 		{
 			AntiDbg->DebuggerMethodsDetected.push_back(Detections::HEAP_FLAG);
-			Logger::logf("UltimateAnticheat.log", Detection, "Debugger found: HEAP_FLAG.\n");
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: HEAP_FLAG.");
 		}
 
 		if (AntiDbg->_IsKernelDebuggerPresent())
 		{
 			AntiDbg->DebuggerMethodsDetected.push_back(Detections::KERNEL_DEBUGGER);
-			Logger::logf("UltimateAnticheat.log", Detection, "Debugger found: KERNEL_DEBUGGER.\n");
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: KERNEL_DEBUGGER.");
 		}
 
 		if (AntiDbg->_IsDebuggerPresent_DbgBreak())
 		{
 			AntiDbg->DebuggerMethodsDetected.push_back(Detections::INT3);
-			Logger::logf("UltimateAnticheat.log", Detection, "Debugger found: DbgBreak Excpetion Handler\n");
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: DbgBreak Excpetion Handler");
 		}
 
 		if (AntiDbg->_IsDebuggerPresent_WaitDebugEvent())
 		{
 			AntiDbg->DebuggerMethodsDetected.push_back(Detections::DEBUG_EVENT);
-			Logger::logf("UltimateAnticheat.log", Detection, "Debugger found WaitDebugEvent.\n");
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: WaitDebugEvent.");
 		}
 
 		if (AntiDbg->_IsDebuggerPresent_VEH()) //also patches over InitializeVEH's first byte if the dll is found
 		{
 			AntiDbg->DebuggerMethodsDetected.push_back(Detections::VEH_DEBUGGER);
-			Logger::logf("UltimateAnticheat.log", Detection, "VEH debugger found!\n");
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: VEH ");
 		}
 
 		if (AntiDbg->_IsDebuggerPresent_DebugPort())
 		{
 			AntiDbg->DebuggerMethodsDetected.push_back(Detections::DEBUG_PORT);
-			Logger::logf("UltimateAnticheat.log", Detection, "DebugPort found!\n");
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: DebugPort");
 		}
 
 		if (AntiDbg->_IsDebuggerPresent_ProcessDebugFlags())
 		{
 			AntiDbg->DebuggerMethodsDetected.push_back(Detections::PROCESS_DEBUG_FLAGS);
-			Logger::logf("UltimateAnticheat.log", Detection, "ProcessDebugFlags found!\n");
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: ProcessDebugFlags\n");
 		}
 
 		if (AntiDbg->_IsDebuggerPresent_CloseHandle())
 		{
 			AntiDbg->DebuggerMethodsDetected.push_back(Detections::CLOSEHANDLE);
-			Logger::logf("UltimateAnticheat.log", Detection, "Debugger was found via CloseHandle!\n");
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: CloseHandle");
 		}
 		
 		if (AntiDbg->DebuggerMethodsDetected.size() > 0)
@@ -246,7 +248,7 @@ bool Debugger::AntiDebug::_IsDebuggerPresent_HeapFlags()
 			if (*heapForceFlagsPtr >= 0x40000060)
 				return true;
 		}
-		__except (EXCEPTION_EXECUTE_HANDLER) //incase of mem read exception
+		__except (EXCEPTION_EXECUTE_HANDLER)
 		{
 			return false;
 		}
@@ -396,20 +398,25 @@ inline bool Debugger::AntiDebug::_IsDebuggerPresent_WaitDebugEvent()
 inline bool  Debugger::AntiDebug::_IsDebuggerPresent_PEB()
 {
 	MYPEB* _PEB = (MYPEB*)__readgsqword(0x60);
-	return _PEB->BeingDebugged;
+	return _PEB;
 }
 
 inline bool Debugger::AntiDebug::_IsDebuggerPresent_DebugPort()
 {
-	typedef NTSTATUS(NTAPI* TNtQueryInformationProcess)(IN HANDLE ProcessHandle, IN PROCESSINFOCLASS ProcessInformationClass,OUT PVOID ProcessInformation,IN ULONG ProcessInformationLength,OUT PULONG ReturnLength);
+	typedef NTSTATUS(NTAPI* TNtQueryInformationProcess)(IN HANDLE ProcessHandle, IN PROCESS_INFORMATION_CLASS ProcessInformationClass,OUT PVOID ProcessInformation,IN ULONG ProcessInformationLength,OUT PULONG ReturnLength);
 
-	HMODULE hNtdll = LoadLibraryA("ntdll.dll");
+	HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
+
+	if(!hNtdll)
+	    hNtdll = LoadLibraryA("ntdll.dll");
+	
 	if (hNtdll)
 	{
 		auto pfnNtQueryInformationProcess = (TNtQueryInformationProcess)GetProcAddress(hNtdll, "NtQueryInformationProcess");
 
 		if (pfnNtQueryInformationProcess)
 		{
+			const PROCESS_INFORMATION_CLASS ProcessDebugPort = (PROCESS_INFORMATION_CLASS)7;
 			DWORD dwProcessDebugPort, dwReturned;
 			NTSTATUS status = pfnNtQueryInformationProcess(GetCurrentProcess(), ProcessDebugPort, &dwProcessDebugPort, sizeof(DWORD), &dwReturned);
 
@@ -424,7 +431,7 @@ inline bool Debugger::AntiDebug::_IsDebuggerPresent_DebugPort()
 
 inline bool Debugger::AntiDebug::_IsDebuggerPresent_ProcessDebugFlags()
 {
-	typedef NTSTATUS(NTAPI* TNtQueryInformationProcess)(IN HANDLE ProcessHandle, IN PROCESSINFOCLASS ProcessInformationClass, OUT PVOID ProcessInformation, IN ULONG ProcessInformationLength, OUT PULONG ReturnLength);
+	typedef NTSTATUS(NTAPI* TNtQueryInformationProcess)(IN HANDLE ProcessHandle, IN PROCESS_INFORMATION_CLASS ProcessInformationClass, OUT PVOID ProcessInformation, IN ULONG ProcessInformationLength, OUT PULONG ReturnLength);
 
 	HMODULE hNtdll = LoadLibraryA("ntdll.dll");
 	if (hNtdll)
@@ -433,8 +440,9 @@ inline bool Debugger::AntiDebug::_IsDebuggerPresent_ProcessDebugFlags()
 
 		if (pfnNtQueryInformationProcess)
 		{
+			PROCESS_INFORMATION_CLASS pic = (PROCESS_INFORMATION_CLASS)0x1F;
 			DWORD dwProcessDebugFlags, dwReturned;
-			NTSTATUS status = pfnNtQueryInformationProcess(GetCurrentProcess(), (PROCESSINFOCLASS)0x1F, &dwProcessDebugFlags, sizeof(DWORD), &dwReturned);
+			NTSTATUS status = pfnNtQueryInformationProcess(GetCurrentProcess(), pic, &dwProcessDebugFlags, sizeof(DWORD), &dwReturned);
 
 			if (NT_SUCCESS(status) && (dwProcessDebugFlags == 0))
 				return true;
