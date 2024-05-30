@@ -18,6 +18,14 @@ namespace UACServer.Network
             writer.WriteString(cookie);
             return writer;
         }
+        
+        public static PacketWriter QueryMemory(ulong address, int nBytes)
+        {
+            PacketWriter writer = new PacketWriter((short)Opcodes.SC.SC_QUERY_MEMORY);
+            writer.WriteLong((long)address);
+            writer.WriteInt(nBytes);
+            return writer;     
+        }
 
     }
 }

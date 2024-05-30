@@ -84,8 +84,7 @@ namespace UACServer.Network
             if (bytesRead > 0)
             {
                 string message = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-                Logger.Log("UACServer.log", $"Received from client {((IPEndPoint)client.Client.RemoteEndPoint).Address}: {message}");
-
+                
                 if(!HandlePacket(c, buffer, bytesRead))
                 {
                     Logger.Log("UACServer.log", "Client heartbeat was incorrect, disconnecting client " +  c.hardware_id);
@@ -99,28 +98,23 @@ namespace UACServer.Network
                 {
                     var clientState = (object[])state;
                     var clientToSend = (TcpClient)clientState[0];
-                    while (isRunning)
-                    {
-                        Thread.Sleep(heartbeatDelay); // 60 seconds between heartbeats
+
+                        Thread.Sleep(heartbeatDelay);
 
                         if (clientToSend.Connected)
                         {
                             Console.WriteLine("Sending heartbeat...");
-                            if (SendHeartbeat(c))
-                            {                      
-                                return;
-                            }
-                            else
+                            if (!SendHeartbeat(c))
                             {
                                 clientToSend.Client.Disconnect(false);
                                 return;
-                            }                           
+                            }                     
                         }
                         else
                         {
                             return;
                         }
-                    }
+
                 }, asyncState);
 
                 client.GetStream().BeginRead(buffer, 0, buffer.Length, HandleMessageReceived, asyncState);
@@ -163,11 +157,8 @@ namespace UACServer.Network
         private bool SendHeartbeat(AntiCheatClient c)
         {    
             string cookie = RandomStringGenerator.GenerateRandomString(128);
-
             PacketWriter p = Factory.MakeHeartbeat(cookie);
-
             c.heartbeat_responses.Add(cookie); //save heartbeats so that we can compare client responses to them fpr .
-
             return SendBytes(c, p);
         }
 
@@ -187,6 +178,10 @@ namespace UACServer.Network
                     {
                         Logger.Log("UACServer.log", "Client hello transaction failed: gamecode/license was not correct.");
                         return false;
+                    }
+                    else
+                    {
+                            Logger.Log("UACServer.log", "Client info: Hostname=" + c.hostname + ", GameCode=" + c.gamecode + ", ID=" + c.id + ", IP=" + c.ip_addr);
                     }
 
                     if(!SendClientHello(c))
@@ -216,11 +211,15 @@ namespace UACServer.Network
                 }
                 break;
 
-                case Opcodes.CS.CS_FLAGGED_CHEATER:
+                case Opcodes.CS.CS_FLAGGED_CHEATER: //flagged as cheater
+                {
                     c.flagged_cheater = true; //...then ban the cheater at some random time within the next 12h
-                    break;
+                    Logger.Log("UACServer.log", "Client was flagged as a cheater for reason: " + Convert.ToString(p.ReadShort()));
 
-                case Opcodes.CS.CS_QUERY_MEMORY:
+                    //write to database or some other action
+                } break;
+
+                case Opcodes.CS.CS_QUERY_MEMORY: //todo: fill this
 
                     break;
 
