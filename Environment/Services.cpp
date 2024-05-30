@@ -116,38 +116,6 @@ BOOL Services::GetLoadedDrivers()
 }
 
 /*
-    IsDriverSigned - returns TRUE if the driver at `driverPath` is signed using WinVerifyTrust
-*/
-BOOL __forceinline Services::IsDriverSigned(wstring driverPath)
-{
-    GUID guidAction = WINTRUST_ACTION_GENERIC_VERIFY_V2;
-    WINTRUST_FILE_INFO fileInfo;
-    memset(&fileInfo, 0, sizeof(fileInfo));
-    fileInfo.cbStruct = sizeof(fileInfo);
-    fileInfo.pcwszFilePath = driverPath.c_str();
-
-    WINTRUST_DATA trustData;
-    memset(&trustData, 0, sizeof(trustData));
-    trustData.cbStruct = sizeof(trustData);
-    trustData.dwUIChoice = WTD_UI_NONE;
-    trustData.fdwRevocationChecks = WTD_REVOKE_NONE;
-    trustData.dwUnionChoice = WTD_CHOICE_FILE;
-    trustData.dwStateAction = 0;
-    trustData.hWVTStateData = NULL;
-    trustData.pFile = &fileInfo;
-
-    LONG lStatus = WinVerifyTrust(NULL, &guidAction, &trustData);
-
-    if (lStatus != ERROR_SUCCESS)
-    {
-        //Logger::logf("UltimateAnticheat.log", Err, "WinVerifyTrust failed with error code %ld\n", lStatus);
-        return FALSE;
-    }
-
-    return TRUE;
-}
-
-/*
     GetUnsignedDrivers - returns a list of unsigned driver names loaded on the machine
 */
 list<wstring> Services::GetUnsignedDrivers()
@@ -165,7 +133,7 @@ list<wstring> Services::GetUnsignedDrivers()
 
     for (const std::wstring& driverPath : DriverPaths) 
     {
-        if (!IsDriverSigned(driverPath))
+        if (!Authenticode::VerifyEmbeddedSignature(driverPath.c_str()))
         {
             Logger::logfw("UltimateAnticheat.log", Warning, L"Found unsigned or outdated certificate on driver: %s\n", driverPath.c_str());
             unsignedDrivers.push_back(driverPath);
