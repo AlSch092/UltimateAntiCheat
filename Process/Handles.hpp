@@ -1,7 +1,6 @@
 //By AlSch092 @github
 #pragma once
 #include <windows.h>
-#include <winternl.h>
 #include <iostream>
 #include <vector>
 #include "../Logger.hpp"
@@ -14,6 +13,19 @@
 
 namespace Handles
 {
+    typedef enum _SYSTEM_INFORMATION_CLASS 
+    {
+        SystemBasicInformation = 0,
+        SystemPerformanceInformation = 2,
+        SystemTimeOfDayInformation = 3,
+        SystemProcessInformation = 5,
+        SystemProcessorPerformanceInformation = 8,
+        SystemInterruptInformation = 23,
+        SystemExceptionInformation = 33,
+        SystemRegistryQuotaInformation = 37,
+        SystemLookasideInformation = 45
+    } SYSTEM_INFORMATION_CLASS;
+
     typedef NTSTATUS(NTAPI* NtQuerySystemInformationFunc)(SYSTEM_INFORMATION_CLASS SystemInformationClass, PVOID SystemInformation, ULONG SystemInformationLength, PULONG ReturnLength);
 
     typedef struct _SYSTEM_HANDLE

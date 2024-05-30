@@ -32,7 +32,7 @@ std::vector<Handles::SYSTEM_HANDLE> Handles::GetHandles()
             free(buffer);
             bufferSize *= 2;
         }
-        else if (!NT_SUCCESS(status))
+        else if (!(((NTSTATUS)(status)) >= 0))
         {
             Logger::logf("UltimateAnticheat.log", Err, "NtQuerySystemInformation failed @ Handles::GetHandles");
             free(buffer);
@@ -84,8 +84,10 @@ std::vector<Handles::SYSTEM_HANDLE> Handles::DetectOpenHandlesToProcess()
                         handle.ReferencingOurProcess = false;
                     }
 
-                    CloseHandle(duplicatedHandle);
+                    if(duplicatedHandle != INVALID_HANDLE_VALUE)
+                        CloseHandle(duplicatedHandle);
                 }
+
                 CloseHandle(processHandle);
             }
             else
