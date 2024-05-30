@@ -19,11 +19,7 @@ UINT64 GetPEBPointerAddress()
 
 PVOID GetPEBAddress()
 {
-	PTEB teb = (PTEB)__readgsqword(0x30);
-	if (teb == NULL)
-		return NULL;
-
-	return teb->ProcessEnvironmentBlock;
+	return (PVOID)__readgsqword(0x60);
 }
 
 void SetPEBAddress(UINT64 address)
@@ -35,7 +31,7 @@ void SetPEBAddress(UINT64 address)
 	}
 	__except (EXCEPTION_EXECUTE_HANDLER)
 	{
-		printf("Failed at SetPEBAddress: memory exception writing PEB ptr\n");
+		Logger::logf("UltimateAnticheat.log", Err, "Failed at SetPEBAddress: memory exception writing PEB ptr");
 		return;
 	}
 }
@@ -74,15 +70,13 @@ BYTE* CopyPEBBytes(unsigned int pebSize)
 {
 	LPVOID pebAddress = GetPEBAddress();
 
-	//int size_copy = sizeof(struct _MYPEB);
-	int size_copy = 0x1000;
-
+	int size_copy = sizeof(struct _MYPEB);
 	BYTE* peb_bytes = new BYTE[size_copy];
 
 	BOOL success = ReadProcessMemory(GetCurrentProcess(), pebAddress, peb_bytes, size_copy, NULL);
 	if (!success)
 	{
-		printf("Failed to copy PEB bytes. Error: %d\n", GetLastError());
+		Logger::logf("UltimateAnticheat.log", Err, "Failed to copy PEB bytes. Error: %d\n", GetLastError());
 		delete[] peb_bytes;
 		return NULL;
 	}
@@ -97,6 +91,10 @@ BYTE* CopyAndSetPEB()
 	if (newPeb != NULL)
 	{
 		SetPEBAddress((UINT64)newPeb); //our byte array's address becomes the new PEB
+	}
+	else
+	{
+		Logger::logf("UltimateAnticheat.log", Err, "Failed to copy PEB bytes. Error: %d\n");
 	}
 
 	return newPeb;
