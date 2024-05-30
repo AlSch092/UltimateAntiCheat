@@ -21,7 +21,7 @@ UltimateAntiCheat is an open source anti-cheat system made to detect and prevent
 - Loaded module name random renaming (process manipulation)
 - Exported function names random renaming (process manipulation, anti-injection)
 - Data obfuscation class to help hide sensitive variables
-- Check for if Windows is in 'Test Signing mode'
+- Check for if Windows is in 'Test Signing mode' and 'debug mode'
 - TLS Callback & thread function address `ret` patching (anti-DLL/shellcode injection)
 - TLS Callback spoofing (changing TLS callbacks at runtime)
 - Networked heartbeat system to ensure client is running the AC module
