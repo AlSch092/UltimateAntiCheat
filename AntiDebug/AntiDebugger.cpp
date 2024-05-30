@@ -398,7 +398,7 @@ inline bool Debugger::AntiDebug::_IsDebuggerPresent_WaitDebugEvent()
 inline bool  Debugger::AntiDebug::_IsDebuggerPresent_PEB()
 {
 	MYPEB* _PEB = (MYPEB*)__readgsqword(0x60);
-	return _PEB;
+	return _PEB->BeingDebugged;
 }
 
 inline bool Debugger::AntiDebug::_IsDebuggerPresent_DebugPort()
