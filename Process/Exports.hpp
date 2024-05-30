@@ -1,14 +1,13 @@
 /*
 	Exports.hpp - a part of the UltimateAntiCheat project
 */
-
 #pragma once
 #include <string>
 #include <Windows.h>
-#include <winternl.h>
 #include <ImageHlp.h>
-#pragma comment(lib, "ImageHlp")
 #include "../Logger.hpp"
+
+#pragma comment(lib, "ImageHlp")
 
 using namespace std;
 
