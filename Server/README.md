@@ -1,6 +1,6 @@
 # UltimateAntiCheat (SERVER): A server for UltimateAntiCheat built in C#
 
-![Example](https://github.com/AlSch092/UltimateAntiCheat/assets/94417808/ae7450aa-4000-45eb-aeb8-e1efe951bc39)
+![ExampleOutput](https://github.com/AlSch092/UltimateAntiCheat/assets/94417808/8607553b-42b1-4bc4-ab1c-fa59d9eb4c8f)
 
 ## How to use:
 Simply open & build the project using visual studio (originally made in VS2022), and allow the program through your private network firewall when the Windows prompt pops up. You can then run the UltimateAnticheat project (client) and it will attempt to connect to this server on port 5445.
