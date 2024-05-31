@@ -12,6 +12,7 @@ namespace UACServer.Network
     class AnticheatServer
     {
         private const short versionNum = 100;
+        private const int heartbeatDelay = 2000; //1 minute between hb's
 
         private TcpListener listener;
         private List<AntiCheatClient> clients = new List<AntiCheatClient>();
@@ -53,8 +54,6 @@ namespace UACServer.Network
         {
             if (!isRunning)
                 return;
-
-            const int heartbeatDelay = 60000; //1 minute between hb's
 
             object[] asyncState = (object[])result.AsyncState;
             TcpClient client = (TcpClient)asyncState[0];
@@ -206,6 +205,10 @@ namespace UACServer.Network
                         Logger.Log("UACServer.log", "Client heartbeat transaction failed: client heartbeat cookie was incorrect.");
                         return false;
                     }
+                    else
+                    {
+                        Console.WriteLine("Heartbeat from client {0} was successful", c.id);
+                    }
 
                     c.current_heartbeat_count++;
                 }
@@ -214,14 +217,15 @@ namespace UACServer.Network
                 case Opcodes.CS.CS_FLAGGED_CHEATER: //flagged as cheater
                 {
                     c.flagged_cheater = true; //...then ban the cheater at some random time within the next 12h
-                    Logger.Log("UACServer.log", "Client was flagged as a cheater for reason: " + Convert.ToString(p.ReadShort()));
-
-                    //write to database or some other action
+                    DetectionFlags cheat_reason = (DetectionFlags)p.ReadShort();
+                    Handlers.HandleClientFlaggedCheater(c, cheat_reason);
                 } break;
 
-                case Opcodes.CS.CS_QUERY_MEMORY: //todo: fill this
+                case Opcodes.CS.CS_QUERY_MEMORY: //todo: finish this
+                {
 
-                    break;
+                }
+                break;
 
                 default:
                     Logger.Log("UACServer.log", "Unknown opcode @ HandlePacket");
