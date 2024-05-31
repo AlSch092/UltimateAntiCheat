@@ -1,3 +1,4 @@
+//By AlSch092 @github
 #include "Integrity.hpp"
 
 //returns false if any static memory is modified (assuming we pass in moduleBase and sizeOfModule.
@@ -118,34 +119,4 @@ bool Integrity::IsUnknownModulePresent()
 	}
 
 	return foundUnknown;
-}
-
-bool Integrity::DisableDynamicCode()
-{
-	PROCESS_MITIGATION_DYNAMIC_CODE_POLICY dynamicCodePolicy = { 0 };
-
-	dynamicCodePolicy.ProhibitDynamicCode = 1; // Enable dynamic code restriction
-
-	if (!SetProcessMitigationPolicy((PROCESS_MITIGATION_POLICY)2, &dynamicCodePolicy, sizeof(dynamicCodePolicy))) 
-	{ 
-		Logger::logf("UltimateAnticheat.log", Warning, "Failed to set process mitigation policy @ DisableDynamicCode.  Error code: %lu\n", GetLastError());
-		return false;
-	}
-
-	return true;
-}
-
-bool Integrity::DisableUnsignedCode() //stop some unsigned dlls from being loaded
-{
-	_PROCESS_MITIGATION_BINARY_SIGNATURE_POLICY signPolicy = { 0 };
-
-	signPolicy.MicrosoftSignedOnly = true;
-
-	if (!SetProcessMitigationPolicy((PROCESS_MITIGATION_POLICY)8, &signPolicy, sizeof(signPolicy)))
-	{
-		Logger::logf("UltimateAnticheat.log", Warning, "Failed to set process mitigation policy @ DisableUnsignedCode.  Error code: %lu\n", GetLastError());
-		return false;
-	}
-
-	return true;
 }

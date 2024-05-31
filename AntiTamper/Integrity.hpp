@@ -1,13 +1,16 @@
+//By AlSch092 @github
 #pragma once
 #include "../Common/Utility.hpp"
 #include "../Common/SHA256.hpp"
-#include "../Process/Process.hpp"
 #include "NAuthenticode.hpp"
+#include <list>
+#include <string>
+#include <Psapi.h>
 #include <stdio.h>
 #include <algorithm>
 
+using namespace std;
 
-//the purpose of this class is to form a list containing our program's .text section (or other) hashes
 class Integrity
 {
 public:
@@ -23,26 +26,23 @@ public:
 
 	bool IsUnknownModulePresent();
 
-	static bool DisableDynamicCode();
-	static bool DisableUnsignedCode();
-
-	list<wstring> WhitelistedModules;
-
-	wstring InternalModuleName = L"UltimateAnticheat.exe"; //store original module name since we randomize it later
+	list<wstring> GetWhitelistedModules() { return this->WhitelistedModules; }
+	void AddToWhitelist(const wchar_t* module) { WhitelistedModules.push_back(module); }
 
 	Integrity()
 	{
-		WhitelistedModules.push_back(L"UltimateAnticheat.exe");
+		WhitelistedModules.push_back(L"UltimateAnticheat.exe"); //strings can optionally be encrypted
 		WhitelistedModules.push_back(L"KERNEL32.dll");
 		WhitelistedModules.push_back(L"KERNELBASE.dll");
+		WhitelistedModules.push_back(L"ntdll.dll");
 		WhitelistedModules.push_back(L"apphelp.dll");
 		WhitelistedModules.push_back(L"USER32.dll");
+		WhitelistedModules.push_back(L"uxtheme.dll");
+		WhitelistedModules.push_back(L"gdiplus.dll");
 	}
 
 private:
 	
-	list<wstring> _LoadedDlls;
-	list<uint64_t> _DllHashes;
-
 	list<uint64_t> _MemorySectionHashes; 
+	list<wstring> WhitelistedModules;
 };
