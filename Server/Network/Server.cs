@@ -12,7 +12,7 @@ namespace UACServer.Network
     class AnticheatServer
     {
         private const short versionNum = 100;
-        private const int heartbeatDelay = 2000; //1 minute between hb's
+        private const int heartbeatDelay = 60000; //1 minute between hb's
 
         private TcpListener listener;
         private List<AntiCheatClient> clients = new List<AntiCheatClient>();
