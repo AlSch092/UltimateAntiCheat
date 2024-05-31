@@ -8,14 +8,16 @@
 #include "Common/Error.hpp"
 #include "Common/Utility.hpp"
 #include "Common/Globals.hpp"
+#include "AntiTamper/Integrity.hpp"
 
 class Preventions
 {
 public:
 
-	Preventions(bool preventingThreads)
+	Preventions(bool preventingThreads, Integrity* integrityChecker)
 	{
-		IsPreventingThreadCreation = preventingThreads;
+		this->IsPreventingThreadCreation = preventingThreads;
+		this->integrityChecker = integrityChecker;
 	}
 
 	Error DeployBarrier(); //activate all protections
@@ -44,4 +46,6 @@ private:
 	const wstring OriginalModuleName = L"UltimateAnticheat.exe";
 
 	bool IsPreventingThreadCreation; //used in TLS callback if we want to supress or track new threads
+
+	Integrity* integrityChecker = nullptr;
 };

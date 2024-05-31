@@ -79,6 +79,9 @@ bool Preventions::RandomizeModuleName()
         success = true;
         UnmanagedGlobals::wCurrentModuleName = wstring(newModuleName);
         UnmanagedGlobals::CurrentModuleName = Utility::ConvertWStringToString(UnmanagedGlobals::wCurrentModuleName);
+        
+        this->integrityChecker->AddToWhitelist(UnmanagedGlobals::wCurrentModuleName.c_str());
+
         Logger::logfw("UltimateAnticheat.log", Info, L"Changed module name to: %s\n", UnmanagedGlobals::wCurrentModuleName.c_str());
     }
 

@@ -107,7 +107,8 @@ void Detections::Monitor(LPVOID thisPtr)
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Found modified .text section!\n");
             Monitor->SetCheater(true);
-            
+            Monitor->DetectedFlags.push_back(DetectionFlags::CODE_INTEGRITY);
+
             NetClient* client = Monitor->GetNetClient();  //report back to server that someone's cheating
             if (client != nullptr)
             {
@@ -122,6 +123,7 @@ void Detections::Monitor(LPVOID thisPtr)
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Found blacklisted process!");
             Monitor->SetCheater(true);
+            Monitor->DetectedFlags.push_back(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM); //todo: detect & stop duplicate list adds
 
             NetClient* client = Monitor->GetNetClient();  //report back to server that someone's cheating
             if (client != nullptr)
@@ -138,6 +140,7 @@ void Detections::Monitor(LPVOID thisPtr)
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Networking WINAPI (send | recv) was hooked!\n"); //WINAPI hooks doesn't always determine someone is cheating since AV and other software can write the hooks
             Monitor->SetCheater(true); //..but for simplicity in this project we will set them as a cheater
+            Monitor->DetectedFlags.push_back(DetectionFlags::DLL_TAMPERING);
 
             NetClient* client = Monitor->GetNetClient();  //report back to server that someone's cheating
             if (client != nullptr)
@@ -152,6 +155,8 @@ void Detections::Monitor(LPVOID thisPtr)
         if (Monitor->GetIntegrityChecker()->IsUnknownModulePresent()) //authenticode call and check against whitelisted module list
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Found at least one unsigned dll loaded : We ideally only want verified, signed dlls in our application!\n");
+            Monitor->SetCheater(true);
+            Monitor->DetectedFlags.push_back(DetectionFlags::INJECTED_ILLEGAL_PROGRAM);
 
             NetClient* client = Monitor->GetNetClient();  //report back to server that someone's cheating
             if (client != nullptr)
@@ -163,10 +168,11 @@ void Detections::Monitor(LPVOID thisPtr)
             }
         }
 
-        if (Services::IsTestsigningEnabled()) //test signing enabled, self-signed drivers
+        if (Services::IsTestsigningEnabled() || Services::IsDebugModeEnabled()) //test signing enabled, self-signed drivers
         {
-            Logger::logf("UltimateAnticheat.log", Detection, "Testsigning is enabled! In most cases we don't allow the game/process to continue if testsigning is enabled.\n");
+            Logger::logf("UltimateAnticheat.log", Detection, "Testsigning or debugging mode is enabled! In most cases we don't allow the game/process to continue if testsigning is enabled.");
             Monitor->SetCheater(true);
+            Monitor->DetectedFlags.push_back(DetectionFlags::UNSIGNED_DRIVERS);
 
             NetClient* client = Monitor->GetNetClient();  //report back to server that someone's cheating
             if (client != nullptr)
@@ -182,6 +188,7 @@ void Detections::Monitor(LPVOID thisPtr)
         {
             Logger::logf("UltimateAnticheat.log", Detection, "IAT was hooked! One or more functions lead to addresses outside their respective modules!\n");
             Monitor->SetCheater(true);
+            Monitor->DetectedFlags.push_back(DetectionFlags::BAD_IAT);
 
             NetClient* client = Monitor->GetNetClient();  //report back to server that someone's cheating
             if (client != nullptr)
@@ -196,7 +203,10 @@ void Detections::Monitor(LPVOID thisPtr)
         if (Detections::IsTextSectionWritable()) //page protections check
         {
             Logger::logf("UltimateAnticheat.log", Detection, ".text section was writable, which means someone re-re-mapped our memory regions! (or you ran this in DEBUG build)");
+            
+#ifndef _DEBUG           
             Monitor->SetCheater(true);
+            Monitor->DetectedFlags.push_back(DetectionFlags::PAGE_PROTECTIONS);
 
             NetClient* client = Monitor->GetNetClient();  //report back to server that someone's cheating
             if (client != nullptr)
@@ -206,12 +216,14 @@ void Detections::Monitor(LPVOID thisPtr)
                     Logger::logf("UltimateAnticheat.log", Err, "Failed to notify server of cheating status.");
                 }
             }
+#endif
         }
 
         if (Detections::CheckOpenHandles()) //open handles to our process check
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Found open process handles to our process from other processes");
             Monitor->SetCheater(true);
+            Monitor->DetectedFlags.push_back(DetectionFlags::OPEN_PROCESS_HANDLES);
 
             NetClient* client = Monitor->GetNetClient();  //report back to server that someone's cheating
             if (client != nullptr)

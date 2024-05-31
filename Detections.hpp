@@ -90,4 +90,6 @@ private:
 	Process* _Proc = new Process(); //keep track of our sections, loaded modules, etc
 
 	NetClient* netClient = nullptr; //send any detections to the server
+
+	list<DetectionFlags> DetectedFlags;
 };

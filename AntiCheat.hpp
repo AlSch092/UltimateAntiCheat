@@ -28,7 +28,7 @@ public:
 
 		Monitor = new Detections(false, Client);
 		
-		Barrier = new Preventions(true); //true = prevent new threads from being made
+		Barrier = new Preventions(true, Monitor->GetIntegrityChecker()); //true = prevent new threads from being made
 	}
 
 	~AntiCheat()
