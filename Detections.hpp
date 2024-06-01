@@ -46,9 +46,7 @@ public:
 
 	NetClient* GetNetClient() { return this->netClient; }
 
-	string currentModuleName;
-
-	void SetCheater(BOOL cheating) { this->CheaterWasDetected->SetData((uint8_t)cheating); } //obfuscated bool/int variable
+	void SetCheater(BOOL cheating) { this->CheaterWasDetected->SetData((uint8_t)cheating); } //obfuscated bool/int variable. cast to uint8 to avoid getting stuck as 0/1 by compilers bool interpretation
 	BOOL IsUserCheater() { return this->CheaterWasDetected->GetData(); }
 
 	Services* GetServiceManager() { return this->_Services; }
@@ -67,14 +65,15 @@ public:
 
 	void StartMonitor(); //begin threading
 
-	BOOL IsBlacklistedProcessRunning(); //process checking, can be circumvented easily
-	
+	BOOL IsBlacklistedProcessRunning();
+
 	static BOOL DoesFunctionAppearHooked(const char* moduleName, const char* functionName); //checks for jumps or calls as the first byte on a function
 	static BOOL DoesIATContainHooked();
-	
 	static BOOL IsTextSectionWritable();
-
 	static bool CheckOpenHandles(); //detect any open handles to our process, very useful since this will detect most external cheats
+
+	void AddDetectedFlag(DetectionFlags f); //add to DetectedFlags without duplicates
+	bool Flag(DetectionFlags flag);
 
 private:
 
