@@ -46,7 +46,6 @@ namespace UACServer.Network
 
             byte[] buffer = new byte[1024];
             client.GetStream().BeginRead(buffer, 0, buffer.Length, HandleMessageReceived, new object[] { client, buffer });
-
             listener.BeginAcceptTcpClient(HandleClientConnected, null); //Continue accepting more client connections
         }
 
@@ -124,7 +123,6 @@ namespace UACServer.Network
 
                     }, asyncState);
                 }
-
                 client.GetStream().BeginRead(buffer, 0, buffer.Length, HandleMessageReceived, asyncState);
             }
             else
@@ -152,8 +150,14 @@ namespace UACServer.Network
                 return false;
 
             byte[] buffer = p.m_stream.GetBuffer();
-            c.net_client.GetStream().Write(buffer, 0, buffer.Length);
-            return true;
+            
+            if(c.net_client.Connected)
+            {
+                c.net_client.GetStream().Write(buffer, 0, buffer.Length);
+                return true;
+            }
+
+            return false;
         }
 
         private bool SendClientHello(AntiCheatClient c)
