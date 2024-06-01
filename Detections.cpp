@@ -448,7 +448,6 @@ void Detections::AddDetectedFlag(DetectionFlags flag)
 
     if (!isDuplicate)
         this->DetectedFlags.push_back(flag);
-
 }
 
 /*
@@ -468,6 +467,11 @@ bool Detections::Flag(DetectionFlags flag)
             Logger::logf("UltimateAnticheat.log", Err, "Failed to notify server of cheating status.");
             return false;
         }
+    }
+    else
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "NetClient was NULL @ Detections::Flag");
+        return false;
     }
 
     return true;
