@@ -463,7 +463,7 @@ bool Detections::Flag(DetectionFlags flag)
     NetClient* client = this->GetNetClient();  //report back to server that someone's cheating
     if (client != nullptr)
     {
-        if (client->FlagCheater(DetectionFlags::OPEN_PROCESS_HANDLES) != Error::OK) //cheat engine attachment can be detected this way
+        if (client->FlagCheater(flag) != Error::OK) //cheat engine attachment can be detected this way
         {
             Logger::logf("UltimateAnticheat.log", Err, "Failed to notify server of cheating status.");
             return false;
