@@ -21,10 +21,10 @@ class AntiCheat
 public:
 
 	AntiCheat()
-	{	
-		_AntiDebugger = new Debugger::AntiDebug();
-		
+	{			
 		Client = new NetClient();
+
+		_AntiDebugger = new Debugger::AntiDebug(Client); //any detection methods need the netclient for comms
 
 		Monitor = new Detections(false, Client);
 		
