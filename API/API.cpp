@@ -29,7 +29,7 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessNam
 
 		if (AC->GetNetworkClient()->Initialize(API::ServerEndpoint, API::ServerPort, licenseKey) != Error::OK) //initialize client is separate from license key auth
 		{
-			errorCode = Error::CANT_STARTUP;		//don't allow startup if networking doesn't work
+			errorCode = Error::CANT_STARTUP;		//don't allow AC startup if network portion doesn't succeed
 			goto end;
 		}
 	}

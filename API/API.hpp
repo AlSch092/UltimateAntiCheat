@@ -4,7 +4,7 @@
 
 using namespace std;
 
-//API is exported dispatch routine needed for a game to initialize this anti-cheat class
+//API class is the interface to work with the AntiCheat class from the game code
 namespace API
 {
 	enum DispatchCode
@@ -13,9 +13,9 @@ namespace API
 		CLIENT_EXIT,
 	};
 
-	static bool serverAvailable = false; //change this to false if you don't want to use networking
+	static bool serverAvailable = true; //networking on/off switch
 
-	static const char* ServerEndpoint = "127.0.0.1"; //change to 0.0.0.0 if you want to host remotely
+	static const char* ServerEndpoint = "127.0.0.1";
 	static unsigned short ServerPort = 5445;
 #ifdef _DEBUG
 	static const wchar_t* whitelistedParentProcess = L"VsDebugConsole.exe"; //if debugging in VS, otherwise change to explorer.exe
