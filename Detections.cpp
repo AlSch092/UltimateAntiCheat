@@ -144,7 +144,7 @@ void Detections::Monitor(LPVOID thisPtr)
         {
             Logger::logf("UltimateAnticheat.log", Detection, ".text section was writable, which means someone re-re-mapped our memory regions! (or you ran this in DEBUG build)");
             
-#ifndef _DEBUG           
+#ifndef _DEBUG           //in debug build we are not remapping, and software breakpoints in VS may cause page protections to be writable
             Monitor->Flag(DetectionFlags::PAGE_PROTECTIONS);
 #endif
         }
@@ -434,7 +434,7 @@ bool Detections::CheckOpenHandles()
 /*
     AddDetectedFlags - adds DetectionFlags `flag` to the list of detected flags. Does not add if the flag is already in the list.
 */
-void Detections::AddDetectedFlag(DetectionFlags flag)
+bool Detections::AddDetectedFlag(DetectionFlags flag)
 {
     bool isDuplicate = false;
 
@@ -448,6 +448,8 @@ void Detections::AddDetectedFlag(DetectionFlags flag)
 
     if (!isDuplicate)
         this->DetectedFlags.push_back(flag);
+
+    return isDuplicate;
 }
 
 /*
@@ -456,8 +458,11 @@ void Detections::AddDetectedFlag(DetectionFlags flag)
 */
 bool Detections::Flag(DetectionFlags flag)
 {
-    AddDetectedFlag(flag);
+    bool wasDuplicate = AddDetectedFlag(flag);
     this->SetCheater(true);
+
+    if (wasDuplicate) //prevent duplicate server comms
+        return true;
 
     NetClient* client = this->GetNetClient();  //report back to server that someone's cheating
     if (client != nullptr)

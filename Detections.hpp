@@ -72,7 +72,7 @@ public:
 	static BOOL IsTextSectionWritable();
 	static bool CheckOpenHandles(); //detect any open handles to our process, very useful since this will detect most external cheats
 
-	void AddDetectedFlag(DetectionFlags f); //add to DetectedFlags without duplicates
+	bool AddDetectedFlag(DetectionFlags f); //add to DetectedFlags without duplicates
 	bool Flag(DetectionFlags flag);
 
 private:
