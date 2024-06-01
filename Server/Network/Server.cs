@@ -12,7 +12,7 @@ namespace UACServer.Network
     class AnticheatServer
     {
         private const short versionNum = 100;
-        private const int heartbeatDelay = 60000; //1 minute between hb's
+        private const int heartbeatDelay = 5000; //1 minute between hb's
 
         private TcpListener listener;
         private List<AntiCheatClient> clients = new List<AntiCheatClient>();
@@ -92,11 +92,15 @@ namespace UACServer.Network
                     return;
                 }
 
-                // Send something to client every 60 seconds after receiving the first piece of data
-                ThreadPool.QueueUserWorkItem(state =>
+                if(!c.in_heartbeat_loop)
                 {
-                    var clientState = (object[])state;
-                    var clientToSend = (TcpClient)clientState[0];
+                    c.in_heartbeat_loop = true;
+
+                    // Send something to client every 60 seconds after receiving the first piece of data
+                    ThreadPool.QueueUserWorkItem(state => //...not the best C# code by any means
+                    {
+                        var clientState = (object[])state;
+                        var clientToSend = (TcpClient)clientState[0];
 
                         Thread.Sleep(heartbeatDelay);
 
@@ -107,14 +111,19 @@ namespace UACServer.Network
                             {
                                 clientToSend.Client.Disconnect(false);
                                 return;
-                            }                     
+                            }
+                            else
+                            {
+                                c.in_heartbeat_loop = false;
+                            }
                         }
                         else
                         {
                             return;
                         }
 
-                }, asyncState);
+                    }, asyncState);
+                }
 
                 client.GetStream().BeginRead(buffer, 0, buffer.Length, HandleMessageReceived, asyncState);
             }

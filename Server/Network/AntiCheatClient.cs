@@ -29,6 +29,8 @@ namespace UACServer
 
         public TcpClient net_client = null;
 
+        public bool in_heartbeat_loop = false;
+
         public AntiCheatClient()
         {
             heartbeat_responses = new List<string>();
