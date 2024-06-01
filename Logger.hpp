@@ -3,9 +3,9 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <time.h>
+#include <ctime>
 #include <cstdarg>
-#include <mutex>
+#include <windows.h>
 
 enum LogType
 {
@@ -114,7 +114,7 @@ public:
             msg_with_errorcode = msg_with_errorcode + message;
 
             std::time_t now = std::time(nullptr);
-            wchar_t timestamp[128]{ 0 };
+            wchar_t timestamp[256] { 0 };
             std::wcsftime(timestamp, sizeof(timestamp), L"%Y-%m-%d %H:%M:%S", std::localtime(&now));
 
             logFile << L"[" << timestamp << L"] " << msg_with_errorcode << std::endl;
@@ -173,5 +173,16 @@ public:
         {
             std::cerr << "Error: Failed to format log message." << std::endl;
         }
+    }
+
+    static void SetColor(int color) 
+    {
+        HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        SetConsoleTextAttribute(hConsole, color);
+    }
+
+    static void ResetColor()
+    {
+        SetColor(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
     }
 };
