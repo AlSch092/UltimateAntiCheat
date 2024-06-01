@@ -11,11 +11,11 @@ void Debugger::AntiDebug::StartAntiDebugThread()
 
 	if (this->DetectionThread->handle == INVALID_HANDLE_VALUE || this->DetectionThread->handle == NULL)
 	{
-		Logger::logf("UltimateAnticheat.log", Err, "Couldn't start anti-debug thread @ Debugger::AntiDebug::StartAntiDebugThread\n");
+		Logger::logf("UltimateAnticheat.log", Err, "Couldn't start anti-debug thread @ Debugger::AntiDebug::StartAntiDebugThread");
 		//optionally shut down here
 	}
 
-	Logger::logf("UltimateAnticheat.log", Info, "Created Debugger detection thread with Id: %d\n", this->DetectionThread->Id);
+	Logger::logf("UltimateAnticheat.log", Info, "Created Debugger detection thread with Id: %d", this->DetectionThread->Id);
 
 	this->DetectionThread->CurrentlyRunning = true;
 }
@@ -24,7 +24,7 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 {
 	if (AD == nullptr)
 	{
-		Logger::logf("UltimateAnticheat.log", Err, "AntiDbg PTR was NULL @ CheckForDebugger");
+		Logger::logf("UltimateAnticheat.log", Err, "AntiDbg class was NULL @ CheckForDebugger");
 		return;
 	}
 
@@ -38,7 +38,7 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 
 		if (AntiDbg == NULL)
 		{
-			Logger::logf("UltimateAnticheat.log", Err, "AntiDbg PTR was NULL @ CheckForDebugger");
+			Logger::logf("UltimateAnticheat.log", Err, "AntiDbg class was NULL @ CheckForDebugger");
 			return;
 		}
 
@@ -54,73 +54,73 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 
 		if (basicDbg)
 		{
-			AntiDbg->DebuggerMethodsDetected.push_back(Detections::WINAPI_DEBUGGER);
-			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: WINAPI_DEBUGGER!");
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: WINAPI_DEBUGGER");
+			AntiDbg->Flag(WINAPI_DEBUGGER);
 		}
 
 		if (AntiDbg->_IsDebuggerPresent_PEB())
 		{
-			AntiDbg->DebuggerMethodsDetected.push_back(Detections::PEB_FLAG);
-			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: PEB_FLAG!");
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: PEB");
+			AntiDbg->Flag(PEB);
 		}
 
 		if (AntiDbg->_IsHardwareDebuggerPresent())
 		{
-			AntiDbg->DebuggerMethodsDetected.push_back(Detections::HARDWARE_REGISTERS);
-			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: HARDWARE_REGISTERS.");
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: HARDWARE_REGISTERS");
+			AntiDbg->Flag(HARDWARE_REGISTERS);
 		}
 
 		if (AntiDbg->_IsDebuggerPresent_HeapFlags())
 		{
-			AntiDbg->DebuggerMethodsDetected.push_back(Detections::HEAP_FLAG);
-			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: HEAP_FLAG.");
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: HEAP_FLAG");
+			AntiDbg->Flag(HEAP_FLAG);
 		}
 
 		if (AntiDbg->_IsKernelDebuggerPresent())
 		{
-			AntiDbg->DebuggerMethodsDetected.push_back(Detections::KERNEL_DEBUGGER);
-			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: KERNEL_DEBUGGER.");
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: KERNEL_DEBUGGER");
+			AntiDbg->Flag(KERNEL_DEBUGGER);
 		}
 
 		if (AntiDbg->_IsDebuggerPresent_DbgBreak())
 		{
-			AntiDbg->DebuggerMethodsDetected.push_back(Detections::INT3);
 			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: DbgBreak Excpetion Handler");
+			AntiDbg->Flag(INT3);
 		}
 
 		if (AntiDbg->_IsDebuggerPresent_WaitDebugEvent())
 		{
-			AntiDbg->DebuggerMethodsDetected.push_back(Detections::DEBUG_EVENT);
-			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: WaitDebugEvent.");
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: WaitDebugEvent");
+			AntiDbg->Flag(DEBUG_EVENT);
 		}
 
 		if (AntiDbg->_IsDebuggerPresent_VEH()) //also patches over InitializeVEH's first byte if the dll is found
-		{
-			AntiDbg->DebuggerMethodsDetected.push_back(Detections::VEH_DEBUGGER);
-			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: VEH ");
+		{			
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: Cheat Engine VEH");
+			AntiDbg->Flag(VEH_DEBUGGER);
 		}
 
 		if (AntiDbg->_IsDebuggerPresent_DebugPort())
 		{
-			AntiDbg->DebuggerMethodsDetected.push_back(Detections::DEBUG_PORT);
 			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: DebugPort");
+			AntiDbg->Flag(DEBUG_PORT);
 		}
 
 		if (AntiDbg->_IsDebuggerPresent_ProcessDebugFlags())
 		{
-			AntiDbg->DebuggerMethodsDetected.push_back(Detections::PROCESS_DEBUG_FLAGS);
-			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: ProcessDebugFlags\n");
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: ProcessDebugFlags");
+			AntiDbg->Flag(PROCESS_DEBUG_FLAGS);
 		}
 
 		if (AntiDbg->_IsDebuggerPresent_CloseHandle())
 		{
-			AntiDbg->DebuggerMethodsDetected.push_back(Detections::CLOSEHANDLE);
 			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: CloseHandle");
+			AntiDbg->Flag(CLOSEHANDLE);
 		}
 		
 		if (AntiDbg->DebuggerMethodsDetected.size() > 0)
 		{
-			Logger::logf("UltimateAnticheat.log", Info, "Atleast one method has caught a running debugger!\n");
+			Logger::logf("UltimateAnticheat.log", Info, "Atleast one method has caught a running debugger!");
 		}	
 
 		Sleep(2000);
@@ -162,7 +162,7 @@ bool Debugger::AntiDebug::_IsHardwareDebuggerPresent()
 				{
 					if (lpContext.Dr0 || lpContext.Dr1 || lpContext.Dr2 || lpContext.Dr3 )
 					{
-						Logger::logf("UltimateAnticheat.log", Detection, "Found at least one debug register enabled\n");
+						Logger::logf("UltimateAnticheat.log", Detection, "Found at least one debug register enabled");
 						CloseHandle(hThreadSnap);
 						CloseHandle(_tThread);
 						return true;
@@ -170,14 +170,14 @@ bool Debugger::AntiDebug::_IsHardwareDebuggerPresent()
 				}
 				else
 				{
-					Logger::logf("UltimateAnticheat.log", Err, "GetThreadContext failed with: %d\n", GetLastError());
+					Logger::logf("UltimateAnticheat.log", Err, "GetThreadContext failed with: %d", GetLastError());
 					CloseHandle(_tThread);
 					continue;
 				}
 			}
 			else
 			{
-				Logger::logf("UltimateAnticheat.log", Err, "Could not call openthread! %d\n", GetLastError());
+				Logger::logf("UltimateAnticheat.log", Err, "Could not call openthread! %d", GetLastError());
 				continue;
 			}
 		}
@@ -203,7 +203,7 @@ bool Debugger::AntiDebug::_IsKernelDebuggerPresent()
 
 	if (hModule == NULL)
 	{
-		Logger::logf("UltimateAnticheat.log", Err, "Error fetching module ntdll.dll @ _IsKernelDebuggerPresent: %d\n", GetLastError());
+		Logger::logf("UltimateAnticheat.log", Err, "Error fetching module ntdll.dll @ _IsKernelDebuggerPresent: %d", GetLastError());
 		return false;
 	}
 
@@ -226,7 +226,7 @@ bool Debugger::AntiDebug::_IsKernelDebuggerPresent_SharedKData()
 {
 	_KUSER_SHARED_DATA* sharedData = USER_SHARED_DATA;
 
-	if (sharedData->DbgKdEnabled) 	//Check the kernel debugger enabled flag
+	if (sharedData->KdDebuggerEnabled) 	//Check the kernel debugger enabled flag
 	{
 		return true;
 	}
@@ -236,7 +236,12 @@ bool Debugger::AntiDebug::_IsKernelDebuggerPresent_SharedKData()
 
 bool Debugger::AntiDebug::_IsDebuggerPresent_HeapFlags()
 {
+#ifdef _M_IX86
+	DWORD_PTR pPeb64 = (DWORD_PTR)__readfsdword(0x30);
+#else
 	DWORD_PTR pPeb64 = (DWORD_PTR)__readgsqword(0x60);
+#endif
+
 
 	if (pPeb64)
 	{
@@ -303,7 +308,7 @@ bool Debugger::AntiDebug::_IsDebuggerPresent_Int2d()
 	DWORD pOldProt = 0;
 	if (!VirtualProtect((LPVOID)cBuf, 2, PAGE_EXECUTE_READ, &pOldProt))
 	{
-		Logger::logf("UltimateAnticheat.log", Err, "VirtualProtect failed at _IsDebuggerPresent_Int2d: %d\n", GetLastError());
+		Logger::logf("UltimateAnticheat.log", Err, "VirtualProtect failed at _IsDebuggerPresent_Int2d: %d", GetLastError());
 		return false;
 	}
 
@@ -334,7 +339,7 @@ bool Debugger::AntiDebug::_IsDebuggerPresent_DbgBreak()
 		return false;
 	}
 
-	Logger::logf("UltimateAnticheat.log", Info, "Calling __fastfail() to prevent further execution since a debugger was found running.\n");
+	Logger::logf("UltimateAnticheat.log", Info, "Calling __fastfail() to prevent further execution since a debugger was found running.");
 	__fastfail(1); //code should not reach here unless process is being debugged
 	return true;
 #endif
@@ -348,7 +353,7 @@ inline bool Debugger::AntiDebug::_IsDebuggerPresent_VEH()
 {
 	bool bFound = false;
 
-	HMODULE veh_debugger = GetModuleHandleA("vehdebug-x86_64.dll");
+	HMODULE veh_debugger = GetModuleHandleA("vehdebug-x86_64.dll"); //if someone renames this dll we'll still stop them from debugging since our TLS callback patches over first byte of new thread funcs
 
 	if (veh_debugger != NULL) 
 	{
@@ -397,7 +402,12 @@ inline bool Debugger::AntiDebug::_IsDebuggerPresent_WaitDebugEvent()
 
 inline bool  Debugger::AntiDebug::_IsDebuggerPresent_PEB()
 {
+#ifdef _M_IX86
+	MYPEB* _PEB = (MYPEB*)__readfsdword(0x30);
+#else
 	MYPEB* _PEB = (MYPEB*)__readgsqword(0x60);
+#endif
+	
 	return _PEB->BeingDebugged;
 }
 
@@ -450,4 +460,54 @@ inline bool Debugger::AntiDebug::_IsDebuggerPresent_ProcessDebugFlags()
 	}
 
 	return false;
+}
+
+/*
+	AddDetectedFlag - adds `flag` to DebuggerMethodsDetected after checking for duplicate entry
+	returns FALSE if `flag` is duplicate entry
+*/
+inline bool Debugger::AntiDebug::AddDetectedFlag(Detections flag)
+{
+	bool isDuplicate = false;
+
+	for (Detections f : this->DebuggerMethodsDetected)
+	{
+		if (f == flag)
+		{
+			isDuplicate = true;
+		}
+	}
+
+	if (!isDuplicate)
+		this->DebuggerMethodsDetected.push_back(flag);
+
+	return isDuplicate;
+}
+
+/*
+	Flag - adds `flag` to detected methods list and tells server we've caught a debugger
+	returns false on error, true on success
+*/
+bool Debugger::AntiDebug::Flag(Debugger::Detections flag)
+{
+	bool wasDuplicate = AddDetectedFlag(flag);
+
+	if (wasDuplicate)
+		return true; //function still succeeds even though it was duplicate (no error)
+
+	if (this->GetNetClient() != nullptr)
+	{
+		if (this->GetNetClient()->FlagCheater(DetectionFlags::DEBUGGER) != Error::OK) //the type of debugger doesn't really matter at the server-side, we can optionally modify the outbound packet to make debugger detections more granular
+		{
+			Logger::logf("UltimateAnticheat.log", Err, "Failed to notify server of caught debugger status");
+			return false;
+		}
+	}
+	else
+	{
+		Logger::logf("UltimateAnticheat.log", Err, "NetClient was NULL @ AntiDebug::Flag");
+		return false;
+	}
+
+	return true;
 }
