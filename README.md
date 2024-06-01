@@ -29,4 +29,6 @@ UltimateAntiCheat is an open source anti-cheat system made to detect and prevent
 - Return address checks in important routines such as heartbeat generation to prevent remote calling
 
 ## Enabling/Disabling Networking:
-Networking support has been added to the project; the server can be found in the `Server` folder as its own solution. Using networking is optional, and can be turned on/off through the variable `bool serverAvailable` in the file `API/API.hpp`. If you choose to use networking, please follow the instructions in the README.md file of the server.  
+Networking support has been added to the project; the server can be found in the `Server` folder as its own solution. Using networking is optional, and can be turned on/off through the variable `bool serverAvailable` in the file `API/API.hpp`. If you choose to use networking, please follow the instructions in the README.md file of the server.   
+
+UltimateAntiCheat © 2022 is licensed by AlSch092 under CC BY-NC 4.0.  
