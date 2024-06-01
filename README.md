@@ -30,6 +30,3 @@ UltimateAntiCheat is an open source anti-cheat system made to detect and prevent
 
 ## Enabling/Disabling Networking:
 Networking support has been added to the project; the server can be found in the `Server` folder as its own solution. Using networking is optional, and can be turned on/off through the variable `bool serverAvailable` in the file `API/API.hpp`. If you choose to use networking, please follow the instructions in the README.md file of the server.  
-
-## Troubleshooting:
-Visual Studio 2013 or other earlier versions may not be able to open the .vcxproj file (missing .props file error), thus it's recommended you use Visual Studio 2022 for working with this project. This project was made & tested on Windows 10 and cannot guarantee every single technique work across different Windows versions.
