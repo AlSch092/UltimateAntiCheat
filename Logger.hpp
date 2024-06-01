@@ -22,6 +22,7 @@ public:
     static void log(const std::string& filename, LogType type, const std::string& message)
     {
         std::ofstream logFile(filename, std::ios::out | std::ios::app);
+
         if (!logFile.is_open())
         {
             std::cerr << "Error: Could not open log file: " << filename << std::endl;
@@ -29,7 +30,6 @@ public:
         }
 
         std::string msg_with_errorcode;
-
         switch (type)
         {
         case Err:
@@ -48,22 +48,22 @@ public:
             msg_with_errorcode = "[ERROR] ";
             break;
         }
-
         msg_with_errorcode += message;
 
         std::time_t now = std::time(nullptr);
-        char timestamp[256] = { 0 };
-        std::strftime(timestamp, 256, "%Y-%m-%d %H:%M:%S", std::localtime(&now));
+        char timestamp[20];
+        std::strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
 
         logFile << "[" << timestamp << "] " << msg_with_errorcode << std::endl;
+
+        printf("%s\n", msg_with_errorcode.c_str());
 
         if (logFile.fail())
         {
             std::cerr << "[ERROR] Failed to write to log file: " << filename << std::endl;
-            return;
         }
 
-        std::cout << msg_with_errorcode << std::endl; // Output to console
+        logFile.close();
     }
 
     static void logw(const std::string& filename, LogType type, const std::wstring& message)
@@ -107,6 +107,8 @@ public:
 
         logFile << L"[" << timestamp << L"] " << msg_with_errorcode << std::endl;
 
+        wprintf(L"%s\n", msg_with_errorcode.c_str());
+
         if (logFile.fail())
         {
             std::cerr << "[ERROR] Failed to write to log file: " << filename << std::endl;
@@ -119,7 +121,6 @@ public:
     template<typename... Args>
     static void logf(const char* filename, LogType type, const char* format, Args... args)
     {
-
         if (format == NULL || filename == NULL)
             return;
 
