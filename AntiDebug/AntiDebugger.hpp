@@ -18,7 +18,6 @@ namespace Debugger
         INT2C,
         INT2D,
         CLOSEHANDLE,
-        DEBUG_EVENT,
         DEBUG_OBJECT,
         VEH_DEBUGGER,
         KERNEL_DEBUGGER,
@@ -26,6 +25,7 @@ namespace Debugger
         DEBUG_PORT,
         PROCESS_DEBUG_FLAGS,
         PARENT,
+        VIRTUALIZATION,
     };
 
     class AntiDebug
@@ -60,7 +60,6 @@ namespace Debugger
         inline bool _IsDebuggerPresent_Int2d();
         inline bool _IsDebuggerPresent_VEH();
         inline bool _IsDebuggerPresent_DbgBreak();
-        inline bool _IsDebuggerPresent_WaitDebugEvent();
         inline bool _IsDebuggerPresent_PEB();
         inline bool _IsDebuggerPresent_DebugPort();
         inline bool _IsDebuggerPresent_ProcessDebugFlags();
@@ -179,8 +178,8 @@ typedef struct _KUSER_SHARED_DATA  //https://learn.microsoft.com/en-us/windows-h
             ULONG DbgMultiUsersInSessionSku : 1;
             ULONG DbgStateSeparationEnabled : 1;
             ULONG SpareBits : 21;
-        } DUMMYSTRUCTNAME2;
-    } DUMMYUNIONNAME2;
+        } Dbg;
+    } DbgUnion;
     ULONG                         DataFlagsPad[1];
     ULONGLONG                     TestRetInstruction;
     LONGLONG                      QpcFrequency;

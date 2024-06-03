@@ -3,6 +3,9 @@
 
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 
+/*
+	StartAntiDebugThread - creates a new thread on `CheckForDebugger`
+*/
 void Debugger::AntiDebug::StartAntiDebugThread()
 {
 	this->DetectionThread = new Thread();
@@ -20,6 +23,9 @@ void Debugger::AntiDebug::StartAntiDebugThread()
 	this->DetectionThread->CurrentlyRunning = true;
 }
 
+/*
+	CheckForDebugger - Thread function which loops and checks for the presense of debuggers
+*/
 void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 {
 	if (AD == nullptr)
@@ -82,16 +88,16 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 			AntiDbg->Flag(KERNEL_DEBUGGER);
 		}
 
+		if (AntiDbg->_IsKernelDebuggerPresent_SharedKData())
+		{
+			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: KUSER_SHARED_DATA flags");
+			AntiDbg->Flag(KERNEL_DEBUGGER);
+		}
+
 		if (AntiDbg->_IsDebuggerPresent_DbgBreak())
 		{
 			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: DbgBreak Excpetion Handler");
 			AntiDbg->Flag(INT3);
-		}
-
-		if (AntiDbg->_IsDebuggerPresent_WaitDebugEvent())
-		{
-			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: WaitDebugEvent");
-			AntiDbg->Flag(DEBUG_EVENT);
 		}
 
 		if (AntiDbg->_IsDebuggerPresent_VEH()) //also patches over InitializeVEH's first byte if the dll is found
@@ -127,6 +133,9 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 	}
 }
 
+/*
+	_IsHardwareDebuggerPresent
+*/
 bool Debugger::AntiDebug::_IsHardwareDebuggerPresent()
 {
 	DWORD ProcessId = GetCurrentProcessId(); //this can be replaced later, or a process that is not us
@@ -160,9 +169,25 @@ bool Debugger::AntiDebug::_IsHardwareDebuggerPresent()
 			{
 				if (GetThreadContext(_tThread, &lpContext))
 				{
-					if (lpContext.Dr0 || lpContext.Dr1 || lpContext.Dr2 || lpContext.Dr3 )
+					if (lpContext.Dr0 || lpContext.Dr1 || lpContext.Dr2 || lpContext.Dr3)
 					{
 						Logger::logf("UltimateAnticheat.log", Detection, "Found at least one debug register enabled");
+						CloseHandle(hThreadSnap);
+						CloseHandle(_tThread);
+						return true;
+					}
+
+					if (lpContext.Dr6 || lpContext.Dr7)
+					{
+						Logger::logf("UltimateAnticheat.log", Detection, "Debug status register was set");
+						CloseHandle(hThreadSnap);
+						CloseHandle(_tThread);
+						return true;
+					}
+
+					if (lpContext.DebugControl)
+					{
+						Logger::logf("UltimateAnticheat.log", Detection, "Debug control was set");
 						CloseHandle(hThreadSnap);
 						CloseHandle(_tThread);
 						return true;
@@ -222,16 +247,10 @@ bool Debugger::AntiDebug::_IsKernelDebuggerPresent()
 	return false;
 }
 
-bool Debugger::AntiDebug::_IsKernelDebuggerPresent_SharedKData()
+inline bool Debugger::AntiDebug::_IsKernelDebuggerPresent_SharedKData()
 {
 	_KUSER_SHARED_DATA* sharedData = USER_SHARED_DATA;
-
-	if (sharedData->KdDebuggerEnabled) 	//Check the kernel debugger enabled flag
-	{
-		return true;
-	}
-
-	return false;
+	return sharedData->KdDebuggerEnabled;
 }
 
 bool Debugger::AntiDebug::_IsDebuggerPresent_HeapFlags()
@@ -387,19 +406,6 @@ inline bool Debugger::AntiDebug::_IsDebuggerPresent_VEH()
 	return bFound;
 }
 
-inline bool Debugger::AntiDebug::_IsDebuggerPresent_WaitDebugEvent()
-{
-	bool bFound = false;
-	LPDEBUG_EVENT lpd_e = { 0 };
-
-	if (WaitForDebugEvent(lpd_e, INFINITE))
-	{
-		bFound = true;
-	}
-
-	return bFound;
-}
-
 inline bool  Debugger::AntiDebug::_IsDebuggerPresent_PEB()
 {
 #ifdef _M_IX86
@@ -411,6 +417,9 @@ inline bool  Debugger::AntiDebug::_IsDebuggerPresent_PEB()
 	return _PEB->BeingDebugged;
 }
 
+/*
+    _IsDebuggerPresent_DebugPort - calls NtQueryInformationProcess with PROCESS_INFORMATION_CLASS 0x07 to check for debuggers
+*/
 inline bool Debugger::AntiDebug::_IsDebuggerPresent_DebugPort()
 {
 	typedef NTSTATUS(NTAPI* TNtQueryInformationProcess)(IN HANDLE ProcessHandle, IN PROCESS_INFORMATION_CLASS ProcessInformationClass,OUT PVOID ProcessInformation,IN ULONG ProcessInformationLength,OUT PULONG ReturnLength);
@@ -438,12 +447,15 @@ inline bool Debugger::AntiDebug::_IsDebuggerPresent_DebugPort()
 	return false;
 }
 
-
+/*
+	_IsDebuggerPresent_ProcessDebugFlags - calls NtQueryInformationProcess with PROCESS_INFORMATION_CLASS 0x1F to check for debuggers
+*/
 inline bool Debugger::AntiDebug::_IsDebuggerPresent_ProcessDebugFlags()
 {
 	typedef NTSTATUS(NTAPI* TNtQueryInformationProcess)(IN HANDLE ProcessHandle, IN PROCESS_INFORMATION_CLASS ProcessInformationClass, OUT PVOID ProcessInformation, IN ULONG ProcessInformationLength, OUT PULONG ReturnLength);
 
 	HMODULE hNtdll = LoadLibraryA("ntdll.dll");
+
 	if (hNtdll)
 	{
 		auto pfnNtQueryInformationProcess = (TNtQueryInformationProcess)GetProcAddress(hNtdll, "NtQueryInformationProcess");
