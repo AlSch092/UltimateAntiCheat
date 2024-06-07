@@ -388,7 +388,7 @@ BOOL __forceinline Detections::IsTextSectionWritable()
 
     VirtualQuery((LPCVOID)textAddr, &mbi, sizeof(MEMORY_BASIC_INFORMATION));
 
-    if (mbi.AllocationProtect != PAGE_EXECUTE_READ)
+    if (mbi.Protect != PAGE_EXECUTE_READ)
     {
         return TRUE;
     }
