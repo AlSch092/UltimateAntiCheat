@@ -70,11 +70,7 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 			AntiDbg->Flag(PEB);
 		}
 
-		if (AntiDbg->_IsHardwareDebuggerPresent())
-		{
-			Logger::logf("UltimateAnticheat.log", Detection, "Found debugger: HARDWARE_REGISTERS");
-			AntiDbg->Flag(HARDWARE_REGISTERS);
-		}
+		HANDLE HWDebugCheck = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Debugger::AntiDebug::_IsHardwareDebuggerPresent, AntiDbg, 0, 0);
 
 		if (AntiDbg->_IsDebuggerPresent_HeapFlags())
 		{
@@ -134,82 +130,87 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 }
 
 /*
-	_IsHardwareDebuggerPresent
+	_IsHardwareDebuggerPresent - suspends threads + Checks debug registers for Dr0-3,6,7 being > 0
 */
-bool Debugger::AntiDebug::_IsHardwareDebuggerPresent()
+void Debugger::AntiDebug::_IsHardwareDebuggerPresent(LPVOID AD)
 {
-	DWORD ProcessId = GetCurrentProcessId(); //this can be replaced later, or a process that is not us
+	if (AD == nullptr)
+	{
+		Logger::logf("UltimateAnticheat.log", Err, "AntiDbg class was NULL @ _IsHardwareDebuggerPresent");
+		return;
+	}
 
-	HANDLE hThreadSnap = INVALID_HANDLE_VALUE;
+	Debugger::AntiDebug* AntiDbg = reinterpret_cast<Debugger::AntiDebug*>(AD);
+
 	THREADENTRY32 te32;
-
-	hThreadSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
-	if (hThreadSnap == INVALID_HANDLE_VALUE)
-		return(FALSE);
-
 	te32.dwSize = sizeof(THREADENTRY32);
 
-	if (!Thread32First(hThreadSnap, &te32))
+	HANDLE hThreadSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+	if (hThreadSnap == INVALID_HANDLE_VALUE) 
 	{
-		CloseHandle(hThreadSnap);
-		return(FALSE);
+		printf("Error: unable to create toolhelp snapshot\n");
+		return;
 	}
-	
-	do
+
+	DWORD currentProcessID = GetCurrentProcessId();
+
+	if (Thread32First(hThreadSnap, &te32)) 
 	{
-		if (te32.th32OwnerProcessID == ProcessId)
+		do 
 		{
-			CONTEXT lpContext;
-			memset(&lpContext, 0, sizeof(CONTEXT));
-			lpContext.ContextFlags = CONTEXT_FULL;
-
-			HANDLE _tThread = OpenThread(THREAD_ALL_ACCESS, FALSE, te32.th32ThreadID);
-
-			if (_tThread)
+			if (te32.th32OwnerProcessID == currentProcessID && te32.th32ThreadID != GetCurrentThreadId()) 
 			{
-				if (GetThreadContext(_tThread, &lpContext))
+				HANDLE hThread = OpenThread(THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME | THREAD_QUERY_INFORMATION, FALSE, te32.th32ThreadID);
+				
+				if (hThread == NULL) 
 				{
-					if (lpContext.Dr0 || lpContext.Dr1 || lpContext.Dr2 || lpContext.Dr3)
-					{
-						Logger::logf("UltimateAnticheat.log", Detection, "Found at least one debug register enabled");
-						CloseHandle(hThreadSnap);
-						CloseHandle(_tThread);
-						return true;
-					}
-
-					if (lpContext.Dr6 || lpContext.Dr7)
-					{
-						Logger::logf("UltimateAnticheat.log", Detection, "Debug status register was set");
-						CloseHandle(hThreadSnap);
-						CloseHandle(_tThread);
-						return true;
-					}
-
-					if (lpContext.DebugControl)
-					{
-						Logger::logf("UltimateAnticheat.log", Detection, "Debug control was set");
-						CloseHandle(hThreadSnap);
-						CloseHandle(_tThread);
-						return true;
-					}
-				}
-				else
-				{
-					Logger::logf("UltimateAnticheat.log", Err, "GetThreadContext failed with: %d", GetLastError());
-					CloseHandle(_tThread);
+					printf("Error: unable to open thread %d\n", te32.th32ThreadID);
 					continue;
 				}
+
+				SuspendThread(hThread);
+
+				CONTEXT context;
+				context.ContextFlags = CONTEXT_DEBUG_REGISTERS;
+
+				if (GetThreadContext(hThread, &context)) 
+				{
+					if (context.Dr0 || context.Dr1 || context.Dr2 || context.Dr3 || context.Dr6 || context.Dr7)
+					{
+						Logger::logf("UltimateAnticheat.log", Detection, "Found at least one debug register enabled (hardware debugging)");
+						ResumeThread(hThread);
+						CloseHandle(hThreadSnap);
+						CloseHandle(hThread);
+						
+						if (!AntiDbg->Flag(Detections::HARDWARE_REGISTERS))
+						{
+							Logger::logf("UltimateAnticheat.log", Warning, "Failed to notify server of hardware debugging.");
+						}
+
+						return;
+					}
+				}
+				else 
+				{
+					Logger::logf("UltimateAnticheat.log", Err, "GetThreadContext failed with: %d", GetLastError());								
+					ResumeThread(hThread);
+					CloseHandle(hThread);
+					continue;
+				}
+
+				ResumeThread(hThread);
+				CloseHandle(hThread);
 			}
-			else
-			{
-				Logger::logf("UltimateAnticheat.log", Err, "Could not call openthread! %d", GetLastError());
-				continue;
-			}
-		}
-	} while (Thread32Next(hThreadSnap, &te32));
+		} while (Thread32Next(hThreadSnap, &te32));
+	}
+	else 
+	{
+		Logger::logf("UltimateAnticheat.log", Err, "Thread32First Failed: %d\n", GetLastError());			
+		return;
+	}
 
 	CloseHandle(hThreadSnap);
-	return false;
+	return;
 }
 
 bool Debugger::AntiDebug::_IsKernelDebuggerPresent()

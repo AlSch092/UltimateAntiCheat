@@ -65,7 +65,7 @@ namespace Debugger
         inline bool _IsDebuggerPresent_ProcessDebugFlags();
         inline bool _IsKernelDebuggerPresent();
         inline bool _IsKernelDebuggerPresent_SharedKData();
-        inline bool _IsHardwareDebuggerPresent();
+        static void _IsHardwareDebuggerPresent(LPVOID AD); //we need this particular routine threaded due to requirement of suspending threads to properly fetching thread context, if this is not threaded it means one thread (the anti-debugger one) will be lacking DR checks
 
         bool AddDetectedFlag(Detections f);
         bool Flag(Detections flag);
