@@ -135,7 +135,7 @@
       <TreatLinkerWarningAsErrors>false</TreatLinkerWarningAsErrors>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(ProjectDir)\splash.png" "$(ProjectDir)\..\x64\Debug\splash.png"</Command>
+      <Command>copy "$(ProjectDir)\splash.png" "$(ProjectDir)\x64\Debug\splash.png"</Command>
       <Message>Copy Splash Image</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -157,7 +157,7 @@
       <AdditionalDependencies>ntdll.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(ProjectDir)\splash.png" "$(ProjectDir)\..\x64\Release\splash.png"</Command>
+      <Command>copy "$(ProjectDir)\splash.png" "$(ProjectDir)\x64\Release\splash.png"</Command>
       <Message>Copy Splash Image</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
