@@ -426,9 +426,6 @@ inline bool Debugger::AntiDebug::_IsDebuggerPresent_DebugPort()
 	typedef NTSTATUS(NTAPI* TNtQueryInformationProcess)(IN HANDLE ProcessHandle, IN PROCESS_INFORMATION_CLASS ProcessInformationClass,OUT PVOID ProcessInformation,IN ULONG ProcessInformationLength,OUT PULONG ReturnLength);
 
 	HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
-
-	if(!hNtdll)
-	    hNtdll = LoadLibraryA("ntdll.dll");
 	
 	if (hNtdll)
 	{
@@ -444,6 +441,10 @@ inline bool Debugger::AntiDebug::_IsDebuggerPresent_DebugPort()
 				return true;
 		}
 	}
+	else
+	{
+            Logger::logf("UltimateAnticheat.log", Warning, "Failed to fetch ntdll.dll address @ _IsDebuggerPresent_DebugPort ");
+	}
 
 	return false;
 }
@@ -455,7 +456,7 @@ inline bool Debugger::AntiDebug::_IsDebuggerPresent_ProcessDebugFlags()
 {
 	typedef NTSTATUS(NTAPI* TNtQueryInformationProcess)(IN HANDLE ProcessHandle, IN PROCESS_INFORMATION_CLASS ProcessInformationClass, OUT PVOID ProcessInformation, IN ULONG ProcessInformationLength, OUT PULONG ReturnLength);
 
-	HMODULE hNtdll = LoadLibraryA("ntdll.dll");
+	HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
 
 	if (hNtdll)
 	{
@@ -471,7 +472,10 @@ inline bool Debugger::AntiDebug::_IsDebuggerPresent_ProcessDebugFlags()
 				return true;
 		}
 	}
-
+        else
+	{
+	    Logger::logf("UltimateAnticheat.log", Warning, "Failed to fetch ntdll.dll address @ _IsDebuggerPresent_ProcessDebugFlags ");
+	}
 	return false;
 }
 
