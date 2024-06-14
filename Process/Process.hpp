@@ -13,6 +13,8 @@
 
 using namespace std;
 
+#define EXPECTED_SECTIONS 6 //change this to however many sections your program has by default. if your program adds/removes sections, you'll need to do further tracking
+
 #define _CRT_SECURE_NO_WARNINGS
 
 #define MAX_DLLS_LOADED 128
@@ -82,7 +84,7 @@ class Process
 {
 public:
 
-	Process()
+	Process(int nProgramSections)
 	{
 		_PEB = new _MYPEB();
 		
@@ -93,6 +95,8 @@ public:
 
 		SetParentName(GetProcessName(GetParentProcessId()));
 		SetElevated(IsProcessElevated());
+
+		NumberOfSections = nProgramSections; //save original # of program sections so that we can modify NumberOfSections in the NT headers and still achieve program functionality
 	}
 
 	~Process()
@@ -107,8 +111,12 @@ public:
 
 	static list<ProcessData::Section*>* GetSections(string module);
 
+#ifdef _M_IX86
+	static _MYPEB* GetPEB() { return (_MYPEB*)__readfsdword(0x30); }
+#else
 	static _MYPEB* GetPEB() { return (_MYPEB*)__readgsqword(0x60); }
-	
+#endif
+
 	static wstring GetProcessName(DWORD pid);
 	static DWORD GetProcessIdByName(wstring procName);
 
@@ -155,6 +163,9 @@ public:
 	
 	static HMODULE GetModuleHandle_Ldr(const wchar_t* moduleName);
 
+	int SetNumberOfSections(int nSections) { this->NumberOfSections = nSections; }
+	int GetNumberOfSections() { return this->NumberOfSections; }
+
 private:
 
 	_MYPEB* _PEB = NULL;
@@ -173,4 +184,6 @@ private:
 	list<ProcessData::MODULE_DATA*> ModuleList; //todo: make routine to fill this member
 
 	bool _Elevated;
+
+	int NumberOfSections = 0;
 };

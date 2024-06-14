@@ -134,9 +134,7 @@ list<ProcessData::Section*>* Process::GetSections(string module)
     pNtH = (PIMAGE_NT_HEADERS64)((PIMAGE_NT_HEADERS64)((PBYTE)hInst + (DWORD)pDoH->e_lfanew));
     sectionHeader = IMAGE_FIRST_SECTION(pNtH);
 
-    int nSections = pNtH->FileHeader.NumberOfSections;
-
-    for (int i = 0; i < nSections; i++)
+    for (int i = 0; i < EXPECTED_SECTIONS; i++)
     {
         ProcessData::Section* s = new ProcessData::Section();
 
@@ -165,7 +163,12 @@ list<ProcessData::Section*>* Process::GetSections(string module)
 */
 bool Process::ChangeModuleName(const wstring szModule, const wstring newName)
 {
+#ifdef _M_IX86
+    MYPEB* PEB = (MYPEB*)__readfsdword(0x30);
+#else
     MYPEB* PEB = (MYPEB*)__readgsqword(0x60);
+#endif
+
     _LIST_ENTRY* f = PEB->Ldr->InMemoryOrderModuleList.Flink;
     bool Found = FALSE;
     int count = 0;
@@ -177,8 +180,8 @@ bool Process::ChangeModuleName(const wstring szModule, const wstring newName)
         if (wcsstr(dataEntry->FullDllName.Buffer, szModule.c_str()))
         {
             wcscpy_s(dataEntry->FullDllName.Buffer, szModule.size() + 1, newName.c_str()); //..then modify the string modulename to newName
-            dataEntry->FullDllName.Length = newName.length() + 1;
-            dataEntry->FullDllName.MaximumLength = newName.length() + 1;
+            dataEntry->FullDllName.Length = (newName.length() * 2) + 1;
+            dataEntry->FullDllName.MaximumLength = (newName.length() * 2) + 1;
             Found = TRUE;
             return true;
         }
@@ -196,7 +199,12 @@ bool Process::ChangeModuleName(const wstring szModule, const wstring newName)
 */
 bool Process::ChangeModuleBase(const wchar_t* szModule, uint64_t moduleBaseAddress)
 {
+#ifdef _M_IX86
+    MYPEB* PEB = (MYPEB*)__readfsdword(0x30);
+#else
     MYPEB* PEB = (MYPEB*)__readgsqword(0x60);
+#endif
+
     _LIST_ENTRY* f = PEB->Ldr->InMemoryOrderModuleList.Flink;
     bool Found = FALSE;
     int count = 0;
@@ -225,7 +233,12 @@ bool Process::ChangeModuleBase(const wchar_t* szModule, uint64_t moduleBaseAddre
 */
 bool Process::ChangeModulesChecksum(const wchar_t* szModule, DWORD checksum)
 {
+#ifdef _M_IX86
+    MYPEB* PEB = (MYPEB*)__readfsdword(0x30);
+#else
     MYPEB* PEB = (MYPEB*)__readgsqword(0x60);
+#endif
+
     _LIST_ENTRY* f = PEB->Ldr->InMemoryOrderModuleList.Flink;
     bool Found = FALSE;
     int count = 0;
@@ -591,11 +604,15 @@ UINT64 Process::GetSectionAddress(const char* moduleName, const char* sectionNam
     }
 
     PIMAGE_SECTION_HEADER pSectionHeader = IMAGE_FIRST_SECTION(pNtHeaders);
-    for (int i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++)  //the `NumberOfSections` variable can also be modified @ runtime to throw off attackers and prevent section traversal!
+
+    for (int i = 0; i < EXPECTED_SECTIONS; i++)  //we are modifying # of sections at runtime to throw attackers off
     {
-        if (strcmp((const char*)pSectionHeader->Name, sectionName) == 0)
+        if ((const char*)pSectionHeader->Name != nullptr)
         {
-            return baseAddress + pSectionHeader->VirtualAddress;
+            if (strcmp((const char*)pSectionHeader->Name, sectionName) == 0)
+            {
+                return baseAddress + pSectionHeader->VirtualAddress;
+            }
         }
 
         pSectionHeader++;
@@ -994,7 +1011,12 @@ std::vector<ProcessData::MODULE_DATA>* Process::GetLoadedModules()
 */
 HMODULE Process::GetModuleHandle_Ldr(const wchar_t* moduleName)
 {
+#ifdef _M_IX86
+    MYPEB* peb = (MYPEB*)__readfsdword(0x30);
+#else
     MYPEB* peb = (MYPEB*)__readgsqword(0x60);
+#endif
+
     uintptr_t kernel32Base = 0;
 
     LIST_ENTRY* current_record = NULL;
