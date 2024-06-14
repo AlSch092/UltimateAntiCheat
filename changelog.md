@@ -1,4 +1,6 @@
 ## Updates
+-June 13, '24: Added NT header tampering for its members `NumberOfSections`, `SizeOfImage`, `AddressOfEntryPoint`, which results in dynamic info lookups from attackers on these variables to be incorrect.
+
 - May 29. '24: Added 'process mitigation policies' in the Preventions class
 
 - May 28, '24: Program can now block APC injection by patching over ntdll.dll's Ordinal8 (called by KiUserApcDispatcher). This routine can also be hooked to reveal the injected APC payload's address. If your game/program relies on APC for normal execution, this technique might not be suitable.
