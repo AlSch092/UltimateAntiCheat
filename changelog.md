@@ -1,5 +1,5 @@
 ## Updates
--June 13, '24: Added NT header tampering for its members `NumberOfSections`, `SizeOfImage`, `AddressOfEntryPoint`, which results in dynamic info lookups from attackers on these variables to be incorrect.
+- June 13, '24: Added NT header tampering for its members `NumberOfSections`, `SizeOfImage`, `AddressOfEntryPoint`, which results in dynamic info lookups from attackers on these variables to be incorrect.
 
 - May 29. '24: Added 'process mitigation policies' in the Preventions class
 
