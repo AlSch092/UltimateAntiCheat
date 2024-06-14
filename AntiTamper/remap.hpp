@@ -3,11 +3,10 @@
 
 #include <Windows.h>
 #include "../Logger.hpp"
+
+#define EXPECTED_SECTIONS 6
+
 //=============================================================================
 // Public Interface
 //=============================================================================
-_Check_return_
-BOOL
-RmpRemapImage(
-    _In_ ULONG_PTR ImageBase
-);
+_Check_return_ BOOL RmpRemapImage(_In_ ULONG_PTR ImageBase);

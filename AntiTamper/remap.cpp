@@ -5,10 +5,7 @@
 //=============================================================================
 // Private Types
 //=============================================================================
-typedef BOOL(NTAPI* REMAP_ROUTINE)(
-    _In_ PVOID pRemapRegion
-    );
-
+typedef BOOL(NTAPI* REMAP_ROUTINE)(_In_ PVOID pRemapRegion);
 
 //=============================================================================
 // Module Globals
@@ -237,7 +234,7 @@ RmppVerifyPeSectionAlignment(
 
     pSectionHeader = IMAGE_FIRST_SECTION(pNtHeaders);
 
-    for (WORD i = 0; i < pNtHeaders->FileHeader.NumberOfSections; ++i)
+    for (WORD i = 0; i < EXPECTED_SECTIONS; ++i)
     {
         SectionBase =
             pNtHeaders->OptionalHeader.ImageBase +
@@ -294,7 +291,7 @@ RmppCopyPeSections(
     // We copy each pe section individually because images compiled with the
     //  '/ALIGN' linker option will have reserved memory padding.
     //
-    for (WORD i = 0; i < pNtHeaders->FileHeader.NumberOfSections; ++i)
+    for (WORD i = 0; i < EXPECTED_SECTIONS; ++i)
     {
         RtlCopyMemory(
             (PVOID)(DestinationBase + pSectionHeader[i].VirtualAddress),
@@ -419,7 +416,7 @@ RmppRemapImageRoutine(
     //
     pSectionHeader = IMAGE_FIRST_SECTION(pNtHeaders);
 
-    for (WORD i = 0; i < pNtHeaders->FileHeader.NumberOfSections; ++i)
+    for (WORD i = 0; i < EXPECTED_SECTIONS; ++i)
     {
         Protection = RmppConvertSectionCharacteristicsToPageProtection(
             pSectionHeader[i].Characteristics);
@@ -587,7 +584,7 @@ RmppValidateRemappedImageProtection(
 
     pSectionHeader = IMAGE_FIRST_SECTION(pNtHeaders);
 
-    for (WORD i = 0; i < pNtHeaders->FileHeader.NumberOfSections; ++i)
+    for (WORD i = 0; i < EXPECTED_SECTIONS; ++i)
     {
         status = RmppValidateRemappedPeSectionProtection(
             (PVOID)(ImageBase + pSectionHeader[i].VirtualAddress));
