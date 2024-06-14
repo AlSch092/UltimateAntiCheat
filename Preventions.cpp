@@ -97,13 +97,24 @@ Error Preventions::DeployBarrier()
     IsPreventingThreadCreation = false; //TLS callback anti-dll injection switch var
 #endif
 
-#ifndef _DEBUG
+    if (!Process::ChangeNumberOfSections("UltimateAnticheat.exe", 1)) //change # of sections to 1
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to change number of sections @ Preventions::DeployBarrier");
+        retError = Error::CANT_APPLY_TECHNIQUE;
+    }
+
+    Process::ChangePEEntryPoint(-1); //these must be called before remapping, and not essential for operations thus don't need to return an error if they don't work
+    Process::ChangeSizeOfCode(-1);  //additional runtime tricks to break info lookup via headers
+    //Process::ChangeImageBase(-1); //breaks remapping, only use this if you're not remapping
+    Process::ChangeImageSize(-1);
+
+//#ifndef _DEBUG
     if (!RemapProgramSections()) //anti-memory write through sections remapping, thanks changeofpace
     {
         Logger::logf("UltimateAnticheat.log", Err, " Couldn't remap memory @ DeployBarrier!\n");
         retError = Error::CANT_STARTUP;
     }
-#endif
+//#endif
 
     IsPreventingThreadCreation = true; //used in TLS callback to prevent thread creation (can stop shellcode + module injection)
 
@@ -123,7 +134,7 @@ Error Preventions::DeployBarrier()
         retError = Error::CANT_APPLY_TECHNIQUE;
     }
 
-    //third parameter (dynamic code) set to true -> prevents VirtualProtect from succeeding on .text sections of loaded modules. while this can be very useful, it breaks our TLS callback protections since we patch over the first byte of new thread's execution addresses
+    //third parameter (dynamic code) set to true -> prevents VirtualProtect from succeeding on .text sections of loaded/signed modules. while this can be very useful, it breaks our TLS callback protections since we patch over the first byte of new thread's execution addresses
     Preventions::EnableProcessMitigations(true, true, false, true, true); 
 
     //anything commented out below means it needs further testing to ensure no side effects occur, 

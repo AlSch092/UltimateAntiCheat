@@ -20,7 +20,7 @@ public:
 		integrityChecker = new Integrity();
 
 		BlacklistedProcesses.push_back(L"Cheat Engine.exe"); //todo: hide these strings
-		BlacklistedProcesses.push_back(L"CheatEngine.exe"); //in addition, we can scan for window class names, possible exported functions, specific text inside windows, etc.
+		BlacklistedProcesses.push_back(L"CheatEngine.exe"); //...we can  also scan for window class names, possible exported functions, specific text inside windows, etc.
 		BlacklistedProcesses.push_back(L"cheatengine-x86_64-SSE4-AVX2.exe");	
 		BlacklistedProcesses.push_back(L"x64dbg.exe");
 		BlacklistedProcesses.push_back(L"windbg.exe");
@@ -86,7 +86,7 @@ private:
 
 	list<wstring> BlacklistedProcesses;
 
-	Process* _Proc = new Process(); //keep track of our sections, loaded modules, etc
+	Process* _Proc = new Process(EXPECTED_SECTIONS); //keep track of our sections, loaded modules, etc
 
 	NetClient* netClient = nullptr; //send any detections to the server
 
