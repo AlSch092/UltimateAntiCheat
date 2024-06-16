@@ -65,44 +65,24 @@ void Integrity::SetMemoryHashList(std::list<uint64_t> hList)
 	this->_MemorySectionHashes.assign(hList.begin(), hList.end());
 }
 
-list<wstring> Integrity::GetLoadedModules()
-{
-	list<wstring> modules;
-	HMODULE  hMod[1024] = { 0 };
-	DWORD cbNeeded;
-
-	if (EnumProcessModules(GetCurrentProcess(), hMod, sizeof(hMod), &cbNeeded))
-	{
-		for (int i = 0; i < (cbNeeded / sizeof(HMODULE)); i++)
-		{
-			TCHAR szModName[MAX_PATH];
-
-			if (GetModuleFileNameExW(GetCurrentProcess(), hMod[i], szModName, sizeof(szModName) / sizeof(TCHAR)))
-			{
-				modules.push_back(szModName);
-			}
-		}
-	}
-
-	return modules;
-}
-
 /*
-Authenticode check on loaded DLLs, any unsigned/unverified loaded returns true
+	IsUnknownModulePresent - compares current module list to one gathered at program startup, any delta modules are checked via WinVerifyTrust and added to our `WhitelistedModules` member
+	return true if an unsigned module (besides current executable) was found
 */
 bool Integrity::IsUnknownModulePresent()
 {
 	bool foundUnknown = false;
 
-	list<wstring> modules = Integrity::GetLoadedModules();
+	vector<ProcessData::MODULE_DATA> currentModules = *Process::GetLoadedModules();
+	list<ProcessData::MODULE_DATA> modulesToAdd;
 
-	for (auto str : modules)
+	for (auto it = currentModules.begin(); it != currentModules.end(); ++it) 
 	{
 		bool found_whitelisted = false;
 
-		for (auto whitelist : WhitelistedModules)  //str is full path while whitelist is just name
+		for (auto it2 = this->WhitelistedModules->begin(); it2 != this->WhitelistedModules->end(); ++it2) //our whitelisted module list is initially populated inside the constructor with modules gathered at program startup
 		{
-			if (wcsstr(str.c_str(), whitelist.c_str()) != NULL) //WARNING! wcsstr is not safe against overflows
+			if (wcscmp(it->baseName, it2->baseName) == 0)
 			{
 				found_whitelisted = true;
 			}
@@ -110,12 +90,22 @@ bool Integrity::IsUnknownModulePresent()
 
 		if (!found_whitelisted)
 		{
-			//check dll name against a pre-determined white-list of DLLs, check if signed too
-			if (!Authenticode::VerifyEmbeddedSignature(str.c_str()))
+			if (Authenticode::VerifyEmbeddedSignature(it->name)) //if file is signed and not yet on our whitelist, we can add it
 			{
+				ProcessData::MODULE_DATA mod = *Process::GetModuleInfo(it->baseName);
+				modulesToAdd.push_back(mod);		
+			}
+			else
+			{
+				Logger::logfw("UltimateAnticheat.log", Detection, L"Unsigned module was found loaded in the process: %s\n", it->name);
 				foundUnknown = true;
 			}
 		}
+	}
+
+	for (const ProcessData::MODULE_DATA mod : modulesToAdd) //add any signed modules to our whitelist
+	{
+		this->WhitelistedModules->push_back(mod);
 	}
 
 	return foundUnknown;
