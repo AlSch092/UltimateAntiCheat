@@ -99,10 +99,10 @@ Error API::LaunchDefenses(AntiCheat* AC) //currently in the process to split the
 
 	AC->GetMonitor()->GetServiceManager()->GetServiceModules(); //enumerate services
 
-	if (AC->GetMonitor()->GetServiceManager()->GetLoadedDrivers()) //enumerate drivers
-	{
-		list<wstring> unsigned_drivers = AC->GetMonitor()->GetServiceManager()->GetUnsignedDrivers(); //unsigned drivers, take further action if needed
-	}
+	//if (AC->GetMonitor()->GetServiceManager()->GetLoadedDrivers()) //enumerate drivers
+	//{
+	//	list<wstring> unsigned_drivers = AC->GetMonitor()->GetServiceManager()->GetUnsignedDrivers(); //unsigned drivers, take further action if needed
+	//}
 
 	if (!Process::CheckParentProcess(AC->GetMonitor()->GetProcessObj()->GetParentName())) //parent process check, the parent process would normally be set using our API methods
 	{

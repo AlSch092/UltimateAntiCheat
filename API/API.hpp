@@ -13,7 +13,7 @@ namespace API
 		CLIENT_EXIT,
 	};
 
-	static bool serverAvailable = true; //networking on/off switch
+	static bool serverAvailable = false; //networking on/off switch
 
 	static const char* ServerEndpoint = "127.0.0.1";
 	static unsigned short ServerPort = 5445;
