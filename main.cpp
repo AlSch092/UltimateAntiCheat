@@ -38,9 +38,9 @@ using namespace std;
 int main(int argc, char** argv)
 {
     const int MillisecondsBeforeShutdown = 60000;
-
+    
     SetConsoleTitle(L"Ultimate Anti-Cheat");
-
+   
     CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Splash::InitializeSplash, 0, 0, 0); //open splash window
 
     cout << "----------------------------------------------------------------------------------------------------------\n";
@@ -95,7 +95,7 @@ cleanup: //jump to here on any error with AC initialization
 bool UnmanagedGlobals::AddThread(DWORD id)
 {
     DWORD tid = GetCurrentThreadId();
-    Logger::logf("UltimateAnticheat.log", Info, " New thread spawned: %d\n", tid);
+    Logger::logf("UltimateAnticheat.log", Info, " New thread spawned: %d", tid);
 
     CONTEXT context;
     context.ContextFlags = CONTEXT_ALL;
@@ -104,7 +104,7 @@ bool UnmanagedGlobals::AddThread(DWORD id)
 
     if (threadHandle == NULL)
     {
-        Logger::logf("UltimateAnticheat.log", Warning, " Couldn't open thread handle @ TLS Callback: Thread %d \n", tid);
+        Logger::logf("UltimateAnticheat.log", Warning, " Couldn't open thread handle @ TLS Callback: Thread %d", tid);
         return false;
     }
     else
@@ -118,7 +118,7 @@ bool UnmanagedGlobals::AddThread(DWORD id)
         }
         else
         {
-            Logger::logf("UltimateAnticheat.log", Warning, " GetThreadContext failed @ TLS Callback: Thread %d \n", tid);
+            Logger::logf("UltimateAnticheat.log", Warning, " GetThreadContext failed @ TLS Callback: Thread %d", tid);
             delete t;
             return false;
         }
@@ -245,6 +245,8 @@ void NTAPI __stdcall FakeTLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserv
             exit(-1);
         }
 
+        UnmanagedGlobals::ModulesAtStartup = Process::GetLoadedModules();  //take a snapshot of loaded modules at program startup for later comparison. If you're loading dlls dynamically, you'll need to update this member with a new MODULE_DATA*
+
         Logger::logf("UltimateAnticheat.log", Info, " New process attached, current thread %d\n", GetCurrentThreadId());
 
         if (UnmanagedGlobals::FirstProcessAttach) //process creation will trigger PROCESS_ATTACH, so we can put some initialize stuff in here incase main() is hooked or statically modified by the attacker
@@ -279,18 +281,18 @@ void NTAPI __stdcall FakeTLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserv
 }
 
 /*
-    ExceptionHandler - User defined exception handler which catches program-wide exceptions, mostly unused currently
+    ExceptionHandler - User defined exception handler which catches program-wide exceptions
 */
 LONG WINAPI UnmanagedGlobals::ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo)  //handler that will be called whenever an unhandled exception occurs in any thread of the process
 {
     DWORD exceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
-
-    if (exceptionCode == EXCEPTION_BREAKPOINT)
+    Logger::logf("UltimateAnticheat.log", Warning, "Program threw exception: %x at %llX\n", exceptionCode, ExceptionInfo->ExceptionRecord->ExceptionAddress);
+    
+    if (exceptionCode == EXCEPTION_BREAKPOINT) //one or two of our debug checks may throw this exception
     {
-        Logger::logf("UltimateAnticheat.log", Info, " Breakpoint exception was caught in ExceptionHandler\n");
     }
 
-    Logger::logf("UltimateAnticheat.log", Warning, "Program threw exception: %x\n", exceptionCode);
-
+    //optionally we may be able to view the exception address and compare it to whitelisted module address space, if it's not contained then we assume it's attacker-run code
+    
     return EXCEPTION_CONTINUE_SEARCH;
 }
