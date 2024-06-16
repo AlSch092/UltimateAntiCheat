@@ -4,7 +4,6 @@
 #include "Process/Exports.hpp" 
 #include "AntiTamper/remap.hpp"
 #include "Obscure/Obfuscation.hpp"
-#include "Obscure/SymbolicHash.hpp"
 #include "Common/Error.hpp"
 #include "Common/Utility.hpp"
 #include "Common/Globals.hpp"
