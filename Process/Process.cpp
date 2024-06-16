@@ -435,7 +435,7 @@ bool Process::ChangeNumberOfSections(string module, DWORD newSectionsCount)
 
     memcpy((void*)&pNtH->FileHeader.NumberOfSections, (void*)&newSectionsCount, sizeof(DWORD));
 
-    if (!VirtualProtect((LPVOID)&pNtH->FileHeader.NumberOfSections, sizeof(DWORD), dwOldProt, &dwOldProt))
+    if (!VirtualProtect((LPVOID)&pNtH->FileHeader.NumberOfSections, sizeof(DWORD), dwOldProt, &dwOldProt)) //reset page protections
     {
         Logger::logf("UltimateAnticheat.log", Err, " VirtualProtect (2nd call) failed @ Process::ChangeNumberOfSections");
         return false;
@@ -947,62 +947,94 @@ wstring Process::GetProcessName(DWORD pid)
 }
 
 /*
-    GetLoadedModules - returns a vector<ProcessData::MODULE_DATA>*  representing a set of loaded modules in the current process
+    GetLoadedModules - returns a vector<MODULE_DATA>*  representing a set of loaded modules in the current process
     returns nullptr on failure
 */
 std::vector<ProcessData::MODULE_DATA>* Process::GetLoadedModules()
 {
-    HMODULE hModules[256];
-    DWORD cbNeeded = 0;
+
+#ifdef _M_IX86
+    MYPEB* peb = (MYPEB*)__readfsdword(0x30);
+#else
+    MYPEB* peb = (MYPEB*)__readgsqword(0x60);
+#endif
+
+    uintptr_t kernel32Base = 0;
+
+    LIST_ENTRY* current_record = NULL;
+    LIST_ENTRY* start = &(peb->Ldr->InLoadOrderModuleList);
+
+    current_record = start->Flink;
 
     std::vector<ProcessData::MODULE_DATA>* moduleList = new std::vector<ProcessData::MODULE_DATA>();
 
-    if (EnumProcessModules(GetCurrentProcess(), hModules, sizeof(hModules), &cbNeeded))
+    while (true)
     {
-        for (unsigned int i = 0; i < (cbNeeded / sizeof(HMODULE)); i++)
+        MY_LDR_DATA_TABLE_ENTRY* module_entry = (MY_LDR_DATA_TABLE_ENTRY*)CONTAINING_RECORD(current_record, MY_LDR_DATA_TABLE_ENTRY, InLoadOrderLinks);
+        ProcessData::MODULE_DATA module;
+
+        wcscpy_s(module.name, module_entry->FullDllName.Buffer);
+        wcscpy_s(module.baseName, module_entry->BaseDllName.Buffer);
+
+        module.hModule = (HMODULE)module_entry->DllBase;
+        module.dllInfo.lpBaseOfDll = module_entry->DllBase;
+        module.dllInfo.SizeOfImage = module_entry->SizeOfImage;
+        moduleList->push_back(module);
+
+        current_record = current_record->Flink;
+
+        if (current_record == start)
         {
-            ProcessData::MODULE_DATA module;
-
-            TCHAR szModuleName[MAX_PATH];
-            MODULEINFO moduleInfo;
-
-            if (GetModuleFileNameEx(GetCurrentProcess(), hModules[i], szModuleName, sizeof(szModuleName) / sizeof(TCHAR)))
-            {
-                wcscpy_s(module.name, szModuleName);
-
-                module.hModule = hModules[i];
-
-                if (GetModuleInformation(GetCurrentProcess(), hModules[i], &moduleInfo, sizeof(moduleInfo)))
-                {
-                    module.dllInfo.lpBaseOfDll = moduleInfo.lpBaseOfDll;
-                    module.dllInfo.SizeOfImage = moduleInfo.SizeOfImage;
-                }
-                else
-                {
-                    Logger::logf("UltimateAnticheat.log", Warning, "Unable to parse module information @ Process::GetLoadedModules");
-                    module.dllInfo.lpBaseOfDll = NULL;
-                    module.dllInfo.SizeOfImage = NULL;
-                }
-
-                moduleList->push_back(module);
-            }
-            else
-            {
-                Logger::logf("UltimateAnticheat.log", Err, "Unable to parse module named @ Process::GetLoadedModules");
-                delete moduleList; moduleList = nullptr;
-                return nullptr;
-            }
+            break;
         }
-    }
-    else
-    {
-        Logger::logf("UltimateAnticheat.log", Err, "EnumProcessModules failed @ Process::GetLoadedModules");
-        delete moduleList; moduleList = nullptr;
-        return nullptr;
     }
 
     return moduleList;
-    
+}
+
+/*
+    GetModuleInfo - returns a ProcessData::MODULE_DATA* representing the module given `name`.
+    returns nullptr on failure/no module found
+*/
+ProcessData::MODULE_DATA* Process::GetModuleInfo(const wchar_t* name)
+{
+#ifdef _M_IX86
+    MYPEB* peb = (MYPEB*)__readfsdword(0x30);
+#else
+    MYPEB* peb = (MYPEB*)__readgsqword(0x60);
+#endif
+
+    uintptr_t kernel32Base = 0;
+
+    LIST_ENTRY* current_record = NULL;
+    LIST_ENTRY* start = &(peb->Ldr->InLoadOrderModuleList);
+
+    current_record = start->Flink;
+
+    while (true)
+    {
+        MY_LDR_DATA_TABLE_ENTRY* module_entry = (MY_LDR_DATA_TABLE_ENTRY*)CONTAINING_RECORD(current_record, MY_LDR_DATA_TABLE_ENTRY, InLoadOrderLinks);
+
+        if (wcscmp(module_entry->BaseDllName.Buffer, name) == 0)
+        {
+            ProcessData::MODULE_DATA* module = new ProcessData::MODULE_DATA();
+            wcscpy_s(module->name, module_entry->FullDllName.Buffer);
+            wcscpy_s(module->baseName, module_entry->BaseDllName.Buffer);
+            module->hModule = (HMODULE)module_entry->DllBase;
+            module->dllInfo.lpBaseOfDll = module_entry->DllBase;
+            module->dllInfo.SizeOfImage = module_entry->SizeOfImage;
+            return module;
+        }
+
+        current_record = current_record->Flink;
+
+        if (current_record == start)
+        {
+            break;
+        }
+    }
+
+    return nullptr;
 }
 
 /*

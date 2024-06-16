@@ -44,6 +44,7 @@ namespace ProcessData
 
 	struct MODULE_DATA
 	{
+		wchar_t baseName[MAX_FILE_PATH_LENGTH/2];
 		wchar_t name[MAX_FILE_PATH_LENGTH];
 		MODULEINFO dllInfo;
 		HMODULE hModule;
@@ -160,6 +161,7 @@ public:
 	static bool IsReturnAddressInModule(UINT64 RetAddr, const wchar_t* module);
 
 	static std::vector<ProcessData::MODULE_DATA>* GetLoadedModules();
+	static ProcessData::MODULE_DATA* GetModuleInfo(const wchar_t* name);
 	
 	static HMODULE GetModuleHandle_Ldr(const wchar_t* moduleName);
 
