@@ -21,27 +21,22 @@ class AntiCheat
 public:
 
 	AntiCheat()
-	{			
+	{		
 		Client = new NetClient();
 
 		_AntiDebugger = new Debugger::AntiDebug(Client); //any detection methods need the netclient for comms
 
-		Monitor = new Detections(false, Client);
+		Monitor = new Detections(false, Client, UnmanagedGlobals::ModulesAtStartup);
 		
 		Barrier = new Preventions(true, Monitor->GetIntegrityChecker()); //true = prevent new threads from being made
 	}
 
 	~AntiCheat()
 	{
-		delete Monitor;
-		delete Barrier;
-		delete _AntiDebugger;
-		delete Client;
-
-		Monitor = nullptr;
-		Barrier = nullptr;
-		_AntiDebugger = nullptr;
-		Client = nullptr;
+		delete Monitor; 		Monitor = nullptr;
+		delete Barrier;		    Barrier = nullptr;
+		delete _AntiDebugger;   _AntiDebugger = nullptr;
+		delete Client; 		    Client = nullptr;
 	}
 
 	Debugger::AntiDebug* GetAntiDebugger() { return this->_AntiDebugger; }

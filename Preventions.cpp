@@ -80,7 +80,13 @@ bool Preventions::RandomizeModuleName()
         UnmanagedGlobals::wCurrentModuleName = wstring(newModuleName);
         UnmanagedGlobals::CurrentModuleName = Utility::ConvertWStringToString(UnmanagedGlobals::wCurrentModuleName);
         
-        this->integrityChecker->AddToWhitelist(UnmanagedGlobals::wCurrentModuleName.c_str());
+        ProcessData::MODULE_DATA* mod = Process::GetModuleInfo(newModuleName);
+        
+        if (mod != nullptr)
+        {
+            this->integrityChecker->AddToWhitelist(*mod);
+            delete mod;
+        }
 
         Logger::logfw("UltimateAnticheat.log", Info, L"Changed module name to: %s\n", UnmanagedGlobals::wCurrentModuleName.c_str());
     }
@@ -105,16 +111,17 @@ Error Preventions::DeployBarrier()
 
     Process::ChangePEEntryPoint(-1); //these must be called before remapping, and not essential for operations thus don't need to return an error if they don't work
     Process::ChangeSizeOfCode(-1);  //additional runtime tricks to break info lookup via headers
-    //Process::ChangeImageBase(-1); //breaks remapping, only use this if you're not remapping
     Process::ChangeImageSize(-1);
 
-//#ifndef _DEBUG
+#ifndef _DEBUG
     if (!RemapProgramSections()) //anti-memory write through sections remapping, thanks changeofpace
     {
         Logger::logf("UltimateAnticheat.log", Err, " Couldn't remap memory @ DeployBarrier!\n");
         retError = Error::CANT_STARTUP;
     }
-//#endif
+#endif
+
+    Process::ChangeImageBase(-1); //breaks remapping, only use this if you're not remapping
 
     IsPreventingThreadCreation = true; //used in TLS callback to prevent thread creation (can stop shellcode + module injection)
 

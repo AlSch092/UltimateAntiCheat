@@ -14,10 +14,10 @@ class Detections
 {
 public:
 
-	Detections(BOOL StartMonitor, NetClient* client)
+	Detections(BOOL StartMonitor, NetClient* client, vector<ProcessData::MODULE_DATA>* currentModules)
 	{
 		_Services = new Services(FALSE);
-		integrityChecker = new Integrity();
+		integrityChecker = new Integrity(currentModules);
 
 		BlacklistedProcesses.push_back(L"Cheat Engine.exe"); //todo: hide these strings
 		BlacklistedProcesses.push_back(L"CheatEngine.exe"); //...we can  also scan for window class names, possible exported functions, specific text inside windows, etc.
