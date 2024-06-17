@@ -121,9 +121,13 @@ Error NetClient::SendData(PacketWriter* outPacket)
 	if (this->Socket == SOCKET_ERROR)
 		return Error::BAD_SOCKET;
 
+	LPBYTE encryptedBuffer = (LPBYTE)outPacket->GetBuffer();
+
+	CipherData(encryptedBuffer, outPacket->GetSize());
+
 	Error err = Error::OK;
 
-	int BytesSent = send(Socket, (const char*)outPacket->GetBuffer(), outPacket->GetSize(), 0); //if this ever fragments i'll add a check
+	int BytesSent = send(Socket, (const char*)encryptedBuffer, outPacket->GetSize(), 0); //if this ever fragments i'll add a check
 
 	int nRecvDataLength = 0;
 
@@ -143,12 +147,18 @@ void NetClient::ProcessRequests(LPVOID Param)
 {
 	bool receiving = true;
 	const int ms_between_loops = 1000;
+	unsigned char recvBuf[DEFAULT_RECV_LENGTH] = { 0 };
 
-	Logger::logf("UltimateAnticheat.log", Info, "Started thread on NetClient::ProcessRequests with id %d.", GetCurrentThreadId());
+	Logger::logf("UltimateAnticheat.log", Info, "Started thread on NetClient::ProcessRequests with id: %d", GetCurrentThreadId());
 
 	NetClient* Client = reinterpret_cast<NetClient*>(Param);
 
-	unsigned char recvBuf[DEFAULT_RECV_LENGTH] = { 0 };
+	if (Client == nullptr)
+	{
+		Logger::logf("UltimateAnticheat.log", Err, "Client was NULL @ NetClient::ProcessRequests");
+		receiving = false; //todo: send signals to rest of anticheat to shutdown
+		goto end;
+	}
 
 	while (receiving)
 	{
@@ -165,6 +175,8 @@ void NetClient::ProcessRequests(LPVOID Param)
 
 			if (bytesIn != SOCKET_ERROR)
 			{
+				Client->CipherData(recvBuf, bytesIn); //decrypt buffer
+
 				PacketReader* p = new PacketReader(recvBuf, bytesIn);
 				Client->HandleInboundPacket(p);
 				delete p;
@@ -475,4 +487,21 @@ __forceinline const char* NetClient::MakeHeartbeat(string cookie)
 	}
 
 	return HeartbeatResponse;
+}
+
+/*
+	EncryptData - encrypts `buffer` using xor /w sub/add operation
+*/
+void NetClient::CipherData(LPBYTE buffer, int length)
+{
+	const byte XorKey = 0x90;
+	const byte OperationKey = 0x90;
+
+	for (int i = 0; i < length; i++)
+	{
+		if(i % 2 == 0)
+			buffer[i] = (buffer[i] ^ XorKey) + OperationKey;
+		else
+			buffer[i] = (buffer[i] ^ XorKey) - OperationKey;
+	}
 }

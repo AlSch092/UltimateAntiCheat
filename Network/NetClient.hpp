@@ -74,6 +74,8 @@ public:
 
 	Thread* GetRecvThread() { return this->RecvLoopThread; }
 
+	void CipherData(LPBYTE buffer, int length);
+
 private:
 
 	const int HeartbeatSize = 128;
