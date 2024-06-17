@@ -2,11 +2,11 @@
 #include "Integrity.hpp"
 
 //returns false if any static memory is modified (assuming we pass in moduleBase and sizeOfModule.
-bool Integrity::Check(uint64_t Address, int nBytes, std::list<uint64_t> hashList)
+bool Integrity::Check(uint64_t Address, int nBytes, vector<uint64_t> hashList)
 {
 	bool hashesMatch = true;
 
-	list<uint64_t> hashes = GetMemoryHash(Address, nBytes);
+	vector<uint64_t> hashes = GetMemoryHash(Address, nBytes);
 
 	auto it1 = hashes.begin();
 	auto it2 = hashList.begin();
@@ -31,10 +31,9 @@ bool Integrity::Check(uint64_t Address, int nBytes, std::list<uint64_t> hashList
 	return hashesMatch;
 }
 
-//we can build an array here at some memory location with nBytes, then SHA256 
-list<uint64_t> Integrity::GetMemoryHash(uint64_t Address, int nBytes)
+vector<uint64_t> Integrity::GetMemoryHash(uint64_t Address, int nBytes)
 {
-	std::list<uint64_t> hashList;
+	std::vector<uint64_t> hashList;
 
 	if (Address == 0)
 		return hashList;
@@ -60,7 +59,7 @@ list<uint64_t> Integrity::GetMemoryHash(uint64_t Address, int nBytes)
 	return hashList;
 }
 
-void Integrity::SetMemoryHashList(std::list<uint64_t> hList)
+void Integrity::SetMemoryHashList(vector<uint64_t> hList)
 {
 	this->_MemorySectionHashes.assign(hList.begin(), hList.end());
 }
@@ -76,7 +75,7 @@ bool Integrity::IsUnknownModulePresent()
 	vector<ProcessData::MODULE_DATA> currentModules = *Process::GetLoadedModules();
 	list<ProcessData::MODULE_DATA> modulesToAdd;
 
-	for (auto it = currentModules.begin(); it != currentModules.end(); ++it) 
+	for (auto it = currentModules.begin(); it != currentModules.end(); ++it)  //if an attacker signs their dll, they'll be able to get past this
 	{
 		bool found_whitelisted = false;
 
@@ -97,16 +96,134 @@ bool Integrity::IsUnknownModulePresent()
 			}
 			else
 			{
-				Logger::logfw("UltimateAnticheat.log", Detection, L"Unsigned module was found loaded in the process: %s\n", it->name);
+				Logger::logfw("UltimateAnticheat.log", Detection, L"Unsigned module was found loaded in the process: %s", it->name);
 				foundUnknown = true;
 			}
 		}
 	}
 
-	for (const ProcessData::MODULE_DATA mod : modulesToAdd) //add any signed modules to our whitelist
+	for (const ProcessData::MODULE_DATA& mod : modulesToAdd) //add any signed modules to our whitelist
 	{
 		this->WhitelistedModules->push_back(mod);
 	}
 
 	return foundUnknown;
+}
+
+/*
+GetModuleHash - searches `ModuleHashes` variable for module with name `moduleName`
+returns nullptr if not found
+*/
+ModuleHashData* Integrity::GetModuleHash(const wchar_t* moduleName)
+{
+	string modName = Utility::ConvertWStringToString(moduleName);
+	list<ProcessData::Section*>* sections = Process::GetSections(modName);
+
+	for (auto s : *sections)
+	{
+		if (strcmp(s->name, ".text") == 0)
+		{
+			vector<uint64_t> hashes = GetMemoryHash((uint64_t)(s->address + GetModuleHandleA(modName.c_str())), s->size); //make hashes of .text of module
+
+			ModuleHashData* moduleHashData = new ModuleHashData();
+			int name_len = wcslen(moduleName);
+			moduleHashData->Name = new wchar_t[name_len + 1];
+			wcscpy(moduleHashData->Name, moduleName);
+			moduleHashData->Hashes = hashes;
+
+			return moduleHashData;
+		}
+	}
+
+	return nullptr;
+}
+
+/*
+	GetModuleHashes  - fill member `ModuleHashes` with hashes of each whitelisted module
+*/
+vector<ModuleHashData*>* Integrity::GetModuleHashes()
+{
+	vector<ModuleHashData*>* moduleHashes = new vector<ModuleHashData*>();
+
+	for (auto it = this->WhitelistedModules->begin(); it != this->WhitelistedModules->end(); ++it) //traverse whitelisted modules
+	{
+		if (it->dllInfo.lpBaseOfDll == GetModuleHandleA(NULL)) //skip main executable module, we're tracking that with another member
+			continue;
+
+		AddModuleHash(moduleHashes, it->baseName);
+	}
+
+	return moduleHashes;
+}
+
+/*
+	IsModuleModified - checks if module `moduleName` has had its .text section modified (compared to `ModuleHashes` member)
+	returns true if current module hash does not match original from `ModuleHashes`
+*/
+bool Integrity::IsModuleModified(const wchar_t* moduleName)
+{
+	bool foundModified = false;
+
+	ModuleHashData* currentModuleHash = GetModuleHash(moduleName);
+
+	for (ModuleHashData* modHash : *this->ModuleHashes)
+	{
+		if (wcscmp(modHash->Name, currentModuleHash->Name) == 0) //moduleName matches module in list
+		{
+			if (modHash->Hashes.size() != currentModuleHash->Hashes.size()) //size check
+			{
+				delete[] currentModuleHash->Name;
+				delete currentModuleHash; //return true if sizes dont match, attacker may have increased memory size at end of section to avoid detection (or they re-wrote entire dll's memory)
+				return true;
+			}
+
+			uint64_t* arr1 = modHash->Hashes.data();
+			size_t size = modHash->Hashes.size();
+
+			uint64_t* arr2 = currentModuleHash->Hashes.data();
+
+			for (int i = 0; i < size; i++)
+			{
+				if (arr1[i] != arr2[i])
+				{
+					foundModified = true;
+				}
+			}
+
+			break;
+		}
+	}
+
+	delete[] currentModuleHash->Name;
+	delete currentModuleHash;
+	return foundModified;
+}
+
+/*
+	AddModuleHash - fetches hash list for `moduleName` and adds to `moduleHashList`
+*/
+void Integrity::AddModuleHash(vector<ModuleHashData*>* moduleHashList, wchar_t* moduleName)
+{
+	if (moduleHashList == nullptr || moduleName == nullptr)
+		return;
+
+	string modName = Utility::ConvertWStringToString(moduleName);
+	list<ProcessData::Section*>* sections = Process::GetSections(modName);
+
+	for (auto s : *sections)
+	{
+		if (strcmp(s->name, ".text") == 0)
+		{
+			vector<uint64_t> hashes = GetMemoryHash((uint64_t)(s->address + GetModuleHandleA(modName.c_str())), s->size); //make hashes of .text of module
+
+			ModuleHashData* moduleHashData = new ModuleHashData();
+			int name_len = wcslen(moduleName);
+			moduleHashData->Name = new wchar_t[name_len + 1];
+			wcscpy(moduleHashData->Name, moduleName);
+			moduleHashData->Hashes = hashes;
+
+			moduleHashList->push_back(moduleHashData);
+			break;
+		}
+	}
 }
