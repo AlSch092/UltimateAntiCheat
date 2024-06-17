@@ -80,9 +80,7 @@ namespace UACServer.Network
             }
 
             if (bytesRead > 0)
-            {
-                string message = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-                
+            {        
                 if(!HandlePacket(c, buffer, bytesRead))
                 {
                     Logger.Log("UACServer.log", "Client heartbeat was incorrect, disconnecting client " +  c.hardware_id);
@@ -150,8 +148,10 @@ namespace UACServer.Network
                 return false;
 
             byte[] buffer = p.m_stream.GetBuffer();
-            
-            if(c.net_client.Connected)
+
+            Cipher(buffer, buffer.Length);
+
+            if (c.net_client.Connected)
             {
                 c.net_client.GetStream().Write(buffer, 0, buffer.Length);
                 return true;
@@ -174,10 +174,27 @@ namespace UACServer.Network
             return SendBytes(c, p);
         }
 
+        private void Cipher(byte[] buffer, int length)
+        {
+            const byte xorKey = 0x90;
+            const byte operationKey = 0x90;
+
+            for(int i = 0; i < length; i++)
+            {
+                if (i % 2 == 0)
+                    buffer[i] = (byte)((buffer[i] - operationKey ) ^ xorKey);
+                else
+                    buffer[i] = (byte)((buffer[i] + operationKey ) ^ xorKey);
+            }
+        }
+
         private bool HandlePacket(AntiCheatClient c, byte[] buffer, int length)
         {
             if (buffer == null || length == 0)
                 return false;
+
+            //decrypt buffer
+            Cipher(buffer, length);
 
             PacketReader p = new PacketReader(buffer);
             ushort opcode = p.ReadUShort();
