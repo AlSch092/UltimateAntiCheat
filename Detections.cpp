@@ -109,6 +109,12 @@ void Detections::Monitor(LPVOID thisPtr)
             Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
         }
 
+        if (Monitor->GetIntegrityChecker()->IsModuleModified(L"WINTRUST.dll")) //check hashes of wintrust.dll for signing-related hooks
+        {
+            Logger::logf("UltimateAnticheat.log", Detection, "Found modified .text section in WINTRUST.dll!");
+            Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
+        }
+
         if (Monitor->IsBlacklistedProcessRunning()) //external applications running on machine
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Found blacklisted process!");
@@ -197,7 +203,7 @@ list<ProcessData::Section*>* Detections::SetSectionHash(const char* moduleName, 
 
         if (strcmp(s->name, sectionName) == 0)
         {
-            list<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)s->address + ModuleAddr, s->size); //check most of section, a few short to stop edge read cases
+            vector<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)s->address + ModuleAddr, s->size); //check most of section, a few short to stop edge read cases
 
             if (hashes.size() > 0)
             {
