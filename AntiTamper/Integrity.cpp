@@ -89,7 +89,7 @@ bool Integrity::IsUnknownModulePresent()
 
 		if (!found_whitelisted)
 		{
-			if (Authenticode::VerifyEmbeddedSignature(it->name)) //if file is signed and not yet on our whitelist, we can add it
+			if (Authenticode::HasSignature(it->name)) //if file is signed and not yet on our whitelist, we can add it
 			{
 				ProcessData::MODULE_DATA mod = *Process::GetModuleInfo(it->baseName);
 				modulesToAdd.push_back(mod);		

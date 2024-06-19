@@ -26,6 +26,28 @@ void Detections::StartMonitor()
     this->MonitorThread->CurrentlyRunning = true;
 }
 
+/*
+    LdrpDllNotification - This function is called whenever a new module is loaded into the process space, called before TLS callbacks
+*/
+
+VOID CALLBACK Detections::OnDllNotification(ULONG NotificationReason, const PLDR_DLL_NOTIFICATION_DATA NotificationData, PVOID Context)
+{
+    Detections* Monitor = reinterpret_cast<Detections*>(Context);
+    
+    if (NotificationReason == LDR_DLL_NOTIFICATION_REASON_LOADED)
+    {
+        LPCWSTR FullDllName = NotificationData->Loaded.FullDllName->pBuffer;
+        Logger::logfw("UltimateAnticheat.log", Info, L"[LdrpDllNotification Callback] dll loaded: %s, verifying signature...\n", FullDllName);
+
+        if (!Authenticode::HasSignature(FullDllName))
+        {
+			Logger::logfw("UltimateAnticheat.log", Detection, L"Failed to verify signature of %s\n", FullDllName);
+
+            Monitor->Flag(DetectionFlags::INJECTED_ILLEGAL_PROGRAM);
+        }
+    }
+
+}
 
 /*
     Detections::Monitor(LPVOID thisPtr)

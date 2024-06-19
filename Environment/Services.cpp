@@ -133,7 +133,7 @@ list<wstring> Services::GetUnsignedDrivers()
 
     for (const std::wstring& driverPath : DriverPaths) 
     {
-        if (!Authenticode::VerifyEmbeddedSignature(driverPath.c_str()))
+        if (!Authenticode::HasSignature(driverPath.c_str()))
         {
             Logger::logfw("UltimateAnticheat.log", Warning, L"Found unsigned or outdated certificate on driver: %s\n", driverPath.c_str());
             unsignedDrivers.push_back(driverPath);
