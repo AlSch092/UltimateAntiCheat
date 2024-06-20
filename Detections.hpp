@@ -6,6 +6,7 @@
 #include "Environment/Services.hpp"
 #include "Obscure/Obfuscation.hpp"
 #include "Common/Globals.hpp"
+#include "Obscure/ntldr.hpp"
 
 /*
 	The detections class contains a set of static functions to help detect fragments of cheating, along with a thread for looping detections
@@ -33,6 +34,12 @@ public:
 
 		if (StartMonitor)
 			this->StartMonitor();
+		
+		HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
+		_LdrRegisterDllNotification pLdrRegisterDllNotification = (_LdrRegisterDllNotification)GetProcAddress(hNtdll, "LdrRegisterDllNotification");
+
+		PVOID cookie;
+		NTSTATUS status = pLdrRegisterDllNotification(0, (PLDR_DLL_NOTIFICATION_FUNCTION)OnDllNotification, this, &cookie);
 	}
 
 	~Detections()
@@ -74,6 +81,7 @@ public:
 
 	bool AddDetectedFlag(DetectionFlags f); //add to DetectedFlags without duplicates
 	bool Flag(DetectionFlags flag);
+	static VOID OnDllNotification(ULONG NotificationReason, const PLDR_DLL_NOTIFICATION_DATA NotificationData, PVOID Context);
 
 private:
 

@@ -200,6 +200,7 @@
     <ClInclude Include="Network\Packets\PacketReader.hpp" />
     <ClInclude Include="Network\Packets\Packets.hpp" />
     <ClInclude Include="Network\Packets\PacketWriter.hpp" />
+    <ClInclude Include="Obscure\ntldr.hpp" />
     <ClInclude Include="Obscure\Obfuscation.hpp" />
     <ClInclude Include="Preventions.hpp" />
     <ClInclude Include="Process\Exports.hpp" />

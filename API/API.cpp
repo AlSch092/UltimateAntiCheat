@@ -38,6 +38,9 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessNam
 		Logger::logf("UltimateAnticheat.log", Info, "Networking is currently disabled, no heartbeats will occurs");
 	}
 
+	/* Initialise LdrpDllNotificationList */
+	//AC->GetMonitor()->GetLdrpDllNotificationList();
+
 end:	
 	return errorCode;
 }
