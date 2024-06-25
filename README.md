@@ -18,7 +18,6 @@ UltimateAntiCheat is an open source anti-cheat system made to detect and prevent
 - Dll load notifcations/callback & signature checks of loaded modules (thanks to discriminate for this contribution)
 - Spoofs `NumberOfSections`, `SizeOfImage`, & `AddressOfEntryPoint` to prevent dynamic info lookups (process manipulation)
 - Parent process check
-- Detects unsigned modules loaded into the process
 - Blacklisted running process checks & whitelisted loaded modules check
 - Loaded module name random renaming (process manipulation)
 - Exported function names random renaming (process manipulation, anti-injection)
