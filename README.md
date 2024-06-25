@@ -15,6 +15,7 @@ UltimateAntiCheat is an open source anti-cheat system made to detect and prevent
 - Blocks Cheat Engine VEH debugger (`initializeVEH` patching, module name renaming)
 - Integrity checks on program memory (`.text` section checks, WINAPI hook checks, IAT hook checks)
 - Remapping sections & re-re-mapping checks (anti-tamper)
+- Dll load notifcations/callback & signature checks of loaded modules (thanks to discriminate for this contribution)
 - Spoofs `NumberOfSections`, `SizeOfImage`, & `AddressOfEntryPoint` to prevent dynamic info lookups (process manipulation)
 - Parent process check
 - Detects unsigned modules loaded into the process
