@@ -215,7 +215,8 @@ void Integrity::AddModuleHash(vector<ModuleHashData*>* moduleHashList, wchar_t* 
 	{
 		if (strcmp(s->name, ".text") == 0)
 		{
-			vector<uint64_t> hashes = GetMemoryHash((uint64_t)(s->address + GetModuleHandleA(modName.c_str())), s->size); //make hashes of .text of module
+			uint64_t sec_addr = (uint64_t)(s->address) + (uint64_t)GetModuleHandleA(modName.c_str());
+			vector<uint64_t> hashes = GetMemoryHash(sec_addr, s->size); //make hashes of .text of module
 
 			ModuleHashData* moduleHashData = new ModuleHashData();
 			int name_len = wcslen(moduleName);
