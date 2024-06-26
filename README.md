@@ -2,11 +2,11 @@
 
 # UltimateAntiCheat: An Educational Anti-Cheat built in C++ (x64)
 
-UltimateAntiCheat is an open source anti-cheat system made to detect and prevent common attack vectors in game hacking, including: memory editing, module & code injection, debugging, unsigned drivers, open handles, and more. The project also features a client-server design with a heartbeat being sent every 60 seconds to clients.  
+UltimateAntiCheat is an open source usermode anti-cheat system made to detect and prevent common attack vectors in game hacking, including: memory editing, module & code injection, debugging, unsigned drivers, open handles, and more. The project also features a client-server design with a heartbeat being sent every 60 seconds to clients.
 
-   This project is meant to serve as an educational tool and is not intended to be commercial software or overly complex to crack. This example includes basic but fundamental protections, and we aim to cover all attack surfaces such that the attacker is not able to gain a foothold into our process without being detected. Any modification to a single aspect will lead to being detected: for example, if someone tries to debug our code from usermode, they will likely re-map and perform memory edits to try and disable debugger detection which leads to their memory edit or remapping being detected. UltimateAntiCheat runs in usermode and has no driver associated with it. It's recommended that if possible you run VMProtect or a similar program on the compiled binary for added security through obscurity. 
+   This project is meant to serve as an educational tool and is not intended to be commercial software or overly complex to crack. This example includes basic but fundamental protections, and we aim to cover all attack surfaces such that the attacker is not able to gain a foothold from usermode into our process without being detected. Any modification to a single aspect will lead to being detected: for example, if someone tries to debug our code from usermode, they will likely re-map and perform memory edits to try and disable debugger detection which leads to their memory edit or remapping being detected. It's recommended that if possible you run VMProtect or a similar program on the compiled binary for added security through obscurity. 
 
-   If there is anything not working for you (throws exceptions, can't build, etc) please raise an issue and I will answer it ASAP. If you have code suggestions or techniques you'd like to see added, or want assistance with adding anti-cheat to your game, please send me an email. More techniques and better design will be added to the project over time, and the file changelog.md contains a dated updates list.  
+   If there is anything not working for you (throws unhandled exceptions, can't build, etc) please raise an issue and I will answer it ASAP. If you have code suggestions or techniques you'd like to see added, or want assistance with adding anti-cheat to your game, please send me an email. More techniques and better design will be added to the project over time, and the file changelog.md contains a dated updates list.  
 
 ## Current Detections and protective features:
 - Detects Open Process Handles to our process (`OpenProcess` detection)
@@ -15,7 +15,7 @@ UltimateAntiCheat is an open source anti-cheat system made to detect and prevent
 - Blocks Cheat Engine VEH debugger (`initializeVEH` patching, module name renaming)
 - Integrity checks on program memory (`.text` section checks, WINAPI hook checks, IAT hook checks)
 - Remapping sections & re-re-mapping checks (anti-tamper)
-- Dll load notifcations/callback & signature checks of loaded modules (thanks to discriminate for this contribution)
+- Dll load notifcations/callback & signature checks of loaded modules (thanks to user discriminate for this contribution)
 - Spoofs `NumberOfSections`, `SizeOfImage`, & `AddressOfEntryPoint` to prevent dynamic info lookups (process manipulation)
 - Parent process check
 - Blacklisted running process checks & whitelisted loaded modules check
@@ -28,6 +28,7 @@ UltimateAntiCheat is an open source anti-cheat system made to detect and prevent
 - Networked heartbeat system to ensure client is running the AC module
 - Stops multiple instances of the process from being run by mapping shared memory
 - Return address checks in important routines such as heartbeat generation to prevent remote calling
+- Basic window title & class name checks for commonly used attack tools such as Cheat Engine
 
 ## Enabling/Disabling Networking:
 Networking support has been added to the project; the server can be found in the `Server` folder as its own solution. Using networking is optional, and can be turned on/off through the variable `bool serverAvailable` in the file `API/API.hpp`. If you choose to use networking, please follow the instructions in the README.md file of the server.   
