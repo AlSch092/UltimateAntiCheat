@@ -1,4 +1,10 @@
 ## Updates
+- June 25, '24: Added simple window title & class name checks to help determine if the user is running Cheat Engine, x64dbg, etc. This should be considered an extra data point and not solely responsible for detecting attackers.
+
+- June 20, '24: Added hash lists for all loaded modules `.text` sections such that specific modules can later on be checked for memory modifications. This was used to add checks on `WINTRUST.dll` to detect any hooks on signature-related routines. Since it's a bit expensive to check all loaded module hashes constantly, specific modules should be checked periodically.
+
+- June 19, '24: Added DLL load notifications/callbacks and proper signature checks on any loaded modules (thanks for user discriminate for this contribution). 
+
 - June 13, '24: Added NT header tampering for its members `NumberOfSections`, `SizeOfImage`, `AddressOfEntryPoint`, which results in dynamic info lookups from attackers on these variables to be incorrect.
 
 - May 29. '24: Added 'process mitigation policies' in the Preventions class
