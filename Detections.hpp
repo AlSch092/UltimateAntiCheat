@@ -77,7 +77,8 @@ public:
 	static BOOL DoesFunctionAppearHooked(const char* moduleName, const char* functionName); //checks for jumps or calls as the first byte on a function
 	static BOOL DoesIATContainHooked();
 	static BOOL IsTextSectionWritable();
-	static bool CheckOpenHandles(); //detect any open handles to our process, very useful since this will detect most external cheats
+	static BOOL CheckOpenHandles(); //detect any open handles to our process, very useful since this will detect most external cheats
+	BOOL IsBlacklistedWindowPresent();
 
 	bool AddDetectedFlag(DetectionFlags f); //add to DetectedFlags without duplicates
 	bool Flag(DetectionFlags flag);

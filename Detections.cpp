@@ -127,7 +127,7 @@ void Detections::Monitor(LPVOID thisPtr)
 
         if (Monitor->CheckSectionHash(CachedSectionAddress, CachedSectionSize)) //compare hashes of .text for modifications
         {
-            Logger::logf("UltimateAnticheat.log", Detection, "Found modified .text section!\n");
+            Logger::logf("UltimateAnticheat.log", Detection, "Found modified .text section (or you're debugging with software breakpoints)!\n");
             Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
         }
 
@@ -168,7 +168,7 @@ void Detections::Monitor(LPVOID thisPtr)
             Monitor->Flag(DetectionFlags::BAD_IAT);
         }
 
-        if (Detections::IsTextSectionWritable()) //page protections check
+        if (Detections::IsTextSectionWritable()) //page protections check, can be made more granular or loop over all mem pages
         {
             Logger::logf("UltimateAnticheat.log", Detection, ".text section was writable, which means someone re-re-mapped our memory regions! (or you ran this in DEBUG build)");
             
@@ -181,6 +181,12 @@ void Detections::Monitor(LPVOID thisPtr)
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Found open process handles to our process from other processes");
             Monitor->Flag(DetectionFlags::OPEN_PROCESS_HANDLES);
+        }
+
+        if (Monitor->IsBlacklistedWindowPresent())
+        {
+            Logger::logf("UltimateAnticheat.log", Detection, "Found blacklisted window text!");
+            Monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
         }
 
         Sleep(MonitorLoopMilliseconds);
@@ -428,9 +434,9 @@ BOOL __forceinline Detections::IsTextSectionWritable()
     CheckOpenHandles - Checks if any processes have open handles to our process, excluding whitelisted processes such as conhost.exe
     returns true if some other process has an open process handle to the current process
 */
-bool Detections::CheckOpenHandles()
+BOOL Detections::CheckOpenHandles()
 {
-    bool foundHandle = false;
+    BOOL foundHandle = FALSE;
     std::vector<Handles::_SYSTEM_HANDLE> handles = Handles::DetectOpenHandlesToProcess();
 
     for (auto& handle : handles)
@@ -449,7 +455,7 @@ bool Detections::CheckOpenHandles()
             }
 
             Logger::logfw("UltimateAnticheat.log", Detection, L"Process %s has open process handle to our process.", procName.c_str());
-            foundHandle = true;
+            foundHandle = TRUE;
 
         inner_break:
             continue;
@@ -508,4 +514,92 @@ bool Detections::Flag(DetectionFlags flag)
     }
 
     return true;
+}
+
+/*
+    EnumWindowsProc - window traversal callback used in Detections::IsBlacklistedWindowPresent
+*/
+BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
+{
+    char windowTitle[256]{ 0 };
+    char className[256]{ 0 };
+    const int xorKey1 = 0x44;
+    const int xorKey2 = 0x47;
+    Detections* Monitor = reinterpret_cast<Detections*>(lParam); //maybe put blacklisted xor'd strings into a list in Detections?
+
+    unsigned char CheatEngine[] = {
+        'C' ^ xorKey1, 'h' ^ xorKey1, 'e' ^ xorKey1, 'a' ^ xorKey1, 't' ^ xorKey1, ' ' ^ xorKey1,
+        'E' ^ xorKey1, 'n' ^ xorKey1, 'g' ^ xorKey1, 'i' ^ xorKey1, 'n' ^ xorKey1, 'e' ^ xorKey1
+    };
+
+    unsigned char LuaScript[] = {
+        'L' ^ xorKey2, 'u' ^ xorKey2, 'a' ^ xorKey2, ' ' ^ xorKey2,
+        's' ^ xorKey2, 'c' ^ xorKey2, 'r' ^ xorKey2, 'i' ^ xorKey2,
+        'p' ^ xorKey2, 't' ^ xorKey2, ':' ^ xorKey2
+    };
+
+    char original_CheatEngine[13]{ 0 };
+    char original_LUAScript[12]{ 0 };
+
+    for (int i = 0; i < 13 - 1; i++) //13 - 1 to stop last 00 from being xor'd
+    {
+        original_CheatEngine[i] = (char)(CheatEngine[i] ^ xorKey1);
+    }
+
+    for (int i = 0; i < 12; i++)
+    {
+        original_LUAScript[i] = (char)(CheatEngine[i] ^ xorKey2);
+    }
+
+    if (GetWindowTextA(hwnd, windowTitle, sizeof(windowTitle)))
+    {
+        if (GetClassNameA(hwnd, className, sizeof(className)))
+        {
+            if (strstr(windowTitle, (const char*)original_CheatEngine) || strstr(windowTitle, (const char*)original_CheatEngine) != NULL)
+            {
+                Monitor->SetCheater(true);
+                Monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
+                Logger::logf("UltimateAnticheat.log", Detection, "Detected cheat engine window");
+                return FALSE;
+            }
+            else if (strstr(windowTitle, (const char*)original_LUAScript))
+            {
+                Monitor->SetCheater(true);
+                Monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
+                Logger::logf("UltimateAnticheat.log", Detection, "Detected cheat engine's lua script window");
+                return FALSE;
+            }
+        }
+    }
+
+    return TRUE;
+}
+
+/*
+    IsBlacklistedWindowPresent - Checks if windows with specific title or class names are present
+*/
+BOOL Detections::IsBlacklistedWindowPresent()
+{
+    typedef BOOL(WINAPI* ENUMWINDOWS)(WNDENUMPROC, LPARAM);
+    HMODULE hUser32 = GetModuleHandleA("USER32.dll");
+
+    if (hUser32 != NULL)
+    {
+        ENUMWINDOWS pEnumWindows = (ENUMWINDOWS)GetProcAddress(hUser32, "EnumWindows");
+        if (pEnumWindows != NULL)
+        {
+            EnumWindows(EnumWindowsProc, (LPARAM)this);
+        }
+        else
+        {
+            Logger::logf("UltimateAnticheat.log", Err, "GetProcAddress failed @ Detections::IsBlacklistedWindowPresent: %d", GetLastError());
+        }
+    }
+    else
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "GetModuleHandle failed @ Detections::IsBlacklistedWindowPresent: %d", GetLastError());
+        return FALSE;
+    }
+
+    return FALSE;
 }
