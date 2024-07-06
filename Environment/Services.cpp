@@ -196,7 +196,7 @@ BOOL Services::IsTestsigningEnabled()
     string bcdedit_location = "Windows\\System32\\bcdedit.exe";
     string fullpath_bcdedit = (volumeName + bcdedit_location);
 
-    if (!CreateProcessA(fullpath_bcdedit.c_str(), NULL, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
+    if (!CreateProcessA(fullpath_bcdedit.c_str(), NULL, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
     {
         Logger::logf("UltimateAnticheat.log", Err, "CreateProcess failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
         CloseHandle(hReadPipe);
@@ -208,7 +208,8 @@ BOOL Services::IsTestsigningEnabled()
     WaitForSingleObject(pi.hProcess, INFINITE);
 
     CloseHandle(hWritePipe);
-
+    CloseHandle(pi.hThread);
+	
     if (!ReadFile(hReadPipe, szOutput, 1024 - 1, &bytesRead, NULL)) //now read our pipe
     {
         Logger::logf("UltimateAnticheat.log", Err, "ReadFile failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
@@ -291,7 +292,7 @@ BOOL Services::IsDebugModeEnabled()
     string bcdedit_location = "Windows\\System32\\bcdedit.exe";
     string fullpath_bcdedit = (volumeName + bcdedit_location);
 
-    if (!CreateProcessA(fullpath_bcdedit.c_str(), NULL, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
+    if (!CreateProcessA(fullpath_bcdedit.c_str(), NULL, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
     {
         Logger::logf("UltimateAnticheat.log", Err, "CreateProcess failed @ Services::IsDebugModeEnabled: %d\n", GetLastError());
         CloseHandle(hReadPipe);
@@ -303,7 +304,8 @@ BOOL Services::IsDebugModeEnabled()
     WaitForSingleObject(pi.hProcess, INFINITE);
 
     CloseHandle(hWritePipe);
-
+    CloseHandle(pi.hThread);
+	
     if (!ReadFile(hReadPipe, szOutput, 1024 - 1, &bytesRead, NULL)) //now read our pipe
     {
         Logger::logf("UltimateAnticheat.log", Err, "ReadFile failed @ Services::IsDebugModeEnabled: %d\n", GetLastError());
