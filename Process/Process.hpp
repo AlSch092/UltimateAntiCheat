@@ -25,6 +25,12 @@ using namespace std;
 
 namespace ProcessData
 {
+	struct ProcessMini
+	{
+		DWORD pid;
+		string processPath;
+	};
+
 	typedef enum _PROCESS_INFORMATION_CLASS 
 	{
 		ProcessMemoryPriority,
@@ -167,6 +173,8 @@ public:
 
 	int SetNumberOfSections(int nSections) { this->NumberOfSections = nSections; }
 	int GetNumberOfSections() { return this->NumberOfSections; }
+
+	static DWORD GetTextSectionSize(HMODULE hModule);
 
 private:
 
