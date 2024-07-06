@@ -10,7 +10,7 @@
 
 using namespace std;
 
-struct Service
+struct Service //mostly unused right now
 {
 	wstring displayName;
 	wstring serviceName;

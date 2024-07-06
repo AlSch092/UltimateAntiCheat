@@ -169,14 +169,14 @@ BOOL Services::IsTestsigningEnabled()
     DWORD charCount;
 
     charCount = GetWindowsDirectoryA(volumePath, MAX_PATH);
-    if (charCount == 0) 
+    if (charCount == 0)
     {
         Logger::logf("UltimateAnticheat.log", Err, "Failed to retrieve Windows directory path @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
         return FALSE;
     }
 
     CHAR volumeName[MAX_PATH];
-    if (!GetVolumePathNameA(volumePath, volumeName, MAX_PATH)) 
+    if (!GetVolumePathNameA(volumePath, volumeName, MAX_PATH))
     {
         Logger::logf("UltimateAnticheat.log", Err, "Failed to retrieve volume path name @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
         return FALSE;
@@ -201,7 +201,7 @@ BOOL Services::IsTestsigningEnabled()
         Logger::logf("UltimateAnticheat.log", Err, "CreateProcess failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
         CloseHandle(hReadPipe);
         CloseHandle(hWritePipe);
-        return foundTestsigning;
+        return FALSE;
     }
 
     //..wait for the process to finish
@@ -213,29 +213,34 @@ BOOL Services::IsTestsigningEnabled()
     {
         Logger::logf("UltimateAnticheat.log", Err, "ReadFile failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
         CloseHandle(hReadPipe);
-        return foundTestsigning;
+        return FALSE;
     }
+
+    CloseHandle(hReadPipe);
 
     szOutput[bytesRead] = '\0';
 
-    if (strstr(szOutput, "testsigning") != NULL && strstr(szOutput, "Yes") != NULL)  //this works on Windows 10, I can't guarantee it does on other versions of windows
-    {
-        foundTestsigning = TRUE;
-    }
-    else if (strstr(szOutput, "The boot configuration data store could not be opened") != NULL)
+    if (strstr(szOutput, "The boot configuration data store could not be opened") != NULL)
     {
         Logger::logf("UltimateAnticheat.log", Err, "Failed to run bcdedit @ IsMachineAllowingSelfSignedDrivers. Please make sure program is run as administrator\n");
         foundTestsigning = FALSE;
     }
-    else
+
+    char* token = strtok(szOutput, "\r\n");
+
+    while (token != NULL)      //Iterate through tokens
     {
-        Logger::logf("UltimateAnticheat.log", Info, "Windows is in regular mode.");
-        foundTestsigning = FALSE;
+        if (strstr(token, "testsigning") != NULL && strstr(token, "Yes") != NULL)
+        {
+            foundTestsigning = TRUE;
+        }
+
+        token = strtok(NULL, "\r\n");
     }
 
-    CloseHandle(hReadPipe);
     return foundTestsigning;
 }
+
 
 /*
     IsDebugModeEnabled - Opens BCDEdit.exe and pipes output to check if debug mode is enabled. May require running program as administrator.
@@ -306,23 +311,27 @@ BOOL Services::IsDebugModeEnabled()
         return foundKDebugMode;
     }
 
+    CloseHandle(hReadPipe);
+
     szOutput[bytesRead] = '\0';
 
-    if (strstr(szOutput, "debug") != NULL && strstr(szOutput, "Yes") != NULL)  //this works on Windows 10, I can't guarantee it does on other versions of windows
+    if (strstr(szOutput, "The boot configuration data store could not be opened") != NULL)
     {
-        foundKDebugMode = TRUE;
-    }
-    else if (strstr(szOutput, "The boot configuration data store could not be opened") != NULL)
-    {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to run bcdedit @ IsDebugModeEnabled. Please make sure program is run as administrator\n");
-        foundKDebugMode = FALSE;
-    }
-    else
-    {
-        Logger::logf("UltimateAnticheat.log", Detection, "Debug mode was found enabled");
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to run bcdedit @ IsMachineAllowingSelfSignedDrivers. Please make sure program is run as administrator\n");
         foundKDebugMode = FALSE;
     }
 
-    CloseHandle(hReadPipe);
+    char* token = strtok(szOutput, "\r\n");
+
+    while (token != NULL)      //Iterate through tokens
+    {
+        if (strstr(token, "debug") != NULL && strstr(token, "Yes") != NULL)
+        {
+            foundKDebugMode = TRUE;
+        }
+
+        token = strtok(NULL, "\r\n");
+    }
+
     return foundKDebugMode;
 }
