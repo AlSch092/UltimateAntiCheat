@@ -73,10 +73,11 @@ public:
 	void StartMonitor(); //begin threading
 
 	BOOL IsBlacklistedProcessRunning();
+	list<ProcessData::ProcessMini> GetBlacklistedRunning();
 
 	static BOOL DoesFunctionAppearHooked(const char* moduleName, const char* functionName); //checks for jumps or calls as the first byte on a function
 	static BOOL DoesIATContainHooked();
-	static BOOL IsTextSectionWritable();
+	static UINT64 IsTextSectionWritable();
 	static BOOL CheckOpenHandles(); //detect any open handles to our process, very useful since this will detect most external cheats
 	BOOL IsBlacklistedWindowPresent();
 
