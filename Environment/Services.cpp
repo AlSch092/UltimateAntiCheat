@@ -165,22 +165,7 @@ BOOL Services::IsTestsigningEnabled()
     sa.bInheritHandle = TRUE;
     sa.lpSecurityDescriptor = NULL;
 
-    CHAR volumePath[MAX_PATH];
-    DWORD charCount;
-
-    charCount = GetWindowsDirectoryA(volumePath, MAX_PATH);
-    if (charCount == 0)
-    {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to retrieve Windows directory path @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
-        return FALSE;
-    }
-
-    CHAR volumeName[MAX_PATH];
-    if (!GetVolumePathNameA(volumePath, volumeName, MAX_PATH))
-    {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to retrieve volume path name @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
-        return FALSE;
-    }
+    string volumeName = GetWindowsDrive();
 
     if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0)) //use a pipe to read output of bcdedit command
     {
@@ -194,7 +179,7 @@ BOOL Services::IsTestsigningEnabled()
     si.hStdOutput = hWritePipe;
 
     string bcdedit_location = "Windows\\System32\\bcdedit.exe";
-    string fullpath_bcdedit = (volumeName + bcdedit_location);
+    string fullpath_bcdedit = (volumeName.c_str() + bcdedit_location);
 
     if (!CreateProcessA(fullpath_bcdedit.c_str(), NULL, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
     {
@@ -209,7 +194,7 @@ BOOL Services::IsTestsigningEnabled()
 
     CloseHandle(hWritePipe);
     CloseHandle(pi.hThread);
-	
+
     if (!ReadFile(hReadPipe, szOutput, 1024 - 1, &bytesRead, NULL)) //now read our pipe
     {
         Logger::logf("UltimateAnticheat.log", Err, "ReadFile failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
@@ -261,22 +246,7 @@ BOOL Services::IsDebugModeEnabled()
     sa.bInheritHandle = TRUE;
     sa.lpSecurityDescriptor = NULL;
 
-    CHAR volumePath[MAX_PATH];
-    DWORD charCount;
-
-    charCount = GetWindowsDirectoryA(volumePath, MAX_PATH);
-    if (charCount == 0)
-    {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to retrieve Windows directory path @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
-        return FALSE;
-    }
-
-    CHAR volumeName[MAX_PATH];
-    if (!GetVolumePathNameA(volumePath, volumeName, MAX_PATH))
-    {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to retrieve volume path name @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
-        return FALSE;
-    }
+    string volumeName = GetWindowsDrive();
 
     if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0)) //use a pipe to read output of bcdedit command
     {
@@ -305,7 +275,7 @@ BOOL Services::IsDebugModeEnabled()
 
     CloseHandle(hWritePipe);
     CloseHandle(pi.hThread);
-	
+
     if (!ReadFile(hReadPipe, szOutput, 1024 - 1, &bytesRead, NULL)) //now read our pipe
     {
         Logger::logf("UltimateAnticheat.log", Err, "ReadFile failed @ Services::IsDebugModeEnabled: %d\n", GetLastError());
@@ -336,4 +306,54 @@ BOOL Services::IsDebugModeEnabled()
     }
 
     return foundKDebugMode;
+}
+
+/*
+    GetWindowsDrive - return drive where windows is installed, such as C:\\
+*/
+string Services::GetWindowsDrive()
+{
+    CHAR volumePath[MAX_PATH];
+    DWORD charCount;
+
+    charCount = GetWindowsDirectoryA(volumePath, MAX_PATH);
+    if (charCount == 0)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to retrieve Windows directory path @ Services::GetWindowsPath: %d\n", GetLastError());
+        return "";
+    }
+
+    CHAR volumeName[MAX_PATH];
+    if (!GetVolumePathNameA(volumePath, volumeName, MAX_PATH))
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to retrieve volume path name @ Services::GetWindowsPath: %d\n", GetLastError());
+        return "";
+    }
+
+    return volumeName;
+}
+
+/*
+    GetWindowsDriveW - return drive where windows is installed, such as C:\\
+*/
+wstring Services::GetWindowsDriveW()
+{
+    wchar_t volumePath[MAX_PATH];
+    DWORD charCount;
+
+    charCount = GetWindowsDirectoryW(volumePath, MAX_PATH);
+    if (charCount == 0)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to retrieve Windows directory path @ Services::GetWindowsPathW: %d\n", GetLastError());
+        return L"";
+    }
+
+    wchar_t volumeName[MAX_PATH];
+    if (!GetVolumePathNameW(volumePath, volumeName, MAX_PATH))
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to retrieve volume path name @ Services::GetWindowsPathW: %d\n", GetLastError());
+        return L"";
+    }
+
+    return volumeName;
 }

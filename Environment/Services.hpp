@@ -10,7 +10,7 @@
 
 using namespace std;
 
-struct Service //mostly unused right now
+struct Service
 {
 	wstring displayName;
 	wstring serviceName;
@@ -19,7 +19,7 @@ struct Service //mostly unused right now
 };
 
 /*
-The Services class deals with keeping track of loaded drivers & services on the system
+The Services class deals with keeping track of loaded drivers & services/recurring tasks on the system, along with misc windows functions
 */
 class Services
 {
@@ -49,6 +49,9 @@ public:
 
 	static BOOL IsTestsigningEnabled();
 	static BOOL IsDebugModeEnabled();
+
+	static string GetWindowsDrive();
+	static wstring GetWindowsDriveW();
 
 private:
 
