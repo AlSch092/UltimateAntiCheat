@@ -293,9 +293,9 @@ BOOL Services::IsDebugModeEnabled()
         foundKDebugMode = FALSE;
     }
 
-    char* token = strtok(szOutput, "\r\n");
+    char* token = strtok(szOutput, "\r\n"); //split based on new line
 
-    while (token != NULL)      //Iterate through tokens
+    while (token != NULL)      //Iterate through tokens, both "yes" and "debug" on same line = debug mode
     {
         if (strstr(token, "debug") != NULL && strstr(token, "Yes") != NULL)
         {
@@ -306,6 +306,77 @@ BOOL Services::IsDebugModeEnabled()
     }
 
     return foundKDebugMode;
+}
+
+/*
+    IsSecureBootEnabled - checks if secure bool is enabled on machine
+*/
+BOOL Services::IsSecureBootEnabled()
+{
+    HANDLE hReadPipe, hWritePipe;
+    SECURITY_ATTRIBUTES sa;
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+    char szOutput[1024];
+    DWORD bytesRead;
+    BOOL secureBootEnabled = FALSE;
+
+    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+    sa.bInheritHandle = TRUE;
+    sa.lpSecurityDescriptor = NULL;
+
+    if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0)) //use a pipe to read output of bcdedit command
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "CreatePipe failed @ Services::IsSecureBootEnabled: %d\n", GetLastError());
+        return FALSE;
+    }
+
+    memset(&si, 0, sizeof(si));
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdOutput = hWritePipe;
+
+    if (!CreateProcessA(NULL, (LPSTR)"powershell -c \"Confirm-SecureBootUEFI\"", NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "CreateProcess failed @ Services::IsSecureBootEnabled: %d\n", GetLastError());
+        CloseHandle(hReadPipe);
+        CloseHandle(hWritePipe);
+        return FALSE;
+    }
+
+    //..wait for the process to finish
+    WaitForSingleObject(pi.hProcess, INFINITE);
+
+    CloseHandle(hWritePipe);
+    CloseHandle(pi.hThread);
+
+    if (!ReadFile(hReadPipe, szOutput, 1024 - 1, &bytesRead, NULL)) //now read our pipe
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "ReadFile failed @ Services::IsSecureBootEnabled: %d\n", GetLastError());
+        CloseHandle(hReadPipe);
+        return FALSE;
+    }
+
+    CloseHandle(hReadPipe);
+
+    szOutput[bytesRead] = '\0';
+
+    if (strstr(szOutput, "Cmdlet not supported on this platform") != NULL) //
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to run bcdedit @ IsMachineAllowingSelfSignedDrivers. Please make sure program is run as administrator\n");
+        secureBootEnabled = FALSE;
+    }
+
+    if (strstr(szOutput, "False") != NULL)
+    {
+        secureBootEnabled = FALSE;
+    }
+    else if (strcmp(szOutput, "True") != NULL)
+    {
+        secureBootEnabled = TRUE;
+    }
+
+    return secureBootEnabled;
 }
 
 /*
@@ -356,4 +427,22 @@ wstring Services::GetWindowsDriveW()
     }
 
     return volumeName;
+}
+
+/*
+    IsRunningAsAdmin - returns TRUE if the application is running as administrator context
+*/
+BOOL Services::IsRunningAsAdmin()
+{
+    BOOL isAdmin = FALSE;
+    PSID adminGroup = NULL;
+
+    // Allocate and initialize a SID for the administrators group
+    SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+    if (AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID,DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &adminGroup)) 
+    {
+        CheckTokenMembership(NULL, adminGroup, &isAdmin);
+        FreeSid(adminGroup);
+    }
+    return isAdmin;
 }

@@ -49,9 +49,12 @@ public:
 
 	static BOOL IsTestsigningEnabled();
 	static BOOL IsDebugModeEnabled();
+	static BOOL IsSecureBootEnabled();
 
 	static string GetWindowsDrive();
 	static wstring GetWindowsDriveW();
+
+	static BOOL IsRunningAsAdmin();
 
 private:
 
