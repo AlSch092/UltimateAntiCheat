@@ -98,13 +98,12 @@ Error NetClient::EndConnection(int reason)
 
 	if (Socket != SOCKET_ERROR && Socket != NULL)
 	{
+		shutdown(Socket, 0);
 		closesocket(Socket);
 	}
 
 	this->ConnectedDuration = GetTickCount64() - this->ConnectedAt;
-
 	WSACleanup();
-	shutdown(Socket, 0);
 	return err;
 }
 
@@ -194,9 +193,9 @@ void NetClient::ProcessRequests(LPVOID Param)
 	}
 
 end:
+        shutdown(Client->GetClientSocket(), 0);
 	closesocket(Client->GetClientSocket());
-	WSACleanup();
-	shutdown(Client->GetClientSocket(), 0);
+	WSACleanup();	
 }
 
 /*
