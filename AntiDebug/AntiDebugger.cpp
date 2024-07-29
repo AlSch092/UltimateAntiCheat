@@ -21,6 +21,11 @@ void Debugger::AntiDebug::StartAntiDebugThread()
 	Logger::logf("UltimateAnticheat.log", Info, "Created Debugger detection thread with Id: %d", this->DetectionThread->Id);
 
 	this->DetectionThread->CurrentlyRunning = true;
+
+#ifndef _DEBUG
+	HideThreadFromDebugger(this->DetectionThread->handle); //disable breakpoint capabilities
+	HideThreadFromDebugger(this->GetNetClient()->GetRecvThread()->handle);
+#endif	
 }
 
 /*
@@ -527,4 +532,31 @@ bool Debugger::AntiDebug::Flag(Debugger::Detections flag)
 	}
 
 	return true;
+}
+
+/*
+	HideThreadFromDebugger - disables debugger notifications for thread `hThread`, which stops traditional breakpoints
+ 	return true on success
+*/
+bool Debugger::AntiDebug::HideThreadFromDebugger(HANDLE hThread)
+{
+	HMODULE hNtDll = GetModuleHandleA("ntdll.dll");
+	if (hNtDll)
+	{
+		typedef NTSTATUS(NTAPI* NtSetInformationThread_t)(HANDLE, THREAD_INFORMATION_CLASS, PVOID, ULONG);
+		NtSetInformationThread_t NtSetInformationThread = (NtSetInformationThread_t)GetProcAddress(hNtDll, "NtSetInformationThread");
+		if (NtSetInformationThread)
+		{
+			NTSTATUS status = NtSetInformationThread(hThread, (THREAD_INFORMATION_CLASS)0x11, NULL, 0);
+			if (status != 0)
+			{
+				Logger::logf("UltimateAnticheat.log", Err, "NtSetInformationThread failed with status %x at HideThreadFromDebugger", status);
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	return false;
 }
