@@ -67,6 +67,8 @@ namespace Debugger
         inline bool _IsKernelDebuggerPresent_SharedKData();
         static void _IsHardwareDebuggerPresent(LPVOID AD); //we need this particular routine threaded due to requirement of suspending threads to properly fetching thread context, if this is not threaded it means one thread (the anti-debugger one) will be lacking DR checks
 
+        static bool HideThreadFromDebugger(HANDLE hThread); //prevent debugging
+
         bool AddDetectedFlag(Detections f);
         bool Flag(Detections flag);
 
