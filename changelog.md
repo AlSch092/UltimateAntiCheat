@@ -1,4 +1,6 @@
 ## Updates
+- Aug 8, '24: Added secure boot enforcement to prevent bootloader cheats  
+  
 - June 25, '24: Added simple window title & class name checks to help determine if the user is running Cheat Engine, x64dbg, etc. This should be considered an extra data point and not solely responsible for detecting attackers.
 
 - June 20, '24: Added hash lists for all loaded modules `.text` sections such that specific modules can later on be checked for memory modifications. This was used to add checks on `WINTRUST.dll` to detect any hooks on signature-related routines. Since it's a bit expensive to check all loaded module hashes constantly, specific modules should be checked periodically.
