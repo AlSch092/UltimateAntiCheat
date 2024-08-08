@@ -1,7 +1,9 @@
 /*  
-    U.A.C. is an 'in-development' example of an anti-cheat module written in C++ for x64 platforms.
+    U.A.C. is a non-invasive usermode anticheat for x64 Windows, tested on Windows 10 & 11. Usermode is used to ensure optimal end user experience.
     
-    Please view the readme for more information regarding program features.
+    Please view the readme for more information regarding program features. If you'd like to use this project in your game/software, please contact the author.
+
+    License: Lesser GNU 1.3, please be aware of what and what not can be done with this license..
 
     Author: AlSch092 @ Github
 */
@@ -49,7 +51,13 @@ int main(int argc, char** argv)
     cout << "|       Made by AlSch092 @Github, with special thanks to changeOfPace for remapping method               |\n";
     cout << "----------------------------------------------------------------------------------------------------------\n";
 
-    AntiCheat* AC = new AntiCheat(); //memory is deleted inside the API::Dispatch call (with CLIENT_EXIT)
+    if (!Services::IsSecureBootEnabled()) //enforce secure boot to stop bootloader cheats
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Secure boot is not enabled, thus you cannot proceed. Please enable secure boot in your BIOS.");
+        return 0;
+    }
+    
+    AntiCheat* AC = new AntiCheat(); //no global variables for the anticheat object
 
     if (API::Dispatch(AC, API::DispatchCode::INITIALIZE) != Error::OK) //initialize AC , this will start all detections + preventions
     {
