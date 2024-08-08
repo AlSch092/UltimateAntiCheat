@@ -96,11 +96,11 @@
     <ClCompile Include="Process\Thread.cpp">
       <Filter>Process</Filter>
     </ClCompile>
-    <ClCompile Include="Process\Handles.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="SplashScreen.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Process\Handles.cpp">
+      <Filter>Process</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -167,23 +167,23 @@
     <ClInclude Include="Process\Thread.hpp">
       <Filter>Process</Filter>
     </ClInclude>
-    <ClInclude Include="Logger.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Common\Globals.hpp">
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="Network\Packets\PacketReader.hpp">
       <Filter>Network\Packets</Filter>
     </ClInclude>
-    <ClInclude Include="Process\Handles.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SplashScreen.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Obscure\ntldr.hpp">
       <Filter>Obscure</Filter>
+    </ClInclude>
+    <ClInclude Include="Process\Handles.hpp">
+      <Filter>Process</Filter>
+    </ClInclude>
+    <ClInclude Include="Logger.hpp">
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
