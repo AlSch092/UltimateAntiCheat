@@ -6,6 +6,10 @@
 #include <string>
 #include <locale>
 #include <codecvt>
+#include <vector>
+#include <list>
+
+using namespace std;
 
 class Utility
 {
@@ -44,5 +48,14 @@ public:
 	static char* GenerateRandomString(int length);
 	static wchar_t* GenerateRandomWString(int length);
 
-	static std::string ConvertWStringToString(const std::wstring& wstr);
+	static wstring ConvertStringToWString(const std::string& wstr);
+	static string ConvertWStringToString(const std::wstring& wstr);
+
+	static vector<string> splitStringBySpace(char* str);
+
+	static void addUniqueString(list<string>& strList, const string& str);
+	static bool areAllElementsInList(const std::list<std::string>& list1, const std::list<std::string>& list2);
+
+	static void str_to_lower(char* str);
+	static char* strstr_case_insensitive(const char* haystack, const char* needle);
 };
