@@ -2,7 +2,7 @@
 #pragma once
 #define _CRT_SECURE_NO_WARNINGS
 #include <Windows.h>
-#include "../Logger.hpp"
+#include "../Common/Logger.hpp"
 
 #ifdef _WIN64
 #define IS_64_BIT 1

@@ -2,7 +2,7 @@
 #pragma once
 
 #include <Windows.h>
-#include "../Logger.hpp"
+#include "../Common/Logger.hpp"
 
 #define EXPECTED_SECTIONS 6
 

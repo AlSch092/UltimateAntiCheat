@@ -109,9 +109,9 @@ Error Preventions::DeployBarrier()
         retError = Error::CANT_APPLY_TECHNIQUE;
     }
 
-    Process::ChangePEEntryPoint(-1); //these must be called before remapping, and not essential for operations thus don't need to return an error if they don't work
-    Process::ChangeSizeOfCode(-1);  //additional runtime tricks to break info lookup via headers
-    Process::ChangeImageSize(-1);
+    //Process::ChangePEEntryPoint(-1); //these must be called before remapping, and not essential for operations thus don't need to return an error if they don't work
+    //Process::ChangeSizeOfCode(-1);  //additional runtime tricks to break info lookup via headers
+    //Process::ChangeImageSize(-1);  //these might cause antivirus flags
 
 #ifndef _DEBUG
     if (!RemapProgramSections()) //anti-memory write through sections remapping, thanks changeofpace
@@ -121,7 +121,7 @@ Error Preventions::DeployBarrier()
     }
 #endif
 
-    Process::ChangeImageBase(-1); //breaks remapping, only use this if you're not remapping
+    //Process::ChangeImageBase(-1); //breaks remapping, only use this if you're not remapping
 
     IsPreventingThreadCreation = true; //used in TLS callback to prevent thread creation (can stop shellcode + module injection)
 

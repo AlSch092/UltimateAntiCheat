@@ -5,9 +5,13 @@
 #include <wincrypt.h>
 #include <wintrust.h>
 #include <mscat.h>
-#include "../Logger.hpp"
+#include "../Common/Logger.hpp"
 
 #pragma comment (lib, "wintrust")
+
+#define CATROOT_PATH L"Windows\\System32\\CatRoot" //needs prefix of correct windows-located drive
+#define CATROOT2_PATH L"Windows\\System32\\CatRoot2" //needs prefix of correct windows-located drive
+#define DRIVERSTORE_PATH L"Windows\\System32\\DriverStore\\FileRepository"
 
 namespace Authenticode
 {

@@ -11,7 +11,7 @@
 
 #include "Detections.hpp"
 #include "Preventions.hpp"
-#include "Logger.hpp"
+#include "Common/Logger.hpp"
 
 /*
 	The `AntiCheat` class is a container for the necessary classes of our program, including the monitor, barrier, netclient, and anti-debugger

@@ -2,7 +2,7 @@
 #include <windows.h>
 #include <gdiplus.h>
 #include <iostream>
-#include "Logger.hpp"
+#include "Common/Logger.hpp"
 
 #pragma comment(lib, "gdiplus.lib")
 

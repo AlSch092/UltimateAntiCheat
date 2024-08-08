@@ -5,7 +5,7 @@
 #include <string>
 #include <Windows.h>
 #include <ImageHlp.h>
-#include "../Logger.hpp"
+#include "../Common/Logger.hpp"
 
 #pragma comment(lib, "ImageHlp")
 

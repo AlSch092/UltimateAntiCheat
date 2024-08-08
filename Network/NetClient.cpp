@@ -30,9 +30,9 @@ Error NetClient::Initialize(string ip, uint16_t port, string gameCode)
 
 	if (connect(Socket, (SOCKADDR*)(&SockAddr), sizeof(SockAddr)) != 0)
 	{
-		shutdown(Socket, 0);
 		closesocket(Socket);
-		WSACleanup();	
+		WSACleanup();
+		shutdown(Socket, 0);
 		return Error::CANT_CONNECT;
 	}
 
@@ -42,9 +42,9 @@ Error NetClient::Initialize(string ip, uint16_t port, string gameCode)
 
 	if (sendResult != Error::OK)
 	{
-		shutdown(Socket, 0);
 		closesocket(Socket);
 		WSACleanup();
+		shutdown(Socket, 0);
 		return Error::CANT_SEND;
 	}
 
@@ -53,9 +53,9 @@ Error NetClient::Initialize(string ip, uint16_t port, string gameCode)
 	if (RecvThread == NULL)
 	{
 		Logger::logf("UltimateAnticheat.log", Err, "RecvThread was NULL @ NetClient::Initialize");
-		shutdown(Socket, 0);
 		closesocket(Socket);
-		WSACleanup();		
+		WSACleanup();
+		shutdown(Socket, 0);
 		return Error::GENERIC_FAIL;
 	}
 
@@ -64,6 +64,7 @@ Error NetClient::Initialize(string ip, uint16_t port, string gameCode)
 	if (RecvThread->handle == NULL || RecvThread->handle == INVALID_HANDLE_VALUE)
 	{
 		Logger::logf("UltimateAnticheat.log", Err, "Couldn't create recvThread @ NetClient::Initialize");
+
 		return Error::NO_RECV_THREAD;
 	}
 	
@@ -97,12 +98,13 @@ Error NetClient::EndConnection(int reason)
 
 	if (Socket != SOCKET_ERROR && Socket != NULL)
 	{
-		shutdown(Socket, 0);
 		closesocket(Socket);
 	}
 
 	this->ConnectedDuration = GetTickCount64() - this->ConnectedAt;
+
 	WSACleanup();
+	shutdown(Socket, 0);
 	return err;
 }
 
@@ -192,9 +194,9 @@ void NetClient::ProcessRequests(LPVOID Param)
 	}
 
 end:
-        shutdown(Client->GetClientSocket(), 0);
 	closesocket(Client->GetClientSocket());
-	WSACleanup();	
+	WSACleanup();
+	shutdown(Client->GetClientSocket(), 0);
 }
 
 /*

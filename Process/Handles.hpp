@@ -3,7 +3,7 @@
 #include <windows.h>
 #include <iostream>
 #include <vector>
-#include "../Logger.hpp"
+#include "../Common/Logger.hpp"
 
 #pragma comment(lib, "ntdll.lib")
 
@@ -53,7 +53,7 @@ namespace Handles
 #ifdef _DEBUG
     static const wchar_t* Whitelisted[] = { {L"conhost.exe"}, {L"devenv.exe"}, {L"VsDebugConsole.exe"} };
 #else
-    static const wchar_t* Whitelisted[] = { {L"conhost.exe"} };
+    static const wchar_t* Whitelisted[] = { {L"conhost.exe"} }; //non-console version of this project will be different and conhost should not be considered whitelisted 
 #endif
 }
 

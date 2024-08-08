@@ -1075,33 +1075,3 @@ HMODULE Process::GetModuleHandle_Ldr(const wchar_t* moduleName)
 
     return (HMODULE)NULL;
 }
-
-/*
-    GetTextSectionSize - returns current byte size of text section in current process module
-*/
-DWORD Process::GetTextSectionSize(HMODULE hModule)
-{
-    PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)hModule;
-    if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
-    {
-        return 0;
-    }
-
-    PIMAGE_NT_HEADERS ntHeaders = (PIMAGE_NT_HEADERS)((BYTE*)hModule + dosHeader->e_lfanew);
-    if (ntHeaders->Signature != IMAGE_NT_SIGNATURE)
-    {
-        return 0;
-    }
-
-    PIMAGE_SECTION_HEADER sectionHeaders = IMAGE_FIRST_SECTION(ntHeaders);
-
-    for (int i = 0; i < EXPECTED_SECTIONS; i++)
-    {
-        if (strcmp((char*)sectionHeaders[i].Name, ".text") == 0)
-        {
-            return sectionHeaders[i].Misc.VirtualSize;
-        }
-    }
-
-    return 0;
-}

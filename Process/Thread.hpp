@@ -1,7 +1,7 @@
 //By AlSch092 @ Github
 #pragma once
 #include <windows.h>
-#include "../Logger.hpp"
+#include "../Common/Logger.hpp"
 
 
 /*

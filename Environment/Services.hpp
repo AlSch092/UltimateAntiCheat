@@ -6,9 +6,16 @@
 #include <string>
 #include <list>
 #include "../AntiTamper/NAuthenticode.hpp"
-#include "../Logger.hpp"
+#include "../Common/Logger.hpp"
+#include <setupapi.h>
+#include <cfgmgr32.h>
+#include <tchar.h>
+
+#pragma comment(lib, "setupapi.lib")
 
 using namespace std;
+
+extern "C" NTSTATUS NTAPI RtlGetVersion(RTL_OSVERSIONINFOW * lpVersionInformation); //used in GetWindowsMajorVersion
 
 struct Service
 {
@@ -16,6 +23,18 @@ struct Service
 	wstring serviceName;
 	DWORD pid;
 	bool isRunning;
+};
+
+struct Device
+{
+	string InstanceID;
+	string Description;
+};
+
+struct DeviceW
+{
+	wstring InstanceID;
+	wstring Description;
 };
 
 /*
@@ -50,14 +69,23 @@ public:
 	static BOOL IsTestsigningEnabled();
 	static BOOL IsDebugModeEnabled();
 	static BOOL IsSecureBootEnabled();
+	static BOOL IsSecureBootEnabled_RegKey();
 
 	static string GetWindowsDrive();
 	static wstring GetWindowsDriveW();
 
 	static BOOL IsRunningAsAdmin();
 
+	static BOOL LaunchProcess(string path, string commandLine);
+
+	static list<DeviceW> GetHardwareDevicesW();
+	static BOOL CheckUSBDevices();
+
+	static int GetWindowsMajorVersion();
+
 private:
 
 	list<Service*> ServiceList;
 	list <wstring> DriverPaths;
 };
+

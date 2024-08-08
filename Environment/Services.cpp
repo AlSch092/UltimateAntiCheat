@@ -446,3 +446,215 @@ BOOL Services::IsRunningAsAdmin()
     }
     return isAdmin;
 }
+
+BOOL Services::LaunchProcess(string path, string args)
+{
+    // Define the path to the updater executable
+    LPCSTR Path = path.c_str();
+    std::string commandLine = path + args;
+
+    // Initialize the STARTUPINFO structure
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    ZeroMemory(&pi, sizeof(pi));
+
+    if (!CreateProcessA(NULL, const_cast<LPSTR>(commandLine.c_str()), NULL,NULL,FALSE,0,NULL,NULL,&si,&pi))
+    {
+        //std::cerr << "CreateProcess failed (" << GetLastError() << ").\n";
+        return false;
+    }
+
+    // Wait until child process exits
+    WaitForSingleObject(pi.hProcess, INFINITE);
+
+    // Close process and thread handles
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+    return true;
+}
+
+list<DeviceW> Services::GetHardwareDevicesW()
+{
+    list<DeviceW> deviceList;
+
+    HDEVINFO deviceInfoSet;
+    SP_DEVINFO_DATA deviceInfoData;
+    DWORD deviceIndex = 0;
+
+    // Get the list of all PCI devices
+    deviceInfoSet = SetupDiGetClassDevsA(NULL, "PCI", NULL, DIGCF_PRESENT | DIGCF_ALLCLASSES);
+    if (deviceInfoSet == INVALID_HANDLE_VALUE) 
+    {
+        //std::cerr << "SetupDiGetClassDevs failed with error: " << GetLastError() << std::endl;
+        return {};
+    }
+
+    deviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
+
+    // Iterate over the devices
+    while (SetupDiEnumDeviceInfo(deviceInfoSet, deviceIndex, &deviceInfoData)) 
+    {
+        deviceIndex++;
+        DeviceW d;
+
+        // Get the device instance ID
+        TCHAR deviceInstanceId[MAX_DEVICE_ID_LEN];
+        if (CM_Get_Device_ID(deviceInfoData.DevInst, deviceInstanceId, MAX_DEVICE_ID_LEN, 0) == CR_SUCCESS) 
+        {
+            //std::wcout << L"Device Instance ID: " << deviceInstanceId << std::endl;
+            d.InstanceID = wstring(deviceInstanceId);
+        }
+        else
+        {
+            //std::cerr << "CM_Get_Device_ID failed with error: " << GetLastError() << std::endl;
+            continue;
+        }
+
+        // Get the device description
+        TCHAR deviceDescription[1024];
+        if (SetupDiGetDeviceRegistryProperty(deviceInfoSet, &deviceInfoData, SPDRP_DEVICEDESC, NULL, (PBYTE)deviceDescription, sizeof(deviceDescription), NULL)) 
+        {
+            //std::wcout << L"Device Description: " << deviceDescription << std::endl;
+            d.Description = wstring(deviceDescription);
+        }
+        else 
+        {
+           // std::cerr << "SetupDiGetDeviceRegistryProperty failed with error: " << GetLastError() << std::endl;
+            continue;
+        }
+
+        deviceList.push_back(d);
+    }
+
+    if (GetLastError() != ERROR_NO_MORE_ITEMS)
+    {
+        //std::cerr << "SetupDiEnumDeviceInfo failed with error: " << GetLastError() << std::endl;
+    }
+
+    // Cleanup
+    SetupDiDestroyDeviceInfoList(deviceInfoSet);
+
+    return deviceList;
+}
+
+BOOL Services::IsSecureBootEnabled_RegKey()
+{
+    HKEY hKey;
+    LONG lResult;
+    DWORD dwSize = sizeof(DWORD);
+    DWORD dwValue = 0;
+    const char* registryPath = "SYSTEM\\CurrentControlSet\\Control\\SecureBoot\\State"; //xor this
+    const char* valueName = "UEFISecureBootEnabled";
+
+    lResult = RegOpenKeyExA(HKEY_LOCAL_MACHINE, registryPath, 0, KEY_READ, &hKey);
+    if (lResult != ERROR_SUCCESS) 
+    {
+        //std::cerr << "Error opening registry key: " << lResult << std::endl;
+        return FALSE;
+    }
+
+    lResult = RegQueryValueExA(hKey, valueName, NULL, NULL, (LPBYTE)&dwValue, &dwSize);
+    if (lResult != ERROR_SUCCESS) 
+    {
+        //std::cerr << "Error querying registry value: " << lResult << std::endl;
+        RegCloseKey(hKey);
+        return FALSE;
+    }
+
+    if (dwValue == 1) 
+    {
+        RegCloseKey(hKey);
+        return TRUE;
+    }
+    else 
+    {
+        RegCloseKey(hKey);
+        return FALSE;
+    }
+}
+
+/*
+       CheckUSBDevices - returns TRUE if any hardware in the PCIe slot are blacklisted (DMA involved)
+*/
+BOOL Services::CheckUSBDevices()
+{
+    HDEVINFO deviceInfoSet;
+    SP_DEVINFO_DATA deviceInfoData;
+    DWORD i;
+    TCHAR deviceID[MAX_PATH];
+
+    BOOL foundFTDI = FALSE;
+    BOOL foundLeonardo = FALSE;
+
+    deviceInfoSet = SetupDiGetClassDevs(NULL, TEXT("USB"), NULL, DIGCF_PRESENT | DIGCF_ALLCLASSES);
+
+    if (deviceInfoSet == INVALID_HANDLE_VALUE) 
+    {
+        //std::cerr << "Failed to get device information set." << std::endl;
+        return FALSE;
+    }
+
+    deviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
+
+    for (i = 0; SetupDiEnumDeviceInfo(deviceInfoSet, i, &deviceInfoData); i++) 
+    {
+        if (SetupDiGetDeviceRegistryProperty(deviceInfoSet, &deviceInfoData, SPDRP_HARDWAREID, NULL, (PBYTE)deviceID, sizeof(deviceID), NULL)) 
+        {       
+            if (_tcsstr(deviceID, TEXT("VID_0403")) && _tcsstr(deviceID, TEXT("PID_6010")))  //Check for FTDI FT601 in the device ID
+            {
+                foundFTDI = TRUE;
+            }
+
+            if (_tcsstr(deviceID, TEXT("VID_0403")) && _tcsstr(deviceID, TEXT("PID_6000")))  //Check for FTDI FT600 in the device ID
+            {
+                foundFTDI = TRUE;
+            }
+
+            if (_tcsstr(deviceID, TEXT("VID_2341")) && _tcsstr(deviceID, TEXT("PID_8036")))  //Check for Arduino Leonardo
+            {
+                foundLeonardo = TRUE;
+            }
+        }
+    }
+
+    SetupDiDestroyDeviceInfoList(deviceInfoSet);
+
+    return (foundFTDI | foundLeonardo);
+}
+
+int Services::GetWindowsMajorVersion()
+{
+    int versionMajor = 0;
+
+    RTL_OSVERSIONINFOW osVersionInfo;
+    osVersionInfo.dwOSVersionInfoSize = sizeof(osVersionInfo);
+
+    NTSTATUS status = RtlGetVersion(&osVersionInfo);
+
+    if (status != 0) 
+    {  // Non-zero status indicates failure
+        return 0;
+    }
+
+    if (osVersionInfo.dwMajorVersion == 6 && osVersionInfo.dwMinorVersion == 1)
+    {
+        return 7;
+    }
+
+    if (osVersionInfo.dwMajorVersion == 10 && osVersionInfo.dwMinorVersion == 0)
+    {
+        if (osVersionInfo.dwBuildNumber < 22000)
+        {
+            return 10;
+        }
+        else 
+        {
+            return 11;
+        }
+    }
+
+    return 0;
+}

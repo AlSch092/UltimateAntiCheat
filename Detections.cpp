@@ -137,9 +137,7 @@ void Detections::Monitor(LPVOID thisPtr)
             Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
         }
 
-        auto blacklistedRunning = Monitor->GetBlacklistedRunning();
-
-        if (blacklistedRunning.size() > 0)
+        if (Monitor->IsBlacklistedProcessRunning()) //external applications running on machine
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Found blacklisted process!");
             Monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
@@ -170,15 +168,12 @@ void Detections::Monitor(LPVOID thisPtr)
             Monitor->Flag(DetectionFlags::BAD_IAT);
         }
 
-        UINT64 wasWritableAddress = Detections::IsTextSectionWritable();
-
-        if (wasWritableAddress > 0) //page protections check, can be made more granular or loop over all mem pages
+        if (Detections::IsTextSectionWritable()) //page protections check, can be made more granular or loop over all mem pages
         {
-            Logger::logf("UltimateAnticheat.log", Detection, ".text section page was writable, which means someone re-re-mapped our memory regions! (or you ran this in DEBUG build)");
-
+            Logger::logf("UltimateAnticheat.log", Detection, ".text section was writable, which means someone re-re-mapped our memory regions! (or you ran this in DEBUG build)");
+            
 #ifndef _DEBUG           //in debug build we are not remapping, and software breakpoints in VS may cause page protections to be writable
             Monitor->Flag(DetectionFlags::PAGE_PROTECTIONS);
-            //send proof to server
 #endif
         }
 
@@ -412,39 +407,29 @@ BOOL __forceinline Detections::DoesIATContainHooked()
 
 /*
 Detections::IsTextSectionWritable() - Simple memory protections check on page in the .text section
-    returns address where the page was writable, which imples someone re-re-mapped our process memory and wants to write patches.
+    returns TRUE if the page was writable, which imples someone re-re-mapped our process memory and wants to write patches.
 */
-UINT64 __forceinline Detections::IsTextSectionWritable()
+BOOL __forceinline Detections::IsTextSectionWritable()
 {
     UINT64 textAddr = Process::GetSectionAddress(NULL, ".text");
     MEMORY_BASIC_INFORMATION mbi = { 0 };
-    SIZE_T result;
-    UINT64 address = textAddr;
 
     if (textAddr == NULL)
     {
         Logger::logf("UltimateAnticheat.log", Err, "textAddr was NULL @ Detections::IsTextSectionWritable");
-        return 0;
+        return FALSE;
     }
 
-    UINT64 max_addr = textAddr + Process::GetTextSectionSize(GetModuleHandle(NULL));
+    VirtualQuery((LPCVOID)textAddr, &mbi, sizeof(MEMORY_BASIC_INFORMATION));
 
-    while ((result = VirtualQuery((LPCVOID)address, &mbi, sizeof(mbi))) != 0)     // Loop through all memory regions
+    if (mbi.AllocationProtect != PAGE_EXECUTE_READ)
     {
-        if (address >= max_addr)
-            break;
-
-        if ((mbi.Protect & PAGE_EXECUTE_READ) == 0)
-        {
-            Logger::logfw("UltimateAnticheat.log", Detection, L"Memory region at address %p is not PAGE_EXECUTE_READ\n", address);
-            return address;
-        }
-
-        address += mbi.RegionSize;
+        return TRUE;
     }
 
-    return 0;
+    return FALSE;
 }
+
 /*
     CheckOpenHandles - Checks if any processes have open handles to our process, excluding whitelisted processes such as conhost.exe
     returns true if some other process has an open process handle to the current process
@@ -617,43 +602,4 @@ BOOL Detections::IsBlacklistedWindowPresent()
     }
 
     return FALSE;
-}
-
-list<ProcessData::ProcessMini> Detections::GetBlacklistedRunning()
-{
-    list<ProcessData::ProcessMini> blacklist;
-
-    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (hSnapshot == INVALID_HANDLE_VALUE)
-    {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to create snapshot of processes. Error code: %d @ Detections::IsBlacklistedProcessRunning\n", GetLastError());
-        return {};
-    }
-
-    PROCESSENTRY32 pe32;
-    pe32.dwSize = sizeof(PROCESSENTRY32);
-    if (!Process32First(hSnapshot, &pe32))
-    {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to get first process. Error code:  %d @ Detections::IsBlacklistedProcessRunning\n", GetLastError());
-        CloseHandle(hSnapshot);
-        return {};
-    }
-
-    do
-    {
-        for (wstring blacklisted : BlacklistedProcesses)
-        {
-            if (Utility::wcscmp_insensitive(blacklisted.c_str(), pe32.szExeFile))
-            {
-                ProcessData::ProcessMini procInfo;
-                procInfo.pid = pe32.th32ProcessID;
-                procInfo.processPath = Utility::ConvertWStringToString(pe32.szExeFile);
-                blacklist.push_back(procInfo);
-                break;
-            }
-        }
-    } while (Process32Next(hSnapshot, &pe32));
-
-    CloseHandle(hSnapshot);
-    return blacklist;
 }

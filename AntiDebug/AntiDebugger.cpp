@@ -21,11 +21,6 @@ void Debugger::AntiDebug::StartAntiDebugThread()
 	Logger::logf("UltimateAnticheat.log", Info, "Created Debugger detection thread with Id: %d", this->DetectionThread->Id);
 
 	this->DetectionThread->CurrentlyRunning = true;
-
-#ifndef _DEBUG
-	HideThreadFromDebugger(this->DetectionThread->handle); //disable breakpoint capabilities
-	HideThreadFromDebugger(this->GetNetClient()->GetRecvThread()->handle);
-#endif	
 }
 
 /*
@@ -535,28 +530,59 @@ bool Debugger::AntiDebug::Flag(Debugger::Detections flag)
 }
 
 /*
-	HideThreadFromDebugger - disables debugger notifications for thread `hThread`, which stops traditional breakpoints
- 	return true on success
+	PreventWindowsDebuggers - experimental, patches over some common debugging routines
 */
-bool Debugger::AntiDebug::HideThreadFromDebugger(HANDLE hThread)
+bool Debugger::AntiDebug::PreventWindowsDebuggers()
 {
-	HMODULE hNtDll = GetModuleHandleA("ntdll.dll");
-	if (hNtDll)
-	{
-		typedef NTSTATUS(NTAPI* NtSetInformationThread_t)(HANDLE, THREAD_INFORMATION_CLASS, PVOID, ULONG);
-		NtSetInformationThread_t NtSetInformationThread = (NtSetInformationThread_t)GetProcAddress(hNtDll, "NtSetInformationThread");
-		if (NtSetInformationThread)
-		{
-			NTSTATUS status = NtSetInformationThread(hThread, (THREAD_INFORMATION_CLASS)0x11, NULL, 0);
-			if (status != 0)
-			{
-				Logger::logf("UltimateAnticheat.log", Err, "NtSetInformationThread failed with status %x at HideThreadFromDebugger", status);
-				return false;
-			}
-		}
+	HMODULE ntdll = GetModuleHandleA("ntdll.dll");
 
-		return true;
+	if (!ntdll)
+	{
+		Logger::logf("UltimateAnticheat.log", Err, "Failed to find ntdll.dll @ AntiDebug::PreventWindowsDebuggers");
+		return false;
 	}
 
-	return false;
+	DWORD dwOldProt = 0;
+
+	UINT64 DbgBreakpoint_Address = (UINT64)GetProcAddress(ntdll, "DbgBreakPoint");
+	UINT64 DbgUiRemoteBreakin_Address = (UINT64)GetProcAddress(ntdll, "DbgUiRemoteBreakin");
+
+	if (DbgBreakpoint_Address)
+	{
+		if (VirtualProtect((LPVOID)DbgBreakpoint_Address, 1, PAGE_EXECUTE_READWRITE, &dwOldProt))
+		{
+			__try
+			{
+				*(BYTE*)DbgBreakpoint_Address = 0xC3;
+			}
+			__except(EXCEPTION_EXECUTE_HANDLER)
+			{
+				Logger::logf("UltimateAnticheat.log", Err, "Failed to patch over DbgBreakpoint @ AntiDebug::PreventWindowsDebuggers");
+				return false;
+			}
+
+			VirtualProtect((LPVOID)DbgBreakpoint_Address, 1, dwOldProt, &dwOldProt);
+		}
+	}
+
+	if (DbgUiRemoteBreakin_Address)
+	{
+		if (VirtualProtect((LPVOID)DbgUiRemoteBreakin_Address, 1, PAGE_EXECUTE_READWRITE, &dwOldProt))
+		{
+			__try
+			{
+				*(BYTE*)DbgUiRemoteBreakin_Address = 0xC3;
+			}
+			__except (EXCEPTION_EXECUTE_HANDLER)
+			{
+				Logger::logf("UltimateAnticheat.log", Err, "Failed to patch over DbgUiRemoteBreakin @ AntiDebug::PreventWindowsDebuggers");
+				return false;
+			}
+
+			VirtualProtect((LPVOID)DbgUiRemoteBreakin_Address, 1, dwOldProt, &dwOldProt);
+		}
+	}
+
+	return true;
+
 }
