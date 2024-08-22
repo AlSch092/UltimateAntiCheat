@@ -7,28 +7,21 @@
 
     Author: AlSch092 @ Github
 */
-
-#pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper)
-
 #include "API/API.hpp"
 #include "SplashScreen.hpp"
+
+#pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper)
 
 void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
 void NTAPI __stdcall FakeTLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
 
-#ifdef _M_IX86
-#pragma comment (linker, "/INCLUDE:__tls_used")
-#pragma comment (linker, "/INCLUDE:__tls_callback")
-#else
 #pragma comment (linker, "/INCLUDE:_tls_used")
 #pragma comment (linker, "/INCLUDE:_tls_callback")
-#endif
+
 EXTERN_C
 #ifdef _M_X64
 #pragma const_seg (".CRT$XLB")
 const
-#else
-#pragma data_seg (".CRT$XLB")
 #endif
 
 PIMAGE_TLS_CALLBACK _tls_callback = FakeTLSCallback; //We're modifying our TLS callback @ runtime to trick static reversing
@@ -36,6 +29,8 @@ PIMAGE_TLS_CALLBACK _tls_callback = FakeTLSCallback; //We're modifying our TLS c
 #pragma const_seg ()
 
 using namespace std;
+
+std::unique_ptr<Settings> Settings::Instance = nullptr; //initialize settings instance singleton
 
 int main(int argc, char** argv)
 {
@@ -51,13 +46,18 @@ int main(int argc, char** argv)
     cout << "|       Made by AlSch092 @Github, with special thanks to changeOfPace for remapping method               |\n";
     cout << "----------------------------------------------------------------------------------------------------------\n";
 
-    if (!Services::IsSecureBootEnabled()) //enforce secure boot to stop bootloader cheats
+    Settings& ConfigInstance = Settings::GetInstance(true, true, true, true, true, true); //see class constructor for true/false switch list
+
+    if (ConfigInstance.bEnforceSecureBoot)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Secure boot is not enabled, thus you cannot proceed. Please enable secure boot in your BIOS.");
-        return 0;
+        if (!Services::IsSecureBootEnabled()) //enforce secure boot to stop bootloader cheats
+        {
+            Logger::logf("UltimateAnticheat.log", Err, "Secure boot is not enabled, thus you cannot proceed. Please enable secure boot in your BIOS.");
+            return 0;
+        }
     }
-    
-    AntiCheat* AC = new AntiCheat(); //no global variables for the anticheat object
+  
+    AntiCheat* AC = new AntiCheat(&ConfigInstance);
 
     if (API::Dispatch(AC, API::DispatchCode::INITIALIZE) != Error::OK) //initialize AC , this will start all detections + preventions
     {
@@ -65,10 +65,13 @@ int main(int argc, char** argv)
         goto cleanup;
     }
 
-    if (AC->IsAnyThreadSuspended()) //make sure that all our necessary threads aren't suspended by an attacker
+    if (ConfigInstance.bCheckThreads)
     {
-        Logger::logf("UltimateAnticheat.log", Detection, "Atleast one of our threads was found suspended! All threads must be running for proper module functionality.");
-        goto cleanup;
+        if (AC->IsAnyThreadSuspended()) //make sure that all our necessary threads aren't suspended by an attacker
+        {
+            Logger::logf("UltimateAnticheat.log", Detection, "Atleast one of our threads was found suspended! All threads must be running for proper module functionality.");
+            goto cleanup;
+        }
     }
 
     UnmanagedGlobals::SupressingNewThreads = AC->GetBarrier()->IsPreventingThreads(); //if this is set to TRUE, we can stop the creation of any new threads via the TLS callback
