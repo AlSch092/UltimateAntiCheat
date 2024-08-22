@@ -12,6 +12,7 @@
 #include "Detections.hpp"
 #include "Preventions.hpp"
 #include "Common/Logger.hpp"
+#include "Common/Settings.hpp"
 
 /*
 	The `AntiCheat` class is a container for the necessary classes of our program, including the monitor, barrier, netclient, and anti-debugger
@@ -20,7 +21,7 @@ class AntiCheat
 {
 public:
 
-	AntiCheat()
+	AntiCheat(Settings* s)
 	{		
 		Client = new NetClient();
 
@@ -29,20 +30,28 @@ public:
 		Monitor = new Detections(false, Client, UnmanagedGlobals::ModulesAtStartup);
 		
 		Barrier = new Preventions(true, Monitor->GetIntegrityChecker()); //true = prevent new threads from being made
+
+		if(s != nullptr)
+			this->Config =	s;
 	}
 
 	~AntiCheat()
 	{
-		delete Monitor; 		Monitor = nullptr;
+		delete Monitor; 	    Monitor = nullptr;
 		delete Barrier;		    Barrier = nullptr;
-		delete _AntiDebugger;   _AntiDebugger = nullptr;
+		delete _AntiDebugger;       _AntiDebugger = nullptr;
 		delete Client; 		    Client = nullptr;
 	}
 
 	Debugger::AntiDebug* GetAntiDebugger() { return this->_AntiDebugger; }
+	
 	NetClient* GetNetworkClient() { return this->Client; }
+	
 	Preventions* GetBarrier() { return this->Barrier;  }
+	
 	Detections* GetMonitor() { return this->Monitor; }
+
+	Settings* GetSettings() { return this->Config; }
 
 	/*
 		IsAnyThreadSuspended - Checks the looping threads of class members to ensure the program is running as normal. An attacker may try to suspend threads to either remap or disable functionalities
@@ -75,4 +84,6 @@ private:
 	Preventions* Barrier = nullptr; //cheat preventions
 	Debugger::AntiDebug* _AntiDebugger = nullptr;
 	NetClient* Client = nullptr; //for client-server comms
+
+	Settings* Config = nullptr;
 };
