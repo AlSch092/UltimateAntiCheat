@@ -4,15 +4,15 @@
 
 //singleton settings class
 //Settings don't come in a .ini or .cfg file as we don't want end-users modifying program flow on compiled releases
-class Settings   
+class Settings
 {
-public:          
+public:
 
-	static Settings& GetInstance(bool bEnforceSecureBoot, bool bEnforceDSE, bool bEnforceNoKDbg, bool bUseAntiDebugging, bool bCheckIntegrity)
+	static Settings& GetInstance(bool bEnforceSecureBoot, bool bEnforceDSE, bool bEnforceNoKDbg, bool bUseAntiDebugging, bool bCheckIntegrity, bool bCheckThreads)
 	{
 		if (!Instance)
 		{
-			Instance = std::unique_ptr<Settings>(new Settings(bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDbg, bUseAntiDebugging, bCheckIntegrity));
+			Instance = std::unique_ptr<Settings>(new Settings(bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDbg, bUseAntiDebugging, bCheckIntegrity, bCheckThreads));
 		}
 
 		return *Instance;
@@ -29,11 +29,13 @@ public:
 
 	bool bCheckIntegrity;
 
-  //more settings options will be added soon...
+	bool bCheckThreads;
+
+	//more settings options will be added soon...
 
 private:
 
-	Settings(bool bEnforceSecureBoot, bool bEnforceDSE, bool bEnforceNoKDbg, bool bUseAntiDebugging, bool bCheckIntegrity) : bEnforceSecureBoot(bEnforceSecureBoot), bEnforceDSE(bEnforceDSE), bEnforceNoKDbg(bEnforceNoKDbg), bUseAntiDebugging(bUseAntiDebugging), bCheckIntegrity(bCheckIntegrity)
+	Settings(bool bEnforceSecureBoot, bool bEnforceDSE, bool bEnforceNoKDbg, bool bUseAntiDebugging, bool bCheckIntegrity, bool bCheckThreads) : bEnforceSecureBoot(bEnforceSecureBoot), bEnforceDSE(bEnforceDSE), bEnforceNoKDbg(bEnforceNoKDbg), bUseAntiDebugging(bUseAntiDebugging), bCheckIntegrity(bCheckIntegrity), bCheckThreads(bCheckThreads)
 	{
 	}
 
