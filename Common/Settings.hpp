@@ -8,11 +8,11 @@ class Settings
 {
 public:
 
-	static Settings& GetInstance(bool bEnforceSecureBoot, bool bEnforceDSE, bool bEnforceNoKDbg, bool bUseAntiDebugging, bool bCheckIntegrity, bool bCheckThreads)
+	static Settings& GetInstance(bool bEnforceSecureBoot, bool bEnforceDSE, bool bEnforceNoKDbg, bool bUseAntiDebugging, bool bCheckIntegrity, bool bCheckThreads, bool bCheckHypervisor)
 	{
 		if (!Instance)
 		{
-			Instance = std::unique_ptr<Settings>(new Settings(bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDbg, bUseAntiDebugging, bCheckIntegrity, bCheckThreads));
+			Instance = std::unique_ptr<Settings>(new Settings(bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDbg, bUseAntiDebugging, bCheckIntegrity, bCheckThreads, bCheckHypervisor));
 		}
 
 		return *Instance;
@@ -24,18 +24,16 @@ public:
 	bool bEnforceSecureBoot;
 	bool bEnforceDSE;
 	bool bEnforceNoKDbg;
-
+	bool bCheckHypervisor;
 	bool bUseAntiDebugging;
-
 	bool bCheckIntegrity;
-
 	bool bCheckThreads;
 
 	//more settings options will be added soon...
 
 private:
 
-	Settings(bool bEnforceSecureBoot, bool bEnforceDSE, bool bEnforceNoKDbg, bool bUseAntiDebugging, bool bCheckIntegrity, bool bCheckThreads) : bEnforceSecureBoot(bEnforceSecureBoot), bEnforceDSE(bEnforceDSE), bEnforceNoKDbg(bEnforceNoKDbg), bUseAntiDebugging(bUseAntiDebugging), bCheckIntegrity(bCheckIntegrity), bCheckThreads(bCheckThreads)
+	Settings(bool bEnforceSecureBoot, bool bEnforceDSE, bool bEnforceNoKDbg, bool bUseAntiDebugging, bool bCheckIntegrity, bool bCheckThreads, bool bCheckHypervisor) : bEnforceSecureBoot(bEnforceSecureBoot), bEnforceDSE(bEnforceDSE), bEnforceNoKDbg(bEnforceNoKDbg), bUseAntiDebugging(bUseAntiDebugging), bCheckIntegrity(bCheckIntegrity), bCheckThreads(bCheckThreads), bCheckHypervisor(bCheckHypervisor)
 	{
 	}
 
