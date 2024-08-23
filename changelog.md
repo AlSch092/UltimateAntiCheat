@@ -1,4 +1,6 @@
 ## Updates
+- Aug 23, '24: Added `Settings` class for compile-time configurations, along with Hypervisor checks  
+
 - Aug 8, '24: Added secure boot enforcement to prevent bootloader cheats  
   
 - June 25, '24: Added simple window title & class name checks to help determine if the user is running Cheat Engine, x64dbg, etc. This should be considered an extra data point and not solely responsible for detecting attackers.
