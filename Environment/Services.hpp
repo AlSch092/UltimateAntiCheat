@@ -76,12 +76,15 @@ public:
 
 	static BOOL IsRunningAsAdmin();
 
-	static BOOL LaunchProcess(string path, string commandLine);
+	static BOOL LaunchProcess(__in string path, __in string commandLine);
 
 	static list<DeviceW> GetHardwareDevicesW();
 	static BOOL CheckUSBDevices();
 
 	static int GetWindowsMajorVersion();
+	
+	static bool IsHypervisor();
+	static void GetHypervisorVendor(__out char vendor[13]);
 
 private:
 

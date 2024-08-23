@@ -1,5 +1,9 @@
 #include "Services.hpp"
 
+#ifdef _MSC_VER
+#include <intrin.h>  // For __cpuid on MSVC (Microsoft Compiler)
+#endif
+
 /*
     GetServiceModules - Fills the `DriverPaths` class member variable with a list of drivers loaded on the system
     returns TRUE if the function succeeded
@@ -657,4 +661,32 @@ int Services::GetWindowsMajorVersion()
     }
 
     return 0;
+}
+
+/*
+    Services::IsHypervisor - returns true if a hypervisor is detected by using the __cpuid intrinsic function
+    the 31st bit of ECX indicates a hypervisor
+*/
+bool Services::IsHypervisor()
+{
+    int cpuInfo[4] = { 0 };
+    __cpuid(cpuInfo, 1);
+    return (cpuInfo[2] & (1 << 31)) != 0;     // bit 31 of ECX = 1 means a hypervisor is present
+}
+
+/*
+    Services::GetHypervisorVendor - fetches the hypervisor vendor as `vendor`
+Additionally, 0x40000001 to 0x400000FF can be queries in the 2nd parameter to __cpuid for more hypervisor-specific info
+*/
+void Services::GetHypervisorVendor(__out char vendor[13]) 
+{
+    int cpuInfo[4] = { 0 };
+
+    __cpuid(cpuInfo, 0x40000000); //2nd param is passed to EAX
+
+    // Copy vendor ID from EBX, ECX, EDX to vendor string
+    ((int*)vendor)[0] = cpuInfo[1];  //BX
+    ((int*)vendor)[1] = cpuInfo[2];  //CX
+    ((int*)vendor)[2] = cpuInfo[3];  //DX
+    vendor[12] = '\0'; 
 }
