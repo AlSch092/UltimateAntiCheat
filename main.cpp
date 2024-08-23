@@ -46,7 +46,12 @@ int main(int argc, char** argv)
     cout << "|       Made by AlSch092 @Github, with special thanks to changeOfPace for remapping method               |\n";
     cout << "----------------------------------------------------------------------------------------------------------\n";
 
-    Settings& ConfigInstance = Settings::GetInstance(true, true, true, true, true, true); //see class constructor for true/false switch list
+#ifdef _DEBUG
+    Settings& ConfigInstance = Settings::GetInstance(false, true, true, true, true, true, true); //no secure boot check + hypervisor check in debug compile
+#else
+    Settings& ConfigInstance = Settings::GetInstance(true, true, true, true, true, true, true); //see class constructor for true/false switch list
+#endif
+    AntiCheat* AC = new AntiCheat(&ConfigInstance);
 
     if (ConfigInstance.bEnforceSecureBoot)
     {
@@ -57,7 +62,18 @@ int main(int argc, char** argv)
         }
     }
   
-    AntiCheat* AC = new AntiCheat(&ConfigInstance);
+    if (ConfigInstance.bCheckHypervisor) //initial check on hypervisor, do not let program proceed if a hypervisor is detected
+    {
+        if (Services::IsHypervisor())
+        {
+            char vendor[13];
+
+            Services::GetHypervisorVendor(vendor);
+
+            Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor was present with vendor: %s", vendor);
+            goto cleanup;
+        }
+    }
 
     if (API::Dispatch(AC, API::DispatchCode::INITIALIZE) != Error::OK) //initialize AC , this will start all detections + preventions
     {
