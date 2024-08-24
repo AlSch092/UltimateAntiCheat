@@ -1,13 +1,12 @@
 /*  
-    U.A.C. is a non-invasive usermode anticheat for x64 Windows, tested on Windows 10 & 11. Usermode is used to ensure optimal end user experience (kernelmode cheats are still easily detectable from usermode with the sole exception of full-on bootkits)
+    U.A.C. is a non-invasive usermode anticheat for x64 Windows, tested on Windows 10 & 11. Usermode is used to ensure optimal end user experience
     
     Please view the readme for more information regarding program features. If you'd like to use this project in your game/software, please contact the author.
 
-    License: Lesser GNU, please be aware of what and what not can be done with this license.. ** you do not have the right to copy this project into your closed-source, for-profit project **
+    License: Lesser GNU (LGPL), please be aware of what and what not can be done with this license.. ** you do not have the right to copy this project into your closed-source, for-profit project **
 
     Author: AlSch092 @ Github
 */
-
 #include "API/API.hpp"
 #include "SplashScreen.hpp"
 
@@ -52,6 +51,7 @@ int main(int argc, char** argv)
 #else
     Settings& ConfigInstance = Settings::GetInstance(true, true, true, true, true, true, true); //see class constructor for true/false switch list
 #endif
+
     AntiCheat* AC = new AntiCheat(&ConfigInstance);
 
     if (ConfigInstance.bEnforceSecureBoot)

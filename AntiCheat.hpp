@@ -21,26 +21,27 @@ class AntiCheat
 {
 public:
 
-	AntiCheat(Settings* s)
+	AntiCheat(Settings* config)
 	{		
 		Client = new NetClient();
 
-		_AntiDebugger = new Debugger::AntiDebug(Client); //any detection methods need the netclient for comms
+		_AntiDebugger = new Debugger::AntiDebug(config, Client); //any detection methods need the netclient for comms
 
-		Monitor = new Detections(false, Client, UnmanagedGlobals::ModulesAtStartup);
+		Monitor = new Detections(config, false, Client, UnmanagedGlobals::ModulesAtStartup);
 		
-		Barrier = new Preventions(true, Monitor->GetIntegrityChecker()); //true = prevent new threads from being made
+		Barrier = new Preventions(config, true, Monitor->GetIntegrityChecker()); //true = prevent new threads from being made
 
-		if(s != nullptr)
-			this->Config =	s;
+		if (config != nullptr)
+			this->Config = config;
 	}
 
 	~AntiCheat()
 	{
-		delete Monitor; 	    Monitor = nullptr;
+		delete Monitor; 		Monitor = nullptr;
 		delete Barrier;		    Barrier = nullptr;
-		delete _AntiDebugger;       _AntiDebugger = nullptr;
+		delete _AntiDebugger;   _AntiDebugger = nullptr;
 		delete Client; 		    Client = nullptr;
+		delete Config;			Config = nullptr;
 	}
 
 	Debugger::AntiDebug* GetAntiDebugger() { return this->_AntiDebugger; }
@@ -50,8 +51,6 @@ public:
 	Preventions* GetBarrier() { return this->Barrier;  }
 	
 	Detections* GetMonitor() { return this->Monitor; }
-
-	Settings* GetSettings() { return this->Config; }
 
 	/*
 		IsAnyThreadSuspended - Checks the looping threads of class members to ensure the program is running as normal. An attacker may try to suspend threads to either remap or disable functionalities
@@ -64,7 +63,7 @@ public:
 			Logger::logf("UltimateAnticheat.log", Detection, "Monitor was found suspended! Abnormal program execution.");
 			return true;
 		}
-		else if (Thread::IsThreadSuspended(_AntiDebugger->GetDetectionThreadHandle()))
+		else if (Thread::IsThreadSuspended(_AntiDebugger->GetDetectionThreadHandle()) && Config->bUseAntiDebugging)
 		{
 			Logger::logf("UltimateAnticheat.log", Detection, "Anti-debugger was found suspended! Abnormal program execution.");
 			return true;
@@ -84,6 +83,5 @@ private:
 	Preventions* Barrier = nullptr; //cheat preventions
 	Debugger::AntiDebug* _AntiDebugger = nullptr;
 	NetClient* Client = nullptr; //for client-server comms
-
 	Settings* Config = nullptr;
 };

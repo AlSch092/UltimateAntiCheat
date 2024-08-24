@@ -7,13 +7,14 @@
 #include "Common/Error.hpp"
 #include "Common/Utility.hpp"
 #include "Common/Globals.hpp"
+#include "Common/Settings.hpp"
 #include "AntiTamper/Integrity.hpp"
 
 class Preventions
 {
 public:
 
-	Preventions(bool preventingThreads, Integrity* integrityChecker)
+	Preventions(Settings* config, bool preventingThreads, Integrity* integrityChecker)
 	{
 		this->IsPreventingThreadCreation = preventingThreads;
 		this->integrityChecker = integrityChecker;
@@ -47,4 +48,6 @@ private:
 	bool IsPreventingThreadCreation; //used in TLS callback if we want to supress or track new threads
 
 	Integrity* integrityChecker = nullptr;
+
+	Settings* Config = nullptr;
 };

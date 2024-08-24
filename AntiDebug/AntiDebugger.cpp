@@ -8,6 +8,13 @@
 */
 void Debugger::AntiDebug::StartAntiDebugThread()
 {
+	if (!this->GetSettings()->bUseAntiDebugging)
+	{
+		Logger::logf("UltimateAnticheat.log", Info, "Anti-Debugger was disabled in settings, debugging will be allowed");
+		this->DetectionThread->CurrentlyRunning = false;
+		return;
+	}
+
 	this->DetectionThread = new Thread();
 
 	this->DetectionThread->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Debugger::AntiDebug::CheckForDebugger, (LPVOID)this, 0, &this->DetectionThread->Id);
@@ -34,14 +41,14 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 		return;
 	}
 
+	Debugger::AntiDebug* AntiDbg = reinterpret_cast<Debugger::AntiDebug*>(AD);
+
 	Logger::logf("UltimateAnticheat.log", Info, "STARTED Debugger detection thread");
 
 	bool MonitoringDebugger = true;
 
 	while (MonitoringDebugger)
 	{
-		Debugger::AntiDebug* AntiDbg = reinterpret_cast<Debugger::AntiDebug*>(AD);
-
 		if (AntiDbg == NULL)
 		{
 			Logger::logf("UltimateAnticheat.log", Err, "AntiDbg class was NULL @ CheckForDebugger");

@@ -71,47 +71,50 @@ void Detections::Monitor(LPVOID thisPtr)
         return;
     }
 
-    list<ProcessData::Section*>* sections = Monitor->SetSectionHash("UltimateAnticheat.exe", ".text"); //set our memory hashes of .text
-
-    if (sections == nullptr)
-    {
-        Logger::logf("UltimateAnticheat.log", Err, "Sections was NULLPTR @ Detections::Monitor. Aborting execution!");
-        return;
-    }
-
-    if (sections->size() == 0)
-    {
-        Logger::logf("UltimateAnticheat.log", Err, "Sections size was 0 @ Detections::Monitor. Aborting execution!");
-        return;
-    }
-
     UINT64 CachedSectionAddress = 0;
     DWORD CachedSectionSize = 0;
 
-    UINT64 ModuleAddr = (UINT64)GetModuleHandleA(NULL);
-
-    if (ModuleAddr == 0)
+    if (Monitor->GetSettings()->bCheckIntegrity) //integrity check setup if option is enabled
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Module couldn't be retrieved @ Detections::Monitor. Aborting execution! (%d)\n", GetLastError());
-        return;
-    }
+        list<ProcessData::Section*>* sections = Monitor->SetSectionHash("UltimateAnticheat.exe", ".text"); //set our memory hashes of .text
 
-    std::list<ProcessData::Section*>::iterator it;
-    for (it = sections->begin(); it != sections->end(); ++it)
-    {
-        ProcessData::Section* s = it._Ptr->_Myval;
-
-        if (s == nullptr)
-            continue;
-
-        if (strcmp(s->name, ".text") == 0) //cache our .text sections address and memory size, since an attacker could possibly spoof the section name or # of sections in ntheaders to prevent section traversing
+        if (sections == nullptr)
         {
-            CachedSectionAddress = s->address + ModuleAddr;
-            CachedSectionSize = s->size;
-            break;
+            Logger::logf("UltimateAnticheat.log", Err, "Sections was NULLPTR @ Detections::Monitor. Aborting execution!");
+            return;
+        }
+
+        if (sections->size() == 0)
+        {
+            Logger::logf("UltimateAnticheat.log", Err, "Sections size was 0 @ Detections::Monitor. Aborting execution!");
+            return;
+        }
+
+        UINT64 ModuleAddr = (UINT64)GetModuleHandleA(NULL);
+
+        if (ModuleAddr == 0)
+        {
+            Logger::logf("UltimateAnticheat.log", Err, "Module couldn't be retrieved @ Detections::Monitor. Aborting execution! (%d)\n", GetLastError());
+            return;
+        }
+
+        std::list<ProcessData::Section*>::iterator it;
+        for (it = sections->begin(); it != sections->end(); ++it)
+        {
+            ProcessData::Section* s = it._Ptr->_Myval;
+
+            if (s == nullptr)
+                continue;
+
+            if (strcmp(s->name, ".text") == 0) //cache our .text sections address and memory size, since an attacker could possibly spoof the section name or # of sections in ntheaders to prevent section traversing
+            {
+                CachedSectionAddress = s->address + ModuleAddr;
+                CachedSectionSize = s->size;
+                break;
+            }
         }
     }
-
+    
     //Main Monitor Loop, continuous detections go in here. we need access to CachedSectionAddress variables so this loop doesnt get its own function.
     bool Monitoring = true;
     const int MonitorLoopMilliseconds = 5000;
@@ -125,10 +128,13 @@ void Detections::Monitor(LPVOID thisPtr)
             return;
         }
 
-        if (Monitor->CheckSectionHash(CachedSectionAddress, CachedSectionSize)) //compare hashes of .text for modifications
+        if (Monitor->GetSettings()->bCheckIntegrity)
         {
-            Logger::logf("UltimateAnticheat.log", Detection, "Found modified .text section (or you're debugging with software breakpoints)!\n");
-            Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
+            if (Monitor->CheckSectionHash(CachedSectionAddress, CachedSectionSize)) //compare hashes of .text for modifications
+            {
+                Logger::logf("UltimateAnticheat.log", Detection, "Found modified .text section (or you're debugging with software breakpoints)!\n");
+                Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
+            }
         }
 
         if (Monitor->GetIntegrityChecker()->IsModuleModified(L"WINTRUST.dll")) //check hashes of wintrust.dll for signing-related hooks

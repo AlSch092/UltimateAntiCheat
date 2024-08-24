@@ -15,9 +15,12 @@ class Detections
 {
 public:
 
-	Detections(BOOL StartMonitor, NetClient* client, vector<ProcessData::MODULE_DATA>* currentModules)
+	Detections(Settings* s, BOOL StartMonitor, NetClient* client, vector<ProcessData::MODULE_DATA>* currentModules)
 	{
-		_Services = new Services(FALSE);
+		if (s != nullptr)
+			this->Config = s;
+
+		_Services = new Services(false);
 		integrityChecker = new Integrity(currentModules);
 
 		BlacklistedProcesses.push_back(L"Cheat Engine.exe"); //todo: hide these strings
@@ -27,19 +30,22 @@ public:
 		BlacklistedProcesses.push_back(L"windbg.exe");
 		BlacklistedProcesses.push_back(L"Procmon64.exe");
 
-		this->CheaterWasDetected = new ObfuscatedData<uint8_t>((bool)false);
+		this->CheaterWasDetected = new ObfuscatedData<uint8_t>((bool)false); //using 'bool' as the templated type will force values to 0/1 by the compiler when we need to xor them to other values
 
 		if (client != nullptr)
 			netClient = client;
+		
+		HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
+
+		if (hNtdll != 0)
+		{
+			_LdrRegisterDllNotification pLdrRegisterDllNotification = (_LdrRegisterDllNotification)GetProcAddress(hNtdll, "LdrRegisterDllNotification");
+			PVOID cookie;
+			NTSTATUS status = pLdrRegisterDllNotification(0, (PLDR_DLL_NOTIFICATION_FUNCTION)OnDllNotification, this, &cookie);
+		}
 
 		if (StartMonitor)
 			this->StartMonitor();
-		
-		HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
-		_LdrRegisterDllNotification pLdrRegisterDllNotification = (_LdrRegisterDllNotification)GetProcAddress(hNtdll, "LdrRegisterDllNotification");
-
-		PVOID cookie;
-		NTSTATUS status = pLdrRegisterDllNotification(0, (PLDR_DLL_NOTIFICATION_FUNCTION)OnDllNotification, this, &cookie);
 	}
 
 	~Detections()
@@ -84,6 +90,8 @@ public:
 	bool Flag(DetectionFlags flag);
 	static VOID OnDllNotification(ULONG NotificationReason, const PLDR_DLL_NOTIFICATION_DATA NotificationData, PVOID Context);
 
+	Settings* GetSettings() { return this->Config; }
+
 private:
 
 	ObfuscatedData<uint8_t>* CheaterWasDetected = NULL; //using bool as the type does not work properly with obfuscation since the compiler uses true/false, so use uint8_t instead and cast to BOOL when needed
@@ -100,4 +108,6 @@ private:
 	NetClient* netClient = nullptr; //send any detections to the server
 
 	list<DetectionFlags> DetectedFlags;
+
+	Settings* Config = nullptr;
 };

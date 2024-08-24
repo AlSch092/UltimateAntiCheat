@@ -1,6 +1,7 @@
 //By AlSch092 @github
 #pragma once
 #include "../Network/NetClient.hpp"
+#include "../Common/Settings.hpp"
 
 #define MAX_DLLS 256 
 #define MAX_FILE_PATH_LENGTH 256
@@ -24,15 +25,13 @@ namespace Debugger
         TRAP_FLAG,
         DEBUG_PORT,
         PROCESS_DEBUG_FLAGS,
-        PARENT,
-        VIRTUALIZATION,
     };
 
     class AntiDebug
     {
     public:
         
-        AntiDebug(NetClient* netClient)
+        AntiDebug(Settings* s, NetClient* netClient)
         {
             this->netClient = netClient;
 
@@ -40,6 +39,9 @@ namespace Debugger
             {
                 Logger::logf("UltimateAnticheat.log", Warning, "Failed to apply anti-debugging technique @ AntiDebug()");
             }
+
+            if (s != nullptr)
+                this->Config = s;
         }
 
         ~AntiDebug()
@@ -79,12 +81,16 @@ namespace Debugger
 
         NetClient* GetNetClient() { return this->netClient; }
 
+        Settings* GetSettings() { return this->Config; }
+
     private:       
         list<Detections> DebuggerMethodsDetected;
 
         Thread* DetectionThread = NULL;
 
         NetClient* netClient = nullptr;
+
+        Settings* Config = nullptr;
     };
 }
 
