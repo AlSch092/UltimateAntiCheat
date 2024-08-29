@@ -10,7 +10,7 @@ char* Utility::GenerateRandomString(int length) //make sure to delete[] memory a
 
     char* randomString = new char[(length + 1) * sizeof(char)];
 
-    srand(time(NULL));
+    srand(time((time_t*)NULL));
 
     for (int i = 0; i < length; ++i) 
         randomString[i] = charset[rand() % (strlen(charset) - 1)];
@@ -29,7 +29,7 @@ wchar_t* Utility::GenerateRandomWString(int length) //make sure to delete[] memo
 
     wchar_t* randomString = new wchar_t[(length + 1) * sizeof(wchar_t)];
 
-    srand(time(NULL));
+    srand(time((time_t*)NULL));
 
     for (int i = 0; i < length; ++i)
         randomString[i] = charset[rand() % (wcslen(charset) - 1)];
@@ -89,8 +89,8 @@ bool Utility::strcmp_insensitive(const char* s1, const char* s2)
     if (s1 == NULL || s2 == NULL)
         return false;
 
-    int len1 = strlen(s1); //can overflow: be careful -> a process with a specific name could trigger an overflow situation
-    int len2 = strlen(s2);
+    int len1 = (int)strlen(s1); //can overflow: be careful -> a process with a specific name could trigger an overflow situation
+    int len2 = (int)strlen(s2);
 
     if (len1 != len2) //strings can't be equal if lengths are diff
         return false;
@@ -111,8 +111,8 @@ bool Utility::wcscmp_insensitive(const wchar_t* s1, const wchar_t* s2)
     if (s1 == NULL || s2 == NULL)
         return false;
 
-    int len1 = wcslen(s1); //can overflow: be careful
-    int len2 = wcslen(s2);
+    int len1 = (int)wcslen(s1); //can overflow: be careful
+    int len2 = (int)wcslen(s2);
 
     if (len1 != len2) //strings can't be equal if lengths are diff
         return false;
