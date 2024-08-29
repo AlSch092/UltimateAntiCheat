@@ -1,6 +1,10 @@
 //By AlSch092 @github
 #include "Preventions.hpp"
 
+/*
+    Preventions::PreventDllInjection - changes the export name of specific K32 routines such that an external attacker trying to fetch the address of these is given bad values.
+    *Note* : Changing export names for certain important dll routines can result in popup errors for the end-user, thus its not recommended for a live product. Alternatively, routines can have their function preambles 'ret' patched for similar effects  (if you know it wont impact program functionality).
+*/
 bool Preventions::PreventDllInjection()
 {
     bool success = FALSE;
@@ -32,6 +36,10 @@ bool Preventions::PreventDllInjection()
     return success;
 }
 
+/*
+    PreventShellcodeThreads - changes export routine name of K32's CreateThread such that external attackers cannot look up the functions address.
+     *Note* : Changing export names for certain important dll routines can result in popup errors for the end-user, thus its not recommended for a live product. Alternatively, routines can have their function preambles 'ret' patched for similar effects (if you know it wont impact program functionality).
+*/
 bool Preventions::PreventShellcodeThreads() //using this technique might pop up a warning about missing the function "CreateThread" (Entry Point Not Found)
 {
     bool success = FALSE;
@@ -61,6 +69,10 @@ BYTE* Preventions::SpoofPEB() //experimental, don't use this right now as it cau
     return newPEBBytes;
 }
 
+/*
+  RandomizeModuleName - Changes the program's main module name (in memory) to a random string  
+  returns true on success
+*/
 bool Preventions::RandomizeModuleName()
 {
     bool success = false;
@@ -95,6 +107,10 @@ bool Preventions::RandomizeModuleName()
     return success;
 }
 
+/*
+    DeployBarrier - Launches various attack prevention techniques
+    returns Error::OK on success
+*/
 Error Preventions::DeployBarrier()
 {
     Error retError = Error::OK;
@@ -141,8 +157,10 @@ Error Preventions::DeployBarrier()
         retError = Error::CANT_APPLY_TECHNIQUE;
     }
 
+#if _WIN32_WINNT >= 0x0602 //minimum windows 8 for SetMitigation routines
     //third parameter (dynamic code) set to true -> prevents VirtualProtect from succeeding on .text sections of loaded/signed modules. while this can be very useful, it breaks our TLS callback protections since we patch over the first byte of new thread's execution addresses
     Preventions::EnableProcessMitigations(true, true, false, true, true); 
+#endif
 
     //anything commented out below means it needs further testing to ensure no side effects occur, 
 
@@ -181,7 +199,10 @@ Error Preventions::DeployBarrier()
     return retError;
 }
 
-//this function re-maps the process memory and then checks if someone else has re-re-mapped it by querying page protections
+/*
+    RemapProgramSections - remaps the current module's sections to prevent memory writing/patching
+    Thanks to ChangeOfPace @ Github for the RmpRemapImage routines
+*/
 bool Preventions::RemapProgramSections()
 {
     ULONG_PTR ImageBase = (ULONG_PTR)GetModuleHandle(NULL);
@@ -303,6 +324,7 @@ bool Preventions::StopAPCInjection()
     return true;
 }
 
+#if _WIN32_WINNT >= 0x0602  //SetProcessMitigationPolicy starts support in Windows 8 
 /*
     EnableProcessMitigations - enforces policies which are actioned by the system & loader to prevent dynamic code generation & execution (unsigned code will be rejected by the loader)
 */
@@ -368,3 +390,5 @@ void Preventions::EnableProcessMitigations(bool useDEP, bool useASLR, bool useDy
         }
     }
 }
+
+#endif

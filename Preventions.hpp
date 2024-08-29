@@ -26,7 +26,10 @@ public:
 	static bool PreventDllInjection(); //experimental, gives warning popup
 	static bool PreventShellcodeThreads(); //experimental, gives warning popup
 	static bool StopAPCInjection();
+
+#if _WIN32_WINNT >= 0x0602
 	static void EnableProcessMitigations(bool useDEP, bool useASLR, bool useDynamicCode, bool useStrictHandles, bool useSystemCallDisable); //interesting technique which uses the loader & system to block certain types of attacks, such as unsigned modules being injected
+#endif
 
 	static BYTE* SpoofPEB(); //not advisable to use this currently
 
