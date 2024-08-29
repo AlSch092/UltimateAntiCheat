@@ -4,7 +4,6 @@
 #include "../Common/Settings.hpp"
 
 #define MAX_DLLS 256 
-#define MAX_FILE_PATH_LENGTH 256
 #define USER_SHARED_DATA ((KUSER_SHARED_DATA * const)0x7FFE0000)
 
 namespace Debugger
