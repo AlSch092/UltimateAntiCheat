@@ -88,7 +88,7 @@ private:
 	uint16_t Port = 0;
 
 	unsigned long long ConnectedDuration = 0;
-	unsigned long long ConnectedAt = 0; //unix timestamp
+	unsigned long long ConnectedAt = 0; //GetTickCount64 
 
 	string Hostname;
 	string HardwareID;
