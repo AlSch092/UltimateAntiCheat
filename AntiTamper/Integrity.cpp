@@ -127,7 +127,7 @@ ModuleHashData* Integrity::GetModuleHash(const wchar_t* moduleName)
 			vector<uint64_t> hashes = GetMemoryHash(sec_addr, s->size); //make hashes of .text of module
 
 			ModuleHashData* moduleHashData = new ModuleHashData();
-			int name_len = wcslen(moduleName);
+			int name_len = (int)wcslen(moduleName);
 			moduleHashData->Name = new wchar_t[name_len + 1];
 			wcscpy(moduleHashData->Name, moduleName);
 			moduleHashData->Hashes = hashes;
@@ -219,7 +219,7 @@ void Integrity::AddModuleHash(vector<ModuleHashData*>* moduleHashList, wchar_t* 
 			vector<uint64_t> hashes = GetMemoryHash(sec_addr, s->size); //make hashes of .text of module
 
 			ModuleHashData* moduleHashData = new ModuleHashData();
-			int name_len = wcslen(moduleName);
+			int name_len = (int)wcslen(moduleName);
 			moduleHashData->Name = new wchar_t[name_len + 1];
 			wcscpy(moduleHashData->Name, moduleName);
 			moduleHashData->Hashes = hashes;
@@ -228,4 +228,13 @@ void Integrity::AddModuleHash(vector<ModuleHashData*>* moduleHashList, wchar_t* 
 			break;
 		}
 	}
+}
+
+/*
+	Integrity::IsTLSCallbackModified() - checks if the pointer to the TLS callback has been modified (not the TLS callback itself, but the pointer to it)
+*/
+bool Integrity::IsTLSCallbackModified()
+{
+	//todo
+	return true;
 }
