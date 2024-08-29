@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -123,7 +123,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;_WINSOCK_DEPRECATED_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <WholeProgramOptimization>false</WholeProgramOptimization>
@@ -191,11 +191,12 @@
     <ClInclude Include="API\API.hpp" />
     <ClInclude Include="Common\Error.hpp" />
     <ClInclude Include="Common\Globals.hpp" />
+    <ClInclude Include="Common\Logger.hpp" />
+    <ClInclude Include="Common\Settings.hpp" />
     <ClInclude Include="Common\SHA256.hpp" />
     <ClInclude Include="Common\Utility.hpp" />
     <ClInclude Include="Detections.hpp" />
     <ClInclude Include="Environment\Services.hpp" />
-    <ClInclude Include="Logger.hpp" />
     <ClInclude Include="Network\NetClient.hpp" />
     <ClInclude Include="Network\Packets\PacketReader.hpp" />
     <ClInclude Include="Network\Packets\Packets.hpp" />
