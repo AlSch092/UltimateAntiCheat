@@ -229,12 +229,3 @@ void Integrity::AddModuleHash(vector<ModuleHashData*>* moduleHashList, wchar_t* 
 		}
 	}
 }
-
-/*
-	Integrity::IsTLSCallbackModified() - checks if the pointer to the TLS callback has been modified (not the TLS callback itself, but the pointer to it)
-*/
-bool Integrity::IsTLSCallbackModified()
-{
-	//todo
-	return true;
-}
