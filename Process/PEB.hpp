@@ -1,6 +1,5 @@
 //By AlSch092 @ Github
 #pragma once
-#define _CRT_SECURE_NO_WARNINGS
 #include <Windows.h>
 #include "../Common/Logger.hpp"
 
