@@ -15,8 +15,6 @@ using namespace std;
 
 #define EXPECTED_SECTIONS 6 //change this to however many sections your program has by default. if your program adds/removes sections, you'll need to do further tracking
 
-#define _CRT_SECURE_NO_WARNINGS
-
 #define MAX_DLLS_LOADED 128
 #define MAX_FILE_PATH_LENGTH 512
 
