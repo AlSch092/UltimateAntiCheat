@@ -34,4 +34,8 @@ UltimateAntiCheat is an open source usermode anti-cheat system made to detect an
 - Basic window title & class name checks for commonly used attack tools such as Cheat Engine
 
 ## Enabling/Disabling Networking:
-Networking support has been added to the project; the server can be found in the `Server` folder as its own solution. Using networking is optional, and can be turned on/off through the variable `bool serverAvailable` in the file `API/API.hpp`. If you choose to use networking, please follow the instructions in the README.md file of the server.   
+Networking support has been added to the project; the server can be found in the `Server` folder as its own solution. Using networking is optional, and can be turned on/off through the variable `bool serverAvailable` in the file `API/API.hpp`. If you choose to use networking, please follow the instructions in the README.md file of the server.  
+
+## Windows version targeting:
+
+The preprocessor definition `_WIN32_WINNT=0x...` can be used to target different versions of Windows. For example, using 0x0A00 will target Windows 10 and above, and 0x0601 will target Windows 7 and above. Certain features might only work on newer Windows versions and are excluded from compilation based on this value.
