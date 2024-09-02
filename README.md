@@ -41,4 +41,4 @@ Networking support has been added to the project; the server can be found in the
 The preprocessor definition `_WIN32_WINNT=0x...` can be used to target different versions of Windows. For example, using 0x0A00 will target Windows 10 and above, and 0x0601 will target Windows 7 and above. Certain features might only work on newer Windows versions and are excluded from compilation based on this value.
 
 ## Advanced Features
-If you're looking for full database integration for your commercial game/software, a robust, load-tested backend can be provided for a fair licensing fee. Custom features can also be made for your game for considerably cheaper than most anti-cheat products on the market.
+If you're looking for full database integration for your small to mid-sized commercial game/software, a robust, load-tested backend can be provided for a fair licensing fee. Custom features can also be made for your game for a better price than most anti-cheat products on the market.
