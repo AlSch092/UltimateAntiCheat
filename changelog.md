@@ -1,4 +1,6 @@
 ## Updates
+- Sept 6, '24: Added checks on TLS callback structure for anomalies (number of TLS callbacks, TLS data directory address, TLS callback addresses outside of main module, etc)  
+
 - Aug 23, '24: Added `Settings` class for compile-time configurations, along with Hypervisor checks  
 
 - Aug 8, '24: Added secure boot enforcement to prevent bootloader cheats  
