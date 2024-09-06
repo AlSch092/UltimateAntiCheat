@@ -67,7 +67,7 @@ namespace Obfuscator //from my other project, ObfuscateThis !
 
 	__forceinline string get_deobfuscated_string(char* input, int maxStrLen)
 	{
-		if (input == NULL) return (string)NULL;
+		if (input == NULL) return "";
 
 		size_t len = strnlen_s(input, maxStrLen);
 
