@@ -128,6 +128,12 @@ void Detections::Monitor(LPVOID thisPtr)
             return;
         }
 
+        if (Monitor->GetIntegrityChecker()->IsTLSCallbackStructureModified()) //check various aspects of the TLS callback structure for modifications
+        {
+            Logger::logf("UltimateAnticheat.log", Detection, "Found modified TLS callback structure section (atleast one aspect of the TLS data directory structure was modified)");
+            Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
+        }
+
         if (Monitor->GetSettings()->bCheckIntegrity)
         {
             if (Monitor->CheckSectionHash(CachedSectionAddress, CachedSectionSize)) //compare hashes of .text for modifications
