@@ -27,7 +27,7 @@ UltimateAntiCheat is an open source usermode anti-cheat system made to detect an
 - Secure boot enforcement (anti-bootloader cheats)
 - Hypervisor check  
 - TLS Callback & thread function address `ret` patching (anti-DLL/shellcode injection)
-- TLS Callback spoofing (changing TLS callbacks at runtime)
+- TLS Callback spoofing (changing TLS callbacks at runtime), along with checks to ensure the TLS callback structure has not been modified or added to  
 - Networked heartbeat system to ensure client is running the AC module
 - Stops multiple instances of the process from being run by mapping shared memory
 - Return address checks in important routines such as heartbeat generation to prevent remote calling
