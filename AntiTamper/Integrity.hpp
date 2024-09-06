@@ -3,6 +3,7 @@
 #include "../Common/Utility.hpp"
 #include "../Common/SHA256.hpp"
 #include "../Common/Globals.hpp"
+#include "../Common/Settings.hpp"
 #include "NAuthenticode.hpp"
 #include <vector>
 #include <string>
@@ -39,12 +40,14 @@ public:
 
 	bool IsModuleModified(const wchar_t* moduleName); //pinpoint any specific modules that have had their .text sections changed
 
+	bool IsTLSCallbackStructureModified(); //checks the TLSCallback structure in data directory for mods
+
 	Integrity(vector<ProcessData::MODULE_DATA>* startupModuleList) //modules gathered at program startup
 	{
 		WhitelistedModules = new vector<ProcessData::MODULE_DATA>();
 		ModuleHashes = new vector< ModuleHashData*>();
 
-		for (const ProcessData::MODULE_DATA mod : *startupModuleList)
+		for (const ProcessData::MODULE_DATA& mod : *startupModuleList)
 		{
 			WhitelistedModules->push_back(mod);
 		}

@@ -229,3 +229,51 @@ void Integrity::AddModuleHash(vector<ModuleHashData*>* moduleHashList, wchar_t* 
 		}
 	}
 }
+
+/*
+	Integrity::IsTLSCallbackModified() - checks if the pointer to the TLS callback address has been modified
+	Note: Someone should only be able to modifyh th
+*/
+bool Integrity::IsTLSCallbackStructureModified()
+{
+	HMODULE hModule = GetModuleHandle(NULL);
+	IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER*)hModule;
+	IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((BYTE*)dosHeader + dosHeader->e_lfanew);
+
+	IMAGE_TLS_DIRECTORY* tlsDir = (IMAGE_TLS_DIRECTORY*)((BYTE*)hModule + ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].VirtualAddress); //.data section
+
+	HMODULE MainModule = GetModuleHandleA(NULL);
+	UINT32 ModuleSize = Process::GetModuleSize(MainModule);
+
+	if (ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].VirtualAddress == 0) 
+	{
+		return true; //No TLS callbacks in data directory indicates something is wrong, abort!
+	}
+
+	if ((UINT64)tlsDir < (UINT64)MainModule || (UINT64)tlsDir > (UINT64)((UINT64)MainModule + ModuleSize)) //check if TLS directory address is inside main module for good measure
+	{
+		return true;
+	}
+
+	PIMAGE_TLS_CALLBACK* pTLSCallbacks = (PIMAGE_TLS_CALLBACK*)tlsDir->AddressOfCallBacks;
+
+	int tlsCount = 0;
+
+	for (int i = 0; pTLSCallbacks[i] != nullptr; i++) //traverse actual callback list, we are expecting (atleast) one callback in our program
+	{
+		if (!pTLSCallbacks)
+			return true;
+
+		if ((UINT64)pTLSCallbacks[i] < (UINT64)MainModule || (UINT64)pTLSCallbacks[i] > (UINT64)((UINT64)MainModule + ModuleSize)) //check if TLS callback is inside main module
+		{
+			return true;
+		}
+
+		tlsCount++;
+	}
+
+	if (tlsCount != 1) //last check to make sure there is atleast one TLS callback **note: you may have to modify this line if your protected program is using its own additional TLS callback**
+		return true;  //an attacker may try to register their own additional TLS callback at runtime without changing the original one
+
+	return false;
+}
