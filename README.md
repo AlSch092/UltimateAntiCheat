@@ -2,7 +2,7 @@
 
 # UltimateAntiCheat: An Educational Anti-Cheat built in C++ (x64)
 
-UltimateAntiCheat is an open source usermode anti-cheat system made to detect and prevent common attack vectors in game hacking, including: memory editing, module & code injection, debugging, unsigned drivers, open handles, and more. The project also features a client-server design with a heartbeat being sent every 60 seconds to clients.
+UltimateAntiCheat is an open source usermode anti-cheat system made to detect and prevent common attack vectors in game hacking, including: memory editing, module & code injection, debugging, unsigned drivers, open handles, and more. The project also features a client-server design with a heartbeat being sent every 60 seconds to clients. No privacy-invasive techniques are used.
 
    This project is meant to serve as an educational tool and is not intended to be commercial software or overly complex to crack. This example includes basic but fundamental protections, and we aim to cover all attack surfaces such that the attacker is not able to gain a foothold from usermode into our process without being detected. Any modification to a single aspect will lead to being detected: for example, if someone tries to debug our code from usermode, they will likely re-map and perform memory edits to try and disable debugger detection which leads to their memory edit or remapping being detected. It's recommended that if possible you run VMProtect or a similar program on the compiled binary for added security through obscurity. This project should be integrated to your game or software directly as source code instead of a standalone DLL in order to avoid DLL proxying/spoofing attacks.  
 
@@ -42,3 +42,7 @@ The preprocessor definition `_WIN32_WINNT=0x...` can be used to target different
 
 ## Advanced Features
 If you're looking for full database integration for your small to mid-sized commercial game/software: a robust,  load-tested backend can be provided for a fair licensing fee. Custom features can also be made for your game for a better price than most anti-cheat products on the market.
+
+## Licensing  
+
+The GNU Affero general public license is used in this project. Please be aware of what you can and cannot do with this license: for example, you do not have permission to rip this project into your own commercial project or use this project in your own code base without it being open source. Any license violations are subject to potential legal action.
