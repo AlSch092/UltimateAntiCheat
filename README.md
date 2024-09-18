@@ -45,4 +45,4 @@ If you're looking for full database integration for your small to mid-sized comm
 
 ## Licensing  
 
-The GNU Affero general public license is used in this project. Please be aware of what you can and cannot do with this license: for example, you do not have permission to rip this project into your own commercial project or use this project in your own code base without it being open source.
+The GNU Affero general public license is used in this project. Please be aware of what you can and cannot do with this license: for example, you do not have permission to rip this project into your own commercial project or use this project in your own code base without it being open source. Using this project for a "private game server" or any other stolen code/binaries is strictly prohibited.
