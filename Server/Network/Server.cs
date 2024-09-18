@@ -52,7 +52,7 @@ namespace UACServer.Network
             }
             catch(IOException ex)
             {
-                Logger.Log("UACServer.log", Logger.LogOptions.CLIENT_ERROR, "Failed to read client data");
+                Logger.Log("UACServer.log", "Failed to read client data @ HandleClientConnected");
                 return;
             }
             
@@ -131,7 +131,16 @@ namespace UACServer.Network
 
                     }, asyncState);
                 }
-                client.GetStream().BeginRead(buffer, 0, buffer.Length, HandleMessageReceived, asyncState);
+
+                try
+                {
+                    client.GetStream().BeginRead(buffer, 0, buffer.Length, HandleMessageReceived, asyncState);
+                }
+                catch(IOException ex)
+                {
+                    Logger.Log("UACServer.log", "Failed to read client data @ HandleMessageReceived");
+                    return;
+                }
             }
             else
             {
