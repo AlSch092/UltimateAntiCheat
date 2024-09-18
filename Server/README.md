@@ -14,6 +14,6 @@ Simply open & build the project using visual studio (originally made in VS2022),
 - Heartbeat mechanism every 60 seconds (in-progress)
 
 ## Notice:
-This server is newly-made in comparison to the client, thus bugs will exist and some features may be lacking. This will improve with time.
+A premium version exists which has been load tested and with all exceptions fixed, thus this public version may be considered 'lacking' in certain ways (you may run into unhandled exceptions).
 
 
