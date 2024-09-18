@@ -45,7 +45,17 @@ namespace UACServer.Network
             this.clients.Add(c);
 
             byte[] buffer = new byte[1024];
-            client.GetStream().BeginRead(buffer, 0, buffer.Length, HandleMessageReceived, new object[] { client, buffer });
+            
+            try
+            {
+                client.GetStream().BeginRead(buffer, 0, buffer.Length, HandleMessageReceived, new object[] { client, buffer });
+            }
+            catch(IOException ex)
+            {
+                Logger.Log("UACServer.log", Logger.LogOptions.CLIENT_ERROR, "Failed to read client data");
+                return;
+            }
+            
             listener.BeginAcceptTcpClient(HandleClientConnected, null); //Continue accepting more client connections
         }
 
