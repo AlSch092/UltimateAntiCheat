@@ -1,4 +1,6 @@
 ## Updates
+- Oct 3, '24: Fixed `IsTextSectionWritable` routine, which now checks all pages in the .text section for protections other than PAGE_EXECUTE_READ. Further development of this project will likely be much slower than normal, as I'm busy with other projects.  
+  
 - Sept 6, '24: Added checks on TLS callback structure for anomalies (number of TLS callbacks, TLS data directory address, TLS callback addresses outside of main module, etc)  
 
 - Aug 23, '24: Added `Settings` class for compile-time configurations, along with Hypervisor checks  
