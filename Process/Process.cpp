@@ -1075,3 +1075,32 @@ HMODULE Process::GetModuleHandle_Ldr(const wchar_t* moduleName)
 
     return (HMODULE)NULL;
 }
+
+DWORD Process::GetTextSectionSize(HMODULE hModule)
+{
+    PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)hModule;
+    if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Invalid DOS signature @ GetTextSectionSize");
+        return 0;
+    }
+
+    PIMAGE_NT_HEADERS ntHeaders = (PIMAGE_NT_HEADERS)((BYTE*)hModule + dosHeader->e_lfanew);
+    if (ntHeaders->Signature != IMAGE_NT_SIGNATURE)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Invalid NT signature @ GetTextSectionSize");
+        return 0;
+    }
+
+    PIMAGE_SECTION_HEADER sectionHeaders = IMAGE_FIRST_SECTION(ntHeaders);
+
+    for (int i = 0; i < ntHeaders->FileHeader.NumberOfSections; i++)
+    {
+        if (strcmp((char*)sectionHeaders[i].Name, ".text") == 0)
+        {
+            return sectionHeaders[i].Misc.VirtualSize;
+        }
+    }
+
+    return 0;
+}

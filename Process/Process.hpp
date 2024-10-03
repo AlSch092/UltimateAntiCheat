@@ -83,7 +83,7 @@ class Process
 {
 public:
 
-	Process(int nProgramSections)
+	Process(int nProgramSections) //we manually set number of program sections in order to spoof it at runtime to 0 or 1, and not have the program be confused
 	{
 		_PEB = new _MYPEB();
 		
@@ -165,6 +165,8 @@ public:
 
 	int SetNumberOfSections(int nSections) { this->NumberOfSections = nSections; }
 	int GetNumberOfSections() { return this->NumberOfSections; }
+
+	static DWORD GetTextSectionSize(HMODULE hModule);
 
 private:
 
