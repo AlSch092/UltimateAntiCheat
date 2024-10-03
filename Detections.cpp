@@ -108,7 +108,7 @@ void Detections::Monitor(LPVOID thisPtr)
 
             if (strcmp(s->name, ".text") == 0) //cache our .text sections address and memory size, since an attacker could possibly spoof the section name or # of sections in ntheaders to prevent section traversing
             {
-                CachedSectionAddress = s->address + ModuleAddr;
+                CachedSectionAddress = s->address + ModuleAddr; //any strings such as ".text" can be encrypted at compile time and decrypted at runtime to make reversing a bit more difficult
                 CachedSectionSize = s->size;
                 break;
             }
@@ -128,14 +128,14 @@ void Detections::Monitor(LPVOID thisPtr)
             return;
         }
 
-        if (Monitor->GetIntegrityChecker()->IsTLSCallbackStructureModified()) //check various aspects of the TLS callback structure for modifications
-        {
-            Logger::logf("UltimateAnticheat.log", Detection, "Found modified TLS callback structure section (atleast one aspect of the TLS data directory structure was modified)");
-            Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
-        }
-
         if (Monitor->GetSettings()->bCheckIntegrity)
         {
+            if (Monitor->GetIntegrityChecker()->IsTLSCallbackStructureModified()) //check various aspects of the TLS callback structure for modifications
+            {
+                Logger::logf("UltimateAnticheat.log", Detection, "Found modified TLS callback structure section (atleast one aspect of the TLS data directory structure was modified)");
+                Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
+            }
+
             if (Monitor->CheckSectionHash(CachedSectionAddress, CachedSectionSize)) //compare hashes of .text for modifications
             {
                 Logger::logf("UltimateAnticheat.log", Detection, "Found modified .text section (or you're debugging with software breakpoints)!\n");
@@ -422,7 +422,7 @@ BOOL __forceinline Detections::DoesIATContainHooked()
 Detections::IsTextSectionWritable() - Simple memory protections check on page in the .text section
     returns address where the page was writable, which imples someone re-re-mapped our process memory and wants to write patches.
 */
-UINT64 __forceinline Detections::IsTextSectionWritable()
+UINT64 Detections::IsTextSectionWritable()
 {
     UINT64 textAddr = Process::GetSectionAddress(NULL, ".text");
     MEMORY_BASIC_INFORMATION mbi = { 0 };
@@ -441,7 +441,7 @@ UINT64 __forceinline Detections::IsTextSectionWritable()
 
     while ((result = VirtualQuery((LPCVOID)address, &mbi, sizeof(mbi))) != 0)     //Loop through all pages in .text
     {
-        if(address >= max_addr)
+        if (address >= max_addr)
             break;
 
         if (mbi.Protect != PAGE_EXECUTE_READ) //many WRITE options exist, so instead of checking against each possible write option, check if its not RX protections
@@ -449,7 +449,7 @@ UINT64 __forceinline Detections::IsTextSectionWritable()
             Logger::logfw("UltimateAnticheat.log", Detection, L"Memory region at address %p is not PAGE_EXECUTE_READ - attacker likely re-re-mapped\n", address);
             return address;
         }
-        
+
         address += pageSize;
     }
 
