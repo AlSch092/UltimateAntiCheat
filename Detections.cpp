@@ -417,29 +417,43 @@ BOOL __forceinline Detections::DoesIATContainHooked()
     return TRUE;
 }
 
+
 /*
 Detections::IsTextSectionWritable() - Simple memory protections check on page in the .text section
-    returns TRUE if the page was writable, which imples someone re-re-mapped our process memory and wants to write patches.
+    returns address where the page was writable, which imples someone re-re-mapped our process memory and wants to write patches.
 */
-BOOL __forceinline Detections::IsTextSectionWritable()
+UINT64 __forceinline Detections::IsTextSectionWritable()
 {
     UINT64 textAddr = Process::GetSectionAddress(NULL, ".text");
     MEMORY_BASIC_INFORMATION mbi = { 0 };
+    SIZE_T result;
+    UINT64 address = textAddr;
+
+    const int pageSize = 0x1000;
 
     if (textAddr == NULL)
     {
         Logger::logf("UltimateAnticheat.log", Err, "textAddr was NULL @ Detections::IsTextSectionWritable");
-        return FALSE;
+        return 0;
     }
 
-    VirtualQuery((LPCVOID)textAddr, &mbi, sizeof(MEMORY_BASIC_INFORMATION));
+    UINT64 max_addr = textAddr + Process::GetTextSectionSize(GetModuleHandle(NULL));
 
-    if (mbi.AllocationProtect != PAGE_EXECUTE_READ)
+    while ((result = VirtualQuery((LPCVOID)address, &mbi, sizeof(mbi))) != 0)     //Loop through all pages in .text
     {
-        return TRUE;
+        if(address >= max_addr)
+            break;
+
+        if ((mbi.Protect == PAGE_EXECUTE_WRITECOPY) || (mbi.Protect == PAGE_EXECUTE_READWRITE))
+        {
+            Logger::logfw("UltimateAnticheat.log", Detection, L"Memory region at address %p is not PAGE_EXECUTE_READ - attacker likely re-re-mapped\n", address);
+            return address;
+        }
+        
+        address += pageSize;
     }
 
-    return FALSE;
+    return 0;
 }
 
 /*
