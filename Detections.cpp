@@ -444,7 +444,7 @@ UINT64 __forceinline Detections::IsTextSectionWritable()
         if(address >= max_addr)
             break;
 
-        if ((mbi.Protect == PAGE_EXECUTE_WRITECOPY) || (mbi.Protect == PAGE_EXECUTE_READWRITE))
+        if (mbi.Protect != PAGE_EXECUTE_READ) //many WRITE options exist, so instead of checking against each possible write option, check if its not RX protections
         {
             Logger::logfw("UltimateAnticheat.log", Detection, L"Memory region at address %p is not PAGE_EXECUTE_READ - attacker likely re-re-mapped\n", address);
             return address;
