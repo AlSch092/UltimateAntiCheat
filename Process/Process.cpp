@@ -1094,7 +1094,7 @@ DWORD Process::GetTextSectionSize(HMODULE hModule)
 
     PIMAGE_SECTION_HEADER sectionHeaders = IMAGE_FIRST_SECTION(ntHeaders);
 
-    for (int i = 0; i < ntHeaders->FileHeader.NumberOfSections; i++)
+    for (int i = 0; i < EXPECTED_SECTIONS; i++) //EXPECTED_SECTIONS is used since we're spoofing the number of sections in our process at runtime
     {
         if (strcmp((char*)sectionHeaders[i].Name, ".text") == 0)
         {
