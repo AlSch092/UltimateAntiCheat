@@ -10,7 +10,7 @@
 #include "API/API.hpp"
 #include "SplashScreen.hpp"
 
-#pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper)
+#pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper) - each section has its own region, aligning with physical page boundaries
 
 void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
 void NTAPI __stdcall FakeTLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
@@ -37,14 +37,17 @@ int main(int argc, char** argv)
     const int MillisecondsBeforeShutdown = 60000;
     
     SetConsoleTitle(L"Ultimate Anti-Cheat");
-   
+  
     CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Splash::InitializeSplash, 0, 0, 0); //open splash window
 
-    cout << "----------------------------------------------------------------------------------------------------------\n";
-    cout << "|                               Welcome to Ultimate Anti-Cheat!                                          |\n";
-    cout << "|       An in-development, non-commercial AC made to help teach us basic concepts in game security       |\n";
-    cout << "|       Made by AlSch092 @Github, with special thanks to changeOfPace for remapping method               |\n";
-    cout << "----------------------------------------------------------------------------------------------------------\n";
+    cout << "------------------------------------------------------------------------------------------\n";
+    cout << "|                            Welcome to Ultimate Anti-Cheat!                             |\n";
+    cout << "|  An in-development, non-commercial AC made to help teach us concepts in game security  |\n";
+    cout << "|                              Made by AlSch092 @Github                                  |\n";
+    cout << "|         ...With special thanks to:                                                     |\n";
+    cout << "|                                    changeofpace@github (remapping method)              |\n";
+    cout << "|                                    discriminating@github (dll load notifcations)       |\n";
+    cout << "------------------------------------------------------------------------------------------\n";
 
 #ifdef _DEBUG
     Settings& ConfigInstance = Settings::GetInstance(false, true, true, true, true, true, true); //no secure boot check + hypervisor check in debug compile
@@ -221,7 +224,7 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
                     if (ThreadExecutionAddress > LowAddr && ThreadExecutionAddress < HighAddr)
                     {
                         delete modules; modules = nullptr;
-                        return; //some loaded dll is making a thread, whitelisted address space
+                        return; //some loaded dll is making a thread, in a whitelisted address space
                     }
                 }
 
@@ -310,6 +313,7 @@ void NTAPI __stdcall FakeTLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserv
 
 /*
     ExceptionHandler - User defined exception handler which catches program-wide exceptions
+    ...Currently we are not doing anything special with this, but we'll leave it here incase we need it later
 */
 LONG WINAPI UnmanagedGlobals::ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo)  //handler that will be called whenever an unhandled exception occurs in any thread of the process
 {
@@ -318,9 +322,7 @@ LONG WINAPI UnmanagedGlobals::ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo
     
     if (exceptionCode == EXCEPTION_BREAKPOINT) //one or two of our debug checks may throw this exception
     {
-    }
+    } //optionally we may be able to view the exception address and compare it to whitelisted module address space, if it's not contained then we assume it's attacker-run code
 
-    //optionally we may be able to view the exception address and compare it to whitelisted module address space, if it's not contained then we assume it's attacker-run code
-    
     return EXCEPTION_CONTINUE_SEARCH;
 }
