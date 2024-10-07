@@ -45,8 +45,8 @@ int main(int argc, char** argv)
     cout << "|  An in-development, non-commercial AC made to help teach us concepts in game security  |\n";
     cout << "|                              Made by AlSch092 @Github                                  |\n";
     cout << "|         ...With special thanks to:                                                     |\n";
-    cout << "|                                    changeofpace@github (remapping method)              |\n";
-    cout << "|                                    discriminating@github (dll load notifcations)       |\n";
+    cout << "|           changeofpace@github (remapping method)                                       |\n";
+    cout << "|           discriminating@github (dll load notifcations, catalog verification)          |\n";
     cout << "------------------------------------------------------------------------------------------\n";
 
 #ifdef _DEBUG
