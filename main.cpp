@@ -10,7 +10,7 @@
 #include "API/API.hpp"
 #include "SplashScreen.hpp"
 
-#pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper) - each section has its own region, aligning with physical page boundaries
+#pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper) - align with system allocation granularity, each section has its own 64KB region
 
 void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
 void NTAPI __stdcall FakeTLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
