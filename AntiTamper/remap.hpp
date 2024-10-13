@@ -1,5 +1,5 @@
 //thanks to changeofpace for remapping method!
-//Original self-remapping code project can be found at: https://github.com/changeofpace/self-remapping-code
+//Original Self-Remapping-Code project can be found at: https://github.com/changeofpace/self-remapping-code
 
 #pragma once
 
