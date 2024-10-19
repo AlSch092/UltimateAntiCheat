@@ -1,4 +1,4 @@
-//AlSch092 @ Github
+//AlSch092 @ Github - part of the UltimateAnticheat project
 #pragma once
 #include <iostream>
 #include <fstream>
@@ -56,7 +56,26 @@ public:
 
         logFile << "[" << timestamp << "] " << msg_with_errorcode << std::endl;
 
-        printf("%s\n", msg_with_errorcode.c_str());
+        if (type == Detection)
+        {
+            SetColor(FOREGROUND_RED);
+            printf("%s\n", msg_with_errorcode.c_str());
+            ResetColor();
+        }
+        else if (type == Info)
+        {
+            SetColor(FOREGROUND_BLUE);
+            printf("%s\n", msg_with_errorcode.c_str());
+            ResetColor();
+        }
+        else if (type == Warning)
+        {
+            SetColor(FOREGROUND_GREEN);
+            printf("%s\n", msg_with_errorcode.c_str());
+            ResetColor();
+        }
+        else
+            printf("%s\n", msg_with_errorcode.c_str());
 
         if (logFile.fail())
         {
@@ -107,7 +126,26 @@ public:
 
         logFile << L"[" << timestamp << L"] " << msg_with_errorcode << std::endl;
 
-        wprintf(L"%s\n", msg_with_errorcode.c_str());
+        if (type == Detection)
+        {
+            SetColor(FOREGROUND_RED);
+            wprintf(L"%s\n", msg_with_errorcode.c_str());
+            ResetColor();
+        }
+        else if (type == Info)
+        {
+            SetColor(FOREGROUND_BLUE);
+            wprintf(L"%s\n", msg_with_errorcode.c_str());
+            ResetColor();
+        }
+        else if (type == Warning)
+        {
+            SetColor(FOREGROUND_GREEN);
+            wprintf(L"%s\n", msg_with_errorcode.c_str());
+            ResetColor();
+        }
+        else
+            wprintf(L"%s\n", msg_with_errorcode.c_str());
 
         if (logFile.fail())
         {
