@@ -1,4 +1,6 @@
 ## Updates
+- Oct 24, '24: Started to change important class object pointers to `std::unique_ptr`, and fixed an memory-related unhandled exception issue at cleanup/program ending. The main focus going forwards for this project will be to make better use of C++ concepts, in order to make the code more readable and scale better.  
+  
 - Oct 3, '24: Fixed `IsTextSectionWritable` routine, which now checks all pages in the .text section for protections other than PAGE_EXECUTE_READ. Further development of this project will likely be much slower than normal, as I'm busy with other projects.  
   
 - Sept 6, '24: Added checks on TLS callback structure for anomalies (number of TLS callbacks, TLS data directory address, TLS callback addresses outside of main module, etc)  
