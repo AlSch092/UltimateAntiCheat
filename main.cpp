@@ -186,6 +186,8 @@ We can end attacker threads using ExitThread(), and let in our threads which are
 */
 void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 {
+    const UINT ThreadExecutionAddressStackOffset = 0x378; //** this might change on different version of window, Windows 10 is all I have access to currently
+
     switch (dwReason)
     {
         case DLL_PROCESS_ATTACH: //this should never be executed in legitimate program flow, our FakeTLSCallback contains the real logic for this case
@@ -209,9 +211,8 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
             if (UnmanagedGlobals::SupressingNewThreads)
             {
                 UINT64 ThreadExecutionAddress = (UINT64)_AddressOfReturnAddress(); //check down the stack for the thread execution address, compare it to good module range, and if not in range then we've detected a rogue thread
-                const UINT64 ThreadExecutionAddressStackOffset = 0x378;
                 
-                ThreadExecutionAddress += ThreadExecutionAddressStackOffset; //offset in stack to execution thread addr
+                ThreadExecutionAddress += (UINT64)ThreadExecutionAddressStackOffset; //offset in stack to thread's execution address
                 ThreadExecutionAddress = *(UINT64*)ThreadExecutionAddress;
 
                 auto modules = Process::GetLoadedModules();
