@@ -55,7 +55,7 @@ int main(int argc, char** argv)
     Settings* ConfigInstance = &Settings::GetInstance(true, true, true, true, true, true, true); //see class constructor for true/false switch list
 #endif
 
-    unique_ptr<AntiCheat> AC = make_unique<AntiCheat>(ConfigInstance);
+    unique_ptr<AntiCheat> Anti_Cheat = make_unique<AntiCheat>(ConfigInstance); //main object of the program
 
     if (ConfigInstance->bEnforceSecureBoot)
     {
@@ -79,7 +79,7 @@ int main(int argc, char** argv)
         }
     }
 
-    if (API::Dispatch(AC.get(), API::DispatchCode::INITIALIZE) != Error::OK) //initialize AC , this will start all detections + preventions
+    if (API::Dispatch(Anti_Cheat.get(), API::DispatchCode::INITIALIZE) != Error::OK) //initialize AC , this will start all detections + preventions
     {
         Logger::logf("UltimateAnticheat.log", Err, "Could not initialize program: API::Dispatch failed. Shutting down.");
         goto cleanup;
@@ -87,28 +87,28 @@ int main(int argc, char** argv)
 
     if (ConfigInstance->bCheckThreads)
     {
-        if (AC->IsAnyThreadSuspended()) //make sure that all our necessary threads aren't suspended by an attacker
+        if (Anti_Cheat->IsAnyThreadSuspended()) //make sure that all our necessary threads aren't suspended by an attacker
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Atleast one of our threads was found suspended! All threads must be running for proper module functionality.");
             goto cleanup;
         }
     }
 
-    UnmanagedGlobals::SupressingNewThreads = AC->GetBarrier()->IsPreventingThreads(); //if this is set to TRUE, we can stop the creation of any new threads via the TLS callback
+    UnmanagedGlobals::SupressingNewThreads = Anti_Cheat->GetBarrier()->IsPreventingThreads(); //if this is set to TRUE, we can stop the creation of any new threads via the TLS callback
 
     cout << "\n----------------------------------------------------------------------------------------------------------\n";
     cout << "All protections have been deployed, the program will now loop using its detection methods. Thanks for your interest in the project!\n\n";
 
     Sleep(MillisecondsBeforeShutdown); //let the other threads run for a bit to display monitoring, normally the game's main loop would be here but instead we will wait 60s
 
-    if (AC->GetMonitor()->IsUserCheater())
+    if (Anti_Cheat->GetMonitor()->IsUserCheater())
     {
         Logger::logf("UltimateAnticheat.log", Info, "Detected a cheater in first %d milliseconds of runtime!", MillisecondsBeforeShutdown);
     }
 
 cleanup: //jump to here on any error with AC initialization
 
-    if (API::Dispatch(AC.get(), API::DispatchCode::CLIENT_EXIT) == Error::OK) //clean up memory & threads
+    if (API::Dispatch(Anti_Cheat.get(), API::DispatchCode::CLIENT_EXIT) == Error::OK) //clean up memory & threads
     {
         Logger::logf("UltimateAnticheat.log", Info, " Cleanup successful. Shutting down program");
     }
