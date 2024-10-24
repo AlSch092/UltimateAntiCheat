@@ -50,8 +50,11 @@ public:
 
 	~Detections()
 	{
-		delete _Services;
-		delete integrityChecker;
+		if(_Services != nullptr)
+			delete _Services; _Services = nullptr;
+
+		if(integrityChecker != nullptr)
+			delete integrityChecker; integrityChecker = nullptr;
 
 		if (MonitorThread != NULL) //by the time this destructor is called the monitorthread should be exited, but adding in a 'thread running' check might still be handy here
 			delete MonitorThread;
