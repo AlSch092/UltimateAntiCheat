@@ -13,6 +13,7 @@
 #include "Preventions.hpp"
 #include "Common/Logger.hpp"
 #include "Common/Settings.hpp"
+#include <memory>
 
 /*
 	The `AntiCheat` class is a container for the necessary classes of our program, including the monitor, barrier, netclient, and anti-debugger
@@ -23,6 +24,16 @@ public:
 
 	AntiCheat(Settings* config)
 	{		
+		if (config != nullptr)
+		{
+			this->Config = config;
+		}
+		else
+		{
+			Logger::logf("UltimateAnticheat.log", Err, "Settings pointer was NULL @ AntiCheat::AntiCheat");
+			return;
+		}
+
 		Client = new NetClient();
 
 		_AntiDebugger = new Debugger::AntiDebug(config, Client); //any detection methods need the netclient for comms
@@ -30,9 +41,6 @@ public:
 		Monitor = new Detections(config, false, Client, UnmanagedGlobals::ModulesAtStartup);
 		
 		Barrier = new Preventions(config, true, Monitor->GetIntegrityChecker()); //true = prevent new threads from being made
-
-		if (config != nullptr)
-			this->Config = config;
 	}
 
 	~AntiCheat()
@@ -41,7 +49,8 @@ public:
 		delete Barrier;		    Barrier = nullptr;
 		delete _AntiDebugger;   _AntiDebugger = nullptr;
 		delete Client; 		    Client = nullptr;
-		delete Config;			Config = nullptr;
+
+		//no need to delete Settings, it will automatically be deleted when it goes out of scope since its a unique_ptr
 	}
 
 	Debugger::AntiDebug* GetAntiDebugger() { return this->_AntiDebugger; }
@@ -79,9 +88,12 @@ public:
 
 private:
 
+	//todo: change all of these to std::unique_ptrs
+
 	Detections* Monitor = nullptr; //cheat detections
 	Preventions* Barrier = nullptr; //cheat preventions
 	Debugger::AntiDebug* _AntiDebugger = nullptr;
 	NetClient* Client = nullptr; //for client-server comms
+
 	Settings* Config = nullptr;
 };

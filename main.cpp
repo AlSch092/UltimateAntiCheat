@@ -10,7 +10,7 @@
 #include "API/API.hpp"
 #include "SplashScreen.hpp"
 
-#pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper) - align with system allocation granularity, each section has its own 64KB region
+#pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper) - each section has its own region, align with system allocation granularity
 
 void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
 void NTAPI __stdcall FakeTLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
@@ -30,7 +30,7 @@ PIMAGE_TLS_CALLBACK _tls_callback = FakeTLSCallback; //We're modifying our TLS c
 
 using namespace std;
 
-std::unique_ptr<Settings> Settings::Instance = nullptr; //initialize settings instance singleton
+unique_ptr<Settings> Settings::Instance = nullptr; //initialize settings instance singleton
 
 int main(int argc, char** argv)
 {
@@ -42,7 +42,7 @@ int main(int argc, char** argv)
 
     cout << "------------------------------------------------------------------------------------------\n";
     cout << "|                            Welcome to Ultimate Anti-Cheat!                             |\n";
-    cout << "|  An in-development, non-commercial AC made to help teach us concepts in game security  |\n";
+    cout << "|  An in-development, non-commercial AC made to help teach concepts in game security     |\n";
     cout << "|                              Made by AlSch092 @Github                                  |\n";
     cout << "|         ...With special thanks to:                                                     |\n";
     cout << "|           changeofpace@github (remapping method)                                       |\n";
@@ -50,14 +50,14 @@ int main(int argc, char** argv)
     cout << "------------------------------------------------------------------------------------------\n";
 
 #ifdef _DEBUG
-    Settings& ConfigInstance = Settings::GetInstance(false, true, true, true, true, true, true); //no secure boot check + hypervisor check in debug compile
+    Settings* ConfigInstance = &Settings::GetInstance(false, true, true, true, true, true, true); //no secure boot check + hypervisor check in debug compile
 #else
-    Settings& ConfigInstance = Settings::GetInstance(true, true, true, true, true, true, true); //see class constructor for true/false switch list
+    Settings* ConfigInstance = &Settings::GetInstance(true, true, true, true, true, true, true); //see class constructor for true/false switch list
 #endif
 
-    AntiCheat* AC = new AntiCheat(&ConfigInstance);
+    unique_ptr<AntiCheat> AC = make_unique<AntiCheat>(ConfigInstance);
 
-    if (ConfigInstance.bEnforceSecureBoot)
+    if (ConfigInstance->bEnforceSecureBoot)
     {
         if (!Services::IsSecureBootEnabled()) //enforce secure boot to stop bootloader cheats
         {
@@ -66,11 +66,11 @@ int main(int argc, char** argv)
         }
     }
   
-    if (ConfigInstance.bCheckHypervisor) //initial check on hypervisor, do not let program proceed if a hypervisor is detected
+    if (ConfigInstance->bCheckHypervisor)
     {
-        if (Services::IsHypervisor())
+        if (Services::IsHypervisor())  //initial check on hypervisor, do not let program proceed if a hypervisor is detected
         {
-            char vendor[13];
+            char vendor[255]{ 0 };
 
             Services::GetHypervisorVendor(vendor);
 
@@ -79,13 +79,13 @@ int main(int argc, char** argv)
         }
     }
 
-    if (API::Dispatch(AC, API::DispatchCode::INITIALIZE) != Error::OK) //initialize AC , this will start all detections + preventions
+    if (API::Dispatch(AC.get(), API::DispatchCode::INITIALIZE) != Error::OK) //initialize AC , this will start all detections + preventions
     {
         Logger::logf("UltimateAnticheat.log", Err, "Could not initialize program: API::Dispatch failed. Shutting down.");
         goto cleanup;
     }
 
-    if (ConfigInstance.bCheckThreads)
+    if (ConfigInstance->bCheckThreads)
     {
         if (AC->IsAnyThreadSuspended()) //make sure that all our necessary threads aren't suspended by an attacker
         {
@@ -108,7 +108,7 @@ int main(int argc, char** argv)
 
 cleanup: //jump to here on any error with AC initialization
 
-    if (API::Dispatch(AC, API::DispatchCode::CLIENT_EXIT) == Error::OK) //clean up memory & threads
+    if (API::Dispatch(AC.get(), API::DispatchCode::CLIENT_EXIT) == Error::OK) //clean up memory & threads
     {
         Logger::logf("UltimateAnticheat.log", Info, " Cleanup successful. Shutting down program");
     }
