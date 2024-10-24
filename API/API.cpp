@@ -13,7 +13,7 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessNam
 	if (AC == NULL)
 		return Error::NULL_MEMORY_REFERENCE;
 
-	if (Process::CheckParentProcess(parentProcessName)) //check parent process, kick out if bad
+	if (Process::CheckParentProcess(parentProcessName)) //check parent process before startup, kick out if bad
 	{
 		AC->GetMonitor()->GetProcessObj()->SetParentName(parentProcessName);
 	}
@@ -35,11 +35,8 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessNam
 	}
 	else
 	{
-		Logger::logf("UltimateAnticheat.log", Info, "Networking is currently disabled, no heartbeats will occurs");
+		Logger::logf("UltimateAnticheat.log", Info, "Networking is currently disabled, no heartbeats will occur");
 	}
-
-	/* Initialise LdrpDllNotificationList */
-	//AC->GetMonitor()->GetLdrpDllNotificationList();
 
 end:	
 	return errorCode;
@@ -72,7 +69,6 @@ Error API::Cleanup(AntiCheat* AC)
 		WaitForSingleObject(AC->GetNetworkClient()->GetRecvThread()->handle, 5000); //this thread normally sleeps for 5000ms each loop, so we wait 6000ms for good measures
 	}
 
-	delete AC;
 	return Error::OK;
 }
 
