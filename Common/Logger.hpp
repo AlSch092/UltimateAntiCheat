@@ -1,4 +1,4 @@
-//AlSch092 @ Github - part of the UltimateAnticheat project
+//AlSch092 @ Github
 #pragma once
 #include <iostream>
 #include <fstream>
@@ -64,12 +64,6 @@ public:
         }
         else if (type == Info)
         {
-            SetColor(FOREGROUND_BLUE);
-            printf("%s\n", msg_with_errorcode.c_str());
-            ResetColor();
-        }
-        else if (type == Warning)
-        {
             SetColor(FOREGROUND_GREEN);
             printf("%s\n", msg_with_errorcode.c_str());
             ResetColor();
@@ -133,12 +127,6 @@ public:
             ResetColor();
         }
         else if (type == Info)
-        {
-            SetColor(FOREGROUND_BLUE);
-            wprintf(L"%s\n", msg_with_errorcode.c_str());
-            ResetColor();
-        }
-        else if (type == Warning)
         {
             SetColor(FOREGROUND_GREEN);
             wprintf(L"%s\n", msg_with_errorcode.c_str());
