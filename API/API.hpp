@@ -26,7 +26,7 @@ namespace API
 	Error Cleanup(AntiCheat* AC);
 	Error LaunchDefenses(AntiCheat* AC);
 	
-	Error __declspec(dllexport) Dispatch(AntiCheat* AC, DispatchCode code); //incase the user wants to build as a .dll, we export this routine to expose the AntiCheat class to a host game process
+	Error Dispatch(AntiCheat* AC, DispatchCode code); //init/cleanup, if you insist on using this project as a standalone .dll, you can change this function to dllexport
 }
 
 

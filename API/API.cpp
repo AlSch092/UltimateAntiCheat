@@ -116,7 +116,7 @@ Error API::LaunchDefenses(AntiCheat* AC) //currently in the process to split the
 	Dispatch - handles sending requests through the AntiCheat class `AC`, mainly for initialization & cleanup
 	returns Error::OK on successful execution
 */
-Error __declspec(dllexport) API::Dispatch(AntiCheat* AC, DispatchCode code)
+Error API::Dispatch(AntiCheat* AC, DispatchCode code)
 {
 	Error errorCode = Error::OK;
 
