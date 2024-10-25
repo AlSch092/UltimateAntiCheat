@@ -1,6 +1,7 @@
 //By AlSch092 @ Github
 #pragma once
 #include "../AntiCheat.hpp"
+#include "../Common/Error.hpp"
 
 using namespace std;
 
@@ -12,8 +13,6 @@ namespace API
 		INITIALIZE,
 		CLIENT_EXIT,
 	};
-
-	static bool serverAvailable = false; //networking on/off switch
 
 	static const char* ServerEndpoint = "127.0.0.1";
 	static unsigned short ServerPort = 5445;
