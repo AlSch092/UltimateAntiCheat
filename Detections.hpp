@@ -15,7 +15,7 @@ class Detections
 {
 public:
 
-	Detections(Settings* s, BOOL StartMonitor, NetClient* client, vector<ProcessData::MODULE_DATA>* currentModules)
+	Detections(Settings* s, BOOL StartMonitor, std::shared_ptr<NetClient> client, vector<ProcessData::MODULE_DATA>* currentModules)
 	{
 		if (s != nullptr)
 			this->Config = s;
@@ -60,7 +60,7 @@ public:
 			delete MonitorThread;
 	}
 
-	NetClient* GetNetClient() { return this->netClient; }
+	NetClient* GetNetClient() { return this->netClient.get(); }
 
 	void SetCheater(BOOL cheating) { this->CheaterWasDetected->SetData((uint8_t)cheating); } //obfuscated bool/int variable. cast to uint8 to avoid getting stuck as 0/1 by compilers bool interpretation
 	BOOL IsUserCheater() { return this->CheaterWasDetected->GetData(); }
@@ -108,7 +108,7 @@ private:
 
 	Process* _Proc = new Process(EXPECTED_SECTIONS); //keep track of our sections, loaded modules, etc
 
-	NetClient* netClient = nullptr; //send any detections to the server
+	std::shared_ptr<NetClient> netClient; //send any detections to the server
 
 	list<DetectionFlags> DetectedFlags;
 

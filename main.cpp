@@ -7,10 +7,11 @@
 
     Author: AlSch092 @ Github
 */
-#include "API/API.hpp"
+
+#include "API/API.hpp"  //API.hpp includes anticheat.hpp
 #include "SplashScreen.hpp"
 
-#pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper) - each section has its own region, align with system allocation granularity
+#pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper) - each section gets its own region, align with system allocation granularity
 
 void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
 void NTAPI __stdcall FakeTLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
@@ -49,11 +50,27 @@ int main(int argc, char** argv)
     cout << "|           discriminating@github (dll load notifcations, catalog verification)          |\n";
     cout << "------------------------------------------------------------------------------------------\n";
 
-#ifdef _DEBUG
-    Settings* ConfigInstance = &Settings::GetInstance(false, true, true, true, true, true, true); //no secure boot check + hypervisor check in debug compile
+#ifdef _DEBUG //in debug compilation, we are more lax with our protections for easier testing purposes
+    bool bEnableNetworking = true;  //change this to false if you don't want to use the server
+    bool bEnforceSecureBoot = false;
+    bool bEnforceDSE = false;
+    bool bEnforceNoKDBG = false;
+    bool bUseAntiDebugging = false;
+    bool bUseIntegrityChecking = true;
+    bool bCheckThreadIntegrity = true;
+    bool bCheckHypervisor = false;
 #else
-    Settings* ConfigInstance = &Settings::GetInstance(true, true, true, true, true, true, true); //see class constructor for true/false switch list
+    bool bEnableNetworking = true;
+    bool bEnforceSecureBoot = true;
+    bool bEnforceDSE = true;
+    bool bEnforceNoKDBG = true;
+    bool bUseAntiDebugging = true;
+    bool bUseIntegrityChecking = true;
+    bool bCheckThreadIntegrity = true;
+    bool bCheckHypervisor = true;
 #endif
+
+    Settings* ConfigInstance = &Settings::GetInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor);
 
     unique_ptr<AntiCheat> Anti_Cheat = make_unique<AntiCheat>(ConfigInstance); //main object of the program
 
