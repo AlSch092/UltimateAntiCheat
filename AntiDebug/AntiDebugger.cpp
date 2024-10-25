@@ -8,14 +8,14 @@
 */
 void Debugger::AntiDebug::StartAntiDebugThread()
 {
+	this->DetectionThread = new Thread();
+
 	if (!this->GetSettings()->bUseAntiDebugging)
 	{
 		Logger::logf("UltimateAnticheat.log", Info, "Anti-Debugger was disabled in settings, debugging will be allowed");
 		this->DetectionThread->CurrentlyRunning = false;
 		return;
 	}
-
-	this->DetectionThread = new Thread();
 
 	this->DetectionThread->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Debugger::AntiDebug::CheckForDebugger, (LPVOID)this, 0, &this->DetectionThread->Id);
 
