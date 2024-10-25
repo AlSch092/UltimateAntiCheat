@@ -30,7 +30,7 @@ namespace Debugger
     {
     public:
         
-        AntiDebug(Settings* s, NetClient* netClient)
+        AntiDebug(Settings* s, std::shared_ptr<NetClient> netClient)
         {
             this->netClient = netClient;
 
@@ -78,7 +78,7 @@ namespace Debugger
         bool AddDetectedFlag(Detections f);
         bool Flag(Detections flag);
 
-        NetClient* GetNetClient() { return this->netClient; }
+        NetClient* GetNetClient() { return this->netClient.get(); }
 
         Settings* GetSettings() { return this->Config; }
 
@@ -87,7 +87,7 @@ namespace Debugger
 
         Thread* DetectionThread = NULL;
 
-        NetClient* netClient = nullptr;
+        std::shared_ptr<NetClient> netClient = nullptr;
 
         Settings* Config = nullptr;
 
