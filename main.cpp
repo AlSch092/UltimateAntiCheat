@@ -51,7 +51,7 @@ int main(int argc, char** argv)
     cout << "------------------------------------------------------------------------------------------\n";
 
 #ifdef _DEBUG //in debug compilation, we are more lax with our protections for easier testing purposes
-    bool bEnableNetworking = true;  //change this to false if you don't want to use the server
+    bool bEnableNetworking = false;  //change this to false if you don't want to use the server
     bool bEnforceSecureBoot = false;
     bool bEnforceDSE = false;
     bool bEnforceNoKDBG = false;
@@ -60,8 +60,8 @@ int main(int argc, char** argv)
     bool bCheckThreadIntegrity = true;
     bool bCheckHypervisor = false;
 #else
-    bool bEnableNetworking = true;
-    bool bEnforceSecureBoot = true;
+    bool bEnableNetworking = false;
+    bool bEnforceSecureBoot = false; //set to false by default since many people testing the program won't be using secure boot
     bool bEnforceDSE = true;
     bool bEnforceNoKDBG = true;
     bool bUseAntiDebugging = true;
