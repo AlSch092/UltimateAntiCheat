@@ -57,7 +57,7 @@ public:
 
 	Settings* GetConfiguration() { return this->Config; }
 
-	__forceinline bool IsAnyThreadSuspended();
+	bool IsAnyThreadSuspended();
 
 private:
 
@@ -76,7 +76,7 @@ private:
 	IsAnyThreadSuspended - Checks the looping threads of class members to ensure the program is running as normal. An attacker may try to suspend threads to either remap or disable functionalities
 	returns true if any thread is found suspended
 */
-__forceinline bool AntiCheat::IsAnyThreadSuspended()
+bool AntiCheat::IsAnyThreadSuspended()
 {
 	if (Thread::IsThreadSuspended(Monitor->GetMonitorThread()->handle))
 	{
