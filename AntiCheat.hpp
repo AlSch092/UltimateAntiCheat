@@ -13,7 +13,7 @@
 #include "Preventions.hpp"
 #include "Common/Logger.hpp"
 #include "Common/Settings.hpp"
-#include <memory>
+
 
 /*
 	The `AntiCheat` class is a container for the necessary classes of our program, including the monitor, barrier, netclient, and anti-debugger
@@ -57,7 +57,7 @@ public:
 
 	Settings* GetConfiguration() { return this->Config; }
 
-	bool IsAnyThreadSuspended();
+	__forceinline bool IsAnyThreadSuspended();
 
 private:
 
@@ -76,7 +76,7 @@ private:
 	IsAnyThreadSuspended - Checks the looping threads of class members to ensure the program is running as normal. An attacker may try to suspend threads to either remap or disable functionalities
 	returns true if any thread is found suspended
 */
-bool AntiCheat::IsAnyThreadSuspended()
+__forceinline bool AntiCheat::IsAnyThreadSuspended()
 {
 	if (Thread::IsThreadSuspended(Monitor->GetMonitorThread()->handle))
 	{
