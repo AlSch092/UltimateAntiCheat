@@ -34,66 +34,65 @@ public:
 			return;
 		}
 
-		Client = new NetClient();
+		this->NetworkClient = std::make_shared<NetClient>();
 
-		_AntiDebugger = new Debugger::AntiDebug(config, Client); //any detection methods need the netclient for comms
+		this->_AntiDebugger = std::make_unique<Debugger::AntiDebug>(config, NetworkClient); //any detection methods need the netclient for comms
 
-		Monitor = new Detections(config, false, Client, UnmanagedGlobals::ModulesAtStartup);
+		this->Monitor = std::make_unique<Detections>(config, false, NetworkClient, UnmanagedGlobals::ModulesAtStartup);
 		
-		Barrier = new Preventions(config, true, Monitor->GetIntegrityChecker()); //true = prevent new threads from being made
+		this->Barrier = std::make_unique<Preventions>(config, true, Monitor.get()->GetIntegrityChecker()); //true = prevent new threads from being made
 	}
 
-	~AntiCheat()
+	~AntiCheat() //the destructor is now empty since all pointers of this class were recently switched to unique_ptrs
 	{
-		delete Monitor; 		Monitor = nullptr;
-		delete Barrier;		    Barrier = nullptr;
-		delete _AntiDebugger;   _AntiDebugger = nullptr;
-		delete Client; 		    Client = nullptr;
-
-		//no need to delete Settings, it will automatically be deleted when it goes out of scope since its a unique_ptr
 	}
 
-	Debugger::AntiDebug* GetAntiDebugger() { return this->_AntiDebugger; }
+	Debugger::AntiDebug* GetAntiDebugger() { return this->_AntiDebugger.get(); }
 	
-	NetClient* GetNetworkClient() { return this->Client; }
+	NetClient* GetNetworkClient() { return this->NetworkClient.get(); }
 	
-	Preventions* GetBarrier() { return this->Barrier;  }
+	Preventions* GetBarrier() { return this->Barrier.get();  }
 	
-	Detections* GetMonitor() { return this->Monitor; }
+	Detections* GetMonitor() { return this->Monitor.get(); }
 
-	/*
-		IsAnyThreadSuspended - Checks the looping threads of class members to ensure the program is running as normal. An attacker may try to suspend threads to either remap or disable functionalities
-		returns true if any thread is found suspended
-	*/
-	__forceinline bool IsAnyThreadSuspended()
-	{
-		if (Thread::IsThreadSuspended(Monitor->GetMonitorThread()->handle))
-		{
-			Logger::logf("UltimateAnticheat.log", Detection, "Monitor was found suspended! Abnormal program execution.");
-			return true;
-		}
-		else if (Thread::IsThreadSuspended(_AntiDebugger->GetDetectionThreadHandle()) && Config->bUseAntiDebugging)
-		{
-			Logger::logf("UltimateAnticheat.log", Detection, "Anti-debugger was found suspended! Abnormal program execution.");
-			return true;
-		}
-		else if (Thread::IsThreadSuspended(Client->GetRecvThread()->handle))
-		{
-			Logger::logf("UltimateAnticheat.log", Detection, "Netclient comms thread was found suspended! Abnormal program execution.");
-			return true;
-		}
+	Settings* GetConfiguration() { return this->Config; }
 
-		return false;
-	}
+	__forceinline bool IsAnyThreadSuspended();
 
 private:
 
-	//todo: change all of these to std::unique_ptrs
+	std::unique_ptr<Detections> Monitor;  //cheat detections
 
-	Detections* Monitor = nullptr; //cheat detections
-	Preventions* Barrier = nullptr; //cheat preventions
-	Debugger::AntiDebug* _AntiDebugger = nullptr;
-	NetClient* Client = nullptr; //for client-server comms
+	std::unique_ptr<Preventions> Barrier;  //cheat preventions
 
-	Settings* Config = nullptr;
+	std::unique_ptr<Debugger::AntiDebug> _AntiDebugger;
+
+	std::shared_ptr <NetClient> NetworkClient; //for client-server comms, our other classes need access to this to send detected flags to the server
+	
+	Settings* Config = nullptr; //the unique_ptr for this is made in main.cpp
 };
+
+/*
+	IsAnyThreadSuspended - Checks the looping threads of class members to ensure the program is running as normal. An attacker may try to suspend threads to either remap or disable functionalities
+	returns true if any thread is found suspended
+*/
+__forceinline bool AntiCheat::IsAnyThreadSuspended()
+{
+	if (Thread::IsThreadSuspended(Monitor->GetMonitorThread()->handle))
+	{
+		Logger::logf("UltimateAnticheat.log", Detection, "Monitor was found suspended! Abnormal program execution.");
+		return true;
+	}
+	else if (Thread::IsThreadSuspended(_AntiDebugger->GetDetectionThreadHandle()) && Config->bUseAntiDebugging)
+	{
+		Logger::logf("UltimateAnticheat.log", Detection, "Anti-debugger was found suspended! Abnormal program execution.");
+		return true;
+	}
+	else if (Thread::IsThreadSuspended(NetworkClient->GetRecvThread()->handle))
+	{
+		Logger::logf("UltimateAnticheat.log", Detection, "Netclient comms thread was found suspended! Abnormal program execution.");
+		return true;
+	}
+
+	return false;
+}
