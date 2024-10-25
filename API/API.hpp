@@ -5,7 +5,7 @@
 
 using namespace std;
 
-//API class is the interface to work with the AntiCheat class from the game code
+//API namespace is the interface to work with the AntiCheat class, to intialize it and clean up. also contains some important variables for the AC's runtime environment
 namespace API
 {
 	enum DispatchCode
@@ -23,10 +23,11 @@ namespace API
 #endif
 
 	Error Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessName, bool isServerConnected);
-	Error Cleanup(AntiCheat* AC);
-	Error LaunchDefenses(AntiCheat* AC);
+	Error LaunchDefenses(AntiCheat* AC); //these routines are usually called by Dispatch with `INITIALIZE` dispatch code
+
+        Error Cleanup(AntiCheat* AC);
 	
-	Error Dispatch(AntiCheat* AC, DispatchCode code); //init/cleanup, if you insist on using this project as a standalone .dll, you can change this function to dllexport
+	Error Dispatch(AntiCheat* AC, DispatchCode code); //if you insist on using this project as a standalone .dll, you can change this function to dllexport
 }
 
 
