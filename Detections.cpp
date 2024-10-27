@@ -46,7 +46,6 @@ VOID CALLBACK Detections::OnDllNotification(ULONG NotificationReason, const PLDR
             Monitor->Flag(DetectionFlags::INJECTED_ILLEGAL_PROGRAM);
         }
     }
-
 }
 
 /*
@@ -164,7 +163,7 @@ void Detections::Monitor(LPVOID thisPtr)
 
         if (Monitor->GetIntegrityChecker()->IsUnknownModulePresent()) //authenticode call and check against whitelisted module list
         {
-            Logger::logf("UltimateAnticheat.log", Detection, "Found at least one unsigned dll loaded : We ideally only want verified, signed dlls in our application!\n");
+            Logger::logf("UltimateAnticheat.log", Detection, "Found at least one unsigned dll loaded : We ideally only want verified, signed dlls in our application!");
             Monitor->Flag(DetectionFlags::INJECTED_ILLEGAL_PROGRAM);
         }
 
@@ -628,4 +627,118 @@ BOOL Detections::IsBlacklistedWindowPresent()
     }
 
     return FALSE;
+}
+
+/*
+    Detections::MonitorNewProcesses - Monitors process creation events via WMI
+    Intended thread function, has no return value as it logs in real-time
+*/
+void Detections::MonitorProcessCreation(LPVOID thisPtr)
+{
+    if (thisPtr == nullptr)
+    {
+        return;
+    }
+
+    Detections* monitor = reinterpret_cast<Detections*>(thisPtr);
+    monitor->MonitoringProcessCreation = true;
+
+    HRESULT hres;
+    hres = CoInitializeEx(0, COINIT_MULTITHREADED);
+    if (FAILED(hres))
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to initialize COM library @ MonitorNewProcesses");
+        return;
+    }
+
+    hres = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_DEFAULT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE, NULL);
+    if (FAILED(hres))
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to initialize security @ MonitorNewProcesses");
+        CoUninitialize();
+        return;
+    }
+
+    IWbemLocator* pLoc = NULL;
+    hres = CoCreateInstance(CLSID_WbemLocator, 0, CLSCTX_INPROC_SERVER, IID_IWbemLocator, (LPVOID*)&pLoc);
+    if (FAILED(hres))
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to create IWbemLocator object");
+        CoUninitialize();
+        return;
+    }
+
+    IWbemServices* pSvc = NULL;
+    hres = pLoc->ConnectServer(_bstr_t(L"ROOT\\CIMV2"), NULL, NULL, 0, NULL, 0, 0, &pSvc);
+    if (FAILED(hres))
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Could not connect to WMI namespace");
+        pLoc->Release();
+        CoUninitialize();
+        return;
+    }
+
+    hres = CoSetProxyBlanket(pSvc, RPC_C_AUTHN_WINNT, RPC_C_AUTHZ_NONE, NULL, RPC_C_AUTHN_LEVEL_CALL, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE);
+
+    if (FAILED(hres))
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Could not set proxy blanket");
+        pSvc->Release();
+        pLoc->Release();
+        CoUninitialize();
+        return;
+    }
+
+    IEnumWbemClassObject* pEnumerator = NULL;
+    hres = pSvc->ExecNotificationQuery((wchar_t*)L"WQL", (wchar_t*)L"SELECT * FROM __InstanceCreationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_Process'", WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, NULL, &pEnumerator);
+
+    if (FAILED(hres))
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Query for process creation events failed");
+        pSvc->Release();
+        pLoc->Release();
+        CoUninitialize();
+        return;
+    }
+
+    IWbemClassObject* pclsObj = NULL;
+    ULONG uReturn = 0;
+    while (pEnumerator && monitor->MonitoringProcessCreation)
+    {
+        HRESULT hr = pEnumerator->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+        if (0 == uReturn) break;
+
+        VARIANT vtProp;
+        hr = pclsObj->Get(L"TargetInstance", 0, &vtProp, 0, 0);
+        if (SUCCEEDED(hr) && (vtProp.vt == VT_UNKNOWN))
+        {
+            IUnknown* str = vtProp.punkVal;
+            IWbemClassObject* pClassObj = NULL;
+            str->QueryInterface(IID_IWbemClassObject, (void**)&pClassObj);
+            if (pClassObj)
+            {
+                VARIANT vtName;
+                pClassObj->Get(L"Name", 0, &vtName, 0, 0);
+
+                for (wstring blacklistedProcess : monitor->BlacklistedProcesses)
+                {
+                    if (Utility::wcscmp_insensitive(blacklistedProcess.c_str(), vtName.bstrVal))
+                    {
+                        Logger::logfw("UltimateAnticheat.log", Detection, L"Blacklisted process was spawned: %s", vtName.bstrVal);
+                        break;
+                    }
+                }
+
+                VariantClear(&vtName);
+                pClassObj->Release();
+            }
+        }
+        VariantClear(&vtProp);
+        pclsObj->Release();
+    }
+
+    pSvc->Release();
+    pLoc->Release();
+    pEnumerator->Release();
+    CoUninitialize();
 }
