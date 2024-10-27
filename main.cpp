@@ -59,18 +59,20 @@ int main(int argc, char** argv)
     bool bUseIntegrityChecking = true;
     bool bCheckThreadIntegrity = true;
     bool bCheckHypervisor = false;
+    bool bRequireRunAsAdministrator = true;
 #else
-    bool bEnableNetworking = false;
-    bool bEnforceSecureBoot = false; //set to false by default since many people testing the program won't be using secure boot
+    bool bEnableNetworking = false; //change this to false if you don't want to use the server
+    bool bEnforceSecureBoot = true;
     bool bEnforceDSE = true;
     bool bEnforceNoKDBG = true;
     bool bUseAntiDebugging = true;
     bool bUseIntegrityChecking = true;
     bool bCheckThreadIntegrity = true;
     bool bCheckHypervisor = true;
+    bool bRequireRunAsAdministrator = true;
 #endif
 
-    Settings* ConfigInstance = &Settings::GetInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor);
+    Settings* ConfigInstance = &Settings::GetInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator);
 
     unique_ptr<AntiCheat> Anti_Cheat = make_unique<AntiCheat>(ConfigInstance); //main object of the program
 
