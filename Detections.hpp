@@ -6,7 +6,7 @@
 #include "Environment/Services.hpp"
 #include "Obscure/Obfuscation.hpp"
 #include "Common/Globals.hpp"
-#include "Obscure/ntldr.hpp" //for DLL load notifications
+#include "Obscure/ntldr.hpp"
 #include <Wbemidl.h> //for process event creation (WMI)
 #include <comdef.h>  //for process event creation (WMI)
 
@@ -26,7 +26,7 @@ public:
 
 		MonitoringProcessCreation = false; //gets set to true inside `MonitorProcessCreation`
 
-		_Services = make_shared<Services>(false);
+		_Services = make_unique<Services>(false);
 		integrityChecker = make_shared<Integrity>(currentModules);
 
 		BlacklistedProcesses.push_back(L"Cheat Engine.exe"); //todo: hide these strings
@@ -58,16 +58,8 @@ public:
 
 	~Detections()
 	{
-		if (MonitorThread != nullptr)
-		{
-			delete MonitorThread; //the Thread class destructor will terminate the thread
-		}
-
-		if (ProcessCreationMonitorThread != nullptr)
-		{
-			MonitoringProcessCreation = false;
-			delete ProcessCreationMonitorThread;  //the Thread class destructor will terminate the thread
-		}
+		if (MonitorThread != NULL) //by the time this destructor is called the monitorthread should be exited, but adding in a 'thread running' check might still be handy here
+			delete MonitorThread;
 	}
 
 	NetClient* GetNetClient() { return this->netClient.get(); }
@@ -76,7 +68,7 @@ public:
 	BOOL IsUserCheater() { return this->CheaterWasDetected->GetData(); }
 
 	Services* GetServiceManager() { return this->_Services.get(); }
-	Integrity* GetIntegrityChecker() { return this->integrityChecker.get(); }
+	shared_ptr<Integrity> GetIntegrityChecker() { return this->integrityChecker; }
 
 	list<ProcessData::Section*>* SetSectionHash(const char* module, const char* sectionName);
 	BOOL CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize);
@@ -113,7 +105,7 @@ private:
 
 	ObfuscatedData<uint8_t>* CheaterWasDetected = NULL; //using bool as the type does not work properly with obfuscation since the compiler uses true/false, so use uint8_t instead and cast to BOOL when needed
 
-	shared_ptr<Services> _Services = NULL; 
+	unique_ptr<Services> _Services = NULL; 
 	shared_ptr<Integrity> integrityChecker = NULL;
 	shared_ptr<NetClient> netClient; //send any detections to the server
 

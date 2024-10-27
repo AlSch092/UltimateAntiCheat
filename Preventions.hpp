@@ -14,7 +14,7 @@ class Preventions
 {
 public:
 
-	Preventions(Settings* config, bool preventingThreads, Integrity* integrityChecker)
+	Preventions(Settings* config, bool preventingThreads, shared_ptr<Integrity> integrityChecker)
 	{
 		this->IsPreventingThreadCreation = preventingThreads;
 		this->integrityChecker = integrityChecker;
@@ -50,7 +50,7 @@ private:
 
 	bool IsPreventingThreadCreation; //used in TLS callback if we want to supress or track new threads
 
-	Integrity* integrityChecker = nullptr;
+	shared_ptr<Integrity> integrityChecker = nullptr;
 
 	Settings* Config = nullptr;
 };
