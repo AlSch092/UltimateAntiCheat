@@ -6,7 +6,7 @@
 #include "Environment/Services.hpp"
 #include "Obscure/Obfuscation.hpp"
 #include "Common/Globals.hpp"
-#include "Obscure/ntldr.hpp"
+#include "Obscure/ntldr.hpp" //for DLL load notifications
 #include <Wbemidl.h> //for process event creation (WMI)
 #include <comdef.h>  //for process event creation (WMI)
 
@@ -58,8 +58,16 @@ public:
 
 	~Detections()
 	{
-		if (MonitorThread != NULL) //by the time this destructor is called the monitorthread should be exited, but adding in a 'thread running' check might still be handy here
-			delete MonitorThread;
+		if (MonitorThread != nullptr)
+		{
+			delete MonitorThread; //the Thread class destructor will terminate the thread
+		}
+
+		if (ProcessCreationMonitorThread != nullptr)
+		{
+			MonitoringProcessCreation = false;
+			delete ProcessCreationMonitorThread;  //the Thread class destructor will terminate the thread
+		}
 	}
 
 	NetClient* GetNetClient() { return this->netClient.get(); }
