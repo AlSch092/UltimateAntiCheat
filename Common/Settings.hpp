@@ -7,11 +7,29 @@ class Settings
 {
 public:
 
-	static Settings& GetInstance(bool bNetworkingEnabled, bool bEnforceSecureBoot, bool bEnforceDSE, bool bEnforceNoKDbg, bool bUseAntiDebugging, bool bCheckIntegrity, bool bCheckThreads, bool bCheckHypervisor)
+	static Settings& GetInstance(
+		bool bNetworkingEnabled, 
+		bool bEnforceSecureBoot,
+		bool bEnforceDSE,
+		bool bEnforceNoKDbg,
+		bool bUseAntiDebugging,
+		bool bCheckIntegrity,
+		bool bCheckThreads,
+		bool bCheckHypervisor, 
+		bool bRequireRunAsAdministrator)
 	{
 		if (!Instance)
 		{
-			Instance = std::unique_ptr<Settings>(new Settings(bNetworkingEnabled, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDbg, bUseAntiDebugging, bCheckIntegrity, bCheckThreads, bCheckHypervisor));
+			Instance = std::unique_ptr<Settings>(new Settings(
+				bNetworkingEnabled, 
+				bEnforceSecureBoot, 
+				bEnforceDSE, 
+				bEnforceNoKDbg, 
+				bUseAntiDebugging, 
+				bCheckIntegrity, 
+				bCheckThreads, 
+				bCheckHypervisor, 
+				bRequireRunAsAdministrator));
 		}
 
 		return *Instance;
@@ -27,12 +45,23 @@ public:
 	bool bUseAntiDebugging;
 	bool bCheckIntegrity;
 	bool bCheckThreads;
+	bool bRequireRunAsAdministrator;
 
 	bool bNetworkingEnabled; //previously in API.hpp
 
 private:
 
-	Settings(bool bNetworkingEnabled, bool bEnforceSecureBoot, bool bEnforceDSE, bool bEnforceNoKDbg, bool bUseAntiDebugging, bool bCheckIntegrity, bool bCheckThreads, bool bCheckHypervisor) : bNetworkingEnabled(bNetworkingEnabled), bEnforceSecureBoot(bEnforceSecureBoot), bEnforceDSE(bEnforceDSE), bEnforceNoKDbg(bEnforceNoKDbg), bUseAntiDebugging(bUseAntiDebugging), bCheckIntegrity(bCheckIntegrity), bCheckThreads(bCheckThreads), bCheckHypervisor(bCheckHypervisor)
+	Settings(
+		bool bNetworkingEnabled, 
+		bool bEnforceSecureBoot, 
+		bool bEnforceDSE, 
+		bool bEnforceNoKDbg, 
+		bool bUseAntiDebugging,
+		bool bCheckIntegrity,
+		bool bCheckThreads,
+		bool bCheckHypervisor, 
+		bool bRequireRunAsAdministrator)  
+		: bNetworkingEnabled(bNetworkingEnabled), bEnforceSecureBoot(bEnforceSecureBoot), bEnforceDSE(bEnforceDSE), bEnforceNoKDbg(bEnforceNoKDbg), bUseAntiDebugging(bUseAntiDebugging), bCheckIntegrity(bCheckIntegrity), bCheckThreads(bCheckThreads), bCheckHypervisor(bCheckHypervisor), bRequireRunAsAdministrator(bRequireRunAsAdministrator)
 	{
 	}
 	 
