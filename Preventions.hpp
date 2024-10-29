@@ -14,10 +14,8 @@ class Preventions
 {
 public:
 
-	Preventions(Settings* config, bool preventingThreads, shared_ptr<Integrity> integrityChecker)
+	Preventions(Settings* config, bool preventingThreads, shared_ptr<Integrity> integrityChecker) : IsPreventingThreadCreation(preventingThreads), integrityChecker(integrityChecker)
 	{
-		this->IsPreventingThreadCreation = preventingThreads;
-		this->integrityChecker = integrityChecker;
 	}
 
 	Error DeployBarrier(); //activate all protections
