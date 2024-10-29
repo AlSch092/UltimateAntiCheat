@@ -77,8 +77,6 @@ public:
 
 	static BOOL IsRunningAsAdmin();
 
-	static BOOL LaunchProcess(__in string path, __in string commandLine);
-
 	static list<DeviceW> GetHardwareDevicesW();
 	static BOOL CheckUSBDevices();
 

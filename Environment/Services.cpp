@@ -451,39 +451,6 @@ BOOL Services::IsRunningAsAdmin()
 }
 
 /*
-    LaunchProcess(string path, string args) - CreateProcessA wrapper
-    returns `true` on successful process launch
-*/
-BOOL Services::LaunchProcess(string path, string args)
-{
-    // Define the path to the updater executable
-    LPCSTR Path = path.c_str();
-    std::string commandLine = path + args;
-
-    // Initialize the STARTUPINFO structure
-    STARTUPINFOA si;
-    PROCESS_INFORMATION pi;
-
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
-    ZeroMemory(&pi, sizeof(pi));
-
-    if (!CreateProcessA(NULL, const_cast<LPSTR>(commandLine.c_str()), NULL,NULL,FALSE,0,NULL,NULL,&si,&pi))
-    {
-        //std::cerr << "CreateProcess failed (" << GetLastError() << ").\n";
-        return false;
-    }
-
-    // Wait until child process exits
-    WaitForSingleObject(pi.hProcess, INFINITE);
-
-    // Close process and thread handles
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
-    return true;
-}
-
-/*
     GetHardwareDevicesW - returns a list<DeviceW>  representing various devices on the machine
 */
 list<DeviceW> Services::GetHardwareDevicesW()
