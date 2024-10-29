@@ -31,7 +31,6 @@ public:
 	{
 		HandshakeCompleted = false;
 		Initialized = false;
-		RecvLoopThread = new Thread();
 	}
 
 	NetClient(const char* serverEndpoint, uint16_t port)
@@ -41,7 +40,6 @@ public:
 
 		HandshakeCompleted = false;
 		Initialized = false;
-		RecvLoopThread = new Thread();
 	}
 
 	~NetClient()

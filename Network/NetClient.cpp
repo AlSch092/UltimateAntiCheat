@@ -59,7 +59,7 @@ Error NetClient::Initialize(string ip, uint16_t port, string gameCode)
 		return Error::GENERIC_FAIL;
 	}
 
-	RecvThread->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&NetClient::ProcessRequests, this, 0, &RecvThread->Id); //todo: change RecvLoopThread to Thread* class obj
+	RecvLoopThread = new Thread((LPTHREAD_START_ROUTINE)&NetClient::ProcessRequests, this);
 
 	if (RecvThread->handle == NULL || RecvThread->handle == INVALID_HANDLE_VALUE)
 	{
