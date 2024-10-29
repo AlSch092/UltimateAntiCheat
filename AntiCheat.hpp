@@ -14,7 +14,6 @@
 #include "Common/Logger.hpp"
 #include "Common/Settings.hpp"
 
-
 /*
 	The `AntiCheat` class is a container for the necessary classes of our program, including the monitor, barrier, netclient, and anti-debugger
 */
@@ -61,13 +60,13 @@ public:
 
 private:
 
-	std::unique_ptr<Detections> Monitor;  //cheat detections
+	unique_ptr<Detections> Monitor;  //cheat detections
 
-	std::unique_ptr<Preventions> Barrier;  //cheat preventions
+	unique_ptr<Preventions> Barrier;  //cheat preventions
 
-	std::unique_ptr<Debugger::AntiDebug> _AntiDebugger;
+	unique_ptr<Debugger::AntiDebug> _AntiDebugger;
 
-	std::shared_ptr <NetClient> NetworkClient; //for client-server comms, our other classes need access to this to send detected flags to the server
+	shared_ptr <NetClient> NetworkClient; //for client-server comms, our other classes need access to this to send detected flags to the server
 	
 	Settings* Config = nullptr; //the unique_ptr for this is made in main.cpp
 };
@@ -78,17 +77,17 @@ private:
 */
 __forceinline bool AntiCheat::IsAnyThreadSuspended()
 {
-	if (Thread::IsThreadSuspended(Monitor->GetMonitorThread()->handle))
+	if (Monitor->GetMonitorThread()!= nullptr && Thread::IsThreadSuspended(Monitor->GetMonitorThread()->handle))
 	{
 		Logger::logf("UltimateAnticheat.log", Detection, "Monitor was found suspended! Abnormal program execution.");
 		return true;
 	}
-	else if (Thread::IsThreadSuspended(_AntiDebugger->GetDetectionThreadHandle()) && Config->bUseAntiDebugging)
+	else if (Config->bUseAntiDebugging && Thread::IsThreadSuspended(_AntiDebugger->GetDetectionThreadHandle()))
 	{
 		Logger::logf("UltimateAnticheat.log", Detection, "Anti-debugger was found suspended! Abnormal program execution.");
 		return true;
 	}
-	else if (Thread::IsThreadSuspended(NetworkClient->GetRecvThread()->handle))
+	else if (NetworkClient->GetRecvThread() != nullptr && Thread::IsThreadSuspended(NetworkClient->GetRecvThread()->handle))
 	{
 		Logger::logf("UltimateAnticheat.log", Detection, "Netclient comms thread was found suspended! Abnormal program execution.");
 		return true;
