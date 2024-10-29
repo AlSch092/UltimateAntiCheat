@@ -22,26 +22,6 @@ class Integrity
 {
 public:
 
-	bool Check(uint64_t Address, int nBytes, vector<uint64_t> hashList);
-	
-	static vector<uint64_t> GetMemoryHash(uint64_t Address, int nBytes);
-
-	void SetMemoryHashList(vector<uint64_t> hList);
-	vector<uint64_t> GetMemoryHashList() { return this->_MemorySectionHashes; }
-
-	bool IsUnknownModulePresent();
-
-	vector<ProcessData::MODULE_DATA>* GetWhitelistedModules() { return this->WhitelistedModules; }
-	void AddToWhitelist(ProcessData::MODULE_DATA mod) { if(this->WhitelistedModules != nullptr) WhitelistedModules->push_back(mod); }
-
-	void AddModuleHash(vector<ModuleHashData*>* moduleHashList, wchar_t* moduleName);
-	ModuleHashData* GetModuleHash(const wchar_t* moduleName);
-	vector<ModuleHashData*>* GetModuleHashes();
-
-	bool IsModuleModified(const wchar_t* moduleName); //pinpoint any specific modules that have had their .text sections changed
-
-	bool IsTLSCallbackStructureModified(); //checks the TLSCallback structure in data directory for mods
-
 	Integrity(vector<ProcessData::MODULE_DATA>* startupModuleList) //modules gathered at program startup
 	{
 		WhitelistedModules = new vector<ProcessData::MODULE_DATA>();
@@ -71,6 +51,26 @@ public:
 		}
 
 	}
+
+	bool Check(uint64_t Address, int nBytes, vector<uint64_t> hashList);
+	
+	static vector<uint64_t> GetMemoryHash(uint64_t Address, int nBytes);
+
+	void SetMemoryHashList(vector<uint64_t> hList);
+	vector<uint64_t> GetMemoryHashList() { return this->_MemorySectionHashes; }
+
+	bool IsUnknownModulePresent();
+
+	vector<ProcessData::MODULE_DATA>* GetWhitelistedModules() { return this->WhitelistedModules; }
+	void AddToWhitelist(ProcessData::MODULE_DATA mod) { if(this->WhitelistedModules != nullptr) WhitelistedModules->push_back(mod); }
+
+	void AddModuleHash(vector<ModuleHashData*>* moduleHashList, wchar_t* moduleName);
+	ModuleHashData* GetModuleHash(const wchar_t* moduleName);
+	vector<ModuleHashData*>* GetModuleHashes();
+
+	bool IsModuleModified(const wchar_t* moduleName); //pinpoint any specific modules that have had their .text sections changed
+
+	bool IsTLSCallbackStructureModified(); //checks the TLSCallback structure in data directory for mods
 
 private:
 	
