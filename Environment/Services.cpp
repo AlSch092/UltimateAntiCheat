@@ -441,7 +441,6 @@ BOOL Services::IsRunningAsAdmin()
     BOOL isAdmin = FALSE;
     PSID adminGroup = NULL;
 
-    // Allocate and initialize a SID for the administrators group
     SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
     if (AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID,DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &adminGroup)) 
     {
@@ -451,6 +450,10 @@ BOOL Services::IsRunningAsAdmin()
     return isAdmin;
 }
 
+/*
+    LaunchProcess(string path, string args) - CreateProcessA wrapper
+    returns `true` on successful process launch
+*/
 BOOL Services::LaunchProcess(string path, string args)
 {
     // Define the path to the updater executable
@@ -480,6 +483,9 @@ BOOL Services::LaunchProcess(string path, string args)
     return true;
 }
 
+/*
+    GetHardwareDevicesW - returns a list<DeviceW>  representing various devices on the machine
+*/
 list<DeviceW> Services::GetHardwareDevicesW()
 {
     list<DeviceW> deviceList;
@@ -488,45 +494,38 @@ list<DeviceW> Services::GetHardwareDevicesW()
     SP_DEVINFO_DATA deviceInfoData;
     DWORD deviceIndex = 0;
 
-    // Get the list of all PCI devices
-    deviceInfoSet = SetupDiGetClassDevsA(NULL, "PCI", NULL, DIGCF_PRESENT | DIGCF_ALLCLASSES);
+    deviceInfoSet = SetupDiGetClassDevsA(NULL, "PCI", NULL, DIGCF_PRESENT | DIGCF_ALLCLASSES);     //Get the list of all PCI devices
+
     if (deviceInfoSet == INVALID_HANDLE_VALUE) 
     {
-        //std::cerr << "SetupDiGetClassDevs failed with error: " << GetLastError() << std::endl;
+        Logger::logf("UltimateAnticheat.log", Warning, "SetupDiGetClassDevs failed with error: %d @ Services::GetHardwareDevicesW\n", GetLastError());
         return {};
     }
 
     deviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
 
-    // Iterate over the devices
     while (SetupDiEnumDeviceInfo(deviceInfoSet, deviceIndex, &deviceInfoData)) 
     {
         deviceIndex++;
         DeviceW d;
 
-        // Get the device instance ID
         TCHAR deviceInstanceId[MAX_DEVICE_ID_LEN];
-        if (CM_Get_Device_ID(deviceInfoData.DevInst, deviceInstanceId, MAX_DEVICE_ID_LEN, 0) == CR_SUCCESS) 
+        if (CM_Get_Device_ID(deviceInfoData.DevInst, deviceInstanceId, MAX_DEVICE_ID_LEN, 0) == CR_SUCCESS)         // Get the device instance ID
         {
-            //std::wcout << L"Device Instance ID: " << deviceInstanceId << std::endl;
             d.InstanceID = wstring(deviceInstanceId);
         }
         else
         {
-            //std::cerr << "CM_Get_Device_ID failed with error: " << GetLastError() << std::endl;
             continue;
         }
 
-        // Get the device description
         TCHAR deviceDescription[1024];
-        if (SetupDiGetDeviceRegistryProperty(deviceInfoSet, &deviceInfoData, SPDRP_DEVICEDESC, NULL, (PBYTE)deviceDescription, sizeof(deviceDescription), NULL)) 
+        if (SetupDiGetDeviceRegistryProperty(deviceInfoSet, &deviceInfoData, SPDRP_DEVICEDESC, NULL, (PBYTE)deviceDescription, sizeof(deviceDescription), NULL))          // Get the device description
         {
-            //std::wcout << L"Device Description: " << deviceDescription << std::endl;
             d.Description = wstring(deviceDescription);
         }
         else 
         {
-           // std::cerr << "SetupDiGetDeviceRegistryProperty failed with error: " << GetLastError() << std::endl;
             continue;
         }
 
@@ -535,11 +534,10 @@ list<DeviceW> Services::GetHardwareDevicesW()
 
     if (GetLastError() != ERROR_NO_MORE_ITEMS)
     {
-        //std::cerr << "SetupDiEnumDeviceInfo failed with error: " << GetLastError() << std::endl;
+        Logger::logf("UltimateAnticheat.log", Warning, "SetupDiEnumDeviceInfo failed with error: %d @ Services::GetHardwareDevicesW\n", GetLastError());
     }
 
-    // Cleanup
-    SetupDiDestroyDeviceInfoList(deviceInfoSet);
+    SetupDiDestroyDeviceInfoList(deviceInfoSet); 
 
     return deviceList;
 }
@@ -550,20 +548,21 @@ BOOL Services::IsSecureBootEnabled_RegKey()
     LONG lResult;
     DWORD dwSize = sizeof(DWORD);
     DWORD dwValue = 0;
-    const char* registryPath = "SYSTEM\\CurrentControlSet\\Control\\SecureBoot\\State"; //xor this
+    const char* registryPath = "SYSTEM\\CurrentControlSet\\Control\\SecureBoot\\State"; //optionally xor this
     const char* valueName = "UEFISecureBootEnabled";
 
     lResult = RegOpenKeyExA(HKEY_LOCAL_MACHINE, registryPath, 0, KEY_READ, &hKey);
+
     if (lResult != ERROR_SUCCESS) 
     {
-        //std::cerr << "Error opening registry key: " << lResult << std::endl;
         return FALSE;
     }
 
     lResult = RegQueryValueExA(hKey, valueName, NULL, NULL, (LPBYTE)&dwValue, &dwSize);
+
     if (lResult != ERROR_SUCCESS) 
     {
-        //std::cerr << "Error querying registry value: " << lResult << std::endl;
+        Logger::logf("UltimateAnticheat.log", Warning, "RegCloseKey failed with error: %d @ Services::IsSecureBootEnabled_RegKey\n", lResult);
         RegCloseKey(hKey);
         return FALSE;
     }
