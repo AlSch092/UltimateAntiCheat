@@ -739,3 +739,16 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
     pEnumerator->Release();
     CoUninitialize();
 }
+
+/*
+    InitializeBlacklistedProcessesList - add static list of blacklisted process names to our Detections object
+*/
+void Detections::InitializeBlacklistedProcessesList()
+{
+    this->BlacklistedProcesses.push_back(L"Cheat Engine.exe"); //todo: hide these strings
+    this->BlacklistedProcesses.push_back(L"CheatEngine.exe"); //...we can  also scan for window class names, possible exported functions, specific text inside windows, etc.
+    this->BlacklistedProcesses.push_back(L"cheatengine-x86_64-SSE4-AVX2.exe");
+    this->BlacklistedProcesses.push_back(L"x64dbg.exe");
+    this->BlacklistedProcesses.push_back(L"windbg.exe");
+    this->BlacklistedProcesses.push_back(L"DSEFix.exe");
+}

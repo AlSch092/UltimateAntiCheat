@@ -21,18 +21,13 @@ public:
 
 	Detections(Settings* s, BOOL StartMonitor, shared_ptr<NetClient> client, vector<ProcessData::MODULE_DATA>* currentModules) : Config(s), netClient(client)
 	{
+		this->InitializeBlacklistedProcessesList();
+
 		MonitoringProcessCreation = false; //gets set to true inside `MonitorProcessCreation`
 
 		_Services = make_unique<Services>(false);
 
 		integrityChecker = make_shared<Integrity>(currentModules);
-
-		BlacklistedProcesses.push_back(L"Cheat Engine.exe"); //todo: hide these strings
-		BlacklistedProcesses.push_back(L"CheatEngine.exe"); //...we can  also scan for window class names, possible exported functions, specific text inside windows, etc.
-		BlacklistedProcesses.push_back(L"cheatengine-x86_64-SSE4-AVX2.exe");	
-		BlacklistedProcesses.push_back(L"x64dbg.exe");
-		BlacklistedProcesses.push_back(L"windbg.exe");
-		BlacklistedProcesses.push_back(L"DSEFix.exe");
 
 		this->CheaterWasDetected = new ObfuscatedData<uint8_t>((bool)false); //using 'bool' as the templated type will force values to 0/1 by the compiler when we need to xor them to other values
 
@@ -93,6 +88,8 @@ public:
 	Settings* GetSettings() { return this->Config; }
 
 private:
+
+	void InitializeBlacklistedProcessesList();
 
 	static void MonitorProcessCreation(LPVOID thisPtr);
 
