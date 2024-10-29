@@ -159,20 +159,7 @@ bool UnmanagedGlobals::AddThread(DWORD id)
     }
     else
     {
-        Thread* t = new Thread(); //memory must be free'd after done using, this function does not free mem
-        t->Id = tid;
-
-        if (GetThreadContext(threadHandle, &context))
-        {
-            t->ContextFlags = context.ContextFlags;
-        }
-        else
-        {
-            Logger::logf("UltimateAnticheat.log", Warning, " GetThreadContext failed @ TLS Callback: Thread %d", tid);
-            delete t;
-            return false;
-        }
-
+        Thread* t = new Thread(tid); //memory must be free'd after done using, this function does not free mem
         UnmanagedGlobals::ThreadList->push_back(t);
         return true;
     }
