@@ -21,9 +21,6 @@ public:
 
 	Detections(Settings* s, BOOL StartMonitor, shared_ptr<NetClient> client, vector<ProcessData::MODULE_DATA>* currentModules) : Config(s), netClient(client)
 	{
-		if (s != nullptr)
-			this->Config = s;
-
 		MonitoringProcessCreation = false; //gets set to true inside `MonitorProcessCreation`
 
 		_Services = make_unique<Services>(false);
