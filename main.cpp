@@ -1,5 +1,5 @@
 /*  
-    U.A.C. is a non-invasive usermode anticheat for x64 Windows, tested on Windows 10 & 11. Usermode is used to ensure optimal end user experience
+    U.A.C. is a non-invasive usermode anticheat for x64 Windows, tested on Windows 10 & 11. Usermode is used to ensure an optimal end user experience. It also provides insight into how many kernelmode attack methods can be prevented from usermode, through concepts such as secure boot enforcement and DSE checking.
     
     Please view the readme for more information regarding program features. If you'd like to use this project in your game/software, please contact the author.
 
@@ -74,29 +74,50 @@ int main(int argc, char** argv)
 
     Settings* ConfigInstance = &Settings::GetInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator);
 
-    unique_ptr<AntiCheat> Anti_Cheat = make_unique<AntiCheat>(ConfigInstance); //main object of the program
+    if (ConfigInstance->bRequireRunAsAdministrator)
+    {
+        if (!Services::IsRunningAsAdmin()) //enforce secure boot to stop bootloader cheats
+        {
+            MessageBoxA(0, "Program must be running as administrator in order to proceed, or change `bRequireRunAsAdministrator` to false.", "UltimateAntiCheat", 0);
+            Logger::logf("UltimateAnticheat.log", Detection, "Program must be running as administrator in order to proceed, or change `bRequireRunAsAdministrator` to false.");
+            return 0;
+        }
+    }
 
     if (ConfigInstance->bEnforceSecureBoot)
     {
         if (!Services::IsSecureBootEnabled()) //enforce secure boot to stop bootloader cheats
         {
-            Logger::logf("UltimateAnticheat.log", Err, "Secure boot is not enabled, thus you cannot proceed. Please enable secure boot in your BIOS.");
+            MessageBoxA(0, "Secure boot is not enabled, thus you cannot proceed. Please enable secure boot in your BIOS or change `bEnforceSecureBoot` to false.", "UltimateAntiCheat", 0);
+            Logger::logf("UltimateAnticheat.log", Detection, "Secure boot is not enabled, thus you cannot proceed. Please enable secure boot in your BIOS or change `bEnforceSecureBoot` to false.");
             return 0;
         }
     }
-  
-    if (ConfigInstance->bCheckHypervisor)
+
+    if (ConfigInstance->bEnforceDSE)
     {
-        if (Services::IsHypervisor())  //initial check on hypervisor, do not let program proceed if a hypervisor is detected
+        if (!Services::IsTestsigningEnabled()) //check test signing mode before startup
+        {
+            MessageBoxA(0, "Test signing was enabled, thus you cannot proceed. Please turn off test signing via `bcdedit.exe`, or change `bEnforceDSE` to false.", "UltimateAntiCheat", 0);
+            Logger::logf("UltimateAnticheat.log", Detection, "Test signing was enabled, thus you cannot proceed. Please turn off test signing via `bcdedit.exe`, or change `bEnforceDSE` to false.");
+            return 0;
+        }
+    }
+
+    if (ConfigInstance->bCheckHypervisor) //initial check on hypervisor, do not let program proceed if a hypervisor is detected
+    {
+        if (Services::IsHypervisor())  
         {
             char vendor[255]{ 0 };
 
             Services::GetHypervisorVendor(vendor);
 
             Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor was present with vendor: %s", vendor);
-            goto cleanup;
+            return 0;
         }
     }
+
+    unique_ptr<AntiCheat> Anti_Cheat = make_unique<AntiCheat>(ConfigInstance, Services::GetWindowsVersion()); //main object of the program
 
     if (API::Dispatch(Anti_Cheat.get(), API::DispatchCode::INITIALIZE) != Error::OK) //initialize AC , this will start all detections + preventions
     {
