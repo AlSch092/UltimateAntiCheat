@@ -30,17 +30,12 @@ namespace Debugger
     {
     public:
         
-        AntiDebug(Settings* s, std::shared_ptr<NetClient> netClient)
+        AntiDebug(Settings* s, std::shared_ptr<NetClient> netClient) : netClient(netClient), Config(s)
         {
-            this->netClient = netClient;
-
             if (!PreventWindowsDebuggers())
             {
                 Logger::logf("UltimateAnticheat.log", Warning, "Failed to apply anti-debugging technique @ AntiDebug()");
             }
-
-            if (s != nullptr)
-                this->Config = s;
         }
 
         ~AntiDebug()
