@@ -595,38 +595,59 @@ BOOL Services::CheckUSBDevices()
     return (foundFTDI | foundLeonardo);
 }
 
-int Services::GetWindowsMajorVersion()
+/*
+    WindowsVersions GetWindowsVersion() - returns current machine version
+*/
+WindowsVersion Services::GetWindowsVersion()
 {
-    int versionMajor = 0;
-
     RTL_OSVERSIONINFOW osVersionInfo;
     osVersionInfo.dwOSVersionInfoSize = sizeof(osVersionInfo);
 
     NTSTATUS status = RtlGetVersion(&osVersionInfo);
 
-    if (status != 0) 
-    {  // Non-zero status indicates failure
-        return 0;
-    }
-
-    if (osVersionInfo.dwMajorVersion == 6 && osVersionInfo.dwMinorVersion == 1)
+    if (status != 0)
     {
-        return 7;
+        Logger::logf("UltimateAnticheat.log", Warning, "Services::GetWindowsMajorVersion failed with error: %x", status);
+        return ErrorUnknown;
     }
 
-    if (osVersionInfo.dwMajorVersion == 10 && osVersionInfo.dwMinorVersion == 0)
+    if (osVersionInfo.dwMajorVersion == 5 && osVersionInfo.dwMinorVersion == 0)
+    {
+        return Windows2000;
+    }
+    else if (osVersionInfo.dwMajorVersion == 5 && osVersionInfo.dwMinorVersion == 1)
+    {
+        return WindowsXP;
+    }
+    else if (osVersionInfo.dwMajorVersion == 5 && osVersionInfo.dwMinorVersion == 2)
+    {
+        return WindowsXPProfessionalx64;
+    }
+    else if (osVersionInfo.dwMajorVersion == 6 && osVersionInfo.dwMinorVersion == 0)
+    {
+        return WindowsVista;
+    }
+    else if (osVersionInfo.dwMajorVersion == 6 && osVersionInfo.dwMinorVersion == 1)
+    {
+        return Windows7;
+    }
+    else if (osVersionInfo.dwMajorVersion == 6 && osVersionInfo.dwMinorVersion == 2)
+    {
+        return Windows8;
+    }
+    else if (osVersionInfo.dwMajorVersion == 10 && osVersionInfo.dwMinorVersion == 0)
     {
         if (osVersionInfo.dwBuildNumber < 22000)
         {
-            return 10;
+            return Windows10;
         }
-        else 
+        else
         {
-            return 11;
+            return Windows11;
         }
     }
 
-    return 0;
+    return ErrorUnknown;
 }
 
 /*
