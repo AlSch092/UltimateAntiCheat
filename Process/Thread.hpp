@@ -23,10 +23,14 @@ public:
 		if (this->handle == INVALID_HANDLE_VALUE)
 		{
 			Logger::logf("UltimateAnticheat.log", Err, "Failed to create new thread @ Thread::Thread - address %llX", (UINT_PTR)toExecute);
+			this->CurrentlyRunning = false;
+			return;
 		}
 
 		this->ExecutionAddress = (UINT_PTR)toExecute;
 		this->OptionalParam = lpOptionalParam;
+		this->ShutdownSignalled = false;
+		this->CurrentlyRunning = true;
 	}
 
 	~Thread()
