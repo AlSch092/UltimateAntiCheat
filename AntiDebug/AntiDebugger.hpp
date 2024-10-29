@@ -45,7 +45,7 @@ namespace Debugger
 
         ~AntiDebug()
         {
-            delete this->DetectionThread;
+            delete DetectionThread;
         }
         
         list<Detections> GetDebuggerMethodsDetected() { return DebuggerMethodsDetected; }
