@@ -21,13 +21,9 @@ class AntiCheat
 {
 public:
 
-	AntiCheat(Settings* config)
+	AntiCheat(Settings* config, WindowsVersion WinVersion) : Config(config), WinVersion(WinVersion)
 	{		
-		if (config != nullptr)
-		{
-			this->Config = config;
-		}
-		else
+		if (config == nullptr)
 		{
 			Logger::logf("UltimateAnticheat.log", Err, "Settings pointer was NULL @ AntiCheat::AntiCheat");
 			return;
@@ -50,7 +46,7 @@ public:
 	
 	NetClient* GetNetworkClient() { return this->NetworkClient.get(); }
 	
-	Preventions* GetBarrier() { return this->Barrier.get();  }
+	Preventions* GetBarrier() { return this->Barrier.get(); }  //pointer lifetime stays within the Anticheat class, these 'Get' functions should only be used to call functions of these classes
 	
 	Detections* GetMonitor() { return this->Monitor.get(); }
 
@@ -69,6 +65,8 @@ private:
 	shared_ptr <NetClient> NetworkClient; //for client-server comms, our other classes need access to this to send detected flags to the server
 	
 	Settings* Config = nullptr; //the unique_ptr for this is made in main.cpp
+
+	WindowsVersion WinVersion;
 };
 
 /*
