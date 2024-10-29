@@ -18,12 +18,15 @@ public:
 	{
 	}
 
+	void SetThreadCreationPrevention(bool onoff) { this->IsPreventingThreadCreation = onoff; }
+	bool IsPreventingThreads() { return this->IsPreventingThreadCreation; }
+
 	Error DeployBarrier(); //activate all protections
 
 	static bool RemapProgramSections();
-	static bool PreventDllInjection(); //experimental, gives warning popup
-	static bool PreventShellcodeThreads(); //experimental, gives warning popup
-	static bool StopAPCInjection();
+	static bool PreventDllInjection(); //experimental, gives warning messagebox
+	static bool PreventShellcodeThreads(); //experimental, gives warning messagebox
+	static bool StopAPCInjection(); //patch over ntdll.Ordinal8
 
 #if _WIN32_WINNT >= 0x0602
 	static void EnableProcessMitigations(bool useDEP, bool useASLR, bool useDynamicCode, bool useStrictHandles, bool useSystemCallDisable); //interesting technique which uses the loader & system to block certain types of attacks, such as unsigned modules being injected
@@ -33,16 +36,9 @@ public:
 
 	static bool StopMultipleProcessInstances(); //stop multi-boxing via shared memory
 
-	void SetErrorCode(Error err) { this->LastError = err; }
-	Error GetErrorCode() { return this->LastError; }
-
-	void SetThreadCreationPrevention(bool onoff) { this->IsPreventingThreadCreation = onoff; }
-	bool IsPreventingThreads() { return this->IsPreventingThreadCreation; }
-
-	bool RandomizeModuleName(); //uses OriginalModuleName param
+	bool RandomizeModuleName(); //uses OriginalModuleName member
 
 private:
-	Error LastError = Error::OK;
 
 	const wstring OriginalModuleName = L"UltimateAnticheat.exe";
 
