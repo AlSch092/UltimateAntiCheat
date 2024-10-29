@@ -35,11 +35,15 @@ public:
 
 	~Thread()
 	{
+		Logger::logf("UltimateAnticheat.log", Info, "Ending thread which originally executed at: %llX", this->ExecutionAddress);
+
 		if (this->handle != INVALID_HANDLE_VALUE)
 		{
+			this->ShutdownSignalled = true;
+
 			if (!TerminateThread(this->handle, 0))
 			{
-				Logger::logf("UltimateAnticheat.log", Detection, "TerminateThread failed @ ~Thread");
+				Logger::logf("UltimateAnticheat.log", Warning, "TerminateThread failed @ ~Thread");
 			}
 		}
 	}
