@@ -9,11 +9,7 @@ void Detections::StartMonitor()
     if (this->MonitorThread != NULL)
         return;
 
-    this->MonitorThread = new Thread();
-    this->MonitorThread->handle = INVALID_HANDLE_VALUE;
-    this->MonitorThread->ShutdownSignalled = false; //ShutdownSignalled is used to prevent calling TerminateThread from other threads
-
-    this->MonitorThread->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, 0, &this->MonitorThread->Id);
+    this->MonitorThread = new Thread((LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this);
 
     Logger::logf("UltimateAnticheat.log", Info, "Created monitoring thread with ID %d", this->MonitorThread->Id);
     
@@ -391,7 +387,7 @@ BOOL __forceinline Detections::DoesIATContainHooked()
         DWORD moduleSize = Process::GetModuleSize(IATEntry->Module);
 
         if (moduleSize != 0)
-        {   //some IAT functions in k32 can point to ntdll, thus we have to compare IAT to each other whitelisted DLL range
+        {   //some IAT functions in k32 can point to ntdll (forwarding), thus we have to compare IAT to each other whitelisted DLL range
             for (std::vector<ProcessData::MODULE_DATA>::iterator it = modules->begin(); it != modules->end(); ++it)
             {
                 UINT64 LowAddr = (UINT64)it->dllInfo.lpBaseOfDll;
@@ -443,7 +439,7 @@ UINT64 Detections::IsTextSectionWritable()
         if (address >= max_addr)
             break;
 
-        if (mbi.Protect != PAGE_EXECUTE_READ) //many WRITE options exist, so instead of checking against each possible write option, check if its not RX protections
+        if (mbi.Protect != PAGE_EXECUTE_READ) //check if its not RX protections
         {
             Logger::logfw("UltimateAnticheat.log", Detection, L"Memory region at address %p is not PAGE_EXECUTE_READ - attacker likely re-re-mapped\n", address);
             return address;
@@ -637,6 +633,7 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
 {
     if (thisPtr == nullptr)
     {
+        Logger::logf("UltimateAnticheat.log", Err, "Monitor Ptr was NULL @ MonitorNewProcesses");
         return;
     }
 

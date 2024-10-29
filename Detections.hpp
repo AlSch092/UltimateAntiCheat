@@ -19,7 +19,7 @@ class Detections
 {
 public:
 
-	Detections(Settings* s, BOOL StartMonitor, shared_ptr<NetClient> client, vector<ProcessData::MODULE_DATA>* currentModules)
+	Detections(Settings* s, BOOL StartMonitor, shared_ptr<NetClient> client, vector<ProcessData::MODULE_DATA>* currentModules) : Config(s), netClient(client)
 	{
 		if (s != nullptr)
 			this->Config = s;
@@ -27,6 +27,7 @@ public:
 		MonitoringProcessCreation = false; //gets set to true inside `MonitorProcessCreation`
 
 		_Services = make_unique<Services>(false);
+
 		integrityChecker = make_shared<Integrity>(currentModules);
 
 		BlacklistedProcesses.push_back(L"Cheat Engine.exe"); //todo: hide these strings
@@ -38,12 +39,9 @@ public:
 
 		this->CheaterWasDetected = new ObfuscatedData<uint8_t>((bool)false); //using 'bool' as the templated type will force values to 0/1 by the compiler when we need to xor them to other values
 
-		if (client.get() != nullptr)
-			netClient = client;
-		
 		HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
 
-		if (hNtdll != 0)
+		if (hNtdll != 0) //register DLL notifications callback 
 		{
 			_LdrRegisterDllNotification pLdrRegisterDllNotification = (_LdrRegisterDllNotification)GetProcAddress(hNtdll, "LdrRegisterDllNotification");
 			PVOID cookie;
