@@ -12,11 +12,11 @@ class Thread
 {
 public:
 
-	Thread()
+	Thread(DWORD id) : Id(id) //Thread classes that call this constructor are ones we aren't creating ourselves to execute code, and rather ones collected in the TLS callback for bookkeeping purposes
 	{
 	}
 
-	Thread(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalParam)
+	Thread(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalParam) : ExecutionAddress((UINT_PTR)toExecute), OptionalParam(lpOptionalParam)
 	{
 		this->handle = CreateThread(0, 0, toExecute, lpOptionalParam, 0, &this->Id);
 
@@ -27,8 +27,6 @@ public:
 			return;
 		}
 
-		this->ExecutionAddress = (UINT_PTR)toExecute;
-		this->OptionalParam = lpOptionalParam;
 		this->ShutdownSignalled = false;
 		this->CurrentlyRunning = true;
 	}
@@ -49,8 +47,7 @@ public:
 	}
 
 	HANDLE handle = INVALID_HANDLE_VALUE;
-	DWORD Id = 0;
-	DWORD ContextFlags = 0;
+	DWORD Id = 0; //thread id
 
 	UINT_PTR ExecutionAddress = 0;
 	LPVOID OptionalParam = nullptr;
