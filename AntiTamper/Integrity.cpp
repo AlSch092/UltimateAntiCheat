@@ -234,7 +234,7 @@ void Integrity::AddModuleHash(vector<ModuleHashData*>* moduleHashList, wchar_t* 
 	Integrity::IsTLSCallbackModified() - checks if the pointer to the TLS callback address has been modified
 	Note: Someone should only be able to modifyh th
 */
-bool Integrity::IsTLSCallbackStructureModified()
+bool Integrity::IsTLSCallbackStructureModified() const
 {
 	HMODULE hModule = GetModuleHandle(NULL);
 	IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER*)hModule;
@@ -264,7 +264,7 @@ bool Integrity::IsTLSCallbackStructureModified()
 		if (!pTLSCallbacks)
 			return true;
 
-		if ((UINT64)pTLSCallbacks[i] < (UINT64)MainModule || (UINT64)pTLSCallbacks[i] > (UINT64)((UINT64)MainModule + ModuleSize)) //check if TLS callback is inside main module
+		if ((UINT64)pTLSCallbacks[i] < (UINT64)MainModule || (UINT64)pTLSCallbacks[i] > (UINT64)((UINT64)MainModule + ModuleSize)) //check if TLS callback is outside of main module range
 		{
 			return true;
 		}

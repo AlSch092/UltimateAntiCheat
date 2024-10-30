@@ -9,6 +9,9 @@
 
 #pragma comment (lib, "wintrust")
 
+/*
+	The `Authenticode` namespace contains functions to help with certificate & catalog verification
+*/
 namespace Authenticode
 {
 	BOOL VerifyEmbeddedSignature(LPCWSTR pwszSourceFile);

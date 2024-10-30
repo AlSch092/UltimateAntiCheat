@@ -32,24 +32,24 @@ public:
 			WhitelistedModules->push_back(mod);
 		}
 
-		ModuleHashes = GetModuleHashes(); //
+		ModuleHashes = GetModuleHashes(); 
 	}
 
 	~Integrity()
 	{
-		delete WhitelistedModules;
+		if(WhitelistedModules != nullptr)
+			delete WhitelistedModules;
 
 		if (ModuleHashes != nullptr)
 		{
 			for (std::vector<ModuleHashData*>::const_iterator it = ModuleHashes->begin(); it != ModuleHashes->end(); ++it)
 			{
 				if ((*it)->Name != nullptr)
-					delete[] (*it)->Name;
+					delete[](*it)->Name;
 
-				delete *it;
+				delete* it;
 			}
 		}
-
 	}
 
 	bool Check(uint64_t Address, int nBytes, vector<uint64_t> hashList);
@@ -57,11 +57,13 @@ public:
 	static vector<uint64_t> GetMemoryHash(uint64_t Address, int nBytes);
 
 	void SetMemoryHashList(vector<uint64_t> hList);
-	vector<uint64_t> GetMemoryHashList() { return this->_MemorySectionHashes; }
+
+	vector<uint64_t> GetMemoryHashList() const { return this->_MemorySectionHashes; }
 
 	bool IsUnknownModulePresent();
 
-	vector<ProcessData::MODULE_DATA>* GetWhitelistedModules() { return this->WhitelistedModules; }
+	vector<ProcessData::MODULE_DATA>* GetWhitelistedModules() const { return this->WhitelistedModules; }
+	
 	void AddToWhitelist(ProcessData::MODULE_DATA mod) { if(this->WhitelistedModules != nullptr) WhitelistedModules->push_back(mod); }
 
 	void AddModuleHash(vector<ModuleHashData*>* moduleHashList, wchar_t* moduleName);
@@ -70,12 +72,11 @@ public:
 
 	bool IsModuleModified(const wchar_t* moduleName); //pinpoint any specific modules that have had their .text sections changed
 
-	bool IsTLSCallbackStructureModified(); //checks the TLSCallback structure in data directory for mods
+	bool IsTLSCallbackStructureModified() const; //checks the TLSCallback structure in data directory for mods
 
 private:
 	
 	vector<uint64_t> _MemorySectionHashes; //hashes of .text section of executable module
 	vector<ProcessData::MODULE_DATA>* WhitelistedModules = nullptr;
-
 	vector<ModuleHashData*>* ModuleHashes = nullptr; //tuple of module name, and their list of hashes
 };
