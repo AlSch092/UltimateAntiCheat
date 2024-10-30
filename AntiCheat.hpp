@@ -28,29 +28,37 @@ public:
 			Logger::logf("UltimateAnticheat.log", Err, "Settings pointer was NULL @ AntiCheat::AntiCheat");
 			return;
 		}
-
-		this->NetworkClient = std::make_shared<NetClient>();
-
-		this->_AntiDebugger = std::make_unique<Debugger::AntiDebug>(config, NetworkClient); //any detection methods need the netclient for comms
-
-		this->Monitor = std::make_unique<Detections>(config, false, NetworkClient, UnmanagedGlobals::ModulesAtStartup);
 		
-		this->Barrier = std::make_unique<Preventions>(config, true, Monitor.get()->GetIntegrityChecker()); //true = prevent new threads from being made
+		try
+		{
+			this->NetworkClient = std::make_shared<NetClient>();
+
+			this->_AntiDebugger = std::make_unique<Debugger::AntiDebug>(config, NetworkClient); //any detection methods need the netclient for comms
+
+			this->Monitor = std::make_unique<Detections>(config, false, NetworkClient, UnmanagedGlobals::ModulesAtStartup);
+
+			this->Barrier = std::make_unique<Preventions>(config, true, Monitor.get()->GetIntegrityChecker()); //true = prevent new threads from being made
+		}
+		catch (const std::bad_alloc& e)
+		{
+			Logger::logf("UltimateAnticheat.log", Err, "Critical allocation failure in AntiCheat::AntiCheat: %s", e.what());
+			std::terminate();  //do not allow proceed if any pointers fail to alloc
+		}
 	}
 
 	~AntiCheat() //the destructor is now empty since all pointers of this class were recently switched to unique_ptrs
 	{
 	}
 
-	Debugger::AntiDebug* GetAntiDebugger() { return this->_AntiDebugger.get(); }
+	Debugger::AntiDebug* GetAntiDebugger() const { return this->_AntiDebugger.get(); }
 	
-	NetClient* GetNetworkClient() { return this->NetworkClient.get(); }
+	NetClient* GetNetworkClient() const  { return this->NetworkClient.get(); }
 	
-	Preventions* GetBarrier() { return this->Barrier.get(); }  //pointer lifetime stays within the Anticheat class, these 'Get' functions should only be used to call functions of these classes
+	Preventions* GetBarrier() const  { return this->Barrier.get(); }  //pointer lifetime stays within the Anticheat class, these 'Get' functions should only be used to call functions of these classes
 	
-	Detections* GetMonitor() { return this->Monitor.get(); }
+	Detections* GetMonitor() const { return this->Monitor.get(); }
 
-	Settings* GetConfiguration() { return this->Config; }
+	Settings* GetConfiguration() const { return this->Config; }
 
 	__forceinline bool IsAnyThreadSuspended();
 

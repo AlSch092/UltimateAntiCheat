@@ -25,10 +25,18 @@ public:
 
 		MonitoringProcessCreation = false; //gets set to true inside `MonitorProcessCreation`
 
-		_Services = make_unique<Services>(false);
-
-		integrityChecker = make_shared<Integrity>(currentModules);
-
+		try 
+		{
+			_Proc = make_unique<Process>(EXPECTED_SECTIONS);
+			_Services = make_unique<Services>(false);
+			integrityChecker = make_shared<Integrity>(currentModules);
+		}
+		catch (const std::bad_alloc& e) 
+		{
+			Logger::logf("UltimateAnticheat.log", Err, "One or more pointers could not be allocated @ Detections::Detections: %s", e.what());
+			std::terminate();
+		}
+	
 		this->CheaterWasDetected = new ObfuscatedData<uint8_t>((bool)false); //using 'bool' as the templated type will force values to 0/1 by the compiler when we need to xor them to other values
 
 		HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
@@ -48,44 +56,48 @@ public:
 
 	~Detections()
 	{
-		if (MonitorThread != NULL) //by the time this destructor is called the monitorthread should be exited, but adding in a 'thread running' check might still be handy here
+		if (MonitorThread != NULL)
 			delete MonitorThread;
 	}
 
 	NetClient* GetNetClient() { return this->netClient.get(); }
 
-	void SetCheater(BOOL cheating) { this->CheaterWasDetected->SetData((uint8_t)cheating); } //obfuscated bool/int variable. cast to uint8 to avoid getting stuck as 0/1 by compilers bool interpretation
-	BOOL IsUserCheater() { return this->CheaterWasDetected->GetData(); }
+	Settings* GetSettings() const { return this->Config; }
 
-	Services* GetServiceManager() { return this->_Services.get(); }
-	shared_ptr<Integrity> GetIntegrityChecker() { return this->integrityChecker; }
+	Services* GetServiceManager() const { return this->_Services.get(); }
+
+	shared_ptr<Integrity> GetIntegrityChecker() const { return this->integrityChecker; }
+
+	void SetCheater(BOOL cheating) { this->CheaterWasDetected->SetData((uint8_t)cheating); } //obfuscated bool/int variable. cast to uint8 to avoid getting stuck as 0/1 by compilers bool interpretation
+	BOOL IsUserCheater() const  { return this->CheaterWasDetected->GetData(); }
 
 	list<ProcessData::Section*>* SetSectionHash(const char* module, const char* sectionName);
 	BOOL CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize);
 
-	static void Monitor(LPVOID thisPtr); //activate all -> thread function
+	Thread* GetMonitorThread() const { return this->MonitorThread; }
 
-	Thread* GetMonitorThread() { return this->MonitorThread; }
-	void SetMonitorThread(Thread* h) {  this->MonitorThread = h; }
-
-	Process* GetProcessObj() { return this->_Proc; }
-	void SetProcessObj(Process* obj) { this->_Proc = obj; }
+	Process* GetProcessObj() const { return this->_Proc.get(); }  //other classes should not be able to set the process object, it is created by default in the constructor
 
 	void StartMonitor(); //begin threading
 
-	BOOL IsBlacklistedProcessRunning();
+	BOOL IsBlacklistedProcessRunning() const;
 
 	static BOOL DoesFunctionAppearHooked(const char* moduleName, const char* functionName); //checks for jumps or calls as the first byte on a function
-	static BOOL DoesIATContainHooked();
-	static UINT64 IsTextSectionWritable();
+	
+	static BOOL DoesIATContainHooked(); //check IAT for hooks
+	
+	static UINT64 IsTextSectionWritable(); //check all pages in .text section of image module for writable pages (after remapping, our .text section should only have RX protected pages)
+	
 	static BOOL CheckOpenHandles(); //detect any open handles to our process, very useful since this will detect most external cheats
+	
 	BOOL IsBlacklistedWindowPresent();
 
 	bool AddDetectedFlag(DetectionFlags f); //add to DetectedFlags without duplicates
-	bool Flag(DetectionFlags flag);
+	bool Flag(DetectionFlags flag); //sets `IsCheater` to true, notifies server component of detected flag
+
 	static VOID OnDllNotification(ULONG NotificationReason, const PLDR_DLL_NOTIFICATION_DATA NotificationData, PVOID Context);
 
-	Settings* GetSettings() { return this->Config; }
+	static void Monitor(LPVOID thisPtr); //loop detections/monitor -> thread function
 
 private:
 
@@ -101,14 +113,14 @@ private:
 	shared_ptr<Integrity> integrityChecker = NULL;
 	shared_ptr<NetClient> netClient; //send any detections to the server
 
-	Thread* MonitorThread = NULL; //these should ideally be unique_ptrs which end the thread when the pointers go out of scope
+	Thread* MonitorThread = NULL; //these should ideally be unique_ptrs which end the thread when the pointers go out of scope, will make these changes soon
 	Thread* ProcessCreationMonitorThread = NULL;
 
 	list<wstring> BlacklistedProcesses;
 
-	Process* _Proc = new Process(EXPECTED_SECTIONS); //keep track of our sections, loaded modules, etc using a managed class
+	unique_ptr<Process> _Proc = nullptr; //keep track of our sections, loaded modules, etc using a managed class
+
+	Settings* Config; //non-owning pointer to the original unique_ptr<Settings> in main.cpp
 
 	list<DetectionFlags> DetectedFlags;
-
-	Settings* Config = nullptr;
 };

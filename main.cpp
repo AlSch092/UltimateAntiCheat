@@ -3,7 +3,7 @@
     
     Please view the readme for more information regarding program features. If you'd like to use this project in your game/software, please contact the author.
 
-    License: Lesser GNU (LGPL), please be aware of what and what not can be done with this license.. ** you do not have the right to copy this project into your closed-source, for-profit project **
+    License: GNU Affero general public license, please be aware of what and what not can be done with this license.. ** you do not have the right to copy this project into your closed-source, for-profit project **
 
     Author: AlSch092 @ Github
 */
@@ -31,7 +31,7 @@ PIMAGE_TLS_CALLBACK _tls_callback = FakeTLSCallback; //We're modifying our TLS c
 
 using namespace std;
 
-unique_ptr<Settings> Settings::Instance = nullptr; //initialize settings instance singleton
+unique_ptr<Settings> Settings::Instance = nullptr; //we only want a single instance of this object throughout the program (some classes might use pointers to this object)
 
 int main(int argc, char** argv)
 {
@@ -117,7 +117,17 @@ int main(int argc, char** argv)
         }
     }
 
-    unique_ptr<AntiCheat> Anti_Cheat = make_unique<AntiCheat>(ConfigInstance, Services::GetWindowsVersion()); //main object of the program
+    unique_ptr<AntiCheat> Anti_Cheat = nullptr;
+
+    try
+    {
+        Anti_Cheat = make_unique<AntiCheat>(ConfigInstance, Services::GetWindowsVersion());   //after all environmental checks (secure boot, DSE, adminmode) are performed, create the AntiCheat object
+    }
+    catch (const std::bad_alloc& e)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Anticheat pointer could not be allocated @ main(): %s", e.what());
+        std::terminate();
+    }
 
     if (API::Dispatch(Anti_Cheat.get(), API::DispatchCode::INITIALIZE) != Error::OK) //initialize AC , this will start all detections + preventions
     {
@@ -148,7 +158,7 @@ int main(int argc, char** argv)
 
 cleanup: //jump to here on any error with AC initialization
 
-    if (API::Dispatch(Anti_Cheat.get(), API::DispatchCode::CLIENT_EXIT) == Error::OK) //clean up memory & threads
+    if (API::Dispatch(Anti_Cheat.get(), API::DispatchCode::CLIENT_EXIT) == Error::OK) //clean up memory & threads -> this will soon be removed once all threads and objects are changed to smart pointers
     {
         Logger::logf("UltimateAnticheat.log", Info, " Cleanup successful. Shutting down program");
     }
@@ -295,13 +305,13 @@ void NTAPI __stdcall FakeTLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserv
         if (!Preventions::StopMultipleProcessInstances()) //prevent multi-clients by using shared memory-mapped region
         {
             Logger::logf("UltimateAnticheat.log", Err, "Could not initialize program: shared memory check failed, make sure only one instance of the program is open. Shutting down.");
-            exit(-1);
+            std::terminate();
         }
 
         if (!Process::ModifyTLSCallbackPtr((UINT64)&TLSCallback)) //TLSCallback is our real callback, FakeTLSCallback is set at compile time since people will try to patch over bytes in the callback to inject their dlls
         {
             Logger::logf("UltimateAnticheat.log", Err, "Could not initialize program: ModifyTLSCallback failed. Shutting down.");
-            exit(-1);
+            std::terminate();
         }
 
         UnmanagedGlobals::ModulesAtStartup = Process::GetLoadedModules();  //take a snapshot of loaded modules at program startup for later comparison. If you're loading dlls dynamically, you'll need to update this member with a new MODULE_DATA*

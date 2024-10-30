@@ -286,7 +286,7 @@ BOOL Detections::CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize)
     IsBlacklistedProcessRunning 
     returns TRUE if a blacklisted program is running in the background, blacklisted processes can be found in the class constructor
 */
-BOOL __forceinline Detections::IsBlacklistedProcessRunning()
+BOOL __forceinline Detections::IsBlacklistedProcessRunning() const
 {
     BOOL foundBlacklistedProcess = FALSE;
 

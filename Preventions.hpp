@@ -19,7 +19,7 @@ public:
 	}
 
 	void SetThreadCreationPrevention(bool onoff) { this->IsPreventingThreadCreation = onoff; }
-	bool IsPreventingThreads() { return this->IsPreventingThreadCreation; }
+	bool IsPreventingThreads() const { return this->IsPreventingThreadCreation; }
 
 	Error DeployBarrier(); //activate all protections
 
@@ -36,7 +36,7 @@ public:
 
 	static bool StopMultipleProcessInstances(); //stop multi-boxing via shared memory
 
-	bool RandomizeModuleName(); //uses OriginalModuleName member
+	bool RandomizeModuleName(); //uses OriginalModuleName member, thus is not static
 
 private:
 
