@@ -10,11 +10,11 @@ char* Utility::GenerateRandomString(int length) //make sure to delete[] memory a
 
     char* randomString = new char[(length + 1) * sizeof(char)];
 
-    srand(time((time_t*)GetTickCount()));
+    srand(time((time_t*)GetTickCount64()));
 
-    for (int i = 0; i < length; ++i) 
+    for (int i = 0; i < length; ++i)
         randomString[i] = charset[rand() % (strlen(charset) - 1)];
-  
+
     randomString[length] = '\0';
 
     return randomString;
@@ -29,7 +29,7 @@ wchar_t* Utility::GenerateRandomWString(int length) //make sure to delete[] memo
 
     wchar_t* randomString = new wchar_t[(length + 1) * sizeof(wchar_t)];
 
-    srand(time((time_t*)GetTickCount()));
+    srand(time((time_t*)GetTickCount64()));
 
     for (int i = 0; i < length; ++i)
         randomString[i] = charset[rand() % (wcslen(charset) - 1)];
@@ -39,49 +39,53 @@ wchar_t* Utility::GenerateRandomWString(int length) //make sure to delete[] memo
     return randomString;
 }
 
-void Utility::str_to_lower(char* str) 
+void Utility::str_to_lower(char* str)
 {
-    while (*str) {
+    while (*str)
+    {
         *str = tolower((unsigned char)*str);
         str++;
     }
 }
 
-char* Utility::strstr_case_insensitive(const char* haystack, const char* needle) 
+char* Utility::strstr_case_insensitive(const char* haystack, const char* needle)
 {
-    if (!*needle) 
+    if (!haystack || !needle)
+    {
+        return nullptr;
+    }
+
+    if (!*needle)
     {
         return (char*)haystack;
     }
 
-    // Create lowercase copies of haystack and needle
     char* haystack_lower = _strdup(haystack);
     char* needle_lower = _strdup(needle);
 
     if (!haystack_lower || !needle_lower)
     {
-        // Memory allocation failed
-        return NULL;
+        free(haystack_lower);
+        free(needle_lower);
+        return nullptr;
     }
 
-    // Convert both strings to lowercase
-    str_to_lower(haystack_lower);
-    str_to_lower(needle_lower);
+    for (char* p = haystack_lower; *p; ++p)
+    {
+        *p = std::tolower(*p);
+    }
 
-    // Search for the needle in the haystack
+    for (char* p = needle_lower; *p; ++p)
+    {
+        *p = std::tolower(*p);
+    }
+
     char* result = strstr(haystack_lower, needle_lower);
-
-    // Clean up memory
+    char* final_result = result ? (char*)(haystack + (result - haystack_lower)) : nullptr;
     free(haystack_lower);
     free(needle_lower);
 
-    // Return the result as a pointer to the original haystack
-    if (result) {
-        return (char*)(haystack + (result - haystack_lower));
-    }
-    else {
-        return NULL;
-    }
+    return final_result;
 }
 
 bool Utility::strcmp_insensitive(const char* s1, const char* s2)
@@ -89,10 +93,10 @@ bool Utility::strcmp_insensitive(const char* s1, const char* s2)
     if (s1 == NULL || s2 == NULL)
         return false;
 
-    int len1 = (int)strlen(s1); //can overflow: be careful -> a process with a specific name could trigger an overflow situation
+    int len1 = (int)strlen(s1);
     int len2 = (int)strlen(s2);
 
-    if (len1 != len2) //strings can't be equal if lengths are diff
+    if (len1 != len2)
         return false;
 
     for (int i = 0; i < len1; i++)
@@ -111,10 +115,10 @@ bool Utility::wcscmp_insensitive(const wchar_t* s1, const wchar_t* s2)
     if (s1 == NULL || s2 == NULL)
         return false;
 
-    int len1 = (int)wcslen(s1); //can overflow: be careful
+    int len1 = (int)wcslen(s1);
     int len2 = (int)wcslen(s2);
 
-    if (len1 != len2) //strings can't be equal if lengths are diff
+    if (len1 != len2)
         return false;
 
     for (int i = 0; i < len1; i++)
@@ -128,15 +132,10 @@ bool Utility::wcscmp_insensitive(const wchar_t* s1, const wchar_t* s2)
     return true;
 }
 
-std::string Utility::ConvertWStringToString(const std::wstring& wstr) 
+std::string Utility::ConvertWStringToString(const std::wstring& wstr)
 {
-    // Create a locale object with the system default locale
     std::locale loc("");
-
-    // Create a codecvt facet for UTF-8 conversion
     std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
-
-    // Convert the wide string to a narrow string using UTF-8 encoding
     return conv.to_bytes(wstr);
 }
 
@@ -146,11 +145,11 @@ std::wstring Utility::ConvertStringToWString(const std::string& str)
     return converter.from_bytes(str);
 }
 
-std::vector<std::string> Utility::splitStringBySpace(char* str) 
+std::vector<std::string> Utility::splitStringBySpace(char* str)
 {
     std::vector<std::string> result;
     char* token = strtok(str, " ");
-    while (token != nullptr) 
+    while (token != nullptr)
     {
         result.push_back(std::string(token));
         token = strtok(nullptr, " ");
@@ -158,22 +157,22 @@ std::vector<std::string> Utility::splitStringBySpace(char* str)
     return result;
 }
 
-void Utility::addUniqueString(std::list<std::string>&strList, const std::string & str)
+void Utility::addUniqueString(std::list<std::string>& strList, const std::string& str)
 {
-    if (find(strList.begin(), strList.end(), str) == strList.end()) 
+    if (find(strList.begin(), strList.end(), str) == strList.end())
     {
         strList.push_back(str);
     }
 }
 
-bool Utility::areAllElementsInList(const std::list<std::string>& list1, const std::list<std::string>& list2) 
+bool Utility::areAllElementsInList(const std::list<std::string>& list1, const std::list<std::string>& list2)
 {
-    for (const auto& str : list1) 
+    for (const auto& str : list1)
     {
-        if (std::find(list2.begin(), list2.end(), str) == list2.end()) 
+        if (std::find(list2.begin(), list2.end(), str) == list2.end())
         {
-            return false; // An element in list1 is not in list2
+            return false; //an element in list1 is not in list2
         }
     }
-    return true; // All elements in list1 are in list2
+    return true; //elements in list1 are in list2
 }
