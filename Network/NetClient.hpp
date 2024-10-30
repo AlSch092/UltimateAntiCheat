@@ -27,15 +27,28 @@ class NetClient
 {
 public:
 
-	NetClient()
+	NetClient() //used when we need to create the object beforehand and set a pointer to it for later intialization
 	{
 		HandshakeCompleted = false;
 		Initialized = false;
+		Port = 0;
 	}
 
 	NetClient(const char* serverEndpoint, uint16_t port)
 	{
-		Ip = serverEndpoint;
+		if (serverEndpoint == nullptr)
+		{
+			Logger::logf("UltimateAnticheat.log", Warning, "serverEndpoint was nullptr at NetClient::NetClient!");
+		}
+
+		if (port == 0)
+		{
+			Logger::logf("UltimateAnticheat.log", Warning, "Port was 0 at NetClient::NetClient!");
+		}
+
+		if(serverEndpoint != nullptr)
+			Ip = string(serverEndpoint);
+
 		Port = port;
 
 		HandshakeCompleted = false;
@@ -83,7 +96,7 @@ private:
 	bool Connected = false;
 
 	string Ip;
-	uint16_t Port = 0;
+	uint16_t Port;
 
 	unsigned long long ConnectedDuration = 0;
 	unsigned long long ConnectedAt = 0; //GetTickCount64 
