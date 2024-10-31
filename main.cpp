@@ -76,7 +76,7 @@ int main(int argc, char** argv)
 
     if (ConfigInstance->bRequireRunAsAdministrator)
     {
-        if (!Services::IsRunningAsAdmin()) //enforce secure boot to stop bootloader cheats
+        if (!Services::IsRunningAsAdmin())
         {
             MessageBoxA(0, "Program must be running as administrator in order to proceed, or change `bRequireRunAsAdministrator` to false.", "UltimateAntiCheat", 0);
             Logger::logf("UltimateAnticheat.log", Detection, "Program must be running as administrator in order to proceed, or change `bRequireRunAsAdministrator` to false.");
