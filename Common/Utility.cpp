@@ -10,7 +10,7 @@ char* Utility::GenerateRandomString(int length) //make sure to delete[] memory a
 
     char* randomString = new char[(length + 1) * sizeof(char)];
 
-    srand(time((time_t*)GetTickCount64()));
+    srand(time((time_t*)NULL));
 
     for (int i = 0; i < length; ++i)
         randomString[i] = charset[rand() % (strlen(charset) - 1)];
@@ -29,7 +29,7 @@ wchar_t* Utility::GenerateRandomWString(int length) //make sure to delete[] memo
 
     wchar_t* randomString = new wchar_t[(length + 1) * sizeof(wchar_t)];
 
-    srand(time((time_t*)GetTickCount64()));
+    srand(time((time_t*)NULL));
 
     for (int i = 0; i < length; ++i)
         randomString[i] = charset[rand() % (wcslen(charset) - 1)];
