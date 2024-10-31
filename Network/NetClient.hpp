@@ -60,6 +60,11 @@ public:
 		delete RecvLoopThread;
 	}
 
+	NetClient operator+(NetClient& other) = delete; //delete all arithmetic operators, unnecessary for context
+	NetClient operator-(NetClient& other) = delete;
+	NetClient operator*(NetClient& other) = delete;
+	NetClient operator/(NetClient& other) = delete;
+
 	static void ProcessRequests(LPVOID Param); //calls recv in a loop to handle requests, and if this routine is not running the program should be exited
 
 	Error Initialize(string ip, uint16_t port, string gameCode); //connects, sends CS_HELLO, verifies the response of a version number from server
@@ -79,11 +84,10 @@ public:
 	bool HandshakeCompleted = false;
 	bool Initialized = false;
 
-	SOCKET GetClientSocket() { return this->Socket; }
-	string GetConnectedIP() { return this->Ip; }
-	uint16_t GetConnectedPort() { return this->Port; }
-
-	Thread* GetRecvThread() { return this->RecvLoopThread; }
+	SOCKET GetClientSocket() const { return this->Socket; }
+	string GetConnectedIP() const { return this->Ip; }
+	uint16_t GetConnectedPort() const { return this->Port; }
+	Thread* GetRecvThread() const { return this->RecvLoopThread; }
 
 	void CipherData(LPBYTE buffer, int length);
 
