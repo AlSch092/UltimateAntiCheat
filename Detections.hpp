@@ -60,6 +60,11 @@ public:
 			delete MonitorThread;
 	}
 
+	Detections operator+(Detections& other) = delete; //delete all arithmetic operators, unnecessary for context
+	Detections operator-(Detections& other) = delete;
+	Detections operator*(Detections& other) = delete;
+	Detections operator/(Detections& other) = delete;
+
 	NetClient* GetNetClient() { return this->netClient.get(); }
 
 	Settings* GetSettings() const { return this->Config; }

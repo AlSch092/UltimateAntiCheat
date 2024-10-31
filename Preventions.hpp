@@ -18,6 +18,11 @@ public:
 	{
 	}
 
+	Preventions operator+(Preventions& other) = delete; //delete all arithmetic operators, unnecessary for context
+	Preventions operator-(Preventions& other) = delete;
+	Preventions operator*(Preventions& other) = delete;
+	Preventions operator/(Preventions& other) = delete;
+
 	void SetThreadCreationPrevention(bool onoff) { this->IsPreventingThreadCreation = onoff; }
 	bool IsPreventingThreads() const { return this->IsPreventingThreadCreation; }
 
