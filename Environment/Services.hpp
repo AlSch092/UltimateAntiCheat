@@ -15,7 +15,7 @@
 
 using namespace std;
 
-extern "C" NTSTATUS NTAPI RtlGetVersion(RTL_OSVERSIONINFOW * lpVersionInformation); //used in GetWindowsMajorVersion
+extern "C" NTSTATUS NTAPI RtlGetVersion(RTL_OSVERSIONINFOW * lpVersionInformation); //used in GetWindowsVersion
 
 struct Service
 {
@@ -76,8 +76,13 @@ public:
 		ServiceList.clear();
 	}
 
-	BOOL GetLoadedDrivers();
-	BOOL GetServiceModules();
+	Services operator+(Services& other) = delete; //delete all arithmetic operators, unnecessary for context
+	Services operator-(Services& other) = delete;
+	Services operator*(Services& other) = delete;
+	Services operator/(Services& other) = delete;
+
+	BOOL GetLoadedDrivers(); //adds to `DriverPaths`
+	BOOL GetServiceModules(); //adds to `ServiceList`
 
 	list<wstring> GetUnsignedDrivers();
 
