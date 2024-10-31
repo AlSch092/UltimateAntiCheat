@@ -43,11 +43,14 @@ namespace Debugger
             delete DetectionThread;
         }
         
-        list<Detections> GetDebuggerMethodsDetected() { return DebuggerMethodsDetected; }
+        list<Detections> GetDebuggerMethodsDetected() const { return DebuggerMethodsDetected; }
     
-        Thread* GetDetectionThread() { return this->DetectionThread; }
-        HANDLE GetDetectionThreadHandle() { if (this->DetectionThread != NULL) return this->DetectionThread->handle; else return INVALID_HANDLE_VALUE; }
-        void SetDetectionThread(HANDLE h) { this->DetectionThread->handle = h; }
+        Thread* GetDetectionThread() const  { return this->DetectionThread; }
+        HANDLE GetDetectionThreadHandle() const  { if (this->DetectionThread != NULL) return this->DetectionThread->GetHandle(); else return INVALID_HANDLE_VALUE; }
+
+        NetClient* GetNetClient() const { return this->netClient.get(); }
+
+        Settings* GetSettings() const { return this->Config; }
 
         void StartAntiDebugThread();
 
@@ -72,10 +75,6 @@ namespace Debugger
 
         bool AddDetectedFlag(Detections f);
         bool Flag(Detections flag);
-
-        NetClient* GetNetClient() { return this->netClient.get(); }
-
-        Settings* GetSettings() { return this->Config; }
 
     private:       
         list<Detections> DebuggerMethodsDetected;

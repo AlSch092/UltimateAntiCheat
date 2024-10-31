@@ -14,15 +14,15 @@ void Debugger::AntiDebug::StartAntiDebugThread()
 		return;
 	}
 
-	this->DetectionThread = new Thread((LPTHREAD_START_ROUTINE)Debugger::AntiDebug::CheckForDebugger, (LPVOID)this);
+	this->DetectionThread = new Thread((LPTHREAD_START_ROUTINE)Debugger::AntiDebug::CheckForDebugger, (LPVOID)this, true);
 
-	if (this->DetectionThread->handle == INVALID_HANDLE_VALUE || this->DetectionThread->handle == NULL)
+	if (this->DetectionThread->GetHandle() == INVALID_HANDLE_VALUE || this->DetectionThread->GetHandle() == NULL)
 	{
 		Logger::logf("UltimateAnticheat.log", Err, "Couldn't start anti-debug thread @ Debugger::AntiDebug::StartAntiDebugThread");
 		//optionally shut down here if thread creation fails
 	}
 
-	Logger::logf("UltimateAnticheat.log", Info, "Created Debugger detection thread with Id: %d", this->DetectionThread->Id);
+	Logger::logf("UltimateAnticheat.log", Info, "Created Debugger detection thread with Id: %d", this->DetectionThread->GetId());
 
 	this->DetectionThread->CurrentlyRunning = true;
 }
@@ -54,7 +54,7 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 
 		if (AntiDbg->DetectionThread->ShutdownSignalled)
 		{
-			Logger::logf("UltimateAnticheat.log", Info, "Shutting down Debugger detection thread with Id: %d", AntiDbg->DetectionThread->Id);
+			Logger::logf("UltimateAnticheat.log", Info, "Shutting down Debugger detection thread with Id: %d", AntiDbg->DetectionThread->GetId());
 			AntiDbg->DetectionThread->CurrentlyRunning = false;
 			return; //exit thread
 		}
