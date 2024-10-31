@@ -76,6 +76,11 @@ namespace Debugger
         bool AddDetectedFlag(Detections f);
         bool Flag(Detections flag);
 
+        AntiDebug operator+(AntiDebug& other) = delete; //delete all arithmetic operators, unnecessary for context
+        AntiDebug operator-(AntiDebug& other) = delete;
+        AntiDebug operator*(AntiDebug& other) = delete;
+        AntiDebug operator/(AntiDebug& other) = delete;
+
     private:       
         list<Detections> DebuggerMethodsDetected;
 
