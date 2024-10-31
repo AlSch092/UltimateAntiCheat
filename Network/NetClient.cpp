@@ -59,9 +59,9 @@ Error NetClient::Initialize(string ip, uint16_t port, string gameCode)
 		return Error::GENERIC_FAIL;
 	}
 
-	RecvLoopThread = new Thread((LPTHREAD_START_ROUTINE)&NetClient::ProcessRequests, this);
+	RecvLoopThread = new Thread((LPTHREAD_START_ROUTINE)&NetClient::ProcessRequests, this, true);
 
-	if (RecvThread->handle == NULL || RecvThread->handle == INVALID_HANDLE_VALUE)
+	if (RecvThread->GetHandle() == NULL || RecvThread->GetHandle() == INVALID_HANDLE_VALUE)
 	{
 		Logger::logf("UltimateAnticheat.log", Err, "Couldn't create recvThread @ NetClient::Initialize");
 
