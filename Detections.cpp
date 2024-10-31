@@ -9,11 +9,11 @@ void Detections::StartMonitor()
     if (this->MonitorThread != NULL)
         return;
 
-    this->MonitorThread = new Thread((LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this);
+    this->MonitorThread = new Thread((LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, true);
 
-    Logger::logf("UltimateAnticheat.log", Info, "Created monitoring thread with ID %d", this->MonitorThread->Id);
+    Logger::logf("UltimateAnticheat.log", Info, "Created monitoring thread with ID %d", this->MonitorThread->GetId());
     
-    if (this->MonitorThread->handle == INVALID_HANDLE_VALUE || this->MonitorThread->handle == NULL)
+    if (this->MonitorThread->GetHandle() == INVALID_HANDLE_VALUE || this->MonitorThread->GetHandle() == NULL)
     {
         Logger::logf("UltimateAnticheat.log", Err, " Failed to create monitor thread  @ Detections::StartMonitor");
         return;

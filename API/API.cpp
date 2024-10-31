@@ -60,13 +60,13 @@ Error API::Cleanup(AntiCheat* AC)
 	if (AC->GetMonitor()->GetMonitorThread() != NULL) //stop anti-cheat monitor thread
 	{
 		AC->GetMonitor()->GetMonitorThread()->ShutdownSignalled = true;
-		WaitForSingleObject(AC->GetMonitor()->GetMonitorThread()->handle, 6000); //this thread normally sleeps for 5000ms each loop, so we wait 6000ms for good measures
+		WaitForSingleObject(AC->GetMonitor()->GetMonitorThread()->GetHandle(), 6000); //this thread normally sleeps for 5000ms each loop, so we wait 6000ms for good measures
 	}
 
 	if (AC->GetNetworkClient()->GetRecvThread() != NULL) //stop anti-cheat monitor thread
 	{
 		AC->GetNetworkClient()->GetRecvThread()->ShutdownSignalled = true;
-		WaitForSingleObject(AC->GetNetworkClient()->GetRecvThread()->handle, 5000); //this thread normally sleeps for 5000ms each loop, so we wait 6000ms for good measures
+		WaitForSingleObject(AC->GetNetworkClient()->GetRecvThread()->GetHandle(), 5000); //this thread normally sleeps for 5000ms each loop, so we wait 6000ms for good measures
 	}
 
 	return Error::OK;

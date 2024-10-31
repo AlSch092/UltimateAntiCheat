@@ -51,7 +51,7 @@ public:
 		if (StartMonitor)
 			this->StartMonitor();
 
-		ProcessCreationMonitorThread = new Thread((LPTHREAD_START_ROUTINE)Detections::MonitorProcessCreation, this);
+		ProcessCreationMonitorThread = new Thread((LPTHREAD_START_ROUTINE)Detections::MonitorProcessCreation, this, true);
 	}
 
 	~Detections()

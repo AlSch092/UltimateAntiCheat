@@ -25,9 +25,8 @@ namespace API
 	Error Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessName, bool isServerConnected);
 	Error LaunchDefenses(AntiCheat* AC); //these routines are usually called by Dispatch with `INITIALIZE` dispatch code
 
-        Error Cleanup(AntiCheat* AC);
-	
+	Error Cleanup(AntiCheat* AC);
+
 	Error Dispatch(AntiCheat* AC, DispatchCode code); //if you insist on using this project as a standalone .dll, you can change this function to dllexport
 }
-
 
