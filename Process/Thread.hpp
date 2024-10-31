@@ -15,23 +15,20 @@ public:
 	Thread(DWORD id) : Id(id) //Thread classes that call this constructor are ones we aren't creating ourselves to execute code, and rather ones collected in the TLS callback for bookkeeping purposes
 	{
 		this->ShutdownSignalled = false;
-		this->CurrentlyRunning = true;
-		shouldRunForever = false;
+		this->ShouldRunForever = false;
 	}
 
-	Thread(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalParam, BOOL shouldRunForever) : ExecutionAddress((UINT_PTR)toExecute), OptionalParam(lpOptionalParam), shouldRunForever(shouldRunForever)
+	Thread(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalParam, BOOL shouldRunForever) : ExecutionAddress((UINT_PTR)toExecute), OptionalParam(lpOptionalParam), ShouldRunForever(shouldRunForever)
 	{
 		this->handle = CreateThread(0, 0, toExecute, lpOptionalParam, 0, &this->Id);
 
 		if (this->handle == INVALID_HANDLE_VALUE)
 		{
 			Logger::logf("UltimateAnticheat.log", Err, "Failed to create new thread @ Thread::Thread - address %llX", (UINT_PTR)toExecute);
-			this->CurrentlyRunning = false;
 			return;
 		}
 
 		this->ShutdownSignalled = false;
-		this->CurrentlyRunning = true;
 	}
 
 	~Thread()
@@ -55,9 +52,6 @@ public:
 	Thread(const Thread&) = delete; //delete copy + assignment operators
 	Thread& operator=(const Thread&) = delete;
 
-	bool ShutdownSignalled = false;
-	bool CurrentlyRunning = false;
-
 	static bool IsThreadRunning(HANDLE threadHandle); //these could potentially go into Process.hpp/cpp, since we have one Thread class for each thread, thus a static function is not as well suited to be here
 	static bool IsThreadSuspended(HANDLE threadHandle);
 
@@ -65,7 +59,10 @@ public:
 	DWORD GetId() const { return this->Id; }
 	DWORD_PTR GetExecutionAddress() const { return this->ExecutionAddress; }
 	LPVOID GetOptionalParameter() const { return this->OptionalParam; }
-	BOOL RunsForever() const { return this->shouldRunForever; }
+
+	BOOL RunsForever() const { return this->ShouldRunForever; }
+	BOOL IsShutdownSignalled() const { return this->ShutdownSignalled; }
+	void SignalShutdown(BOOL toShutdown) { this->ShutdownSignalled = toShutdown; }
 
 private:
 
@@ -75,5 +72,6 @@ private:
 	DWORD_PTR ExecutionAddress = 0;
 	LPVOID OptionalParam = nullptr;
 
-	BOOL shouldRunForever;
+	BOOL ShouldRunForever;
+	BOOL ShutdownSignalled;
 };
