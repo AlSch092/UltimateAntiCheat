@@ -19,7 +19,7 @@ public:
 		shouldRunForever = false;
 	}
 
-	Thread(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalParam, bool shouldRunForever) : ExecutionAddress((UINT_PTR)toExecute), OptionalParam(lpOptionalParam), shouldRunForever(shouldRunForever)
+	Thread(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalParam, BOOL shouldRunForever) : ExecutionAddress((UINT_PTR)toExecute), OptionalParam(lpOptionalParam), shouldRunForever(shouldRunForever)
 	{
 		this->handle = CreateThread(0, 0, toExecute, lpOptionalParam, 0, &this->Id);
 
@@ -61,16 +61,19 @@ public:
 	static bool IsThreadRunning(HANDLE threadHandle); //these could potentially go into Process.hpp/cpp, since we have one Thread class for each thread, thus a static function is not as well suited to be here
 	static bool IsThreadSuspended(HANDLE threadHandle);
 
-	HANDLE GetHandle() { return this->handle; }
-	DWORD GetId() { return this->Id; }
+	HANDLE GetHandle() const { return this->handle; }
+	DWORD GetId() const { return this->Id; }
+	DWORD_PTR GetExecutionAddress() const { return this->ExecutionAddress; }
+	LPVOID GetOptionalParameter() const { return this->OptionalParam; }
+	BOOL RunsForever() const { return this->shouldRunForever; }
 
 private:
 
 	HANDLE handle = INVALID_HANDLE_VALUE;
 	DWORD Id = 0; //thread id
 
-	UINT_PTR ExecutionAddress = 0;
+	DWORD_PTR ExecutionAddress = 0;
 	LPVOID OptionalParam = nullptr;
 
-	bool shouldRunForever;
+	BOOL shouldRunForever;
 };
