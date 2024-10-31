@@ -162,7 +162,7 @@ void NetClient::ProcessRequests(LPVOID Param)
 
 	while (receiving)
 	{
-		if (Client->GetRecvThread()->ShutdownSignalled)
+		if (Client->GetRecvThread()->IsShutdownSignalled())
 		{
 			goto end;
 		}
