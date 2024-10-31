@@ -53,19 +53,19 @@ Error API::Cleanup(AntiCheat* AC)
 
 	if (AC->GetAntiDebugger()->GetDetectionThread() != NULL) //stop anti-debugger thread
 	{
-		AC->GetAntiDebugger()->GetDetectionThread()->ShutdownSignalled = true;
+		AC->GetAntiDebugger()->GetDetectionThread()->SignalShutdown(true);
 		WaitForSingleObject(AC->GetAntiDebugger()->GetDetectionThreadHandle(), 3000); //this thread normally sleeps for 2000ms each loop, so we wait 3000ms for good measures
 	}
 
 	if (AC->GetMonitor()->GetMonitorThread() != NULL) //stop anti-cheat monitor thread
 	{
-		AC->GetMonitor()->GetMonitorThread()->ShutdownSignalled = true;
+		AC->GetMonitor()->GetMonitorThread()->SignalShutdown(true);
 		WaitForSingleObject(AC->GetMonitor()->GetMonitorThread()->GetHandle(), 6000); //this thread normally sleeps for 5000ms each loop, so we wait 6000ms for good measures
 	}
 
 	if (AC->GetNetworkClient()->GetRecvThread() != NULL) //stop anti-cheat monitor thread
 	{
-		AC->GetNetworkClient()->GetRecvThread()->ShutdownSignalled = true;
+		AC->GetNetworkClient()->GetRecvThread()->SignalShutdown(true);
 		WaitForSingleObject(AC->GetNetworkClient()->GetRecvThread()->GetHandle(), 5000); //this thread normally sleeps for 5000ms each loop, so we wait 6000ms for good measures
 	}
 

@@ -19,7 +19,7 @@ void Detections::StartMonitor()
         return;
     }
 
-    this->MonitorThread->CurrentlyRunning = true;
+    //this->MonitorThread->CurrentlyRunning = true;  //todo: change this to a handle check
 }
 
 /*
@@ -116,10 +116,10 @@ void Detections::Monitor(LPVOID thisPtr)
 
     while (Monitoring) //&& !Monitor->IsUserCheater()) //uncomment if you'd like monitoring to stop once a cheater has been detected
     {
-        if (Monitor->GetMonitorThread()->ShutdownSignalled)
+        if (Monitor->GetMonitorThread()->IsShutdownSignalled())
         {
             Logger::logf("UltimateAnticheat.log", Info, "STOPPING  Detections::Monitor , ending detections thread");
-            Monitor->GetMonitorThread()->CurrentlyRunning = false;
+            //Monitor->GetMonitorThread()->CurrentlyRunning = false;
             return;
         }
 
