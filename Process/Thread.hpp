@@ -14,9 +14,11 @@ public:
 
 	Thread(DWORD id) : Id(id) //Thread classes that call this constructor are ones we aren't creating ourselves to execute code, and rather ones collected in the TLS callback for bookkeeping purposes
 	{
+		this->ShutdownSignalled = false;
+		this->CurrentlyRunning = true;
 	}
 
-	Thread(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalParam) : ExecutionAddress((UINT_PTR)toExecute), OptionalParam(lpOptionalParam)
+	Thread(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalParam, bool shouldRunForever) : ExecutionAddress((UINT_PTR)toExecute), OptionalParam(lpOptionalParam), shouldRunForever(shouldRunForever)
 	{
 		this->handle = CreateThread(0, 0, toExecute, lpOptionalParam, 0, &this->Id);
 
@@ -46,15 +48,28 @@ public:
 		}
 	}
 
-	HANDLE handle = INVALID_HANDLE_VALUE;
-	DWORD Id = 0; //thread id
+	Thread(Thread&& other) noexcept = default;
+	Thread& operator=(Thread&& other) noexcept = default;
 
-	UINT_PTR ExecutionAddress = 0;
-	LPVOID OptionalParam = nullptr;
+	Thread(const Thread&) = delete; //delete copy + assignment operators
+	Thread& operator=(const Thread&) = delete;
 
 	bool ShutdownSignalled = false;
 	bool CurrentlyRunning = false;
 
 	static bool IsThreadRunning(HANDLE threadHandle); //these could potentially go into Process.hpp/cpp, since we have one Thread class for each thread, thus a static function is not as well suited to be here
 	static bool IsThreadSuspended(HANDLE threadHandle);
+
+	HANDLE GetHandle() { return this->handle; }
+	DWORD GetId() { return this->Id; }
+
+private:
+
+	HANDLE handle = INVALID_HANDLE_VALUE;
+	DWORD Id = 0; //thread id
+
+	UINT_PTR ExecutionAddress = 0;
+	LPVOID OptionalParam = nullptr;
+
+	bool shouldRunForever;
 };
