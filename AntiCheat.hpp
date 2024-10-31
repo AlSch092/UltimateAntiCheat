@@ -50,6 +50,13 @@ public:
 	{
 	}
 
+	AntiCheat& operator=(AntiCheat&& other) = delete; //delete move assignments
+
+	AntiCheat operator+(AntiCheat& other) = delete; //delete all arithmetic operators, unnecessary for context
+	AntiCheat operator-(AntiCheat& other) = delete;
+	AntiCheat operator*(AntiCheat& other) = delete;
+	AntiCheat operator/(AntiCheat& other) = delete;
+
 	Debugger::AntiDebug* GetAntiDebugger() const { return this->_AntiDebugger.get(); }
 	
 	NetClient* GetNetworkClient() const  { return this->NetworkClient.get(); }
