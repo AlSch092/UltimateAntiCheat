@@ -16,6 +16,7 @@ public:
 	{
 		this->ShutdownSignalled = false;
 		this->CurrentlyRunning = true;
+		shouldRunForever = false;
 	}
 
 	Thread(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalParam, bool shouldRunForever) : ExecutionAddress((UINT_PTR)toExecute), OptionalParam(lpOptionalParam), shouldRunForever(shouldRunForever)
