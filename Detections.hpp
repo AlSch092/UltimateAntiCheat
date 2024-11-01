@@ -1,12 +1,12 @@
 //By AlSch092 @github
 #pragma once
-#include "Network/NetClient.hpp"
+#include "Network/NetClient.hpp" //Net Comms
 #include "AntiDebug/AntiDebugger.hpp"
-#include "AntiTamper/Integrity.hpp"
-#include "Environment/Services.hpp"
-#include "Obscure/Obfuscation.hpp"
-#include "Common/Globals.hpp"
-#include "Obscure/ntldr.hpp"
+#include "AntiTamper/Integrity.hpp" //Code Integrity
+#include "Environment/Services.hpp" //`Services` class
+#include "Obscure/Obfuscation.hpp" //`ObfuscatedData` class
+#include "Common/Globals.hpp" //`UnmanagedGlobals` namespace
+#include "Obscure/ntldr.hpp" //dll notification structures
 #include <Wbemidl.h> //for process event creation (WMI)
 #include <comdef.h>  //for process event creation (WMI)
 
@@ -60,6 +60,12 @@ public:
 			delete MonitorThread;
 	}
 
+	Detections(Detections&&) = delete;  //delete move constructr
+	Detections& operator=(Detections&&) noexcept = default; //delete move assignment operator
+
+	Detections(const Detections&) = delete; //delete copy constructor 
+	Detections& operator=(const Detections&) = delete; //delete assignment operator
+
 	Detections operator+(Detections& other) = delete; //delete all arithmetic operators, unnecessary for context
 	Detections operator-(Detections& other) = delete;
 	Detections operator*(Detections& other) = delete;
@@ -83,8 +89,6 @@ public:
 
 	Process* GetProcessObj() const { return this->_Proc.get(); }  //other classes should not be able to set the process object, it is created by default in the constructor
 
-	void StartMonitor(); //begin threading
-
 	BOOL IsBlacklistedProcessRunning() const;
 
 	static BOOL DoesFunctionAppearHooked(const char* moduleName, const char* functionName); //checks for jumps or calls as the first byte on a function
@@ -102,6 +106,7 @@ public:
 
 	static VOID OnDllNotification(ULONG NotificationReason, const PLDR_DLL_NOTIFICATION_DATA NotificationData, PVOID Context);
 
+	BOOL StartMonitor(); //begin threading
 	static void Monitor(LPVOID thisPtr); //loop detections/monitor -> thread function
 
 private:

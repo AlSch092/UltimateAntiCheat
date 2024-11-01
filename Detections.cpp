@@ -4,22 +4,22 @@
 /*
     Detections::StartMonitor - use class member MonitorThread to start our main detections loop
 */
-void Detections::StartMonitor()
+BOOL Detections::StartMonitor()
 {
-    if (this->MonitorThread != NULL)
-        return;
+    if (this->MonitorThread != NULL || this->MonitorThread->IsThreadRunning) //prevent accidental double calls to this function/double thread creation
+        return FALSE;
 
     this->MonitorThread = new Thread((LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, true);
 
     Logger::logf("UltimateAnticheat.log", Info, "Created monitoring thread with ID %d", this->MonitorThread->GetId());
     
-    if (this->MonitorThread->GetHandle() == INVALID_HANDLE_VALUE || this->MonitorThread->GetHandle() == NULL)
+    if (this->MonitorThread->GetHandle() == NULL || this->MonitorThread->GetHandle() == INVALID_HANDLE_VALUE)
     {
         Logger::logf("UltimateAnticheat.log", Err, " Failed to create monitor thread  @ Detections::StartMonitor");
-        return;
+        return FALSE;
     }
 
-    //this->MonitorThread->CurrentlyRunning = true;  //todo: change this to a handle check
+    return TRUE;
 }
 
 /*

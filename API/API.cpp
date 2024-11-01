@@ -90,18 +90,23 @@ Error API::LaunchDefenses(AntiCheat* AC) //currently in the process to split the
 	else
 	{
 		Logger::logf("UltimateAnticheat.log", Err, "Could not initialize the barrier @ API::LaunchBasicTests");
-		errorCode = Error::GENERIC_FAIL;
+		errorCode = Error::CANT_APPLY_TECHNIQUE;
 	}
 
-	AC->GetMonitor()->StartMonitor();
+	if (!AC->GetMonitor()->StartMonitor()) //start looped detections
+	{
+		Logger::logf("UltimateAnticheat.log", Err, "Could not initialize the barrier @ API::LaunchBasicTests");
+		errorCode = Error::CANT_STARTUP;
+	}
+
 	AC->GetAntiDebugger()->StartAntiDebugThread(); //start debugger checks in a seperate thread
 
 	AC->GetMonitor()->GetServiceManager()->GetServiceModules(); //enumerate services
 
-	//if (AC->GetMonitor()->GetServiceManager()->GetLoadedDrivers()) //enumerate drivers
-	//{
-	//	list<wstring> unsigned_drivers = AC->GetMonitor()->GetServiceManager()->GetUnsignedDrivers(); //unsigned drivers, take further action if needed
-	//}
+	if (AC->GetMonitor()->GetServiceManager()->GetLoadedDrivers()) //enumerate drivers, will be re-added soon
+	{
+		list<wstring> unsigned_drivers = AC->GetMonitor()->GetServiceManager()->GetUnsignedDrivers(); //unsigned drivers, take further action if needed
+	}
 
 	if (!Process::CheckParentProcess(AC->GetMonitor()->GetProcessObj()->GetParentName())) //parent process check, the parent process would normally be set using our API methods
 	{
