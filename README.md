@@ -36,15 +36,15 @@ UltimateAntiCheat is an open source usermode anti-cheat system made to detect an
 - Basic window title & class name checks for commonly used attack tools such as Cheat Engine
 
 ## Enabling/Disabling Networking:
-Networking support has been added to the project; the server can be found in the `Server` folder as its own solution. Using networking is optional, and can be turned on/off through the variable `bool serverAvailable` in the file `API/API.hpp`. If you choose to use networking, please follow the instructions in the README.md file of the server.  
+Networking support is available in the project - the server can be found in the `Server` folder as its own solution. Using networking is optional, and can be turned on/off through the variable `bool bNetworkingAvailable` in the file `main.cpp` (as part of the `Settings` class). If you choose to use networking, please follow the instructions in the README.md file of the server.  
 
 ## Windows version targeting:
 
-The preprocessor definition `_WIN32_WINNT=0x...` can be used to target different versions of Windows. For example, using 0x0A00 will target Windows 10 and above, and 0x0601 will target Windows 7 and above. Certain features might only work on newer Windows versions and are excluded from compilation based on this value.
+The preprocessor definition `_WIN32_WINNT=0x...` can be used to target different versions of Windows at compile-time. For example, using 0x0A00 will target Windows 10 and above, and 0x0601 will target Windows 7 and above. Certain features might only work on newer Windows versions and are excluded from compilation based on this value. The client will also fetch the machine's windows version at program startup, in `main.cpp`.
 
 ## Advanced Features
-If you're looking for full database integration and bonus protection features for your small to mid-sized commercial game/software: a robust, load-tested backend can be provided for a fair licensing fee.
+If you're looking for full database integration and bonus protective features for your small to mid-sized commercial game/software: a robust, load-tested backend can be provided for a small licensing fee.
 
 ## Licensing  
 
-The GNU Affero general public license is used in this project. Please be aware of what you can and cannot do with this license: for example, you do not have permission to rip this project into your own commercial project or use this project in your own code base without it being open source. Using this project for a "private game server" or any other stolen code/binaries is strictly prohibited.
+The GNU Affero general public license is used in this project. Please be aware of what you can and cannot do with this license: for example, you do not have permission to rip this project into your own commercial project or use this project in your own code base without it being open source. You do have permission to use this project if your project is also open source. Using this project for a "private game server" or any other stolen code/binaries automatically violates the license.
