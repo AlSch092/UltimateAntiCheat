@@ -2,74 +2,6 @@
 #include "Preventions.hpp"
 
 /*
-    Preventions::PreventDllInjection - changes the export name of specific K32 routines such that an external attacker trying to fetch the address of these is given bad values.
-    *Note* : Changing export names for certain important dll routines can result in popup errors for the end-user, thus its not recommended for a live product. Alternatively, routines can have their function preambles 'ret' patched for similar effects  (if you know it wont impact program functionality).
-*/
-bool Preventions::PreventDllInjection()
-{
-    bool success = FALSE;
-
-    //Anti-dll injection
-    char* RandString1 = Utility::GenerateRandomString(12);
-    char* RandString2 = Utility::GenerateRandomString(12);
-    char* RandString3 = Utility::GenerateRandomString(14);
-    char* RandString4 = Utility::GenerateRandomString(14);
-
-    //prevents DLL injection from any host process relying on calling LoadLibrary in the target process (we are the target in this case) -> can possibly be disruptive to end user
-    if (Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryA", RandString1) &&
-        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryW", RandString2) &&
-        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExA", RandString3) &&
-        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExW", RandString4))
-    {
-        success = TRUE;
-    }
-    else
-    {
-        success = FALSE;
-    }
-
-    delete[] RandString1; RandString1 = nullptr;
-    delete[] RandString2; RandString2 = nullptr;
-    delete[] RandString3; RandString3 = nullptr;
-    delete[] RandString4; RandString4 = nullptr;
-
-    return success;
-}
-
-/*
-    PreventShellcodeThreads - changes export routine name of K32's CreateThread such that external attackers cannot look up the functions address.
-     *Note* : Changing export names for certain important dll routines can result in popup errors for the end-user, thus its not recommended for a live product. Alternatively, routines can have their function preambles 'ret' patched for similar effects (if you know it wont impact program functionality).
-*/
-bool Preventions::PreventShellcodeThreads() //using this technique might pop up a warning about missing the function "CreateThread" (Entry Point Not Found)
-{
-    bool success = FALSE;
-    char* RandString1 = Utility::GenerateRandomString(12);
-
-    if (Exports::ChangeFunctionName("KERNEL32.DLL", "CreateThread", RandString1))
-        success = TRUE;
-
-    delete[] RandString1;
-    RandString1 = nullptr;
-    return success;
-}
-
-BYTE* Preventions::SpoofPEB() //experimental, don't use this right now as it causes some thread issues
-{
-    BYTE* newPEBBytes = CopyAndSetPEB();
-
-    if (newPEBBytes == NULL)
-    {
-        Logger::logf("UltimateAnticheat.log", Err, " Failed to copy PEB @ SpoofPEB!\n");
-        return NULL;
-    }
-
-    _MYPEB* ourPEB = (_MYPEB*)&newPEBBytes[0];
-
-    Logger::logf("UltimateAnticheat.log", Info, " Being debugged (PEB Spoofing test): %d. Address of new PEB : %llx\n", ourPEB->BeingDebugged, (UINT64)&newPEBBytes[0]);
-    return newPEBBytes;
-}
-
-/*
   RandomizeModuleName - Changes the program's main module name (in memory) to a random string  
   returns true on success
 */
@@ -125,19 +57,13 @@ Error Preventions::DeployBarrier()
         retError = Error::CANT_APPLY_TECHNIQUE;
     }
 
-    //Process::ChangePEEntryPoint(-1); //these must be called before remapping, and not essential for operations thus don't need to return an error if they don't work
-    //Process::ChangeSizeOfCode(-1);  //additional runtime tricks to break info lookup via headers
-    //Process::ChangeImageSize(-1);  //these might cause antivirus flags
-
 #ifndef _DEBUG
-    if (!RemapProgramSections()) //anti-memory write through sections remapping, thanks changeofpace
+    if (!RemapProgramSections()) //anti-memory write on .text through sections remapping, thanks to changeofpace
     {
         Logger::logf("UltimateAnticheat.log", Err, " Couldn't remap memory @ DeployBarrier!\n");
         retError = Error::CANT_STARTUP;
     }
 #endif
-
-    //Process::ChangeImageBase(-1); //breaks remapping, only use this if you're not remapping
 
     IsPreventingThreadCreation = true; //used in TLS callback to prevent thread creation (can stop shellcode + module injection)
 
@@ -161,40 +87,6 @@ Error Preventions::DeployBarrier()
     //third parameter (dynamic code) set to true -> prevents VirtualProtect from succeeding on .text sections of loaded/signed modules. while this can be very useful, it breaks our TLS callback protections since we patch over the first byte of new thread's execution addresses
     Preventions::EnableProcessMitigations(true, true, false, true, true); 
 #endif
-
-    //anything commented out below means it needs further testing to ensure no side effects occur, 
-
-    //if (PreventDllInjection()) //anti-injection by renaming exports of LoadLibrary
-    //{
-    //    Logger::logf("UltimateAnticheat.log", Info, " Wrote over LoadLibrary (kernel32) export names successfully!\n");
-    //}
-    //else
-    //{
-    //    Logger::logf("UltimateAnticheat.log", Err, " Couldn't write over export names @ Preventions::DeployBarrier\n");
-    //    retError = Error::CANT_APPLY_TECHNIQUE;
-    //}
-
-    //if (PreventShellcodeThreads()) //prevent lookups to CreateThread symbol from injected code by renaming the export name in memory, but can throw errors to the end user
-    //{
-    //    Logger::logf("UltimateAnticheat.log", Info, " Wrote over CreateThread (kernel32) export name successfully!\n");
-    //}
-    //else
-    //{
-    //    Logger::logf("UltimateAnticheat.log", Err, " Couldn't write over export names @ Preventions::DeployBarrier\n");
-    //    retError = Error::CANT_APPLY_TECHNIQUE;
-    //}
-
-    //BYTE* newPEB = SpoofPEB(); //memory should be free'd at end of program  -> CURRENTLY CAUSES ISSUES WITH THREADING, need to look at it deeper
-
-    //if (newPEB != NULL)
-    //{
-    //    Logger::logf("UltimateAnticheat.log", Info, " Spoofed PEB successfully!\n");
-    //}
-    //else
-    //{
-    //    Logger::logf("UltimateAnticheat.log", Err, " Couldn't spoof PEB @ Preventions::DeployBarrier\n");
-    //    retError = Error::CANT_APPLY_TECHNIQUE;
-    //}
 
     return retError;
 }
@@ -392,3 +284,71 @@ void Preventions::EnableProcessMitigations(bool useDEP, bool useASLR, bool useDy
 }
 
 #endif
+
+/*
+    Preventions::PreventDllInjection - changes the export name of specific K32 routines such that an external attacker trying to fetch the address of these is given bad values.
+    *Note* : Changing export names for certain important dll routines can result in popup errors for the end-user, thus its not recommended for a live product. Alternatively, routines can have their function preambles 'ret' patched for similar effects  (if you know it wont impact program functionality).
+*/
+bool Preventions::PreventDllInjection()
+{
+    bool success = FALSE;
+
+    //Anti-dll injection
+    char* RandString1 = Utility::GenerateRandomString(12);
+    char* RandString2 = Utility::GenerateRandomString(12);
+    char* RandString3 = Utility::GenerateRandomString(14);
+    char* RandString4 = Utility::GenerateRandomString(14);
+
+    //prevents DLL injection from any host process relying on calling LoadLibrary in the target process (we are the target in this case) -> can possibly be disruptive to end user
+    if (Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryA", RandString1) &&
+        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryW", RandString2) &&
+        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExA", RandString3) &&
+        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExW", RandString4))
+    {
+        success = TRUE;
+    }
+    else
+    {
+        success = FALSE;
+    }
+
+    delete[] RandString1; RandString1 = nullptr;
+    delete[] RandString2; RandString2 = nullptr;
+    delete[] RandString3; RandString3 = nullptr;
+    delete[] RandString4; RandString4 = nullptr;
+
+    return success;
+}
+
+/*
+    PreventShellcodeThreads - changes export routine name of K32's CreateThread such that external attackers cannot look up the functions address.
+     *Note* : Changing export names for certain important dll routines can result in popup errors for the end-user, thus its not recommended for a live product. Alternatively, routines can have their function preambles 'ret' patched for similar effects (if you know it wont impact program functionality).
+*/
+bool Preventions::PreventShellcodeThreads() //using this technique might pop up a warning about missing the function "CreateThread" (Entry Point Not Found)
+{
+    bool success = FALSE;
+    char* RandString1 = Utility::GenerateRandomString(12);
+
+    if (Exports::ChangeFunctionName("KERNEL32.DLL", "CreateThread", RandString1))
+        success = TRUE;
+
+    delete[] RandString1;
+    RandString1 = nullptr;
+    return success;
+}
+
+BYTE* Preventions::SpoofPEB() //experimental, don't use this right now as it causes some thread issues
+{
+    BYTE* newPEBBytes = CopyAndSetPEB();
+
+    if (newPEBBytes == NULL)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, " Failed to copy PEB @ SpoofPEB!");
+        return NULL;
+    }
+
+    _MYPEB* ourPEB = (_MYPEB*)&newPEBBytes[0];
+
+    Logger::logf("UltimateAnticheat.log", Info, " Being debugged (PEB Spoofing test): %d. Address of new PEB : %llx\n", ourPEB->BeingDebugged, (UINT64)&newPEBBytes[0]);
+    return newPEBBytes;
+}

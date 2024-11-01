@@ -18,6 +18,12 @@ public:
 	{
 	}
 
+	Preventions(Preventions&&) = delete;  //delete move constructr
+	Preventions& operator=(Preventions&&) noexcept = default; //delete move assignment operator
+
+	Preventions(const Preventions&) = delete; //delete copy constructor 
+	Preventions& operator=(const Preventions&) = delete; //delete assignment operator
+
 	Preventions operator+(Preventions& other) = delete; //delete all arithmetic operators, unnecessary for context
 	Preventions operator-(Preventions& other) = delete;
 	Preventions operator*(Preventions& other) = delete;
