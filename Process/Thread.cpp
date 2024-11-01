@@ -1,6 +1,44 @@
 //By AlSch092 @ Github
 #include "Thread.hpp"
 
+BOOL Thread::BeginExecution()
+{
+	if (ExecutionAddress != NULL)
+	{
+		this->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&ExecutionAddress, OptionalParam, 0, &this->Id);
+
+		if (this->handle == INVALID_HANDLE_VALUE)
+		{
+			this->Id = NULL;
+			return FALSE;
+		}
+	}
+
+	return TRUE;
+}
+
+BOOL Thread::BeginExecution(DWORD_PTR toExecute, LPVOID lpOptionalParam, BOOL shouldRunForever)
+{
+	if (ExecutionAddress != NULL)
+	{
+		this->ExecutionAddress = toExecute;
+		this->OptionalParam = lpOptionalParam;
+		this->ShouldRunForever = shouldRunForever;
+
+		this->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&ExecutionAddress, OptionalParam, 0, &this->Id);
+
+		if (this->handle == INVALID_HANDLE_VALUE)
+		{
+			this->Id = NULL;
+			return FALSE;
+		}
+
+		return TRUE;
+	}
+	else
+		return FALSE;
+}
+
 bool Thread::IsThreadRunning(HANDLE threadHandle)
 {
     if (threadHandle == NULL)

@@ -46,11 +46,16 @@ public:
 		}
 	}
 
-	Thread(Thread&& other) noexcept = default;
-	Thread& operator=(Thread&& other) noexcept = default;
+	Thread(Thread&&) = delete;  //move constructr
+	Thread& operator=(Thread&&) noexcept = default; //delete move assignment operator
 
-	Thread(const Thread&) = delete; //delete copy + assignment operators
-	Thread& operator=(const Thread&) = delete;
+	Thread(const Thread&) = delete; //delete copy constructor 
+	Thread& operator=(const Thread&) = delete; //delete assignment operator
+
+	Thread operator+(Thread&) = delete; //delete all arithmetic operators, unnecessary for context
+	Thread operator-(Thread&) = delete;
+	Thread operator*(Thread&) = delete;
+	Thread operator/(Thread&) = delete;
 
 	static bool IsThreadRunning(HANDLE threadHandle); //these could potentially go into Process.hpp/cpp, since we have one Thread class for each thread, thus a static function is not as well suited to be here
 	static bool IsThreadSuspended(HANDLE threadHandle);
@@ -63,6 +68,9 @@ public:
 	BOOL RunsForever() const { return this->ShouldRunForever; }
 	BOOL IsShutdownSignalled() const { return this->ShutdownSignalled; }
 	void SignalShutdown(BOOL toShutdown) { this->ShutdownSignalled = toShutdown; }
+
+	BOOL BeginExecution();
+	BOOL BeginExecution(DWORD_PTR toExecute, LPVOID lpOptionalParam, BOOL shouldRunForever);
 
 private:
 
