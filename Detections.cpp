@@ -538,65 +538,6 @@ bool Detections::Flag(DetectionFlags flag)
 }
 
 /*
-    EnumWindowsProc - window traversal callback used in Detections::IsBlacklistedWindowPresent
-*/
-BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
-{
-    char windowTitle[256]{ 0 };
-    char className[256]{ 0 };
-    const int xorKey1 = 0x44;
-    const int xorKey2 = 0x47;
-    Detections* Monitor = reinterpret_cast<Detections*>(lParam); //maybe put blacklisted xor'd strings into a list in Detections?
-
-    unsigned char CheatEngine[] = {
-        'C' ^ xorKey1, 'h' ^ xorKey1, 'e' ^ xorKey1, 'a' ^ xorKey1, 't' ^ xorKey1, ' ' ^ xorKey1,
-        'E' ^ xorKey1, 'n' ^ xorKey1, 'g' ^ xorKey1, 'i' ^ xorKey1, 'n' ^ xorKey1, 'e' ^ xorKey1
-    };
-
-    unsigned char LuaScript[] = {
-        'L' ^ xorKey2, 'u' ^ xorKey2, 'a' ^ xorKey2, ' ' ^ xorKey2,
-        's' ^ xorKey2, 'c' ^ xorKey2, 'r' ^ xorKey2, 'i' ^ xorKey2,
-        'p' ^ xorKey2, 't' ^ xorKey2, ':' ^ xorKey2
-    };
-
-    char original_CheatEngine[13]{ 0 };
-    char original_LUAScript[12]{ 0 };
-
-    for (int i = 0; i < 13 - 1; i++) //13 - 1 to stop last 00 from being xor'd
-    {
-        original_CheatEngine[i] = (char)(CheatEngine[i] ^ xorKey1);
-    }
-
-    for (int i = 0; i < 12; i++)
-    {
-        original_LUAScript[i] = (char)(CheatEngine[i] ^ xorKey2);
-    }
-
-    if (GetWindowTextA(hwnd, windowTitle, sizeof(windowTitle)))
-    {
-        if (GetClassNameA(hwnd, className, sizeof(className)))
-        {
-            if (strstr(windowTitle, (const char*)original_CheatEngine) || strstr(windowTitle, (const char*)original_CheatEngine) != NULL)
-            {
-                Monitor->SetCheater(true);
-                Monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
-                Logger::logf("UltimateAnticheat.log", Detection, "Detected cheat engine window");
-                return FALSE;
-            }
-            else if (strstr(windowTitle, (const char*)original_LUAScript))
-            {
-                Monitor->SetCheater(true);
-                Monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
-                Logger::logf("UltimateAnticheat.log", Detection, "Detected cheat engine's lua script window");
-                return FALSE;
-            }
-        }
-    }
-
-    return TRUE;
-}
-
-/*
     IsBlacklistedWindowPresent - Checks if windows with specific title or class names are present
 */
 BOOL Detections::IsBlacklistedWindowPresent()
@@ -606,14 +547,74 @@ BOOL Detections::IsBlacklistedWindowPresent()
 
     if (hUser32 != NULL)
     {
+        auto WindowCallback = [](HWND hwnd, LPARAM lParam) -> BOOL 
+        {
+            char windowTitle[256]{ 0 };
+            char className[256]{ 0 };
+            const int xorKey1 = 0x44;
+            const int xorKey2 = 0x47;
+
+            Detections* Monitor = reinterpret_cast<Detections*>(lParam); //optionally, make blacklisted xor'd strings into a list in Detections class
+
+            unsigned char CheatEngine[] =  //"Cheat Engine"
+            { 
+                'C' ^ xorKey1, 'h' ^ xorKey1, 'e' ^ xorKey1, 'a' ^ xorKey1, 't' ^ xorKey1, ' ' ^ xorKey1,
+                'E' ^ xorKey1, 'n' ^ xorKey1, 'g' ^ xorKey1, 'i' ^ xorKey1, 'n' ^ xorKey1, 'e' ^ xorKey1
+            };
+
+            unsigned char LuaScript[] = // //"Lua script:"
+            { 
+                'L' ^ xorKey2, 'u' ^ xorKey2, 'a' ^ xorKey2, ' ' ^ xorKey2,
+                's' ^ xorKey2, 'c' ^ xorKey2, 'r' ^ xorKey2, 'i' ^ xorKey2,
+                'p' ^ xorKey2, 't' ^ xorKey2, ':' ^ xorKey2
+            };
+
+            char original_CheatEngine[13]{ 0 };
+            char original_LUAScript[12]{ 0 };
+
+            for (int i = 0; i < 13 - 1; i++) //13 - 1 to stop last 00 from being xor'd
+            {
+                original_CheatEngine[i] = (char)(CheatEngine[i] ^ xorKey1);
+            }
+
+            for (int i = 0; i < 12; i++)
+            {
+                original_LUAScript[i] = (char)(CheatEngine[i] ^ xorKey2);
+            }
+
+            if (GetWindowTextA(hwnd, windowTitle, sizeof(windowTitle)))
+            {
+                if (GetClassNameA(hwnd, className, sizeof(className)))
+                {
+                    if (strstr(windowTitle, (const char*)original_CheatEngine) || strstr(windowTitle, (const char*)original_CheatEngine) != NULL)
+                    {
+                        Monitor->SetCheater(true);
+                        Monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
+                        Logger::logf("UltimateAnticheat.log", Detection, "Detected cheat engine window");
+                        return FALSE;
+                    }
+                    else if (strstr(windowTitle, (const char*)original_LUAScript))
+                    {
+                        Monitor->SetCheater(true);
+                        Monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
+                        Logger::logf("UltimateAnticheat.log", Detection, "Detected cheat engine's lua script window");
+                        return FALSE;
+                    }
+                }
+            }
+
+            return TRUE;
+        };
+
         ENUMWINDOWS pEnumWindows = (ENUMWINDOWS)GetProcAddress(hUser32, "EnumWindows");
         if (pEnumWindows != NULL)
         {
-            EnumWindows(EnumWindowsProc, (LPARAM)this);
+            EnumWindows(WindowCallback, (LPARAM)this);
         }
         else
         {
             Logger::logf("UltimateAnticheat.log", Err, "GetProcAddress failed @ Detections::IsBlacklistedWindowPresent: %d", GetLastError());
+            return FALSE;
         }
     }
     else
