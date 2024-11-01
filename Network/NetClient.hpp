@@ -60,6 +60,12 @@ public:
 		delete RecvLoopThread;
 	}
 
+	NetClient(NetClient&&) = delete;  //delete move constructr
+	NetClient& operator=(NetClient&&) noexcept = default; //delete move assignment operator
+
+	NetClient(const NetClient&) = delete; //delete copy constructor 
+	NetClient& operator=(const NetClient&) = delete; //delete assignment operator
+
 	NetClient operator+(NetClient& other) = delete; //delete all arithmetic operators, unnecessary for context
 	NetClient operator-(NetClient& other) = delete;
 	NetClient operator*(NetClient& other) = delete;
@@ -89,7 +95,7 @@ public:
 	uint16_t GetConnectedPort() const { return this->Port; }
 	Thread* GetRecvThread() const { return this->RecvLoopThread; }
 
-	void CipherData(LPBYTE buffer, int length);
+	void CipherData(LPBYTE buffer, int length); //encrypt in/out data 
 
 private:
 
