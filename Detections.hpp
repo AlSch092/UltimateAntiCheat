@@ -1,7 +1,7 @@
 //By AlSch092 @github
 #pragma once
 #include "Network/NetClient.hpp" //Net Comms
-#include "AntiDebug/AntiDebugger.hpp"
+#include "AntiDebug/DebuggerDetections.hpp"
 #include "AntiTamper/Integrity.hpp" //Code Integrity
 #include "Environment/Services.hpp" //`Services` class
 #include "Obscure/Obfuscation.hpp" //`ObfuscatedData` class

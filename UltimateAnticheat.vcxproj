@@ -145,7 +145,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;_WIN32_WINNT=0x0A00</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;_WIN32_WINNT=0x0A00;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <BufferSecurityCheck>true</BufferSecurityCheck>
     </ClCompile>
@@ -163,6 +163,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AntiDebug\AntiDebugger.cpp" />
+    <ClCompile Include="AntiDebug\DebuggerDetections.cpp" />
     <ClCompile Include="AntiTamper\Integrity.cpp" />
     <ClCompile Include="AntiTamper\NAuthenticode.cpp" />
     <ClCompile Include="AntiTamper\remap.cpp" />
@@ -185,6 +186,7 @@
   <ItemGroup>
     <ClInclude Include="AntiCheat.hpp" />
     <ClInclude Include="AntiDebug\AntiDebugger.hpp" />
+    <ClInclude Include="AntiDebug\DebuggerDetections.hpp" />
     <ClInclude Include="AntiTamper\Integrity.hpp" />
     <ClInclude Include="AntiTamper\NAuthenticode.hpp" />
     <ClInclude Include="AntiTamper\remap.hpp" />

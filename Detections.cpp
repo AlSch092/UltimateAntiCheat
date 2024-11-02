@@ -6,7 +6,7 @@
 */
 BOOL Detections::StartMonitor()
 {
-    if (this->MonitorThread != NULL || this->MonitorThread->IsThreadRunning) //prevent accidental double calls to this function/double thread creation
+    if (this->MonitorThread != nullptr) //prevent accidental double calls to this function/double thread creation
         return FALSE;
 
     this->MonitorThread = new Thread((LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, true);

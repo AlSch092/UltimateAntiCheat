@@ -31,13 +31,13 @@ public:
 		
 		try
 		{
-			this->NetworkClient = std::make_shared<NetClient>();
+			this->NetworkClient = make_shared<NetClient>();
 
-			this->_AntiDebugger = std::make_unique<Debugger::AntiDebug>(config, NetworkClient); //any detection methods need the netclient for comms
+			this->AntiDebugger = make_unique<DebuggerDetections>(config, NetworkClient); //any detection methods need the netclient for comms
 
-			this->Monitor = std::make_unique<Detections>(config, false, NetworkClient, UnmanagedGlobals::ModulesAtStartup);
+			this->Monitor = make_unique<Detections>(config, false, NetworkClient, UnmanagedGlobals::ModulesAtStartup);
 
-			this->Barrier = std::make_unique<Preventions>(config, true, Monitor.get()->GetIntegrityChecker()); //true = prevent new threads from being made
+			this->Barrier = make_unique<Preventions>(config, true, Monitor.get()->GetIntegrityChecker()); //true = prevent new threads from being made
 		}
 		catch (const std::bad_alloc& e)
 		{
@@ -57,7 +57,7 @@ public:
 	AntiCheat operator*(AntiCheat& other) = delete;
 	AntiCheat operator/(AntiCheat& other) = delete;
 
-	Debugger::AntiDebug* GetAntiDebugger() const { return this->_AntiDebugger.get(); }
+	Debugger::AntiDebug* GetAntiDebugger() const { return this->AntiDebugger.get(); }
 	
 	NetClient* GetNetworkClient() const  { return this->NetworkClient.get(); }
 	
@@ -75,7 +75,7 @@ private:
 
 	unique_ptr<Preventions> Barrier;  //cheat preventions
 
-	unique_ptr<Debugger::AntiDebug> _AntiDebugger;
+	unique_ptr<DebuggerDetections> AntiDebugger;
 
 	shared_ptr <NetClient> NetworkClient; //for client-server comms, our other classes need access to this to send detected flags to the server
 	
@@ -95,7 +95,7 @@ __forceinline bool AntiCheat::IsAnyThreadSuspended()
 		Logger::logf("UltimateAnticheat.log", Detection, "Monitor was found suspended! Abnormal program execution.");
 		return true;
 	}
-	else if (Config->bUseAntiDebugging && Thread::IsThreadSuspended(_AntiDebugger->GetDetectionThreadHandle()))
+	else if (Config->bUseAntiDebugging && Thread::IsThreadSuspended(AntiDebugger->GetDetectionThreadHandle()))
 	{
 		Logger::logf("UltimateAnticheat.log", Detection, "Anti-debugger was found suspended! Abnormal program execution.");
 		return true;
