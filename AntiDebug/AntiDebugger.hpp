@@ -44,7 +44,8 @@ namespace Debugger
 
         ~AntiDebug()
         {
-            delete DetectionThread;
+            //if(DetectionThread != nullptr)
+            //    delete DetectionThread;
         }
 
         AntiDebug operator+(AntiDebug& other) = delete; //delete all arithmetic operators, unnecessary for context
@@ -54,7 +55,7 @@ namespace Debugger
         
         list<Detections> GetDebuggerMethodsDetected() const { return DebuggerMethodsDetected; }
     
-        Thread* GetDetectionThread() const  { return this->DetectionThread; }
+        Thread* GetDetectionThread() const  { return this->DetectionThread.get(); }
         HANDLE GetDetectionThreadHandle() const  { if (this->DetectionThread != NULL) return this->DetectionThread->GetHandle(); else return INVALID_HANDLE_VALUE; }
 
         NetClient* GetNetClient() const { return this->netClient.get(); }
@@ -83,20 +84,22 @@ namespace Debugger
             for (auto& func : functionList) 
             {
                 if (DetectedDebugger = func())
-                {
+                { //debugger was found, optionally take further action (flags are already set in each routine)
                 }
             }
 
             return DetectedDebugger;
         }
 
+        static void _IsHardwareDebuggerPresent(LPVOID AD); //this func needs to run in its own thread, since it suspends all other threads and checks their contexts for DR's with values
+
     protected:
-        std::vector<std::function<bool()>> functionList;
+        vector<function<bool()>> functionList; //list of debugger detection methods, which are contained in the subclass `DebuggerDetections`
 
     private:       
         list<Detections> DebuggerMethodsDetected;
 
-        Thread* DetectionThread = NULL;
+        unique_ptr<Thread> DetectionThread = NULL;
 
         std::shared_ptr<NetClient> netClient = nullptr;
 

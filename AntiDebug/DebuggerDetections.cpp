@@ -2,90 +2,6 @@
 
 using namespace Debugger;
 
-/*
-	_IsHardwareDebuggerPresent - suspends threads + Checks debug registers for Dr0-3,6,7 being > 0
-*/
-void DebuggerDetections::_IsHardwareDebuggerPresent(LPVOID AD)
-{
-	if (AD == nullptr)
-	{
-		Logger::logf("UltimateAnticheat.log", Err, "AntiDbg class was NULL @ _IsHardwareDebuggerPresent");
-		return;
-	}
-
-	Debugger::AntiDebug* AntiDbg = reinterpret_cast<Debugger::AntiDebug*>(AD);
-
-	THREADENTRY32 te32;
-	te32.dwSize = sizeof(THREADENTRY32);
-
-	HANDLE hThreadSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
-	if (hThreadSnap == INVALID_HANDLE_VALUE)
-	{
-		printf("Error: unable to create toolhelp snapshot\n");
-		return;
-	}
-
-	DWORD currentProcessID = GetCurrentProcessId();
-
-	if (Thread32First(hThreadSnap, &te32))
-	{
-		do
-		{
-			if (te32.th32OwnerProcessID == currentProcessID && te32.th32ThreadID != GetCurrentThreadId())
-			{
-				HANDLE hThread = OpenThread(THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME | THREAD_QUERY_INFORMATION, FALSE, te32.th32ThreadID);
-
-				if (hThread == NULL)
-				{
-					printf("Error: unable to open thread %d\n", te32.th32ThreadID);
-					continue;
-				}
-
-				SuspendThread(hThread);
-
-				CONTEXT context;
-				context.ContextFlags = CONTEXT_DEBUG_REGISTERS;
-
-				if (GetThreadContext(hThread, &context))
-				{
-					if (context.Dr0 || context.Dr1 || context.Dr2 || context.Dr3 || context.Dr6 || context.Dr7)
-					{
-						Logger::logf("UltimateAnticheat.log", Detection, "Found at least one debug register enabled (hardware debugging)");
-						ResumeThread(hThread);
-						CloseHandle(hThreadSnap);
-						CloseHandle(hThread);
-
-						if (!AntiDbg->Flag(Detections::HARDWARE_REGISTERS))
-						{
-							Logger::logf("UltimateAnticheat.log", Warning, "Failed to notify server of hardware debugging.");
-						}
-
-						return;
-					}
-				}
-				else
-				{
-					Logger::logf("UltimateAnticheat.log", Err, "GetThreadContext failed with: %d", GetLastError());
-					ResumeThread(hThread);
-					CloseHandle(hThread);
-					continue;
-				}
-
-				ResumeThread(hThread);
-				CloseHandle(hThread);
-			}
-		} while (Thread32Next(hThreadSnap, &te32));
-	}
-	else
-	{
-		Logger::logf("UltimateAnticheat.log", Err, "Thread32First Failed: %d\n", GetLastError());
-		return;
-	}
-
-	CloseHandle(hThreadSnap);
-	return;
-}
-
 bool DebuggerDetections::_IsKernelDebuggerPresent()
 {
 	typedef long NTSTATUS;
@@ -162,8 +78,7 @@ bool DebuggerDetections::_IsDebuggerPresent_HeapFlags()
 			if (*heapForceFlagsPtr >= 0x40000060)
 			{
 				if (!Flag(Detections::HEAP_FLAG))
-				{
-					Logger::logf("UltimateAnticheat.log", Warning, "Failed to notify server of debugging method (server may be offline or duplicate entry)");
+				{ //optionally take further action, `Flag` will already log a warning
 				}
 
 				return true;
@@ -189,8 +104,7 @@ bool DebuggerDetections::_IsDebuggerPresent_CloseHandle()
 	__except (EXCEPTION_INVALID_HANDLE == GetExceptionCode() ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
 	{
 		if (!Flag(Detections::CLOSEHANDLE))
-		{
-			Logger::logf("UltimateAnticheat.log", Warning, "Failed to notify server of debugging method (server may be offline or duplicate entry)");
+		{ //optionally take further action, `Flag` will already log a warning
 		}
 
 		return true;
@@ -206,8 +120,7 @@ bool DebuggerDetections::_IsDebuggerPresent_RemoteDebugger()
 		if (bDebugged)
 		{
 			if (!Flag(Detections::REMOTE_DEBUGGER))
-			{
-				Logger::logf("UltimateAnticheat.log", Warning, "Failed to notify server of debugging method (server may be offline or duplicate entry)");
+			{ //optionally take further action, `Flag` will already log a warning
 			}
 
 			return true;
@@ -233,8 +146,7 @@ bool DebuggerDetections::_IsDebuggerPresent_DbgBreak()
 	Logger::logf("UltimateAnticheat.log", Info, "Calling __fastfail() to prevent further execution since a debugger was found running.");
 
 	if (!Flag(Detections::DBG_BREAK))
-	{
-		Logger::logf("UltimateAnticheat.log", Warning, "Failed to notify server of debugging method (server may be offline or duplicate entry)");
+	{//optionally take further action, `Flag` will already log a warning
 	}
 
 	__fastfail(1); //code should not reach here unless process is being debugged
@@ -261,8 +173,7 @@ bool DebuggerDetections::_IsDebuggerPresent_VEH()
 			bFound = true;
 
 			if (!Flag(Detections::VEH_DEBUGGER))
-			{
-				Logger::logf("UltimateAnticheat.log", Warning, "Failed to notify server of debugging method (server may be offline or duplicate entry)");
+			{//optionally take further action, `Flag` will already log a warning
 			}
 
 			DWORD dwOldProt = 0;
@@ -300,8 +211,7 @@ bool DebuggerDetections::_IsDebuggerPresent_PEB()
 	if (_PEB->BeingDebugged)
 	{
 		if (!Flag(Detections::VEH_DEBUGGER))
-		{
-			Logger::logf("UltimateAnticheat.log", Warning, "Failed to notify server of debugging method (server may be offline or duplicate entry)");
+		{//optionally take further action, `Flag` will already log a warning
 		}
 	}
 
@@ -330,8 +240,7 @@ bool DebuggerDetections::_IsDebuggerPresent_DebugPort()
 			if (NT_SUCCESS(status) && (dwProcessDebugPort == -1))
 			{
 				if (!Flag(Detections::DEBUG_PORT))
-				{
-					Logger::logf("UltimateAnticheat.log", Warning, "Failed to notify server of debugging method (server may be offline or duplicate entry)");
+				{//optionally take further action, `Flag` will already log a warning
 				}
 
 				return true;
@@ -368,8 +277,7 @@ bool DebuggerDetections::_IsDebuggerPresent_ProcessDebugFlags()
 			if (NT_SUCCESS(status) && (dwProcessDebugFlags == 0))
 			{
 				if (!Flag(Detections::PROCESS_DEBUG_FLAGS))
-				{
-					Logger::logf("UltimateAnticheat.log", Warning, "Failed to notify server of debugging method (server may be offline or duplicate entry)");
+				{//optionally take further action, `Flag` will already log a warning
 				}
 
 				return true;
