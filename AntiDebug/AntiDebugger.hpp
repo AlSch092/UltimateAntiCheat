@@ -2,9 +2,11 @@
 #pragma once
 #include "../Network/NetClient.hpp"
 #include "../Common/Settings.hpp"
+#include <functional>
 
 #define MAX_DLLS 256 
 #define USER_SHARED_DATA ((KUSER_SHARED_DATA * const)0x7FFE0000)
+#define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 
 namespace Debugger
 {
@@ -24,6 +26,8 @@ namespace Debugger
         TRAP_FLAG,
         DEBUG_PORT,
         PROCESS_DEBUG_FLAGS,
+        REMOTE_DEBUGGER,
+
     };
 
     class AntiDebug
@@ -42,6 +46,11 @@ namespace Debugger
         {
             delete DetectionThread;
         }
+
+        AntiDebug operator+(AntiDebug& other) = delete; //delete all arithmetic operators, unnecessary for context
+        AntiDebug operator-(AntiDebug& other) = delete;
+        AntiDebug operator*(AntiDebug& other) = delete;
+        AntiDebug operator/(AntiDebug& other) = delete;
         
         list<Detections> GetDebuggerMethodsDetected() const { return DebuggerMethodsDetected; }
     
@@ -56,30 +65,33 @@ namespace Debugger
 
         static void CheckForDebugger(LPVOID AD); //thread function, pass AntiDebug* member as `AD`
 
-        inline bool _IsDebuggerPresent() { return IsDebuggerPresent(); }
-        inline bool _IsDebuggerPresent_HeapFlags();
-        inline bool _IsDebuggerPresent_CloseHandle();
-        inline bool _IsDebuggerPresent_RemoteDebugger();
-        inline bool _IsDebuggerPresent_Int2c();
-        inline bool _IsDebuggerPresent_Int2d();
-        inline bool _IsDebuggerPresent_VEH();
-        inline bool _IsDebuggerPresent_DbgBreak();
-        inline bool _IsDebuggerPresent_PEB();
-        inline bool _IsDebuggerPresent_DebugPort();
-        inline bool _IsDebuggerPresent_ProcessDebugFlags();
-        inline bool _IsKernelDebuggerPresent();
-        inline bool _IsKernelDebuggerPresent_SharedKData();
-        static void _IsHardwareDebuggerPresent(LPVOID AD); //we need this particular routine threaded due to requirement of suspending threads to properly fetching thread context, if this is not threaded it means one thread (the anti-debugger one) will be lacking DR checks
-
         static bool PreventWindowsDebuggers(); //patch DbgBreakpoint + DbgUiRemoteBreakin
 
         bool AddDetectedFlag(Detections f);
         bool Flag(Detections flag);
 
-        AntiDebug operator+(AntiDebug& other) = delete; //delete all arithmetic operators, unnecessary for context
-        AntiDebug operator-(AntiDebug& other) = delete;
-        AntiDebug operator*(AntiDebug& other) = delete;
-        AntiDebug operator/(AntiDebug& other) = delete;
+        template<typename Func>
+        void AddDetectionFunction(Func func) 
+        {
+            functionList.emplace_back(func);
+        }
+
+        bool RunDetectionFunctions() 
+        {
+            bool DetectedDebugger = false;
+
+            for (auto& func : functionList) 
+            {
+                if (DetectedDebugger = func())
+                {
+                }
+            }
+
+            return DetectedDebugger;
+        }
+
+    protected:
+        std::vector<std::function<bool()>> functionList;
 
     private:       
         list<Detections> DebuggerMethodsDetected;
