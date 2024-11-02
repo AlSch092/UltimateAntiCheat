@@ -19,13 +19,7 @@ public:
         AddDetectionFunction([this]() -> bool { return _IsDebuggerPresent_ProcessDebugFlags(); });
         AddDetectionFunction([this]() -> bool { return _IsKernelDebuggerPresent(); });
         AddDetectionFunction([this]() -> bool { return _IsKernelDebuggerPresent_SharedKData(); });
-        //AddDetectionFunction([this]() { return _IsHardwareDebuggerPresent(this->); });
-    }
-
-    // Method to add a subclass-specific function
-    void AddDebuggerDetectionFunction() 
-    {
-        AddDetectionFunction([this]() -> bool { });
+        //AddDetectionFunction([this]() { return _IsHardwareDebuggerPresent(this->); });  //will add this back in soon
     }
 
     bool _IsDebuggerPresent() { return IsDebuggerPresent(); }
