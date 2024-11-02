@@ -42,10 +42,8 @@ namespace Debugger
             }
         }
 
-        ~AntiDebug()
+        ~AntiDebug() //monitor thread will automatically be ended once it goes out of scope
         {
-            //if(DetectionThread != nullptr)
-            //    delete DetectionThread;
         }
 
         AntiDebug operator+(AntiDebug& other) = delete; //delete all arithmetic operators, unnecessary for context
@@ -57,31 +55,29 @@ namespace Debugger
     
         Thread* GetDetectionThread() const  { return this->DetectionThread.get(); }
         HANDLE GetDetectionThreadHandle() const  { if (this->DetectionThread != NULL) return this->DetectionThread->GetHandle(); else return INVALID_HANDLE_VALUE; }
-
         NetClient* GetNetClient() const { return this->netClient.get(); }
-
         Settings* GetSettings() const { return this->Config; }
 
         void StartAntiDebugThread();
 
-        static void CheckForDebugger(LPVOID AD); //thread function, pass AntiDebug* member as `AD`
+        static void CheckForDebugger(LPVOID AD); //thread looping function to monitor, pass AntiDebug* member as `AD`
 
-        static bool PreventWindowsDebuggers(); //patch DbgBreakpoint + DbgUiRemoteBreakin
+        static bool PreventWindowsDebuggers(); //experimental method, patch DbgBreakpoint + DbgUiRemoteBreakin
 
         bool AddDetectedFlag(Detections f);
-        bool Flag(Detections flag);
+        bool Flag(Detections flag); //notify server 
 
         template<typename Func>
-        void AddDetectionFunction(Func func) 
+        void AddDetectionFunction(Func func) //define detection functions in the subclass, `DebuggerDetections`, then add them to the list using this func
         {
-            functionList.emplace_back(func);
+            DetectionFunctionList.emplace_back(func);
         }
 
-        bool RunDetectionFunctions() 
+        bool RunDetectionFunctions()  //run all detection functions
         {
             bool DetectedDebugger = false;
 
-            for (auto& func : functionList) 
+            for (auto& func : DetectionFunctionList)
             {
                 if (DetectedDebugger = func())
                 { //debugger was found, optionally take further action (flags are already set in each routine)
@@ -91,10 +87,10 @@ namespace Debugger
             return DetectedDebugger;
         }
 
-        static void _IsHardwareDebuggerPresent(LPVOID AD); //this func needs to run in its own thread, since it suspends all other threads and checks their contexts for DR's with values
+        static void _IsHardwareDebuggerPresent(LPVOID AD); //this func needs to run in its own thread, since it suspends all other threads and checks their contexts for DR's with values. its placed in this class since it doesn't fit the correct definition type for our detection function list
 
     protected:
-        vector<function<bool()>> functionList; //list of debugger detection methods, which are contained in the subclass `DebuggerDetections`
+        vector<function<bool()>> DetectionFunctionList; //list of debugger detection methods, which are contained in the subclass `DebuggerDetections`
 
     private:       
         list<Detections> DebuggerMethodsDetected;
