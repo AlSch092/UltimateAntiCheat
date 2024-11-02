@@ -102,6 +102,9 @@
     <ClCompile Include="Process\Handles.cpp">
       <Filter>Process</Filter>
     </ClCompile>
+    <ClCompile Include="AntiDebug\DebuggerDetections.cpp">
+      <Filter>AntiDebug</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AntiCheat.hpp">
@@ -190,6 +193,9 @@
     </ClInclude>
     <ClInclude Include="Process\Handles.hpp">
       <Filter>Process</Filter>
+    </ClInclude>
+    <ClInclude Include="AntiDebug\DebuggerDetections.hpp">
+      <Filter>AntiDebug</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
