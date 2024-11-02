@@ -27,7 +27,7 @@ namespace Debugger
         DEBUG_PORT,
         PROCESS_DEBUG_FLAGS,
         REMOTE_DEBUGGER,
-
+        DBG_BREAK,
     };
 
     class AntiDebug
