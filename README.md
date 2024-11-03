@@ -51,5 +51,4 @@ The GNU Affero general public license is used in this project. Please be aware o
 
 ## Class Flow Diagram
 
-![ClassDiagram](https://github.com/user-attachments/assets/732f1e7a-5e11-4196-945b-dee51318d5f0)
-
+![ClassDiagram](https://github.com/user-attachments/assets/1b1ea458-93dd-4e6e-a4c1-ab9f6c3cf96e)
