@@ -14,5 +14,5 @@ Simply open & build the project using visual studio (originally made in VS2022),
 - Heartbeat mechanism every 60 seconds (in-progress)
 
 ## Notice:
-A premium version of this software exists which has been load tested and has built-in database integration, along with improved readability, more detection features; thus this public version may be considered 'lacking' in various ways. The license fee is generally quite affordable and helps towards my basic living expenses. Please send me an e-mail if you're interested!
+A premium version of this software exists which has been load tested and has built-in MySql or MSSQL database integration, along with improved readability, more detection features; thus this public version may be considered 'lacking' in various ways. The license fee is generally quite affordable and helps towards my basic living expenses. Please send me an e-mail if you're interested!
 
