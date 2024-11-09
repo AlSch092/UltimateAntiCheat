@@ -15,7 +15,7 @@ enum LogType
     Detection,
 };
 
-class Logger 
+class Logger final
 {
 public:
 

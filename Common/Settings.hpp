@@ -3,7 +3,7 @@
 #include <memory>
 
 //Settings don't come in a .ini or .cfg file as we don't want end-users modifying program flow on compiled releases
-class Settings 
+class Settings final
 {
 public:
 
