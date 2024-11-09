@@ -92,7 +92,7 @@ namespace Obfuscator //from my other project, ObfuscateThis !
 }
 
 template<class T>
-class ObfuscatedData
+class ObfuscatedData final
 {
 private:
 	T someData; //data member to protect in memory
