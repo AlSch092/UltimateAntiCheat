@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cstring>
 
-class PacketReader 
+class PacketReader final
 {
 private:
     const unsigned char* buffer;

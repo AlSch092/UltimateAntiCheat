@@ -8,7 +8,7 @@
 
 typedef uint16_t header_t;
 
-class PacketWriter 
+class PacketWriter final
 {
 public:
 	PacketWriter() : m_pos(0), m_buffer(new unsigned char[bufferLen]), m_length(bufferLen) { }
