@@ -23,7 +23,7 @@ using namespace std;
 /*
 Class NetClient - Client-side of networking portion
 */
-class NetClient
+class NetClient final
 {
 public:
 
@@ -57,7 +57,8 @@ public:
 
 	~NetClient()
 	{
-		delete RecvLoopThread;
+		if(RecvLoopThread != nullptr)
+			delete RecvLoopThread;
 	}
 
 	NetClient(NetClient&&) = delete;  //delete move constructr
