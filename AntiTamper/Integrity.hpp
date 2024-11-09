@@ -18,7 +18,7 @@ struct ModuleHashData //to avoid needing a `list<tuple<wstring,list<uint64>>>`  
 	vector<uint64_t> Hashes;
 };
 
-class Integrity
+class Integrity final
 {
 public:
 
