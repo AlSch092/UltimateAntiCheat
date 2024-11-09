@@ -10,7 +10,7 @@
 #include "Common/Settings.hpp"
 #include "AntiTamper/Integrity.hpp"
 
-class Preventions
+class Preventions final
 {
 public:
 

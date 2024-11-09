@@ -15,7 +15,7 @@
 /*
 	The detections class contains a set of static functions to help detect fragments of cheating, along with a thread for looping detections and a thread for process creation events
 */
-class Detections
+class Detections final
 {
 public:
 

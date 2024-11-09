@@ -17,7 +17,7 @@
 /*
 	The `AntiCheat` class is a container for the necessary classes of our program, including the monitor, barrier, netclient, and anti-debugger
 */
-class AntiCheat
+class AntiCheat final
 {
 public:
 
@@ -57,7 +57,7 @@ public:
 	AntiCheat operator*(AntiCheat& other) = delete;
 	AntiCheat operator/(AntiCheat& other) = delete;
 
-	Debugger::AntiDebug* GetAntiDebugger() const { return this->AntiDebugger.get(); }
+	DebuggerDetections* GetAntiDebugger() const { return this->AntiDebugger.get(); }
 	
 	NetClient* GetNetworkClient() const  { return this->NetworkClient.get(); }
 	
