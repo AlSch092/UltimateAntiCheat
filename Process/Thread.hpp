@@ -3,12 +3,11 @@
 #include <windows.h>
 #include "../Common/Logger.hpp"
 
-
 /*
 	Thread class represents a process thread, we aim to track threads in our process such that we can determine possible rogue threads
 	Any helper functions related to threads are also defined in this class
 */
-class Thread
+class Thread final
 {
 public:
 
@@ -46,7 +45,7 @@ public:
 		}
 	}
 
-	Thread(Thread&&) = delete;  //move constructr
+	Thread(Thread&&) = delete;  //delete move constructr
 	Thread& operator=(Thread&&) noexcept = default; //delete move assignment operator
 
 	Thread(const Thread&) = delete; //delete copy constructor 
