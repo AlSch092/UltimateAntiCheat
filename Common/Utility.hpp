@@ -14,7 +14,7 @@ using namespace std;
 /*
 	Utility is a 'helper class' which provides some functions for string operations and comparisons
 */
-class Utility
+class Utility final
 {
 public:
 	
