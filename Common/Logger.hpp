@@ -6,13 +6,22 @@
 #include <ctime>
 #include <cstdarg>
 #include <windows.h>
+#include <mutex>
 
 enum LogType
 {
-    Info,
-    Warning,
-    Err,
-    Detection,
+    Info, Warning, Err, Detection
+};
+
+const WORD ConsoleTextColors[] = 
+{
+    FOREGROUND_RED | FOREGROUND_INTENSITY,                       //red
+    FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY,    //yellow
+    FOREGROUND_GREEN | FOREGROUND_INTENSITY,                     //green
+    FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY,   //cyan
+    FOREGROUND_BLUE | FOREGROUND_INTENSITY,                      //blue
+    FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY,     //magenta
+    FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,         // white 
 };
 
 class Logger final
@@ -21,6 +30,8 @@ public:
 
     static void log(const std::string& filename, LogType type, const std::string& message)
     {
+        std::lock_guard<std::mutex> lock(consoleMutex);
+
         std::ofstream logFile(filename, std::ios::out | std::ios::app);
 
         if (!logFile.is_open())
@@ -58,13 +69,25 @@ public:
 
         if (type == Detection)
         {
-            SetColor(FOREGROUND_RED);
+            SetColor(ConsoleTextColors[0]);
             printf("%s\n", msg_with_errorcode.c_str());
             ResetColor();
         }
         else if (type == Info)
         {
+            SetColor(ConsoleTextColors[3]);
+            printf("%s\n", msg_with_errorcode.c_str());
+            ResetColor();
+        }
+        else if (type == Warning)
+        {
             SetColor(FOREGROUND_GREEN);
+            printf("%s\n", msg_with_errorcode.c_str());
+            ResetColor();
+        }
+        else if (type == Err)
+        {
+            SetColor(ConsoleTextColors[5]);
             printf("%s\n", msg_with_errorcode.c_str());
             ResetColor();
         }
@@ -122,13 +145,25 @@ public:
 
         if (type == Detection)
         {
-            SetColor(FOREGROUND_RED);
+            SetColor(ConsoleTextColors[0]);
             wprintf(L"%s\n", msg_with_errorcode.c_str());
             ResetColor();
         }
         else if (type == Info)
         {
+            SetColor(ConsoleTextColors[3]);
+            wprintf(L"%s\n", msg_with_errorcode.c_str());
+            ResetColor();
+        }
+        else if (type == Warning)
+        {
             SetColor(FOREGROUND_GREEN);
+            wprintf(L"%s\n", msg_with_errorcode.c_str());
+            ResetColor();
+        }
+        else if (type == Err)
+        {
+            SetColor(ConsoleTextColors[5]);
             wprintf(L"%s\n", msg_with_errorcode.c_str());
             ResetColor();
         }
@@ -194,4 +229,6 @@ public:
     {
         SetColor(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
     }
+
+    static std::mutex consoleMutex;//prevent race conditions with text color changing
 };
