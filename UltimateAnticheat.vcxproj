@@ -168,6 +168,7 @@
     <ClCompile Include="AntiTamper\NAuthenticode.cpp" />
     <ClCompile Include="AntiTamper\remap.cpp" />
     <ClCompile Include="API\API.cpp" />
+    <ClCompile Include="Common\Logger.cpp" />
     <ClCompile Include="Common\SHA256.cpp" />
     <ClCompile Include="Common\Utility.cpp" />
     <ClCompile Include="Detections.cpp" />

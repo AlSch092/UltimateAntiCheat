@@ -105,6 +105,9 @@
     <ClCompile Include="AntiDebug\DebuggerDetections.cpp">
       <Filter>AntiDebug</Filter>
     </ClCompile>
+    <ClCompile Include="Common\Logger.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AntiCheat.hpp">
