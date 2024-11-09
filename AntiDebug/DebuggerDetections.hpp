@@ -1,7 +1,7 @@
 #pragma once
 #include "AntiDebugger.hpp"
 
-class DebuggerDetections : public Debugger::AntiDebug
+class DebuggerDetections final  : public Debugger::AntiDebug
 {
 public:
     DebuggerDetections(Settings* s, std::shared_ptr<NetClient> netClient) : Debugger::AntiDebug(s, netClient) 
