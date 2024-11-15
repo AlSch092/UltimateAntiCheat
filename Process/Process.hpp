@@ -79,7 +79,7 @@ namespace ProcessData
 	The `Process` class provides a representation of the current process and provides several static utility functions
 	Aspects of a process such as sections, modules, threads, etc are contained in this class
 */
-class Process
+class Process final
 {
 public:
 
