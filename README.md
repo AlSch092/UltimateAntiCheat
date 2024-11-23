@@ -10,7 +10,8 @@ UltimateAntiCheat is an open source usermode anti-cheat system made to detect an
    If there is anything not working for you (throws unhandled exceptions, can't build, etc) please raise an issue and I will answer it ASAP. If you have code suggestions or techniques you'd like to see added, or want assistance with adding anti-cheat to your game, please send me an email. More techniques and better design will be added to the project over time, and the file `changelog.md` contains a dated updates list. Visual Studio 2022 is used as the IDE, and it's recommended you use this for project viewing and compilation.  
 
 ## Current Detections and protective features:
-- Monitors new process creation using WMI  
+- Monitors new process creation using WMI
+- New processes are scanned for blacklisted patterns
 - Detects Open Process Handles to our process (`OpenProcess` detection)
 - Blocks APC injection (undocumented  `ntdll.Ordinal8` patching)
 - Debugger detection (hardware/DR, PEB, kernelmode)
