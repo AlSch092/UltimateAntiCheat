@@ -1,3 +1,4 @@
+//By AlSch092 @ Github
 #include "Services.hpp"
 
 #ifdef _MSC_VER
@@ -108,6 +109,15 @@ BOOL Services::GetLoadedDrivers()
         if (GetDeviceDriverBaseName(drivers[i], driverName, MAX_PATH) && GetDeviceDriverFileName(drivers[i], driverPath, MAX_PATH))
         {
             DriverPaths.push_back(driverPath);
+
+            for (wstring blacklisted : this->BlacklistedDrivers) //enumerate blacklisted drivers, check if driverPath contains a blacklisted driver
+            {
+                if (Utility::ContainsWStringInsensitive(driverPath, blacklisted))
+                {
+                    Logger::logfw("UltimateAnticheat.log", Detection, L"Found Vulnerable loaded driver @ GetLoadedDrivers: %s", driverPath);
+                    this->FoundBlacklistedDrivers.push_back(driverPath);
+                }
+            }
         }
         else 
         {
@@ -139,7 +149,7 @@ list<wstring> Services::GetUnsignedDrivers()
     {
         if (!Authenticode::HasSignature(driverPath.c_str()))
         {
-            Logger::logfw("UltimateAnticheat.log", Warning, L"Found unsigned or outdated certificate on driver: %s\n", driverPath.c_str());
+            Logger::logfw("UltimateAnticheat.log", Detection, L"Found unsigned or outdated certificate on driver: %s\n", driverPath.c_str());
             unsignedDrivers.push_back(driverPath);
         }
         else
@@ -496,6 +506,7 @@ list<DeviceW> Services::GetHardwareDevicesW()
             continue;
         }
 
+        Logger::logfw("UltimateAnticheat.log", Info, L"Found Device: %s\n", d.Description.c_str());
         deviceList.push_back(d);
     }
 
@@ -509,6 +520,9 @@ list<DeviceW> Services::GetHardwareDevicesW()
     return deviceList;
 }
 
+/*
+    Services::IsSecureBootEnabled_RegKey - another method for checking secure boot without using a powershell process
+*/
 BOOL Services::IsSecureBootEnabled_RegKey()
 {
     HKEY hKey;
