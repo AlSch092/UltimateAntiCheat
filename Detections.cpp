@@ -38,7 +38,6 @@ VOID CALLBACK Detections::OnDllNotification(ULONG NotificationReason, const PLDR
         if (!Authenticode::HasSignature(FullDllName))
         {
 			Logger::logfw("UltimateAnticheat.log", Detection, L"Failed to verify signature of %s\n", FullDllName);
-
             Monitor->Flag(DetectionFlags::INJECTED_ILLEGAL_PROGRAM);
         }
     }
@@ -661,7 +660,7 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
     hres = CoCreateInstance(CLSID_WbemLocator, 0, CLSCTX_INPROC_SERVER, IID_IWbemLocator, (LPVOID*)&pLoc);
     if (FAILED(hres))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to create IWbemLocator object");
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to create IWbemLocator object @ MonitorProcessCreation");
         CoUninitialize();
         return;
     }
@@ -670,7 +669,7 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
     hres = pLoc->ConnectServer(_bstr_t(L"ROOT\\CIMV2"), NULL, NULL, 0, NULL, 0, 0, &pSvc);
     if (FAILED(hres))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Could not connect to WMI namespace");
+        Logger::logf("UltimateAnticheat.log", Err, "Could not connect to WMI namespace @ MonitorProcessCreation");
         pLoc->Release();
         CoUninitialize();
         return;
@@ -680,7 +679,7 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
 
     if (FAILED(hres))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Could not set proxy blanket");
+        Logger::logf("UltimateAnticheat.log", Err, "Could not set proxy blanket @ MonitorProcessCreation");
         pSvc->Release();
         pLoc->Release();
         CoUninitialize();
@@ -692,7 +691,7 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
 
     if (FAILED(hres))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Query for process creation events failed");
+        Logger::logf("UltimateAnticheat.log", Err, "Query for process creation events failed @ MonitorProcessCreation");
         pSvc->Release();
         pLoc->Release();
         CoUninitialize();
@@ -701,7 +700,7 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
 
     IWbemClassObject* pclsObj = NULL;
     ULONG uReturn = 0;
-    while (pEnumerator && monitor->MonitoringProcessCreation)
+    while (pEnumerator && monitor->MonitoringProcessCreation) //keep looping while MonitoringProcessCreation is set to true
     {
         HRESULT hr = pEnumerator->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
         if (0 == uReturn) break;
@@ -723,8 +722,12 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
                     if (Utility::wcscmp_insensitive(blacklistedProcess.c_str(), vtName.bstrVal))
                     {
                         Logger::logfw("UltimateAnticheat.log", Detection, L"Blacklisted process was spawned: %s", vtName.bstrVal);
-                        break;
                     }
+                }
+
+                if (monitor->FindBlacklistedProgramsThroughByteScan(Process::GetProcessIdByName(vtName.bstrVal)))
+                {
+                    Logger::logfw("UltimateAnticheat.log", Detection, L"Blacklisted process was found through byte signature: %s", vtName.bstrVal);
                 }
 
                 VariantClear(&vtName);
@@ -747,9 +750,72 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
 void Detections::InitializeBlacklistedProcessesList()
 {
     this->BlacklistedProcesses.push_back(L"Cheat Engine.exe"); //todo: hide these strings
-    this->BlacklistedProcesses.push_back(L"CheatEngine.exe"); //...we can  also scan for window class names, possible exported functions, specific text inside windows, etc.
+    this->BlacklistedProcesses.push_back(L"CheatEngine.exe"); //...we can  also scan for window class names, possible exported functions (in any DLLs running in the program), specific text inside windows, etc.
     this->BlacklistedProcesses.push_back(L"cheatengine-x86_64-SSE4-AVX2.exe");
     this->BlacklistedProcesses.push_back(L"x64dbg.exe");
     this->BlacklistedProcesses.push_back(L"windbg.exe");
     this->BlacklistedProcesses.push_back(L"DSEFix.exe");
+}
+
+/*
+    FindBlacklistedProgramsThroughByteScan(DWORD pid) - check process `pid` for specific byte patterns which implicate it of being a bad actor process
+    Used in combination with WMI process load callbacks (MonitorProcessCreation)
+*/
+bool Detections::FindBlacklistedProgramsThroughByteScan(DWORD pid)
+{
+    if (pid <= 4)
+        return false;
+
+    struct Pattern 
+    {
+        BYTE* data;
+        size_t size;
+
+        Pattern(BYTE* d, size_t s) : data(d), size(s) {}
+    };
+
+    bool foundSignature = false;
+
+    vector<Pattern> BlacklistedPatterns;
+
+    //located at cheatengine-x86_64-SSE4-AVX2.exe + 3DD9
+    BYTE signaturePattern_CheatEngine[] = { 0x48, 0x8D, 0x64, 0x24, 0x28, 0xC3, 0x00, 0x48, 0x8D, 0x64, 0x24,0xD8, 0xC6, 0x05 }; //lea rsp,[rsp+28] -> ret -> add [rax-73],cl -> and al,-28
+
+    BlacklistedPatterns.emplace_back(signaturePattern_CheatEngine, 14);
+
+    for (Pattern pattern : BlacklistedPatterns)
+    {
+        DWORD patternSize = pattern.size;
+
+        vector<BYTE> textSectionBytes = Process::ReadRemoteTextSection(pid);
+
+        if (!textSectionBytes.empty())
+        {
+            for (size_t i = 0; i <= textSectionBytes.size() - patternSize; ++i)
+            {
+                bool found = true;
+                for (size_t j = 0; j < patternSize; ++j)
+                {
+                    if (textSectionBytes[i + j] != pattern.data[j])
+                    {
+                        found = false;
+                        break;
+                    }
+                }
+
+                if (found)
+                {
+                    foundSignature = true;
+                    Logger::logfw("UltimateAnticheat.log", Detection, L"Found blacklisted byte pattern in process %d at offset %d", pid, i);
+                }
+            }
+        }
+        else
+        {
+            Logger::logfw("UltimateAnticheat.log", Warning, L"Failed to read .text section of process %d", pid);
+            continue;
+        }
+    }
+
+    return foundSignature;
 }

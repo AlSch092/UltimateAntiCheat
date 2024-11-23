@@ -109,6 +109,8 @@ public:
 	BOOL StartMonitor(); //begin threading
 	static void Monitor(LPVOID thisPtr); //loop detections/monitor -> thread function
 
+	bool FindBlacklistedProgramsThroughByteScan(DWORD pid); //scan array of bytes in suspected bad actor processes
+
 private:
 
 	void InitializeBlacklistedProcessesList();
