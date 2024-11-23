@@ -96,7 +96,7 @@ int main(int argc, char** argv)
 
     if (ConfigInstance->bEnforceDSE)
     {
-        if (!Services::IsTestsigningEnabled()) //check test signing mode before startup
+        if (Services::IsTestsigningEnabled()) //check test signing mode before startup
         {
             MessageBoxA(0, "Test signing was enabled, thus you cannot proceed. Please turn off test signing via `bcdedit.exe`, or change `bEnforceDSE` to false.", "UltimateAntiCheat", 0);
             Logger::logf("UltimateAnticheat.log", Detection, "Test signing was enabled, thus you cannot proceed. Please turn off test signing via `bcdedit.exe`, or change `bEnforceDSE` to false.");
