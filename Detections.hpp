@@ -28,7 +28,7 @@ public:
 		try 
 		{
 			_Proc = make_unique<Process>(EXPECTED_SECTIONS);
-			_Services = make_unique<Services>(false);
+			_Services = make_unique<Services>(true);
 			integrityChecker = make_shared<Integrity>(currentModules);
 		}
 		catch (const std::bad_alloc& e) 
