@@ -17,6 +17,7 @@ public:
         AddDetectionFunction([this]() -> bool { return _IsDebuggerPresent_ProcessDebugFlags(); });
         AddDetectionFunction([this]() -> bool { return _IsKernelDebuggerPresent(); });
         AddDetectionFunction([this]() -> bool { return _IsKernelDebuggerPresent_SharedKData(); });
+        AddDetectionFunction([this]() -> bool { return _ExitCommonDebuggers(); });
     }
 
     bool _IsDebuggerPresent() { return IsDebuggerPresent(); }
@@ -30,4 +31,5 @@ public:
     bool _IsDebuggerPresent_ProcessDebugFlags();
     bool _IsKernelDebuggerPresent();
     bool _IsKernelDebuggerPresent_SharedKData();
+    bool _ExitCommonDebuggers(); //call ExitProcess in a remote thread on common debuggers
 };

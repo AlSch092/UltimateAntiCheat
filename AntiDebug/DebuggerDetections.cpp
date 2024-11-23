@@ -290,3 +290,54 @@ bool DebuggerDetections::_IsDebuggerPresent_ProcessDebugFlags()
 	}
 	return false;
 }
+
+/*
+	_ExitCommonDebuggers - create remote thread on any common debugger processes and call ExitProcess
+*/
+bool DebuggerDetections::_ExitCommonDebuggers()
+{
+	list<wstring> commonDebuggers;
+	commonDebuggers.push_back(L"x64dbg.exe");
+	commonDebuggers.push_back(L"CheatEngine.exe");
+	commonDebuggers.push_back(L"idaq64.exe");
+	commonDebuggers.push_back(L"cheatengine-x86_64-SSE4-AVX2.exe");
+
+	bool triedEndDebugger = false;
+
+	for (wstring debugger : commonDebuggers)
+	{
+		DWORD foundPid = Process::GetProcessIdByName(debugger);
+
+		if (foundPid != NULL)
+		{
+			UINT64 K32Base = (UINT64)GetModuleHandleW(L"kernel32.dll");
+
+			if (K32Base == NULL)
+			{
+				Logger::logf("UltimateAnticheat.log", Warning, "Failed to fetch kernel32.dll address @ _ExitCommonDebuggers ");
+				return false;
+			}
+
+			UINT64 ExitProcessAddr = (UINT64)GetProcAddress((HMODULE)K32Base, "ExitProcess");
+
+			if (ExitProcessAddr == NULL)
+			{
+				Logger::logf("UltimateAnticheat.log", Warning, "Failed to fetch ExitProcess address @ _ExitCommonDebuggers ");
+				return false;
+			}
+
+			UINT64 ExitProcessOffset = ExitProcessAddr - K32Base;
+
+			HANDLE remoteProcHandle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, foundPid);
+
+			if (remoteProcHandle)
+			{
+				HANDLE RemoteThread = CreateRemoteThread(remoteProcHandle, 0, 0, (LPTHREAD_START_ROUTINE)(Process::GetRemoteModuleBaseAddress(foundPid, L"kernel32.dll") + ExitProcessOffset), 0, 0, 0);
+				Logger::logf("UltimateAnticheat.log", Info, "Created remote thread at %llX address", (Process::GetRemoteModuleBaseAddress(foundPid, L"kernel32.dll") + ExitProcessOffset));
+				triedEndDebugger = true;
+			}
+		}
+	}
+
+	return triedEndDebugger;
+}
