@@ -8,6 +8,9 @@
 #include <codecvt>
 #include <vector>
 #include <list>
+#include <algorithm> //std::transform
+#include <locale>
+#include <cwctype> //std::towlower
 
 using namespace std;
 
@@ -61,4 +64,7 @@ public:
 
 	static void str_to_lower(char* str);
 	static char* strstr_case_insensitive(const char* haystack, const char* needle);
+
+	static wstring ToLower(const std::wstring& str);
+	static bool ContainsWStringInsensitive(const std::wstring& haystack, const std::wstring& needle);
 };

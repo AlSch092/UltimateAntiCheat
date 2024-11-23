@@ -176,3 +176,18 @@ bool Utility::areAllElementsInList(const std::list<std::string>& list1, const st
     }
     return true; //elements in list1 are in list2
 }
+
+std::wstring Utility::ToLower(const std::wstring& str) 
+{
+    std::wstring lowerStr = str;
+    std::transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(),
+        [](wchar_t ch) { return std::towlower(ch); });
+    return lowerStr;
+}
+
+bool Utility::ContainsWStringInsensitive(const std::wstring& haystack, const std::wstring& needle) 
+{
+    std::wstring lowerHaystack = ToLower(haystack);
+    std::wstring lowerNeedle = ToLower(needle); //convert both strings to lowercase, check if the needle is in the haystack
+    return lowerHaystack.find(lowerNeedle) != std::wstring::npos;
+}
