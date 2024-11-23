@@ -1,4 +1,6 @@
 ## Updates
+- Nov 23, '24: Added anti-debugger method which creates a remote thread inside common debuggers which calls their `ExitProcess` routine
+
 - Oct 27, '24: Added process creation monitoring using WMI to detect blacklisted processes being opened  
 
 - Oct 24, '24: Started to change important class object pointers to `std::unique_ptr`, and fixed an memory-related unhandled exception issue at cleanup/program ending. The main focus going forwards for this project will be to make better use of C++ concepts, in order to make the code more readable and scale better.  
