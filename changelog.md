@@ -1,4 +1,6 @@
 ## Updates
+- Nov 23, '24: Added signature/byes pattern scanning on newly created processes
+
 - Nov 23, '24: Added anti-debugger method which creates a remote thread inside common debuggers which calls their `ExitProcess` routine
 
 - Oct 27, '24: Added process creation monitoring using WMI to detect blacklisted processes being opened  
