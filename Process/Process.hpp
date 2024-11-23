@@ -168,6 +168,11 @@ public:
 
 	static DWORD GetTextSectionSize(HMODULE hModule);
 
+	static HMODULE GetRemoteModuleBaseAddress(DWORD processId, const wchar_t* moduleName);
+
+	static bool GetRemoteTextSection(HANDLE hProcess, uintptr_t& baseAddress, SIZE_T& sectionSize);
+	static std::vector<BYTE> ReadRemoteTextSection(DWORD pid);
+
 private:
 
 	_MYPEB* _PEB = NULL;

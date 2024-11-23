@@ -1094,7 +1094,7 @@ DWORD Process::GetTextSectionSize(HMODULE hModule)
 
     PIMAGE_SECTION_HEADER sectionHeaders = IMAGE_FIRST_SECTION(ntHeaders);
 
-    for (int i = 0; i < EXPECTED_SECTIONS; i++) //EXPECTED_SECTIONS is used since we're spoofing the number of sections in our process at runtime
+    for (int i = 0; i < ntHeaders->FileHeader.NumberOfSections; i++)
     {
         if (strcmp((char*)sectionHeaders[i].Name, ".text") == 0)
         {
@@ -1103,4 +1103,86 @@ DWORD Process::GetTextSectionSize(HMODULE hModule)
     }
 
     return 0;
+}
+
+/*
+    GetRemoteModuleBaseAddress - fetch module base address of `moduleName` in `processId`
+*/
+HMODULE Process::GetRemoteModuleBaseAddress(DWORD processId, const wchar_t* moduleName) 
+{
+    HMODULE hModule = NULL;
+    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, processId);
+    if (hSnapshot != INVALID_HANDLE_VALUE) 
+    {
+        MODULEENTRY32 moduleEntry = { 0 };
+        moduleEntry.dwSize = sizeof(MODULEENTRY32);
+        if (Module32First(hSnapshot, &moduleEntry)) 
+        {
+            do 
+            {
+                if (_wcsicmp(moduleEntry.szModule, moduleName) == 0) 
+                {
+                    hModule = moduleEntry.hModule;
+                    break;
+                }
+            } while (Module32Next(hSnapshot, &moduleEntry));
+        }
+        CloseHandle(hSnapshot);
+    }
+    return hModule;
+}
+
+bool Process::GetRemoteTextSection(HANDLE hProcess, uintptr_t& baseAddress, SIZE_T& sectionSize) 
+{
+    MEMORY_BASIC_INFORMATION mbi;
+    uintptr_t address = 0;
+
+    while (VirtualQueryEx(hProcess, reinterpret_cast<LPCVOID>(address), &mbi, sizeof(mbi)) == sizeof(mbi)) 
+    {
+        // Check if the memory region is committed and executable
+        if ((mbi.State == MEM_COMMIT) && (mbi.Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE))) 
+        {
+            // Optionally: refine this logic to inspect PE headers to ensure it's the `.text` section
+            baseAddress = reinterpret_cast<uintptr_t>(mbi.BaseAddress);
+            sectionSize = mbi.RegionSize;
+            return true;
+        }
+        address += mbi.RegionSize;
+    }
+    return false;
+}
+
+std::vector<BYTE> Process::ReadRemoteTextSection(DWORD pid) 
+{
+    HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+    if (!hProcess) 
+    {
+        std::cerr << "Failed to open process. Error: " << GetLastError() << std::endl;
+        return {};
+    }
+
+    uintptr_t baseAddress = 0;
+    SIZE_T sectionSize = 0;
+
+    if (!GetRemoteTextSection(hProcess, baseAddress, sectionSize)) 
+    {
+        std::cerr << "Failed to find the .text section." << std::endl;
+        CloseHandle(hProcess);
+        return {};
+    }
+
+    std::vector<BYTE> buffer(sectionSize);
+
+    SIZE_T bytesRead = 0;
+    if (!ReadProcessMemory(hProcess, reinterpret_cast<LPCVOID>(baseAddress), buffer.data(), sectionSize, &bytesRead)) 
+    {
+        std::cerr << "Failed to read memory. Error: " << GetLastError() << std::endl;
+        CloseHandle(hProcess);
+        return {};
+    }
+
+    buffer.resize(bytesRead); // Resize to actual bytes read
+    CloseHandle(hProcess);
+
+    return buffer;
 }
