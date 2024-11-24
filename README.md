@@ -24,7 +24,7 @@ UltimateAntiCheat is an open source usermode anti-cheat system made to detect an
 - Spoofs `NumberOfSections`, `SizeOfImage`, & `AddressOfEntryPoint` to prevent dynamic info lookups (process manipulation)
 - Parent process check
 - Blacklisted running process checks & whitelisted loaded modules check
-- Loaded module name random renaming (process manipulation)
+- Main module name random renaming (process manipulation)
 - Exported function names random renaming (process manipulation, anti-injection)
 - Data obfuscation class to help hide sensitive variables
 - Check for if Windows is in 'Test Signing mode' and 'debug mode'
