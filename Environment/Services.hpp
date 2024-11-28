@@ -1,17 +1,14 @@
 //By AlSch092 @ Github
 #pragma once
-#include <iostream>
-#include <Windows.h>
+#include "../Common/Logger.hpp"
+#include "../AntiTamper/NAuthenticode.hpp"
+#include "../Common/Utility.hpp"
 #include <Psapi.h>
 #include <TlHelp32.h>
-#include <string>
-#include <list>
-#include "../AntiTamper/NAuthenticode.hpp"
-#include "../Common/Logger.hpp"
-#include "../Common/Utility.hpp"
 #include <setupapi.h>
 #include <cfgmgr32.h>
 #include <tchar.h>
+#include <intrin.h>
 
 #pragma comment(lib, "setupapi.lib")
 
