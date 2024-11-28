@@ -77,9 +77,11 @@ public:
 			BlacklistedDrivers.push_back(L"ENE.sys"); //older versions vulnerable
 			BlacklistedDrivers.push_back(L"iqvw64e.sys"); //direct memory access
 			BlacklistedDrivers.push_back(L"hxctl.sys"); //Huorong Security, allow execute kernel code
-
-		    GetLoadedDrivers();
-		    GetServiceModules();
+			BlacklistedDrivers.push_back(L"kprocesshacker.sys"); //process hacker's driver allows reading + writing to phys memory
+			BlacklistedDrivers.push_back(L"kprocesshacker2.sys"); //process hacker's driver allows reading + writing to phys memory
+			
+		        GetLoadedDrivers();
+		        GetServiceModules();
 		}
 	}
 
