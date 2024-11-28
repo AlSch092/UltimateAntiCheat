@@ -72,10 +72,34 @@ public:
 			BlacklistedDrivers.push_back(L"AsUpIO.sys");  //asus utilities
 			BlacklistedDrivers.push_back(L"CPUID.sys"); //direct memory access & manipulation
 			BlacklistedDrivers.push_back(L"ENE.sys"); //older versions vulnerable
-			BlacklistedDrivers.push_back(L"iqvw64e.sys"); //direct memory access
+			BlacklistedDrivers.push_back(L"iqvw64e.sys"); //direct memory access, used in manually mapping drivers
 			BlacklistedDrivers.push_back(L"hxctl.sys"); //Huorong Security, allow execute kernel code
 			BlacklistedDrivers.push_back(L"kprocesshacker.sys"); //process hacker's driver allows reading + writing to phys memory
 			BlacklistedDrivers.push_back(L"kprocesshacker2.sys"); //process hacker's driver allows reading + writing to phys memory
+			BlacklistedDrivers.push_back(L"EIO64.sys");
+			BlacklistedDrivers.push_back(L"IOMap64.sys");
+			BlacklistedDrivers.push_back(L"ATSZIO64.sys");
+			BlacklistedDrivers.push_back(L"atillk64.sys");
+			BlacklistedDrivers.push_back(L"aswVmm.sys"); //ssdt hooking
+			BlacklistedDrivers.push_back(L"BS_Flash64.sys");
+			BlacklistedDrivers.push_back(L"Capcom.sys");
+			BlacklistedDrivers.push_back(L"cpuz141.sys"); //phys read/write
+			BlacklistedDrivers.push_back(L"WinRing0x64.sys");
+			BlacklistedDrivers.push_back(L"FairplayKD.sys");
+			BlacklistedDrivers.push_back(L"pgldqpoc.sys");
+			BlacklistedDrivers.push_back(L"HwOs2Ec10x64.sys"); //APC injection
+			BlacklistedDrivers.push_back(L"Phymemx64.sys");
+			BlacklistedDrivers.push_back(L"Monitor_win10_x64.sys");
+			BlacklistedDrivers.push_back(L"driver.sys");
+			BlacklistedDrivers.push_back(L"lha.sys");
+			BlacklistedDrivers.push_back(L"Mslo64.sys");
+			BlacklistedDrivers.push_back(L"NTIOLib_x64.sys");
+			BlacklistedDrivers.push_back(L"pcdsrvc_x64.pkms");
+			BlacklistedDrivers.push_back(L"HWiNFO64A.sys");
+			BlacklistedDrivers.push_back(L"rzpnk.sys"); //CVE-2017-9769
+			BlacklistedDrivers.push_back(L"magdrvamd64.sys");
+			BlacklistedDrivers.push_back(L"speedfan.sys");
+			BlacklistedDrivers.push_back(L"zam64.sys");
 			
 		        GetLoadedDrivers();
 		        GetServiceModules();
