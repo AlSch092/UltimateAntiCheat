@@ -100,6 +100,7 @@ public:
 			BlacklistedDrivers.push_back(L"magdrvamd64.sys");
 			BlacklistedDrivers.push_back(L"speedfan.sys");
 			BlacklistedDrivers.push_back(L"zam64.sys");
+			BlacklistedDrivers.push_back(L"DBK64.sys"); //cheat engine dark byte VM driver
 			
 		        GetLoadedDrivers();
 		        GetServiceModules();
