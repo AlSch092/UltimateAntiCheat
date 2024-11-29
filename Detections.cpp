@@ -19,6 +19,8 @@ BOOL Detections::StartMonitor()
         return FALSE;
     }
 
+    HANDLE RegKeyMonitorThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Detections::MonitorImportantRegistryKeys, this, 0, 0); //next code push will have managed thread class for this
+
     return TRUE;
 }
 
@@ -778,7 +780,7 @@ bool Detections::FindBlacklistedProgramsThroughByteScan(DWORD pid)
 
     vector<Pattern> BlacklistedPatterns;
 
-    //located at cheatengine-x86_64-SSE4-AVX2.exe + 3DD9
+    //located at cheatengine-x86_64-SSE4-AVX2.exe + 3DD9, randomly picked. occurs twice in the .text section, no other programs threw false positives on my PC but this may eventually
     BYTE signaturePattern_CheatEngine[] = { 0x48, 0x8D, 0x64, 0x24, 0x28, 0xC3, 0x00, 0x48, 0x8D, 0x64, 0x24,0xD8, 0xC6, 0x05 }; //lea rsp,[rsp+28] -> ret -> add [rax-73],cl -> and al,-28
 
     BlacklistedPatterns.emplace_back(signaturePattern_CheatEngine, 14);
@@ -818,4 +820,94 @@ bool Detections::FindBlacklistedProgramsThroughByteScan(DWORD pid)
     }
 
     return foundSignature;
+}
+
+/*
+    Monitors changes to important registry keys related to secure boot, CI, testsigning mode, etc
+    Meant to be run in its own thread
+*/
+void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
+{
+    if (thisPtr == nullptr)
+    {
+        return;
+    }
+
+    Detections* Monitor = reinterpret_cast<Detections*>(thisPtr);
+
+    const int KEY_COUNT = 2;
+
+    HKEY hKeys[KEY_COUNT];
+    HANDLE hEvents[KEY_COUNT];
+    const TCHAR* subKeys[KEY_COUNT] = 
+    {
+        TEXT("SYSTEM\\CurrentControlSet\\Control\\SecureBoot\\State\\"),
+        TEXT("SOFTWARE\\MyTestKey2\\") //test
+    };
+
+    DWORD filter = REG_NOTIFY_CHANGE_LAST_SET;
+    LONG result;
+
+    for (int i = 0; i < KEY_COUNT; i++) 
+    {
+        result = RegOpenKeyEx(HKEY_LOCAL_MACHINE, subKeys[i], 0, KEY_NOTIFY, &hKeys[i]);
+
+        if (result != ERROR_SUCCESS) 
+        {
+            Logger::logf("UltimateAnticheat.log", Warning, "Failed to open key %d. Error: %ld @ MonitorImportantRegistryKeys", i, result);
+            return;
+        }
+
+        hEvents[i] = CreateEvent(NULL, FALSE, FALSE, NULL);
+        if (!hEvents[i]) 
+        {
+            Logger::logf("UltimateAnticheat.log", Warning, "Failed to create event for key %d. Error: %ld\n", i, GetLastError());
+            RegCloseKey(hKeys[i]);
+            return;
+        }
+
+        result = RegNotifyChangeKeyValue(hKeys[i], TRUE, filter, hEvents[i], TRUE);
+        if (result != ERROR_SUCCESS) 
+        {
+            Logger::logf("UltimateAnticheat.log", Warning, "Failed to register notification for key %d. Error: %ld", i, result);
+            CloseHandle(hEvents[i]);
+            RegCloseKey(hKeys[i]);
+            return;
+        }
+    }
+
+    Logger::logf("UltimateAnticheat.log", Warning, "Monitoring multiple registry keys...");
+
+    while (1) 
+    {        
+        DWORD waitResult = WaitForMultipleObjects(KEY_COUNT, hEvents, FALSE, INFINITE); //wait for any of the events to be signaled
+
+        if (waitResult >= WAIT_OBJECT_0 && waitResult < WAIT_OBJECT_0 + KEY_COUNT) 
+        {
+            int index = waitResult - WAIT_OBJECT_0; //determine which event was signaled
+
+            Logger::logf("UltimateAnticheat.log", Detection, "Key %d value changed!", index);
+
+            result = RegNotifyChangeKeyValue(hKeys[index], TRUE, filter, hEvents[index], TRUE);   //re register the notification for the key
+
+            if (result != ERROR_SUCCESS) 
+            {
+                Logger::logf("UltimateAnticheat.log", Warning, "Failed to re-register notification for key %d. Error: %ld", index, result);
+            }
+        }
+        else 
+        {
+            Logger::logf("UltimateAnticheat.log", Warning, "Unexpected wait result: %ld", waitResult);
+            break;
+        }
+    }
+
+    for (int i = 0; i < KEY_COUNT; i++) 
+    {
+        if(hEvents[i] != INVALID_HANDLE_VALUE)
+            CloseHandle(hEvents[i]);
+
+        RegCloseKey(hKeys[i]);
+    }
+
 }

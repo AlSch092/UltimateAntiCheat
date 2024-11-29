@@ -111,6 +111,8 @@ public:
 
 	bool FindBlacklistedProgramsThroughByteScan(DWORD pid); //scan array of bytes in suspected bad actor processes
 
+	static void MonitorImportantRegistryKeys(LPVOID thisPtr); //threaded func, pass this class ptr to it
+
 private:
 
 	void InitializeBlacklistedProcessesList();
