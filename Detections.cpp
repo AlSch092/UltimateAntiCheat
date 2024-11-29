@@ -19,6 +19,8 @@ BOOL Detections::StartMonitor()
         return FALSE;
     }
 
+    this->ProcessCreationMonitorThread = new Thread((LPTHREAD_START_ROUTINE)Detections::MonitorProcessCreation, this, true);
+
     this->RegistryMonitorThread = new Thread((LPTHREAD_START_ROUTINE)&MonitorImportantRegistryKeys, (LPVOID)this, true);
 
     return TRUE;
