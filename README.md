@@ -11,6 +11,7 @@ UltimateAntiCheat is an open source usermode anti-cheat system made to detect an
 
 ## Current Detections and protective features:
 - Monitors new process creation using WMI
+- Monitors modifications to important registry keys such as ones related to secure boot   
 - New processes are scanned for blacklisted patterns
 - Detects Open Process Handles to our process (`OpenProcess` detection)
 - Blocks APC injection (undocumented  `ntdll.Ordinal8` patching)
