@@ -8,6 +8,7 @@
 #include <intrin.h>
 
 #include "../Common/Error.hpp"
+#include "../Common/DetectionFlags.hpp"
 #include "../Common/Logger.hpp"
 #include "Packets/Packets.hpp"
 #include "../Process/Process.hpp"
