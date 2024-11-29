@@ -1,5 +1,5 @@
 ## Updates
-- Nov 28, '24: Added registry key notifications via `RegNotifyChangeKeyValue` for some important keys  
+- Nov 28, '24: Added registry key modification notifications via `RegNotifyChangeKeyValue` for some important keys  
 
 - Nov 23, '24: Added signature/byte pattern scanning on newly created processes
 
