@@ -19,7 +19,7 @@ BOOL Detections::StartMonitor()
         return FALSE;
     }
 
-    HANDLE RegKeyMonitorThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Detections::MonitorImportantRegistryKeys, this, 0, 0); //next code push will have managed thread class for this
+    this->RegistryMonitorThread = new Thread((LPTHREAD_START_ROUTINE)&MonitorImportantRegistryKeys, (LPVOID)this, true);
 
     return TRUE;
 }

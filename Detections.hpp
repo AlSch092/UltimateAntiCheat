@@ -58,6 +58,9 @@ public:
 	{
 		if (MonitorThread != NULL)
 			delete MonitorThread;
+
+		if(RegistryMonitorThread != NULL)
+			delete RegistryMonitorThread;
 	}
 
 	Detections(Detections&&) = delete;  //delete move constructr
@@ -129,6 +132,7 @@ private:
 
 	Thread* MonitorThread = NULL; //these should ideally be unique_ptrs which end the thread when the pointers go out of scope, will make these changes soon
 	Thread* ProcessCreationMonitorThread = NULL;
+	Thread* RegistryMonitorThread = NULL;
 
 	list<wstring> BlacklistedProcesses;
 
