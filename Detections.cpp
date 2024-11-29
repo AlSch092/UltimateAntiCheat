@@ -844,7 +844,7 @@ void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
     const TCHAR* subKeys[KEY_COUNT] = 
     {
         TEXT("SYSTEM\\CurrentControlSet\\Control\\SecureBoot\\State\\"),
-        TEXT("SOFTWARE\\MyTestKey2\\") //test
+        TEXT("SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\") //test
     };
 
     DWORD filter = REG_NOTIFY_CHANGE_LAST_SET;
@@ -889,6 +889,8 @@ void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
             int index = waitResult - WAIT_OBJECT_0; //determine which event was signaled
 
             Logger::logf("UltimateAnticheat.log", Detection, "Key %d value changed!", index);
+
+            Monitor->Flag(DetectionFlags::REGISTRY_KEY_MODIFICATIONS);
 
             result = RegNotifyChangeKeyValue(hKeys[index], TRUE, filter, hEvents[index], TRUE);   //re register the notification for the key
 

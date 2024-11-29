@@ -6,6 +6,7 @@
 #include "Environment/Services.hpp" //`Services` class
 #include "Obscure/Obfuscation.hpp" //`ObfuscatedData` class
 #include "Common/Globals.hpp" //`UnmanagedGlobals` namespace
+#include "Common/DetectionFlags.hpp"
 #include "Obscure/ntldr.hpp" //dll notification structures
 #include <Wbemidl.h> //for process event creation (WMI)
 #include <comdef.h>  //for process event creation (WMI)
@@ -50,8 +51,6 @@ public:
 
 		if (StartMonitor)
 			this->StartMonitor();
-
-		ProcessCreationMonitorThread = new Thread((LPTHREAD_START_ROUTINE)Detections::MonitorProcessCreation, this, true);
 	}
 
 	~Detections()
