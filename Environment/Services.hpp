@@ -101,9 +101,9 @@ public:
 			BlacklistedDrivers.push_back(L"speedfan.sys");
 			BlacklistedDrivers.push_back(L"zam64.sys");
 			BlacklistedDrivers.push_back(L"DBK64.sys"); //cheat engine dark byte VM driver
-			
-		        GetLoadedDrivers();
-		        GetServiceModules();
+
+		    GetLoadedDrivers();
+		    GetServiceModules();
 		}
 	}
 
@@ -143,6 +143,9 @@ public:
 	
 	static bool IsHypervisor();
 	static void GetHypervisorVendor(__out char vendor[13]);
+
+	static bool LoadDriver(const std::wstring& driverName, const std::wstring& driverPath);
+	static bool UnloadDriver(const std::wstring& driverName); 
 
 private:
 

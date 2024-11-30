@@ -691,3 +691,112 @@ void Services::GetHypervisorVendor(__out char vendor[13])
     ((int*)vendor)[2] = cpuInfo[3];  //DX
     vendor[12] = '\0'; 
 }
+
+/*
+    Services::LoadDriver - register a service and load a driver given a driverName and driverPath using SCM
+    return `true` on success
+*/
+bool Services::LoadDriver(const std::wstring& driverName, const std::wstring& driverPath)
+{
+    SC_HANDLE hSCManager = OpenSCManager(nullptr, nullptr, SC_MANAGER_CREATE_SERVICE);
+
+    bool loadSuccess = true;
+
+    if (!hSCManager)
+    {
+        Logger::logfw("UltimateAnticheat.log", Warning, L"Failed to open SCM: %d", GetLastError());
+        return false;
+    }
+
+    SC_HANDLE hService = CreateService(      //create driver service
+        hSCManager,
+        driverName.c_str(),
+        driverName.c_str(),
+        SERVICE_START | DELETE | SERVICE_STOP,
+        SERVICE_KERNEL_DRIVER,
+        SERVICE_DEMAND_START,
+        SERVICE_ERROR_IGNORE,
+        driverPath.c_str(),
+        nullptr, nullptr, nullptr, nullptr, nullptr);
+
+    if (!hService)
+    {
+        if (GetLastError() == ERROR_SERVICE_EXISTS)
+        {
+            hService = OpenService(hSCManager, driverName.c_str(), SERVICE_START);
+        }
+        else
+        {
+            Logger::logfw("UltimateAnticheat.log", Warning, L"Failed to create service:  %d", GetLastError());
+            CloseServiceHandle(hSCManager);
+            return false;
+        }
+    }
+
+    if (!StartService(hService, 0, nullptr))     // Start the driver
+    {
+        if (GetLastError() != ERROR_SERVICE_ALREADY_RUNNING)
+        {
+            Logger::logfw("UltimateAnticheat.log", Warning, L"Failed to start service: %d", GetLastError());
+            loadSuccess = false;
+        }
+    }
+
+    if(loadSuccess)
+        Logger::logfw("UltimateAnticheat.log", Info, L"Driver %s loaded successfully.", driverName.c_str());
+
+    CloseServiceHandle(hService);
+    CloseServiceHandle(hSCManager);
+    return loadSuccess;
+}
+
+/*
+    Services::UnloadDriver - unregister the driver service and unload a driver given a driverName and driverPath using SCM
+    return `true` on success
+*/
+bool Services::UnloadDriver(const std::wstring& driverName)
+{
+    SC_HANDLE hSCManager = OpenSCManager(nullptr, nullptr, SC_MANAGER_CONNECT);
+
+    bool unloadSuccess = true;
+
+    if (!hSCManager)
+    {
+        Logger::logfw("UltimateAnticheat.log", Warning, L"Failed to open SCM: %d", GetLastError());
+        return false;
+    }
+
+    SC_HANDLE hService = OpenService(hSCManager, driverName.c_str(), SERVICE_STOP | DELETE);
+
+    if (!hService)
+    {
+        Logger::logfw("UltimateAnticheat.log", Warning, L"Failed to open driver service: %d", GetLastError());
+        CloseServiceHandle(hSCManager);
+        return false;
+    }
+
+    SERVICE_STATUS status;
+
+    if (ControlService(hService, SERVICE_CONTROL_STOP, &status))     //stop driver
+    {
+        Logger::logfw("UltimateAnticheat.log", Info, L"Driver stopped successfully.");
+    }
+    else if (GetLastError() != ERROR_SERVICE_NOT_ACTIVE)
+    {
+        Logger::logfw("UltimateAnticheat.log", Warning, L"Failed to stop driver service: %d", GetLastError()); //don't return false yet incase the service was already stopped, in that case delete it
+        unloadSuccess = false;
+    }
+
+    if (!DeleteService(hService))     //delete service
+    {
+        Logger::logfw("UltimateAnticheat.log", Warning, L"Failed to delete driver service: %d", GetLastError());
+        unloadSuccess = false;
+    }
+
+    if(unloadSuccess)
+        Logger::logfw("UltimateAnticheat.log", Info, L"Driver %s unloaded successfully.", driverName.c_str());
+
+    CloseServiceHandle(hService);
+    CloseServiceHandle(hSCManager);
+    return unloadSuccess;
+}
