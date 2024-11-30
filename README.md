@@ -2,7 +2,7 @@
 
 # UltimateAntiCheat: A usermode anti-cheat built in C++ (x64)
 
-UltimateAntiCheat is an open source usermode anti-cheat system made to detect and prevent common attack vectors in game hacking, including: memory editing, module & code injection, debugging, unsigned drivers, open handles, and more. The project also features a client-server design with a heartbeat being sent every 60 seconds to clients. No privacy-invasive techniques are used.
+UltimateAntiCheat is an open source usermode anti-cheat system made to detect and prevent common attack vectors in game hacking, including: memory editing, module & code injection, debugging, unsigned drivers, open handles, and more. The project also features a client-server design with a heartbeat being sent every 60 seconds to clients. No privacy-invasive techniques are used. Optionally, a hybrid kernelmode + usermode approach can now be used through the settings in `main.cpp` and `Common/Settings.hpp` (but you will need to make/provide your own driver for this).
 
 ## Goals & Overview
    This project is meant to serve as an educational/research tool and is not intended to be commercial software or overly complex to crack. It includes many fundamental protection techniques, and we aim to cover as many attack surfaces as possible such that the attacker is not able to gain a foothold from usermode into our process without being detected (some kernelmode or hardware-based attacks will also be detected). Any modification to a single aspect will lead to being detected: for example, if someone tries to debug our code from usermode, they will likely re-map and perform memory edits to try and disable debugger detection which leads to their memory edit or remapping being detected. It's recommended that if possible you run VMProtect or a similar program on the compiled binary for added security through obscurity. The project should be integrated to your game or software directly as source code instead of a stand-alone DLL in order to avoid DLL proxying/spoofing attacks.  
@@ -37,6 +37,7 @@ UltimateAntiCheat is an open source usermode anti-cheat system made to detect an
 - Stops multiple instances of the process from being run by mapping shared memory
 - Return address checks in important routines such as heartbeat generation to prevent remote calling
 - Basic window title & class name checks for commonly used attack tools such as Cheat Engine
+- Optional kernelmode + usermode hybrid approach (you must make/provide your own driver for this, and ideally it would be signed)
 
 ## Enabling/Disabling Networking:
 Networking support is available in the project - the server can be found in the `Server` folder as its own solution. Using networking is optional, and can be turned on/off through the variable `bool bNetworkingAvailable` in the file `main.cpp` (as part of the `Settings` class). If you choose to use networking, please follow the instructions in the README.md file of the server.  
