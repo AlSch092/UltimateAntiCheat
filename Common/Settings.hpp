@@ -16,7 +16,8 @@ public:
 		bool bCheckIntegrity,
 		bool bCheckThreads,
 		bool bCheckHypervisor, 
-		bool bRequireRunAsAdministrator)
+		bool bRequireRunAsAdministrator,
+		bool bUsingDriver)
 	{
 		if (!Instance)
 		{
@@ -29,7 +30,8 @@ public:
 				bCheckIntegrity, 
 				bCheckThreads, 
 				bCheckHypervisor, 
-				bRequireRunAsAdministrator));
+				bRequireRunAsAdministrator,
+				bUsingDriver));
 		}
 
 		return *Instance;
@@ -48,6 +50,10 @@ public:
 	bool bRequireRunAsAdministrator;
 
 	bool bNetworkingEnabled; //previously in API.hpp
+	bool bUsingDriver; //signed kernelmode driver for hybrid approach
+
+	wstring GetKMDriverName() const { return this->KMDriverName; }
+	wstring GetKMDriverPath() const { return this->KMDriverPath; }
 
 private:
 
@@ -60,10 +66,14 @@ private:
 		bool bCheckIntegrity,
 		bool bCheckThreads,
 		bool bCheckHypervisor, 
-		bool bRequireRunAsAdministrator)  
-		: bNetworkingEnabled(bNetworkingEnabled), bEnforceSecureBoot(bEnforceSecureBoot), bEnforceDSE(bEnforceDSE), bEnforceNoKDbg(bEnforceNoKDbg), bUseAntiDebugging(bUseAntiDebugging), bCheckIntegrity(bCheckIntegrity), bCheckThreads(bCheckThreads), bCheckHypervisor(bCheckHypervisor), bRequireRunAsAdministrator(bRequireRunAsAdministrator)
+		bool bRequireRunAsAdministrator,
+		bool bUsingDriver)
+		: bNetworkingEnabled(bNetworkingEnabled), bEnforceSecureBoot(bEnforceSecureBoot), bEnforceDSE(bEnforceDSE), bEnforceNoKDbg(bEnforceNoKDbg), bUseAntiDebugging(bUseAntiDebugging), bCheckIntegrity(bCheckIntegrity), bCheckThreads(bCheckThreads), bCheckHypervisor(bCheckHypervisor), bRequireRunAsAdministrator(bRequireRunAsAdministrator), bUsingDriver(bUsingDriver)
 	{
 	}
 	 
+	const wstring KMDriverName = L"UltimateKernelAnticheat"; //optional hybrid approach
+	const wstring KMDriverPath = L".\\UltimateKernelAnticheat.sys"; 
+
 	static std::unique_ptr<Settings> Instance; //singleton-style, one unique instance
 }; 
