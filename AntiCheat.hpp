@@ -44,10 +44,39 @@ public:
 			Logger::logf("UltimateAnticheat.log", Err, "Critical allocation failure in AntiCheat::AntiCheat: %s", e.what());
 			std::terminate();  //do not allow proceed if any pointers fail to alloc
 		}
+
+		if (config->bUsingDriver) //register + load the driver using the "sc" command, unload it when the program exits
+		{
+			//additionally, we need to check the signature on our driver to make sure someone isn't spoofing it. this will be added soon after initial testing is done
+
+			wchar_t absolutePath[MAX_PATH] = { 0 };
+			
+			if (!GetFullPathName(Config->GetKMDriverPath().c_str(), MAX_PATH, absolutePath, nullptr))
+			{
+				Logger::logf("UltimateAnticheat.log", Err, "Could not get absolute path from driver relative path, shutting down.");
+				std::terminate();  //do not allow proceed since config is set to using driver
+			}
+				
+			if (!Services::LoadDriver(Config->GetKMDriverName().c_str(), absolutePath))
+			{
+				Logger::logf("UltimateAnticheat.log", Err, "Could not get load the driver, shutting down.");
+				std::terminate();  //do not allow to proceed since config is set to using driver
+			}
+
+			Logger::logfw("UltimateAnticheat.log", Info, L"Loaded driver: %s from path %s", Config->GetKMDriverName().c_str(), absolutePath);
+		}
+
 	}
 
 	~AntiCheat() //the destructor is now empty since all pointers of this class were recently switched to unique_ptrs
 	{
+		if (Config != nullptr && Config->bUsingDriver) //unload the KM driver
+		{
+			if (!Services::UnloadDriver(Config->GetKMDriverName()))
+			{
+				Logger::logf("UltimateAnticheat.log", Warning, "Failed to unload kernelmode driver!");
+			}
+		}	
 	}
 
 	AntiCheat& operator=(AntiCheat&& other) = delete; //delete move assignments
