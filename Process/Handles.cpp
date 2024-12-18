@@ -75,6 +75,18 @@ std::vector<Handles::SYSTEM_HANDLE> Handles::DetectOpenHandlesToProcess()
                 {
                     if (GetProcessId(duplicatedHandle) == currentProcessId)
                     {
+                        wstring procName = Process::GetProcessName(handle.ProcessId);
+                        int size = sizeof(Handles::Whitelisted) / sizeof(UINT64);
+
+                        // Check if handle belongs to whitelisted process; if so skip this handle
+                        for (int i = 0; i < size; i++) {
+                            if (wcscmp(Handles::Whitelisted[i], procName.c_str()) == 0) //whitelisted program has open handle
+                            {
+                                //Logger::logf("UltimateAnticheat.log", Detection, "WHITELISTED Handle %d from process %d is referencing our process.", handle.Handle, handle.ProcessId);
+                                goto skip_this_handle;
+                            }
+                        }
+
                         Logger::logf("UltimateAnticheat.log", Detection, "Handle %d from process %d is referencing our process.", handle.Handle, handle.ProcessId);
                         handle.ReferencingOurProcess = true;
                         handlesTous.push_back(handle);
@@ -95,6 +107,8 @@ std::vector<Handles::SYSTEM_HANDLE> Handles::DetectOpenHandlesToProcess()
                 //Logger::logf("UltimateAnticheat.log", Warning, "Couldn't open process with id %d @ Handles::DetectOpenHandlesToProcess (possible LOCAL SERVICE or SYSTEM process)", handle.ProcessId);
                 continue;
             }
+        skip_this_handle:
+            continue;
         }
     }
 
