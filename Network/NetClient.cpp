@@ -48,26 +48,17 @@ Error NetClient::Initialize(string ip, uint16_t port, string gameCode)
 		return Error::CANT_SEND;
 	}
 
-	Thread* RecvThread = GetRecvThread();
+	RecvLoopThread = new Thread((LPTHREAD_START_ROUTINE)&NetClient::ProcessRequests, this, true);
 
-	if (RecvThread == NULL)
+	if (RecvLoopThread->GetHandle() == INVALID_HANDLE_VALUE || RecvLoopThread->GetHandle() == NULL)
 	{
 		Logger::logf("UltimateAnticheat.log", Err, "RecvThread was NULL @ NetClient::Initialize");
 		closesocket(Socket);
 		WSACleanup();
 		shutdown(Socket, 0);
-		return Error::GENERIC_FAIL;
-	}
-
-	RecvLoopThread = new Thread((LPTHREAD_START_ROUTINE)&NetClient::ProcessRequests, this, true);
-
-	if (RecvThread->GetHandle() == NULL || RecvThread->GetHandle() == INVALID_HANDLE_VALUE)
-	{
-		Logger::logf("UltimateAnticheat.log", Err, "Couldn't create recvThread @ NetClient::Initialize");
-
 		return Error::NO_RECV_THREAD;
 	}
-	
+
 	this->Ip = ip;
 	this->Port = port;
 
