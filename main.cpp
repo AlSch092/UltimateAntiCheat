@@ -10,6 +10,7 @@
 
 #include "API/API.hpp"  //API.hpp includes anticheat.hpp
 #include "SplashScreen.hpp"
+#include "Parser.hpp"
 
 #pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper) - each section gets its own region, align with system allocation granularity
 
@@ -39,51 +40,96 @@ int main(int argc, char** argv)
 #ifdef _DEBUG //in debug compilation, we are more lax with our protections for easier testing purposes
     bool bEnableNetworking = false;  //change this to false if you don't want to use the server
     bool bEnforceSecureBoot = false;
-    bool bEnforceDSE = false;
+    bool bEnforceDSE = true;
     bool bEnforceNoKDBG = false;
-    bool bUseAntiDebugging = false;
+    bool bUseAntiDebugging = true;
     bool bUseIntegrityChecking = true;
     bool bCheckThreadIntegrity = true;
     bool bCheckHypervisor = false;
-    bool bRequireRunAsAdministrator = true;
+    bool bRequireRunAsAdministrator = false;
+    bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
 #else
-    bool bEnableNetworking = false;  //change this to false if you don't want to use the server
-    bool bEnforceSecureBoot = false;
-    bool bEnforceDSE = false;
-    bool bEnforceNoKDBG = false;
-    bool bUseAntiDebugging = false;
-    bool bUseIntegrityChecking = true;
-    bool bCheckThreadIntegrity = true;
-    bool bCheckHypervisor = false;
-    bool bRequireRunAsAdministrator = true;
-    /*
     bool bEnableNetworking = false; //change this to false if you don't want to use the server
-    bool bEnforceSecureBoot = false;//true;
+    bool bEnforceSecureBoot = false;
     bool bEnforceDSE = true;
     bool bEnforceNoKDBG = true;
     bool bUseAntiDebugging = true;
     bool bUseIntegrityChecking = true;
     bool bCheckThreadIntegrity = true;
     bool bCheckHypervisor = true;
-    bool bRequireRunAsAdministrator = true;*/
+    bool bRequireRunAsAdministrator = true;
+    bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
 #endif
 
-    // Parse command line arguments
-    for (int i = 1; i < argc; ++i) {
-        char* arg = argv[i];
-        if (strcmp(arg, "--help") ||
-            strcmp(arg, "-h")     ||
-            strcmp(arg, "-?")     ||
-            strcmp(arg, "/?")) {
-            cout << "\nNAME\n\t" << argv[0] << "\n";
-            cout << "\nSYNTAX\n\t" << argv[0] << " [[-Networking] { true | false }]";
+    // Parse command line options
+    Parser parser = Parser(argc,argv);
+
+    // Iterate over arguments/option pairs
+    for (const CommandLineArgument& arg : parser.GetParsedArguments()) {
+        char* argValue = arg.argValue;
+        char* optionValue = arg.optionValue;
+
+        if (strcmp(argValue, "--help") == 0 || strcmp(argValue, "-h") == 0) {
+            cout << GENERATE_HELP_MESSAGE(parser.GetCommandName());
             return 0;
         }
-
-        if (strcmp(arg, "-Networking") && (i + 1) < argc) {
-
+        if (optionValue == nullptr) {
+            cout << "argument \"" << arg.argValue << "\" wasn't provided an option value\n";
         }
+        try {
+            if (strcmp(argValue, "-EnableNetworking") == 0) {
+                bEnableNetworking = Parser::GetOptAsBool(optionValue);
+            }
+            else if (strcmp(argValue, "-EnforceSecureBoot") == 0) {
+                bEnforceSecureBoot = Parser::GetOptAsBool(optionValue);
+            }
+            else if (strcmp(argValue, "-EnforceDSE") == 0) {
+                bEnforceDSE = Parser::GetOptAsBool(optionValue);
+            }
+            else if (strcmp(argValue, "-EnforceNoKDBG") == 0) {
+                bEnforceNoKDBG = Parser::GetOptAsBool(optionValue);
+            }
+            else if (strcmp(argValue, "-UseAntiDebug") == 0) {
+                bUseAntiDebugging = Parser::GetOptAsBool(optionValue);
+            }
+            else if (strcmp(argValue, "-UseIntegrityCheck") == 0) {
+                bUseIntegrityChecking = Parser::GetOptAsBool(optionValue);
+            }
+            else if (strcmp(argValue, "-CheckThreadIntegrity") == 0) {
+                bCheckThreadIntegrity = Parser::GetOptAsBool(optionValue);
+            }
+            else if (strcmp(argValue, "-CheckHypervisor") == 0) {
+                bCheckHypervisor = Parser::GetOptAsBool(optionValue);
+            }
+            else if (strcmp(argValue, "-RequireAdmin") == 0) {
+                bRequireRunAsAdministrator = Parser::GetOptAsBool(optionValue);
+            }
+            else if (strcmp(argValue, "-UseDriver") == 0) {
+                bUsingDriver = Parser::GetOptAsBool(optionValue);
+            }
+            else {
+                cout << "argument \"" << arg.argValue << "\" not recognized" << "\n";
+                return 2;
+            }
+        } catch (char* option) {
+            cout << "option \"" << option << "\" not a boolean as expected";
+            return 2;
+        }
+
     }
+
+#ifndef _DEBUG
+    cout << "Settings for this instance:\n";
+    cout << "\tEnable Networking:\t" << boolalpha << bEnableNetworking << "\n";
+    cout << "\tEnforce Secure Boot: \t" << boolalpha << bEnforceSecureBoot << "\n";
+    cout << "\tEnforce DSE:\t\t" << boolalpha << bEnforceDSE << "\n";
+    cout << "\tEnforce No KDBG:\t" << boolalpha << bEnforceNoKDBG << "\n";
+    cout << "\tUse Anti-Debugging:\t" << boolalpha << bUseAntiDebugging << "\n";
+    cout << "\tUse Integrity Checking:\t" << boolalpha << bUseIntegrityChecking << "\n";
+    cout << "\tCheck Thread Integrity:\t" << boolalpha << bCheckThreadIntegrity << "\n";
+    cout << "\tCheck Hypervisor:\t" << boolalpha << bCheckHypervisor << "\n";
+    cout << "\tRequire Admin:\t\t" << boolalpha << bRequireRunAsAdministrator << "\n";
+#endif
 
     const int MillisecondsBeforeShutdown = 60000;
 
@@ -196,6 +242,16 @@ cleanup: //jump to here on any error with AC initialization
     }
 
     return 0;
+}
+
+/*
+    stringToBool - returns true if str is "true"/"True"; makes options parsing easier
+*/
+bool stringToBool(char* str) {
+    if (strcmp(str, "true") || strcmp(str, "True")) {
+        return true;
+    }
+    return false;
 }
 
 /*
