@@ -10,7 +10,6 @@
 
 #include "API/API.hpp"  //API.hpp includes anticheat.hpp
 #include "SplashScreen.hpp"
-#include "Parser.hpp"
 
 #pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper) - each section gets its own region, align with system allocation granularity
 
@@ -61,64 +60,7 @@ int main(int argc, char** argv)
     bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
 #endif
 
-    // Parse command line options
-    Parser parser = Parser(argc,argv);
-
-    // Iterate over arguments/option pairs
-    for (const CommandLineArgument& arg : parser.GetParsedArguments()) {
-        char* argValue = arg.argValue;
-        char* optionValue = arg.optionValue;
-
-        if (strcmp(argValue, "--help") == 0 || strcmp(argValue, "-h") == 0) {
-            cout << GENERATE_HELP_MESSAGE(parser.GetCommandName());
-            return 0;
-        }
-        if (optionValue == nullptr) {
-            cout << "argument \"" << arg.argValue << "\" wasn't provided an option value\n";
-        }
-        try {
-            if (strcmp(argValue, "-EnableNetworking") == 0) {
-                bEnableNetworking = Parser::GetOptAsBool(optionValue);
-            }
-            else if (strcmp(argValue, "-EnforceSecureBoot") == 0) {
-                bEnforceSecureBoot = Parser::GetOptAsBool(optionValue);
-            }
-            else if (strcmp(argValue, "-EnforceDSE") == 0) {
-                bEnforceDSE = Parser::GetOptAsBool(optionValue);
-            }
-            else if (strcmp(argValue, "-EnforceNoKDBG") == 0) {
-                bEnforceNoKDBG = Parser::GetOptAsBool(optionValue);
-            }
-            else if (strcmp(argValue, "-UseAntiDebug") == 0) {
-                bUseAntiDebugging = Parser::GetOptAsBool(optionValue);
-            }
-            else if (strcmp(argValue, "-UseIntegrityCheck") == 0) {
-                bUseIntegrityChecking = Parser::GetOptAsBool(optionValue);
-            }
-            else if (strcmp(argValue, "-CheckThreadIntegrity") == 0) {
-                bCheckThreadIntegrity = Parser::GetOptAsBool(optionValue);
-            }
-            else if (strcmp(argValue, "-CheckHypervisor") == 0) {
-                bCheckHypervisor = Parser::GetOptAsBool(optionValue);
-            }
-            else if (strcmp(argValue, "-RequireAdmin") == 0) {
-                bRequireRunAsAdministrator = Parser::GetOptAsBool(optionValue);
-            }
-            else if (strcmp(argValue, "-UseDriver") == 0) {
-                bUsingDriver = Parser::GetOptAsBool(optionValue);
-            }
-            else {
-                cout << "argument \"" << arg.argValue << "\" not recognized" << "\n";
-                return 2;
-            }
-        } catch (char* option) {
-            cout << "option \"" << option << "\" not a boolean as expected";
-            return 2;
-        }
-
-    }
-
-#ifndef _DEBUG
+#ifdef _DEBUG
     cout << "Settings for this instance:\n";
     cout << "\tEnable Networking:\t" << boolalpha << bEnableNetworking << "\n";
     cout << "\tEnforce Secure Boot: \t" << boolalpha << bEnforceSecureBoot << "\n";
