@@ -1,6 +1,4 @@
 ## Updates
-- Dec 18, '24: Created command line parser for parsing options, allowing for the user to customize the options during runtime
-
 - Dec 17, '24: Fixed DetectOpenHandlesToProcess to not warn for whitelisted processes
 
 - Nov 28, '24: Added registry key modification notifications via `RegNotifyChangeKeyValue` for some important keys  
