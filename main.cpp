@@ -88,7 +88,7 @@ int main(int argc, char** argv)
     cout << "|           discriminating@github (dll load notifcations, catalog verification)          |\n";
     cout << "------------------------------------------------------------------------------------------\n";
 
-    Settings* ConfigInstance = &Settings::GetInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator);
+    Settings* ConfigInstance = &Settings::GetInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator, bUsingDriver);
 
     if (ConfigInstance->bRequireRunAsAdministrator)
     {
