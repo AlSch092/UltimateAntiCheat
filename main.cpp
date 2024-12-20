@@ -35,21 +35,7 @@ unique_ptr<Settings> Settings::Instance = nullptr; //we only want a single insta
 
 int main(int argc, char** argv)
 {
-    const int MillisecondsBeforeShutdown = 60000;
-    
-    SetConsoleTitle(L"Ultimate Anti-Cheat");
-  
-    CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Splash::InitializeSplash, 0, 0, 0); //open splash window
-
-    cout << "------------------------------------------------------------------------------------------\n";
-    cout << "|                            Welcome to Ultimate Anti-Cheat!                             |\n";
-    cout << "|  An in-development, non-commercial AC made to help teach concepts in game security     |\n";
-    cout << "|                              Made by AlSch092 @Github                                  |\n";
-    cout << "|         ...With special thanks to:                                                     |\n";
-    cout << "|           changeofpace@github (remapping method)                                       |\n";
-    cout << "|           discriminating@github (dll load notifcations, catalog verification)          |\n";
-    cout << "------------------------------------------------------------------------------------------\n";
-
+    // Set default options
 #ifdef _DEBUG //in debug compilation, we are more lax with our protections for easier testing purposes
     bool bEnableNetworking = false;  //change this to false if you don't want to use the server
     bool bEnforceSecureBoot = false;
@@ -74,17 +60,35 @@ int main(int argc, char** argv)
     bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
 #endif
 
-    Settings* ConfigInstance = &Settings::GetInstance(
-        bEnableNetworking, 
-        bEnforceSecureBoot, 
-        bEnforceDSE,
-        bEnforceNoKDBG, 
-        bUseAntiDebugging, 
-        bUseIntegrityChecking, 
-        bCheckThreadIntegrity, 
-        bCheckHypervisor, 
-        bRequireRunAsAdministrator,
-        bUsingDriver);
+#ifdef _DEBUG
+    cout << "Settings for this instance:\n";
+    cout << "\tEnable Networking:\t" << boolalpha << bEnableNetworking << "\n";
+    cout << "\tEnforce Secure Boot: \t" << boolalpha << bEnforceSecureBoot << "\n";
+    cout << "\tEnforce DSE:\t\t" << boolalpha << bEnforceDSE << "\n";
+    cout << "\tEnforce No KDBG:\t" << boolalpha << bEnforceNoKDBG << "\n";
+    cout << "\tUse Anti-Debugging:\t" << boolalpha << bUseAntiDebugging << "\n";
+    cout << "\tUse Integrity Checking:\t" << boolalpha << bUseIntegrityChecking << "\n";
+    cout << "\tCheck Thread Integrity:\t" << boolalpha << bCheckThreadIntegrity << "\n";
+    cout << "\tCheck Hypervisor:\t" << boolalpha << bCheckHypervisor << "\n";
+    cout << "\tRequire Admin:\t\t" << boolalpha << bRequireRunAsAdministrator << "\n";
+#endif
+
+    const int MillisecondsBeforeShutdown = 60000;
+
+    SetConsoleTitle(L"Ultimate Anti-Cheat");
+
+    CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Splash::InitializeSplash, 0, 0, 0); //open splash window
+
+    cout << "------------------------------------------------------------------------------------------\n";
+    cout << "|                            Welcome to Ultimate Anti-Cheat!                             |\n";
+    cout << "|  An in-development, non-commercial AC made to help teach concepts in game security     |\n";
+    cout << "|                              Made by AlSch092 @Github                                  |\n";
+    cout << "|         ...With special thanks to:                                                     |\n";
+    cout << "|           changeofpace@github (remapping method)                                       |\n";
+    cout << "|           discriminating@github (dll load notifcations, catalog verification)          |\n";
+    cout << "------------------------------------------------------------------------------------------\n";
+
+    Settings* ConfigInstance = &Settings::GetInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator, bUsingDriver);
 
     if (ConfigInstance->bRequireRunAsAdministrator)
     {

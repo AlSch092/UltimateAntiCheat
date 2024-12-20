@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include "../Common/Logger.hpp"
+#include "../Process/Process.hpp"
 
 #pragma comment(lib, "ntdll.lib")
 
@@ -56,4 +57,3 @@ namespace Handles
     static const wchar_t* Whitelisted[] = { {L"conhost.exe"} }; //non-console version of this project will be different and conhost should not be considered whitelisted 
 #endif
 }
-
