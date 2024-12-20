@@ -187,16 +187,6 @@ cleanup: //jump to here on any error with AC initialization
 }
 
 /*
-    stringToBool - returns true if str is "true"/"True"; makes options parsing easier
-*/
-bool stringToBool(char* str) {
-    if (strcmp(str, "true") || strcmp(str, "True")) {
-        return true;
-    }
-    return false;
-}
-
-/*
     AddThread - adds a Thread* object to our global thread list
 */
 bool UnmanagedGlobals::AddThread(DWORD id)
