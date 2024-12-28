@@ -523,6 +523,7 @@ bool Detections::Flag(DetectionFlags flag)
         return true;
 
     NetClient* client = this->GetNetClient();  //report back to server that someone's cheating
+
     if (client != nullptr)
     {
         if (client->FlagCheater(flag) != Error::OK) //cheat engine attachment can be detected this way
@@ -542,6 +543,7 @@ bool Detections::Flag(DetectionFlags flag)
 
 /*
     IsBlacklistedWindowPresent - Checks if windows with specific title or class names are present
+    *Note* this function should not be used on its own to determine if someone is running a cheat tool, it should be combined with other methods. An opened folder with a blacklisted name will be caught but doesn't imply the actual program is opened, for example
 */
 BOOL Detections::IsBlacklistedWindowPresent()
 {
@@ -589,11 +591,11 @@ BOOL Detections::IsBlacklistedWindowPresent()
             {
                 if (GetClassNameA(hwnd, className, sizeof(className)))
                 {
-                    if (strstr(windowTitle, (const char*)original_CheatEngine) || strstr(windowTitle, (const char*)original_CheatEngine) != NULL)
+                    if (strcmp(windowTitle, (const char*)original_CheatEngine) == 0  || strstr(windowTitle, (const char*)original_CheatEngine) != NULL) //*note* this will detect open folders named "Cheat Engine" also, which doesn't imply the actual program is opened.
                     {
                         Monitor->SetCheater(true);
                         Monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
-                        Logger::logf("UltimateAnticheat.log", Detection, "Detected cheat engine window");
+                        Logger::logf("UltimateAnticheat.log", Detection, "Detected a window named 'Cheat Engine' (includes open folder names)");
                         return FALSE;
                     }
                     else if (strstr(windowTitle, (const char*)original_LUAScript))
@@ -750,11 +752,13 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
 
 /*
     InitializeBlacklistedProcessesList - add static list of blacklisted process names to our Detections object
+    ...we should also scan for window class names, possible exported functions (in any DLLs running in those programs), etc.
+    Most people will of course just rename any common cheat tool names
 */
 void Detections::InitializeBlacklistedProcessesList()
 {
     this->BlacklistedProcesses.push_back(L"Cheat Engine.exe"); //todo: hide these strings
-    this->BlacklistedProcesses.push_back(L"CheatEngine.exe"); //...we can  also scan for window class names, possible exported functions (in any DLLs running in the program), specific text inside windows, etc.
+    this->BlacklistedProcesses.push_back(L"CheatEngine.exe"); 
     this->BlacklistedProcesses.push_back(L"cheatengine-x86_64-SSE4-AVX2.exe");
     this->BlacklistedProcesses.push_back(L"x64dbg.exe");
     this->BlacklistedProcesses.push_back(L"windbg.exe");
@@ -762,8 +766,8 @@ void Detections::InitializeBlacklistedProcessesList()
 }
 
 /*
-    FindBlacklistedProgramsThroughByteScan(DWORD pid) - check process `pid` for specific byte patterns which implicate it of being a bad actor process
-    Used in combination with WMI process load callbacks (MonitorProcessCreation)
+    FindBlacklistedProgramsThroughByteScan(DWORD pid) - check process `pid` for specific byte patterns which implicate it of possibly being a bad actor process
+    Used in combination with WMI process load callbacks (MonitorProcessCreation), and more checks on a process should be added to ensure its not a false positive
 */
 bool Detections::FindBlacklistedProgramsThroughByteScan(DWORD pid)
 {
@@ -782,10 +786,10 @@ bool Detections::FindBlacklistedProgramsThroughByteScan(DWORD pid)
 
     vector<Pattern> BlacklistedPatterns;
 
-    //located at cheatengine-x86_64-SSE4-AVX2.exe + 3DD9, randomly picked. occurs twice in the .text section, no other programs threw false positives on my PC but this may eventually
+    //signature persists even with different optimizations options in compilation
     BYTE signaturePattern_CheatEngine[] = { 0x48, 0x8D, 0x64, 0x24, 0x28, 0xC3, 0x00, 0x48, 0x8D, 0x64, 0x24,0xD8, 0xC6, 0x05 }; //lea rsp,[rsp+28] -> ret -> add [rax-73],cl -> and al,-28
 
-    BlacklistedPatterns.emplace_back(signaturePattern_CheatEngine, 14);
+    BlacklistedPatterns.emplace_back(signaturePattern_CheatEngine, sizeof(signaturePattern_CheatEngine));
 
     for (Pattern pattern : BlacklistedPatterns)
     {
@@ -811,6 +815,7 @@ bool Detections::FindBlacklistedProgramsThroughByteScan(DWORD pid)
                 {
                     foundSignature = true;
                     Logger::logfw("UltimateAnticheat.log", Detection, L"Found blacklisted byte pattern in process %d at offset %d", pid, i);
+                    break;
                 }
             }
         }
@@ -832,6 +837,7 @@ void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
 {
     if (thisPtr == nullptr)
     {
+        Logger::logf("UltimateAnticheat.log", Warning, "Detections* was NULL @ MonitorImportantRegistryKeys");
         return;
     }
 
