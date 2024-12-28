@@ -104,8 +104,8 @@ bool Integrity::IsUnknownModulePresent()
 }
 
 /*
-GetModuleHash - searches `ModuleHashes` variable for module with name `moduleName`
-returns nullptr if not found
+	GetModuleHash - fetches .text section hashes for a specific module,
+     returns a `ModuleHashData` object, returns nullptr if module or section not found
 */
 ModuleHashData* Integrity::GetModuleHash(const wchar_t* moduleName)
 {
@@ -133,7 +133,8 @@ ModuleHashData* Integrity::GetModuleHash(const wchar_t* moduleName)
 }
 
 /*
-	GetModuleHashes  - fill member `ModuleHashes` with hashes of each whitelisted module
+	GetModuleHashes  - fill member `ModuleHashes` with hashes of each whitelisted module's .text section
+	returns a vector* of `ModuleHashData*` objects
 */
 vector<ModuleHashData*>* Integrity::GetModuleHashes()
 {
@@ -141,7 +142,7 @@ vector<ModuleHashData*>* Integrity::GetModuleHashes()
 
 	for (auto it = this->WhitelistedModules->begin(); it != this->WhitelistedModules->end(); ++it) //traverse whitelisted modules
 	{
-		if (it->dllInfo.lpBaseOfDll == GetModuleHandleA(NULL)) //skip main executable module, we're tracking that with another member
+		if (it->dllInfo.lpBaseOfDll == GetModuleHandleA(NULL)) //skip main executable module, we're tracking that with another member. they could probably be merged into one list to optimize
 			continue;
 
 		AddModuleHash(moduleHashes, it->baseName);
@@ -181,10 +182,12 @@ bool Integrity::IsModuleModified(const wchar_t* moduleName)
 				if (arr1[i] != arr2[i])
 				{
 					foundModified = true;
+					break; //break out of checker loop
 				}
 			}
 
-			break;
+			if (foundModified) //break out of outer loop
+				break;
 		}
 	}
 
