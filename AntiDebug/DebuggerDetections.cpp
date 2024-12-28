@@ -10,8 +10,8 @@ bool DebuggerDetections::_IsKernelDebuggerPresent()
 	typedef struct _SYSTEM_KERNEL_DEBUGGER_INFORMATION { bool DebuggerEnabled; bool DebuggerNotPresent; } SYSTEM_KERNEL_DEBUGGER_INFORMATION, * PSYSTEM_KERNEL_DEBUGGER_INFORMATION;
 
 	enum SYSTEM_INFORMATION_CLASS { SystemKernelDebuggerInformation = 35 };
-	typedef NTSTATUS(__stdcall* ZW_QUERY_SYSTEM_INFORMATION)(IN SYSTEM_INFORMATION_CLASS SystemInformationClass, IN OUT PVOID SystemInformation, IN ULONG SystemInformationLength, OUT PULONG ReturnLength);
-	ZW_QUERY_SYSTEM_INFORMATION ZwQuerySystemInformation;
+	typedef NTSTATUS(__stdcall* NT_QUERY_SYSTEM_INFORMATION)(IN SYSTEM_INFORMATION_CLASS SystemInformationClass, IN OUT PVOID SystemInformation, IN ULONG SystemInformationLength, OUT PULONG ReturnLength);
+	NT_QUERY_SYSTEM_INFORMATION NtQuerySystemInformation;
 	SYSTEM_KERNEL_DEBUGGER_INFORMATION Info;
 
 	HMODULE hModule = GetModuleHandleA("ntdll.dll");
@@ -22,11 +22,11 @@ bool DebuggerDetections::_IsKernelDebuggerPresent()
 		return false;
 	}
 
-	ZwQuerySystemInformation = (ZW_QUERY_SYSTEM_INFORMATION)GetProcAddress(hModule, "ZwQuerySystemInformation");
-	if (ZwQuerySystemInformation == NULL)
+	NtQuerySystemInformation = (NT_QUERY_SYSTEM_INFORMATION)GetProcAddress(hModule, "NtQuerySystemInformation");
+	if (NtQuerySystemInformation == NULL)
 		return false;
 
-	if (!ZwQuerySystemInformation(SystemKernelDebuggerInformation, &Info, sizeof(Info), NULL))
+	if (!NtQuerySystemInformation(SystemKernelDebuggerInformation, &Info, sizeof(Info), NULL))
 	{
 		if (Info.DebuggerEnabled && !Info.DebuggerNotPresent)
 		{
