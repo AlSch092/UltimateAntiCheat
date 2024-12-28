@@ -1,31 +1,23 @@
 //By AlSch092 @github
 #include "Integrity.hpp"
 
-//returns false if any static memory is modified (assuming we pass in moduleBase and sizeOfModule.
+/*
+    Integrity::Check - fetches list of hashes from .text section and compares to `hashList`
+	returns `true` if hash lists match
+*/
 bool Integrity::Check(uint64_t Address, int nBytes, vector<uint64_t> hashList)
 {
 	bool hashesMatch = true;
 
 	vector<uint64_t> hashes = GetMemoryHash(Address, nBytes);
 
-	auto it1 = hashes.begin();
-	auto it2 = hashList.begin();
-
-	int count = 0;
-
-	while (it1 != hashes.end() && it2 != hashList.end())  //iterate both lists at same time, compare each element
+	for (int i = 0; i < hashes.size() - 1; i++)
 	{
-		if (count == hashes.size() - 1) //stop edge case error
-			break;
-
-		if (*it1 != *it2)
+		if (hashes[i] != hashList[i])
 		{
 			hashesMatch = false;
 			break;
 		}
-
-		count++;
-		++it1;		++it2;
 	}
 
 	return hashesMatch;
@@ -84,6 +76,7 @@ bool Integrity::IsUnknownModulePresent()
 			if (wcscmp(it->baseName, it2->baseName) == 0)
 			{
 				found_whitelisted = true;
+				break;
 			}
 		}
 
