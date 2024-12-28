@@ -7,7 +7,7 @@ class Settings final
 {
 public:
 
-	static Settings& GetInstance(
+	static shared_ptr<Settings> CreateInstance(
 		bool bNetworkingEnabled, 
 		bool bEnforceSecureBoot,
 		bool bEnforceDSE,
@@ -21,7 +21,7 @@ public:
 	{
 		if (!Instance)
 		{
-			Instance = std::unique_ptr<Settings>(new Settings(
+			Instance = std::shared_ptr<Settings>(new Settings(
 				bNetworkingEnabled, 
 				bEnforceSecureBoot, 
 				bEnforceDSE, 
@@ -34,7 +34,7 @@ public:
 				bUsingDriver));
 		}
 
-		return *Instance;
+		return Instance;
 	}
 
 	Settings(const Settings&) = delete; //prevent copying
@@ -75,5 +75,5 @@ private:
 	const wstring KMDriverName = L"UltimateKernelAnticheat"; //optional hybrid approach
 	const wstring KMDriverPath = L".\\UltimateKernelAnticheat.sys"; 
 
-	static std::unique_ptr<Settings> Instance; //singleton-style, one unique instance
+	static std::shared_ptr<Settings> Instance; //singleton-style, one unique instance (but still shared between classes, thus shared_ptr)
 }; 
