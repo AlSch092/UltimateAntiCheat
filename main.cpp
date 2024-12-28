@@ -31,7 +31,7 @@ PIMAGE_TLS_CALLBACK _tls_callback = FakeTLSCallback; //We're modifying our TLS c
 
 using namespace std;
 
-unique_ptr<Settings> Settings::Instance = nullptr; //we only want a single instance of this object throughout the program (some classes might use pointers to this object)
+shared_ptr<Settings> Settings::Instance = nullptr; //we only want a single instance of this object throughout the program (some classes might use raw pointers to this object)
 
 int main(int argc, char** argv)
 {
@@ -39,17 +39,17 @@ int main(int argc, char** argv)
 #ifdef _DEBUG //in debug compilation, we are more lax with our protections for easier testing purposes
     bool bEnableNetworking = false;  //change this to false if you don't want to use the server
     bool bEnforceSecureBoot = false;
-    bool bEnforceDSE = true;
+    bool bEnforceDSE = false;
     bool bEnforceNoKDBG = false;
     bool bUseAntiDebugging = true;
     bool bUseIntegrityChecking = true;
     bool bCheckThreadIntegrity = true;
     bool bCheckHypervisor = false;
-    bool bRequireRunAsAdministrator = false;
+    bool bRequireRunAsAdministrator = true;
     bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
 #else
     bool bEnableNetworking = false; //change this to false if you don't want to use the server
-    bool bEnforceSecureBoot = false;
+    bool bEnforceSecureBoot = false; //secure boot is recommended in distribution builds
     bool bEnforceDSE = true;
     bool bEnforceNoKDBG = true;
     bool bUseAntiDebugging = true;
@@ -88,7 +88,7 @@ int main(int argc, char** argv)
     cout << "|           discriminating@github (dll load notifcations, catalog verification)          |\n";
     cout << "------------------------------------------------------------------------------------------\n";
 
-    Settings* ConfigInstance = &Settings::GetInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator, bUsingDriver);
+    shared_ptr<Settings> ConfigInstance = Settings::CreateInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator, bUsingDriver);
 
     if (ConfigInstance->bRequireRunAsAdministrator)
     {
