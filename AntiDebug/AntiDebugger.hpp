@@ -34,7 +34,7 @@ namespace Debugger
     {
     public:
         
-        AntiDebug(Settings* s, std::shared_ptr<NetClient> netClient) : netClient(netClient), Config(s)
+        AntiDebug(shared_ptr<Settings> s, shared_ptr<NetClient> netClient) : netClient(netClient), Config(s)
         {
             if (!PreventWindowsDebuggers())
             {
@@ -56,7 +56,7 @@ namespace Debugger
         Thread* GetDetectionThread() const  { return this->DetectionThread.get(); }
         HANDLE GetDetectionThreadHandle() const  { if (this->DetectionThread != NULL) return this->DetectionThread->GetHandle(); else return INVALID_HANDLE_VALUE; }
         NetClient* GetNetClient() const { return this->netClient.get(); }
-        Settings* GetSettings() const { return this->Config; }
+        Settings* GetSettings() const { return this->Config.get(); }
 
         void StartAntiDebugThread();
 
@@ -97,9 +97,9 @@ namespace Debugger
 
         unique_ptr<Thread> DetectionThread = NULL;
 
-        std::shared_ptr<NetClient> netClient = nullptr;
+        shared_ptr<NetClient> netClient = nullptr;
 
-        Settings* Config = nullptr;
+        shared_ptr<Settings> Config = nullptr;
 
         const string DBK64Driver = "DBK64.sys"; //DBVM debugger, this driver loaded and in a running state may likely indicate the presence of dark byte's VM debugger *todo -> add check on this driver*
     };
