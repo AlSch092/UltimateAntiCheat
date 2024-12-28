@@ -107,13 +107,10 @@ std::vector<Handles::SYSTEM_HANDLE> Handles::DetectOpenHandlesToProcess()
 
                 CloseHandle(processHandle);
             }
-            else
+            else //possibly SYSTEM process, skip over
             {
-                //Logger::logf("UltimateAnticheat.log", Warning, "Couldn't open process with id %d @ Handles::DetectOpenHandlesToProcess (possible LOCAL SERVICE or SYSTEM process)", handle.ProcessId);
                 continue;
             }
-        skip_this_handle:
-            continue;
         }
     }
 
