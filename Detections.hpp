@@ -20,7 +20,7 @@ class Detections final
 {
 public:
 
-	Detections(Settings* s, BOOL StartMonitor, shared_ptr<NetClient> client, vector<ProcessData::MODULE_DATA>* currentModules) : Config(s), netClient(client)
+	Detections(shared_ptr<Settings> s, BOOL StartMonitor, shared_ptr<NetClient> client, vector<ProcessData::MODULE_DATA>* currentModules) : Config(s), netClient(client)
 	{
 		this->InitializeBlacklistedProcessesList();
 
@@ -74,8 +74,6 @@ public:
 	Detections operator/(Detections& other) = delete;
 
 	NetClient* GetNetClient() { return this->netClient.get(); }
-
-	Settings* GetSettings() const { return this->Config; }
 
 	Services* GetServiceManager() const { return this->_Services.get(); }
 
@@ -137,7 +135,7 @@ private:
 
 	unique_ptr<Process> _Proc = nullptr; //keep track of our sections, loaded modules, etc using a managed class
 
-	Settings* Config; //non-owning pointer to the original unique_ptr<Settings> in main.cpp
+	shared_ptr<Settings> Config; //non-owning pointer to the original unique_ptr<Settings> in main.cpp
 
 	list<DetectionFlags> DetectedFlags;
 };

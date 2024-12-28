@@ -72,7 +72,7 @@ void Detections::Monitor(LPVOID thisPtr)
     UINT64 CachedSectionAddress = 0;
     DWORD CachedSectionSize = 0;
 
-    if (Monitor->GetSettings()->bCheckIntegrity) //integrity check setup if option is enabled
+    if (Monitor->Config->bCheckIntegrity) //integrity check setup if option is enabled
     {
         list<ProcessData::Section*>* sections = Monitor->SetSectionHash("UltimateAnticheat.exe", ".text"); //set our memory hashes of .text
 
@@ -126,7 +126,7 @@ void Detections::Monitor(LPVOID thisPtr)
             return;
         }
 
-        if (Monitor->GetSettings()->bCheckIntegrity)
+        if (Monitor->Config->bCheckIntegrity)
         {
             if (Monitor->GetIntegrityChecker()->IsTLSCallbackStructureModified()) //check various aspects of the TLS callback structure for modifications
             {

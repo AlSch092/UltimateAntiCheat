@@ -14,7 +14,7 @@ class Preventions final
 {
 public:
 
-	Preventions(Settings* config, bool preventingThreads, shared_ptr<Integrity> integrityChecker) : IsPreventingThreadCreation(preventingThreads), integrityChecker(integrityChecker)
+	Preventions(shared_ptr<Settings> config, bool preventingThreads, shared_ptr<Integrity> integrityChecker) : IsPreventingThreadCreation(preventingThreads), integrityChecker(integrityChecker), Config(config)
 	{
 	}
 
@@ -51,11 +51,11 @@ public:
 
 private:
 
-	const wstring OriginalModuleName = L"UltimateAnticheat.exe";
+	const wstring OriginalModuleName = L"UltimateAnticheat.exe"; //since we rename the module in the process context to something random, store the original
 
 	bool IsPreventingThreadCreation; //used in TLS callback if we want to supress or track new threads
 
 	shared_ptr<Integrity> integrityChecker = nullptr;
 
-	Settings* Config = nullptr;
+	shared_ptr<Settings> Config = nullptr;
 };
