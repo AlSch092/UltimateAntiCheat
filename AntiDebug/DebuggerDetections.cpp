@@ -47,18 +47,24 @@ bool DebuggerDetections::_IsKernelDebuggerPresent()
 bool DebuggerDetections::_IsKernelDebuggerPresent_SharedKData()
 {
 	_KUSER_SHARED_DATA* sharedData = USER_SHARED_DATA;
+	bool bDebuggerEnabled = false;
 
-	if (sharedData->KdDebuggerEnabled)
+	if (sharedData != nullptr && sharedData->KdDebuggerEnabled)
 	{
+		bDebuggerEnabled = true;
+
 		if (!Flag(Detections::KERNEL_DEBUGGER))
 		{
 			Logger::logf("UltimateAnticheat.log", Warning, "Failed to notify server of debugging method (server may be offline or duplicate entry)");
 		}
 	}
 
-	return sharedData->KdDebuggerEnabled;
+	return bDebuggerEnabled;
 }
 
+/*
+	_IsDebuggerPresent_HeapFlags - checks heap flags in the PEB, certain combination can indicate a debugger is present
+*/
 bool DebuggerDetections::_IsDebuggerPresent_HeapFlags()
 {
 #ifdef _M_IX86
@@ -67,10 +73,9 @@ bool DebuggerDetections::_IsDebuggerPresent_HeapFlags()
 	DWORD_PTR pPeb64 = (DWORD_PTR)__readgsqword(0x60);
 #endif
 
-
 	if (pPeb64)
 	{
-		PVOID ptrHeap = (PVOID) * (PDWORD_PTR)((PBYTE)pPeb64 + 0x30);
+		PVOID ptrHeap = (PVOID)*(PDWORD_PTR)((PBYTE)pPeb64 + 0x30);
 		PDWORD heapForceFlagsPtr = (PDWORD)((PBYTE)ptrHeap + 0x74);
 
 		__try
@@ -87,6 +92,7 @@ bool DebuggerDetections::_IsDebuggerPresent_HeapFlags()
 		}
 		__except (EXCEPTION_EXECUTE_HANDLER)
 		{
+			Logger::logf("UltimateAnticheat.log", Warning, "Failed to dereference heapForceFlagsPtr @ _IsDebuggerPresent_HeapFlags");
 			return false;
 		}
 	}
@@ -94,6 +100,9 @@ bool DebuggerDetections::_IsDebuggerPresent_HeapFlags()
 	return false;
 }
 
+/*
+  _IsDebuggerPresent_CloseHandle - calls CloseHandle with an invalid handle, if an exception is thrown then a debugger is present
+*/
 bool DebuggerDetections::_IsDebuggerPresent_CloseHandle()
 {
 #ifndef _DEBUG
@@ -117,6 +126,7 @@ bool DebuggerDetections::_IsDebuggerPresent_RemoteDebugger()
 {
 	BOOL bDebugged = false;
 	if (CheckRemoteDebuggerPresent(GetCurrentProcess(), &bDebugged))
+	{
 		if (bDebugged)
 		{
 			if (!Flag(Detections::REMOTE_DEBUGGER))
@@ -125,7 +135,8 @@ bool DebuggerDetections::_IsDebuggerPresent_RemoteDebugger()
 
 			return true;
 		}
-			
+	}
+		
 	return false;
 }
 
@@ -181,6 +192,7 @@ bool DebuggerDetections::_IsDebuggerPresent_VEH()
 			if (!VirtualProtect((void*)veh_addr, 1, PAGE_EXECUTE_READWRITE, &dwOldProt))
 			{
 				Logger::logf("UltimateAnticheat.log", Warning, "VirtualProtect failed @ _IsDebuggerPresent_VEH");
+				return true; //return true since we found the routine, even though we can't patch over it. if virtualprotect fails, the program will probably crash if trying to patch it
 			}
 
 			memcpy((void*)veh_addr, "\xC3", sizeof(BYTE)); //patch first byte of `InitializeVEH` with a ret, stops call to InitializeVEH from succeeding.
@@ -190,7 +202,7 @@ bool DebuggerDetections::_IsDebuggerPresent_VEH()
 				Logger::logf("UltimateAnticheat.log", Warning, "VirtualProtect failed @ _IsDebuggerPresent_VEH");
 			}
 
-			if (Process::ChangeModuleName(L"vehdebug-x86_64.dll", L"STOP_CHEATING"))
+			if (Process::ChangeModuleName(L"vehdebug-x86_64.dll", L"STOP_CHEATING")) //change the vehdebug module name to something else for fun
 			{
 				Logger::logf("UltimateAnticheat.log", Info, "Changed module name of vehdebug-x86_64.dll to STOP_CHEATING to prevent VEH debugging.");
 			}
@@ -200,6 +212,10 @@ bool DebuggerDetections::_IsDebuggerPresent_VEH()
 	return bFound;
 }
 
+/*
+     _IsDebuggerPresent_PEB - checks the PEB for the BeingDebugged flag
+     returns `true` if byte is set to 1, indicating a debugger is present
+*/
 bool DebuggerDetections::_IsDebuggerPresent_PEB()
 {
 #ifdef _M_IX86
@@ -208,14 +224,18 @@ bool DebuggerDetections::_IsDebuggerPresent_PEB()
 	MYPEB* _PEB = (MYPEB*)__readgsqword(0x60);
 #endif
 
-	if (_PEB->BeingDebugged)
+	bool bDebuggerPresent = false;
+
+	if (_PEB != nullptr &&_PEB->BeingDebugged)
 	{
 		if (!Flag(Detections::VEH_DEBUGGER))
 		{//optionally take further action, `Flag` will already log a warning
 		}
+
+		bDebuggerPresent = true;
 	}
 
-	return _PEB->BeingDebugged;
+	return bDebuggerPresent;
 }
 
 /*
@@ -245,6 +265,10 @@ bool DebuggerDetections::_IsDebuggerPresent_DebugPort()
 
 				return true;
 			}				
+		}
+		else
+		{
+			Logger::logf("UltimateAnticheat.log", Warning, "Failed to fetch NtQueryInformationProcess address @ _IsDebuggerPresent_DebugPort ");
 		}
 	}
 	else
@@ -293,6 +317,7 @@ bool DebuggerDetections::_IsDebuggerPresent_ProcessDebugFlags()
 
 /*
 	_ExitCommonDebuggers - create remote thread on any common debugger processes and call ExitProcess
+	This can of course be bypassed with a simple process name change, preferrably we would use a combination of artifacts to find these processes
 */
 bool DebuggerDetections::_ExitCommonDebuggers()
 {
