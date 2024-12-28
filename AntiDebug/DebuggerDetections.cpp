@@ -325,6 +325,7 @@ bool DebuggerDetections::_ExitCommonDebuggers()
 	commonDebuggers.push_back(L"x64dbg.exe");
 	commonDebuggers.push_back(L"CheatEngine.exe");
 	commonDebuggers.push_back(L"idaq64.exe");
+	commonDebuggers.push_back(L"cheatengine-x86_64.exe");
 	commonDebuggers.push_back(L"cheatengine-x86_64-SSE4-AVX2.exe");
 
 	bool triedEndDebugger = false;
