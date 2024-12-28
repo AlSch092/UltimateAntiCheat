@@ -44,7 +44,7 @@ BOOL Authenticode::VerifyCatalogSignature(LPCWSTR filePath)
     HANDLE hFile = CreateFileW(filePath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE) 
     {
-        Logger::logfw("UltimateAnticheat.log", LogType::Detection, L"Could not open file: %s @ VerifyCatalogSignature", filePath);
+        Logger::logfw("UltimateAnticheat.log", LogType::Warning, L"Could not open file: %s @ VerifyCatalogSignature", filePath);
         return false;
     }
 
@@ -71,7 +71,7 @@ BOOL Authenticode::VerifyCatalogSignature(LPCWSTR filePath)
     HCATINFO hCatInfo = CryptCATAdminEnumCatalogFromHash(hCatAdmin, pbHash, cbHash, 0, NULL);
     if (hCatInfo == NULL) 
     {
-        //std::wcerr << L"No catalog file found for " << filePath << std::endl;
+        Logger::logfw("UltimateAnticheat.log", LogType::Warning, L"No catalog file found for: %s @ VerifyCatalogSignature", filePath);
         CryptCATAdminReleaseContext(hCatAdmin, 0);
         CloseHandle(hFile);
         return false;
