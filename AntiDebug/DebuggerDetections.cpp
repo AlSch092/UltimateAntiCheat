@@ -315,14 +315,15 @@ bool DebuggerDetections::_IsDebuggerPresent_ProcessDebugFlags()
 	return false;
 }
 
+
 /*
-	_ExitCommonDebuggers - create remote thread on any common debugger processes and call ExitProcess
+	_ExitCommonDebuggers - create remote thread on `ExitProcess` in any common debugger processes
 	This can of course be bypassed with a simple process name change, preferrably we would use a combination of artifacts to find these processes
 */
 bool DebuggerDetections::_ExitCommonDebuggers()
 {
 	list<wstring> commonDebuggers;
-	commonDebuggers.push_back(L"x64dbg.exe");
+	commonDebuggers.push_back(L"x64dbg.exe"); //obviously this is a very basic check, it would be ideal to combine this with process creation callbacks in the `Detections` class, that way we can use byte/sig scanning on the newly created process
 	commonDebuggers.push_back(L"CheatEngine.exe");
 	commonDebuggers.push_back(L"idaq64.exe");
 	commonDebuggers.push_back(L"cheatengine-x86_64.exe");
@@ -367,3 +368,4 @@ bool DebuggerDetections::_ExitCommonDebuggers()
 
 	return triedEndDebugger;
 }
+
