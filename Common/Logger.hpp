@@ -32,7 +32,7 @@ public:
     {
         std::lock_guard<std::mutex> lock(consoleMutex);
 
-        std::ofstream logFile(filename, std::ios::out | std::ios::app);
+        std::ofstream logFile(filename, std::ios::out | std::ios::app); //this can throw an exception if the program shuts down during this call 
 
         if (!logFile.is_open())
         {
@@ -228,6 +228,13 @@ public:
     static void ResetColor()
     {
         SetColor(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    }
+
+    template<typename... Args>
+    static bool LogErrorAndReturn(const char* format, Args... args)
+    {
+		logf("UltimateAnticheat.log", Err, format, args...);
+        return false;
     }
 
     static std::mutex consoleMutex;//prevent race conditions with text color changing
