@@ -522,11 +522,11 @@ bool Detections::Flag(DetectionFlags flag)
     if (wasDuplicate) //prevent duplicate server comms
         return true;
 
-    NetClient* client = this->GetNetClient();  //report back to server that someone's cheating
+    weak_ptr<NetClient> client = this->GetNetClient();  //report back to server that someone's cheating
 
-    if (client != nullptr)
+    if (auto _client = client.lock())
     {
-        if (client->FlagCheater(flag) != Error::OK) //cheat engine attachment can be detected this way
+        if (_client->FlagCheater(flag) != Error::OK) //cheat engine attachment can be detected this way
         {
             Logger::logf("UltimateAnticheat.log", Err, "Failed to notify server of cheating status.");
             return false;
@@ -534,8 +534,7 @@ bool Detections::Flag(DetectionFlags flag)
     }
     else
     {
-        Logger::logf("UltimateAnticheat.log", Err, "NetClient was NULL @ Detections::Flag");
-        return false;
+        return Logger::LogAndReturn("NetClient was NULL @ Detections::Flag");
     }
 
     return true;

@@ -27,10 +27,20 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessNam
 	{
 		Logger::logf("UltimateAnticheat.log", Info, "Starting networking component...");
 
-		if (AC->GetNetworkClient()->Initialize(API::ServerEndpoint, API::ServerPort, licenseKey) != Error::OK) //initialize client is separate from license key auth
+		auto client = AC->GetNetworkClient().lock();
+
+		if (client)
 		{
-			errorCode = Error::CANT_STARTUP;		//don't allow AC startup if network portion doesn't succeed
-			goto end;
+			if (client->Initialize(API::ServerEndpoint, API::ServerPort, licenseKey) != Error::OK) //initialize client is separate from license key auth
+			{
+				errorCode = Error::CANT_STARTUP;		//don't allow AC startup if network portion doesn't succeed
+				goto end;
+			}
+		}
+		else
+		{
+			Logger::logf("UltimateAnticheat.log", Err, "Could not fetch/lock network client, exiting...");
+			return Error::NULL_MEMORY_REFERENCE;
 		}
 	}
 	else
@@ -54,19 +64,29 @@ Error API::Cleanup(AntiCheat* AC)
 	if (AC->GetAntiDebugger()->GetDetectionThread() != NULL) //stop anti-debugger thread
 	{
 		AC->GetAntiDebugger()->GetDetectionThread()->SignalShutdown(true);
-		WaitForSingleObject(AC->GetAntiDebugger()->GetDetectionThreadHandle(), 3000); //this thread normally sleeps for 2000ms each loop, so we wait 3000ms for good measures
+		WaitForSingleObject(AC->GetAntiDebugger()->GetDetectionThreadHandle(), 3000);
 	}
 
 	if (AC->GetMonitor()->GetMonitorThread() != NULL) //stop anti-cheat monitor thread
 	{
 		AC->GetMonitor()->GetMonitorThread()->SignalShutdown(true);
-		WaitForSingleObject(AC->GetMonitor()->GetMonitorThread()->GetHandle(), 6000); //this thread normally sleeps for 5000ms each loop, so we wait 6000ms for good measures
+		WaitForSingleObject(AC->GetMonitor()->GetMonitorThread()->GetHandle(), 6000);
 	}
 
-	if (AC->GetNetworkClient()->GetRecvThread() != NULL) //stop anti-cheat monitor thread
+	auto client = AC->GetNetworkClient().lock();
+
+	if (client)
 	{
-		AC->GetNetworkClient()->GetRecvThread()->SignalShutdown(true);
-		WaitForSingleObject(AC->GetNetworkClient()->GetRecvThread()->GetHandle(), 5000); //this thread normally sleeps for 5000ms each loop, so we wait 6000ms for good measures
+		if (client->GetRecvThread() != NULL) //stop anti-cheat monitor thread
+		{
+			client->GetRecvThread()->SignalShutdown(true);
+			WaitForSingleObject(client->GetRecvThread()->GetHandle(), 5000);
+		}
+	}
+	else
+	{
+		Logger::logf("UltimateAnticheat.log", Err, "Couldn't fetch/lock netclient @  API::Cleanup");
+		return Error::NULL_MEMORY_REFERENCE;
 	}
 
 	return Error::OK;

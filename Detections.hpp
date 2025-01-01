@@ -73,7 +73,7 @@ public:
 	Detections operator*(Detections& other) = delete;
 	Detections operator/(Detections& other) = delete;
 
-	NetClient* GetNetClient() { return this->netClient.get(); }
+	weak_ptr<NetClient> GetNetClient() { return this->netClient; }
 
 	Services* GetServiceManager() const { return this->_Services.get(); }
 
@@ -104,7 +104,7 @@ public:
 	bool AddDetectedFlag(DetectionFlags f); //add to DetectedFlags without duplicates
 	bool Flag(DetectionFlags flag); //sets `IsCheater` to true, notifies server component of detected flag
 
-	static VOID OnDllNotification(ULONG NotificationReason, const PLDR_DLL_NOTIFICATION_DATA NotificationData, PVOID Context);
+	static VOID OnDllNotification(ULONG NotificationReason, const PLDR_DLL_NOTIFICATION_DATA NotificationData, PVOID Context); //dll load callback
 
 	BOOL StartMonitor(); //begin threading
 	static void Monitor(LPVOID thisPtr); //loop detections/monitor -> thread function
@@ -119,23 +119,24 @@ private:
 
 	static void MonitorProcessCreation(LPVOID thisPtr);
 
-	bool MonitoringProcessCreation;
+	bool MonitoringProcessCreation = false;
 
-	ObfuscatedData<uint8_t>* CheaterWasDetected = NULL; //using bool as the type does not work properly with obfuscation since the compiler uses true/false, so use uint8_t instead and cast to BOOL when needed
+	ObfuscatedData<uint8_t>* CheaterWasDetected = nullptr; //using bool as the type does not work properly with obfuscation since the compiler uses true/false, so use uint8_t instead and cast to BOOL when needed
 
-	unique_ptr<Services> _Services = NULL; 
-	shared_ptr<Integrity> integrityChecker = NULL;
+	unique_ptr<Services> _Services = nullptr;
+
+	shared_ptr<Integrity> integrityChecker = nullptr;
 	shared_ptr<NetClient> netClient; //send any detections to the server
 
-	Thread* MonitorThread = NULL; //these should ideally be unique_ptrs which end the thread when the pointers go out of scope, will make these changes soon
-	Thread* ProcessCreationMonitorThread = NULL;
-	Thread* RegistryMonitorThread = NULL;
+	Thread* MonitorThread = nullptr; //these should ideally be unique_ptrs which end the thread when the pointers go out of scope, will make these changes soon
+	Thread* ProcessCreationMonitorThread = nullptr;
+	Thread* RegistryMonitorThread = nullptr;
 
 	list<wstring> BlacklistedProcesses;
 
 	unique_ptr<Process> _Proc = nullptr; //keep track of our sections, loaded modules, etc using a managed class
 
-	shared_ptr<Settings> Config; //non-owning pointer to the original unique_ptr<Settings> in main.cpp
+	shared_ptr<Settings> Config = nullptr; //non-owning pointer to the original unique_ptr<Settings> in main.cpp
 
 	list<DetectionFlags> DetectedFlags;
 };

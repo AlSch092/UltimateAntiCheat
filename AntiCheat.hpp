@@ -88,7 +88,7 @@ public:
 
 	DebuggerDetections* GetAntiDebugger() const { return this->AntiDebugger.get(); }
 	
-	NetClient* GetNetworkClient() const  { return this->NetworkClient.get(); }
+	weak_ptr<NetClient> GetNetworkClient() const  { return this->NetworkClient; }
 	
 	Preventions* GetBarrier() const  { return this->Barrier.get(); }  //pointer lifetime stays within the Anticheat class, these 'Get' functions should only be used to call functions of these classes
 	
