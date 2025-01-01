@@ -534,7 +534,7 @@ bool Detections::Flag(DetectionFlags flag)
     }
     else
     {
-        return Logger::LogAndReturn("NetClient was NULL @ Detections::Flag");
+        return Logger::LogErrorAndReturn("NetClient was NULL @ Detections::Flag");
     }
 
     return true;
