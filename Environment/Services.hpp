@@ -8,7 +8,7 @@
 #include <setupapi.h>
 #include <cfgmgr32.h>
 #include <tchar.h>
-#include <intrin.h>
+#include <x86intrin.h>
 
 #pragma comment(lib, "setupapi.lib")
 
