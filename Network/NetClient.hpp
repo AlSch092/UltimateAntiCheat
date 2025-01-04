@@ -5,7 +5,7 @@
 #include <list>
 #include <stdint.h>
 #include <string>
-#include <intrin.h>
+#include <x86intrin.h>
 
 #include "../Common/Error.hpp"
 #include "../Common/DetectionFlags.hpp"
