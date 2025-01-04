@@ -11,25 +11,24 @@
 #include "API/API.hpp"  //API.hpp includes anticheat.hpp
 #include "SplashScreen.hpp"
 
-#pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper) - each section gets its own region, align with system allocation granularity
+using namespace std;
 
-void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
-void NTAPI __stdcall FakeTLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
+void NTAPI TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
+void NTAPI FakeTLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
 
 #pragma comment (linker, "/INCLUDE:_tls_used")
 #pragma comment (linker, "/INCLUDE:_tls_callback")
 
-EXTERN_C
-#ifdef _M_X64
-#pragma const_seg (".CRT$XLB")
-const
+//the /ALIGN:0x10000 linker command is now part of the project settings, as with the LLVM compiler it is not supported in the source code
+
+// Place the TLS callback in the `.CRT$XLB` section
+#ifdef _MSC_VER
+#pragma const_seg(".CRT$XLB")
+extern "C" const PIMAGE_TLS_CALLBACK _tls_callback = FakeTLSCallback;
+#pragma const_seg()
+#else
+__attribute__((section(".CRT$XLB"))) PIMAGE_TLS_CALLBACK p_tls_callback = TlsCallback;
 #endif
-
-PIMAGE_TLS_CALLBACK _tls_callback = FakeTLSCallback; //We're modifying our TLS callback @ runtime to trick static reversing
-#pragma data_seg ()
-#pragma const_seg ()
-
-using namespace std;
 
 shared_ptr<Settings> Settings::Instance = nullptr; //we only want a single instance of this object throughout the program (some classes might use raw pointers to this object)
 
