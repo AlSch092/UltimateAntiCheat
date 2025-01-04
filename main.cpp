@@ -1,5 +1,7 @@
 /*  
-    U.A.C. is a non-invasive usermode anticheat for x64 Windows, tested on Windows 10 & 11. Usermode is used to ensure an optimal end user experience. It also provides insight into how many kernelmode attack methods can be prevented from usermode, through concepts such as secure boot enforcement and DSE checking.
+    ================== UltimateAntiCheat - LLVM/clang-cl branch  ==================
+        
+    U.A.C. is a non-invasive, privacy-respecting usermode anticheat for x64 Windows, tested on Windows 10 & 11.
     
     Please view the readme for more information regarding program features. If you'd like to use this project in your game/software, please contact the author.
 
