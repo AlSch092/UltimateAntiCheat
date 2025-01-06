@@ -116,7 +116,7 @@ bool Preventions::RemapProgramSections()
         }
         __except (EXCEPTION_EXECUTE_HANDLER)
         {
-            Logger::logf("UltimateAnticheat.log", Err, " Remapping image failed, please ensure optimization is set to /O2\n");
+            Logger::logf("UltimateAnticheat.log", Err, " Remapping image failed!");
             return false;
         }
     }
