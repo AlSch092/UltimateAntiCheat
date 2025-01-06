@@ -64,7 +64,7 @@ Error API::Cleanup(AntiCheat* AC)
 	if (AC->GetAntiDebugger()->GetDetectionThread() != NULL) //stop anti-debugger thread
 	{
 		AC->GetAntiDebugger()->GetDetectionThread()->SignalShutdown(true);
-		WaitForSingleObject(AC->GetAntiDebugger()->GetDetectionThreadHandle(), 3000);
+		WaitForSingleObject(AC->GetAntiDebugger()->GetDetectionThread()->GetHandle(), 3000);
 	}
 
 	if (AC->GetMonitor()->GetMonitorThread() != NULL) //stop anti-cheat monitor thread
