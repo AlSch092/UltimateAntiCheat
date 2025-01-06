@@ -1,6 +1,7 @@
 //By AlSch092 @ Github
 #pragma once
 #include <windows.h>
+#include <chrono>
 #include "../Common/Logger.hpp"
 
 /*
@@ -18,16 +19,11 @@ public:
 	}
 
 	Thread(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalParam, BOOL shouldRunForever) : ExecutionAddress((UINT_PTR)toExecute), OptionalParam(lpOptionalParam), ShouldRunForever(shouldRunForever)
-	{
-		this->handle = CreateThread(0, 0, toExecute, lpOptionalParam, 0, &this->Id);
-
-		if (this->handle == INVALID_HANDLE_VALUE)
+	{	
+		if (BeginExecution((DWORD_PTR)toExecute, lpOptionalParam, shouldRunForever))
 		{
 			Logger::logf("UltimateAnticheat.log", Err, "Failed to create new thread @ Thread::Thread - address %llX", (UINT_PTR)toExecute);
-			return;
 		}
-
-		this->ShutdownSignalled = false;
 	}
 
 	~Thread()
@@ -38,7 +34,7 @@ public:
 		{
 			this->ShutdownSignalled = true;
 
-			if (!TerminateThread(this->handle, 0))
+			if (!TerminateThread(this->handle, 0)) //end thread immediately instead of signalling it to end and then using WaitForSingleObject
 			{
 				Logger::logf("UltimateAnticheat.log", Warning, "TerminateThread failed @ ~Thread");
 			}
@@ -63,13 +59,16 @@ public:
 	DWORD GetId() const { return this->Id; }
 	DWORD_PTR GetExecutionAddress() const { return this->ExecutionAddress; }
 	LPVOID GetOptionalParameter() const { return this->OptionalParam; }
-
+	auto GetTick() const { return this->Tick; }
 	BOOL RunsForever() const { return this->ShouldRunForever; }
 	BOOL IsShutdownSignalled() const { return this->ShutdownSignalled; }
+	
 	void SignalShutdown(BOOL toShutdown) { this->ShutdownSignalled = toShutdown; }
 
 	BOOL BeginExecution();
 	BOOL BeginExecution(DWORD_PTR toExecute, LPVOID lpOptionalParam, BOOL shouldRunForever);
+
+	void UpdateTick() { this->Tick = std::chrono::steady_clock::now(); }
 
 private:
 
@@ -79,6 +78,8 @@ private:
 	DWORD_PTR ExecutionAddress = 0;
 	LPVOID OptionalParam = nullptr;
 
-	BOOL ShouldRunForever;
-	BOOL ShutdownSignalled;
+	BOOL ShouldRunForever = false;
+	BOOL ShutdownSignalled = false;
+
+	std::chrono::steady_clock::time_point Tick; //used in cross checks to ensure thread is running as expected. should be incremented by the thread itself during execution
 };
