@@ -6,10 +6,19 @@
 */
 void Debugger::AntiDebug::StartAntiDebugThread()
 {
-	if (!this->GetSettings()->bUseAntiDebugging)
+	auto settings = this->GetSettings().lock();
+
+	if (settings)
 	{
-		Logger::logf("UltimateAnticheat.log", Info, "Anti-Debugger was disabled in settings, debugging will be allowed");
-		return;
+		if (settings->bUseAntiDebugging)
+		{
+			Logger::logf("UltimateAnticheat.log", Info, "Anti-Debugger was disabled in settings, debugging will be allowed");
+			return;
+		}
+	}
+	else
+	{
+		Logger::logf("UltimateAnticheat.log", Warning, "Settings were NULL or failed to lock weak_ptr<Settings> @ Debugger::AntiDebug::StartAntiDebugThread");
 	}
 
 	this->DetectionThread = make_unique<Thread>((LPTHREAD_START_ROUTINE)Debugger::AntiDebug::CheckForDebugger, (LPVOID)this, true);

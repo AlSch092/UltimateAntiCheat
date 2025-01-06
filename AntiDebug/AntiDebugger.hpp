@@ -42,21 +42,18 @@ namespace Debugger
             }
         }
 
-        ~AntiDebug() //monitor thread will automatically be ended once it goes out of scope
-        {
-        }
+		~AntiDebug() = default; //any smart pointers will be cleaned up automatically
 
         AntiDebug operator+(AntiDebug& other) = delete; //delete all arithmetic operators, unnecessary for context
         AntiDebug operator-(AntiDebug& other) = delete;
         AntiDebug operator*(AntiDebug& other) = delete;
         AntiDebug operator/(AntiDebug& other) = delete;
         
-        list<Detections> GetDebuggerMethodsDetected() const { return DebuggerMethodsDetected; }
+		list<Detections> GetDebuggerMethodsDetected() const { return DebuggerMethodsDetected; } //we could always turn this into an integer that uses powers of 2
     
         Thread* GetDetectionThread() const  { return this->DetectionThread.get(); }
-        HANDLE GetDetectionThreadHandle() const  { if (this->DetectionThread != NULL) return this->DetectionThread->GetHandle(); else return INVALID_HANDLE_VALUE; }
         NetClient* GetNetClient() const { return this->netClient.get(); }
-        Settings* GetSettings() const { return this->Config.get(); }
+        weak_ptr<Settings> GetSettings() const { return this->Config; }
 
         void StartAntiDebugThread();
 
