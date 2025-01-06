@@ -146,7 +146,6 @@ RmpRemapImage(
         goto exit;
     }
 
-
     //Allocate an executable and writable buffer where the remap routine will execute.
     pRemapRegion = VirtualAlloc(
         NULL,
@@ -163,7 +162,7 @@ RmpRemapImage(
     //
     // Copy the image to the remap region.
     //
-    RmppCopyPeSections(pNtHeaders, (ULONG_PTR)pRemapRegion);
+    RmppCopyPeSections(pNtHeaders, (ULONG_PTR)pRemapRegion); //crashes in llvm build
 
     //
     // Locate the address of the remap routine inside the remap region.
@@ -177,6 +176,7 @@ RmpRemapImage(
     // Invoke the remap routine inside the remap region.
     //
     status = fpRemapRoutine(pRemapRegion);
+
     if (!status)
     {
         Logger::logf("UltimateAnticheat.log", Err,"RmppRemapImageRoutine failed.\n");
@@ -293,6 +293,11 @@ RmppCopyPeSections(
     //
     for (WORD i = 0; i < EXPECTED_SECTIONS; ++i)
     {
+        if (strncmp((char*)pSectionHeader[i].Name, ".retplne", 8) == 0) //the .retpln section is not mapped into memory, but included in clang-cl builds. we need to skip it or else this will throw an exception and fail.
+        {
+            continue;
+        }
+
         RtlCopyMemory(
             (PVOID)(DestinationBase + pSectionHeader[i].VirtualAddress),
             (PVOID)(SourceBase + pSectionHeader[i].VirtualAddress),
