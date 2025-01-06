@@ -86,6 +86,7 @@ public:
 	BOOL CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize);
 
 	Thread* GetMonitorThread() const { return this->MonitorThread; }
+	Thread* GetProcessCreationMonitorThread() const { return this->ProcessCreationMonitorThread; }
 
 	Process* GetProcessObj() const { return this->_Proc.get(); }  //other classes should not be able to set the process object, it is created by default in the constructor
 

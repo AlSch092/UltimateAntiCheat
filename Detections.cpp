@@ -703,20 +703,27 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
         return;
     }
 
+    monitor->GetMonitorThread()->UpdateTick();
     IWbemClassObject* pclsObj = NULL;
     ULONG uReturn = 0;
+
     while (pEnumerator && monitor->MonitoringProcessCreation) //keep looping while MonitoringProcessCreation is set to true
     {
         HRESULT hr = pEnumerator->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
-        if (0 == uReturn) break;
+
+        if (0 == uReturn) 
+            continue;
 
         VARIANT vtProp;
+
         hr = pclsObj->Get(L"TargetInstance", 0, &vtProp, 0, 0);
+
         if (SUCCEEDED(hr) && (vtProp.vt == VT_UNKNOWN))
         {
             IUnknown* str = vtProp.punkVal;
             IWbemClassObject* pClassObj = NULL;
             str->QueryInterface(IID_IWbemClassObject, (void**)&pClassObj);
+
             if (pClassObj)
             {
                 VARIANT vtName;
@@ -741,6 +748,8 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
         }
         VariantClear(&vtProp);
         pclsObj->Release();
+        monitor->GetMonitorThread()->UpdateTick(); //update tick on each loop, then we can check this value from a different thread to see if someone has suspended it
+        Sleep(50); //ease the CPU a little bit
     }
 
     pSvc->Release();

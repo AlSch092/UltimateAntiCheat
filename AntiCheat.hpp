@@ -124,6 +124,11 @@ __forceinline bool AntiCheat::IsAnyThreadSuspended()
 		Logger::logf("UltimateAnticheat.log", Detection, "Monitor was found suspended! Abnormal program execution.");
 		return true;
 	}
+	else if (Monitor->GetProcessCreationMonitorThread() != nullptr && Thread::IsThreadSuspended(Monitor->GetProcessCreationMonitorThread()->GetHandle()))
+	{
+		Logger::logf("UltimateAnticheat.log", Detection, "Monitor's process creation thread was found suspended! Abnormal program execution.");
+		return true;
+	}
 	else if (Config->bUseAntiDebugging && Thread::IsThreadSuspended(AntiDebugger->GetDetectionThread()->GetHandle()))
 	{
 		Logger::logf("UltimateAnticheat.log", Detection, "Anti-debugger was found suspended! Abnormal program execution.");
