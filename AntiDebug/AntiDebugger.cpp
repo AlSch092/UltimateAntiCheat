@@ -10,7 +10,7 @@ void Debugger::AntiDebug::StartAntiDebugThread()
 
 	if (settings)
 	{
-		if (settings->bUseAntiDebugging)
+		if (!settings->bUseAntiDebugging)
 		{
 			Logger::logf("UltimateAnticheat.log", Info, "Anti-Debugger was disabled in settings, debugging will be allowed");
 			return;
