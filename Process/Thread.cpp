@@ -26,15 +26,15 @@ BOOL Thread::BeginExecution()
     Thread::BeginExecution - Managed thread creation & start
     return `true` on success, `false` on failure
 */
-BOOL Thread::BeginExecution(DWORD_PTR toExecute, LPVOID lpOptionalParam, BOOL shouldRunForever)
+BOOL Thread::BeginExecution(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalParam, BOOL shouldRunForever)
 {
 	if (ExecutionAddress != NULL)
 	{
-		this->ExecutionAddress = toExecute;
+		this->ExecutionAddress = (UINT64)toExecute;
 		this->OptionalParam = lpOptionalParam;
 		this->ShouldRunForever = shouldRunForever;
 
-		this->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&ExecutionAddress, OptionalParam, 0, &this->Id);
+		this->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)ExecutionAddress, OptionalParam, 0, &this->Id);
 
 		if (this->handle == INVALID_HANDLE_VALUE)
 		{

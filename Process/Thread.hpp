@@ -19,13 +19,13 @@ public:
 
 	Thread(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalParam, BOOL shouldRunForever) : ExecutionAddress((UINT_PTR)toExecute), OptionalParam(lpOptionalParam), ShouldRunForever(shouldRunForever)
 	{
-		this->handle = CreateThread(0, 0, toExecute, lpOptionalParam, 0, &this->Id);
+		BeginExecution(toExecute, lpOptionalParam, shouldRunForever);
 
-		if (this->handle == INVALID_HANDLE_VALUE)
-		{
-			Logger::logf("UltimateAnticheat.log", Err, "Failed to create new thread @ Thread::Thread - address %llX", (UINT_PTR)toExecute);
-			return;
-		}
+		//if (this->handle == INVALID_HANDLE_VALUE)
+		//{
+		//	Logger::logf("UltimateAnticheat.log", Err, "Failed to create new thread @ Thread::Thread - address %llX", (UINT_PTR)toExecute);
+		//	return;
+		//}
 
 		this->ShutdownSignalled = false;
 	}
@@ -70,7 +70,7 @@ public:
 	void SignalShutdown(BOOL toShutdown) { this->ShutdownSignalled = toShutdown; }
 
 	BOOL BeginExecution();
-	BOOL BeginExecution(DWORD_PTR toExecute, LPVOID lpOptionalParam, BOOL shouldRunForever);
+	BOOL BeginExecution(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalParam, BOOL shouldRunForever);
 
 
 	void UpdateTick() { this->Tick = std::chrono::steady_clock::now(); }
@@ -80,7 +80,7 @@ private:
 	HANDLE handle = INVALID_HANDLE_VALUE;
 	DWORD Id = 0; //thread id
 
-	DWORD_PTR ExecutionAddress = 0;
+	UINT64 ExecutionAddress = 0;
 	LPVOID OptionalParam = nullptr;
 
 	BOOL ShouldRunForever;
