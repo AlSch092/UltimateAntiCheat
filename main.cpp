@@ -13,6 +13,8 @@
 
 #pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper) - each section gets its own region, align with system allocation granularity
 
+using namespace std;
+
 void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
 void NTAPI __stdcall FakeTLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
 
@@ -28,8 +30,6 @@ const
 PIMAGE_TLS_CALLBACK _tls_callback = FakeTLSCallback; //We're modifying our TLS callback @ runtime to trick static reversing
 #pragma data_seg ()
 #pragma const_seg ()
-
-using namespace std;
 
 shared_ptr<Settings> Settings::Instance = nullptr; //we only want a single instance of this object throughout the program (some classes might use raw pointers to this object)
 
@@ -73,7 +73,7 @@ int main(int argc, char** argv)
     cout << "\tRequire Admin:\t\t" << boolalpha << bRequireRunAsAdministrator << "\n";
 #endif
 
-    const int MillisecondsBeforeShutdown = 60000;
+    const int MillisecondsBeforeShutdown = 120000;
 
     SetConsoleTitle(L"Ultimate Anti-Cheat");
 
@@ -152,7 +152,7 @@ int main(int argc, char** argv)
     }
 
     if (ConfigInstance->bCheckThreads)
-    {
+    {   //typically thread should cross-check eachother to ensure nothing is suspended, in this version of the program we only check thread suspends once at the start
         if (Anti_Cheat->IsAnyThreadSuspended()) //make sure that all our necessary threads aren't suspended by an attacker
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Atleast one of our threads was found suspended! All threads must be running for proper module functionality.");
@@ -169,7 +169,7 @@ int main(int argc, char** argv)
 
     if (Anti_Cheat->GetMonitor()->IsUserCheater())
     {
-        Logger::logf("UltimateAnticheat.log", Info, "Detected a cheater in first %d milliseconds of runtime!", MillisecondsBeforeShutdown);
+        Logger::logf("UltimateAnticheat.log", Info, "Detected a possible cheater in first %d milliseconds of runtime!", MillisecondsBeforeShutdown);
     }
 
 cleanup: //jump to here on any error with AC initialization

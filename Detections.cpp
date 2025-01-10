@@ -11,7 +11,7 @@ BOOL Detections::StartMonitor()
 
     this->MonitorThread = new Thread((LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, true);
 
-    Logger::logf("UltimateAnticheat.log", Info, "Created monitoring thread with ID %d", this->MonitorThread->GetId());
+    //Logger::logf("UltimateAnticheat.log", Info, "Created monitoring thread with ID %d", this->MonitorThread->GetId());
     
     if (this->MonitorThread->GetHandle() == NULL || this->MonitorThread->GetHandle() == INVALID_HANDLE_VALUE)
     {
@@ -19,7 +19,7 @@ BOOL Detections::StartMonitor()
         return FALSE;
     }
 
-    this->ProcessCreationMonitorThread = new Thread((LPTHREAD_START_ROUTINE)Detections::MonitorProcessCreation, this, true);
+    this->ProcessCreationMonitorThread = new Thread((LPTHREAD_START_ROUTINE)&Detections::MonitorProcessCreation, this, true);
 
     this->RegistryMonitorThread = new Thread((LPTHREAD_START_ROUTINE)&MonitorImportantRegistryKeys, (LPVOID)this, true);
 
@@ -709,6 +709,14 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
 
     while (pEnumerator && monitor->MonitoringProcessCreation) //keep looping while MonitoringProcessCreation is set to true
     {
+        if (monitor->GetProcessCreationMonitorThread() != nullptr)
+        {
+            if (monitor->GetProcessCreationMonitorThread()->IsShutdownSignalled())
+            {
+                break;
+            }
+        }
+
         HRESULT hr = pEnumerator->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
 
         if (0 == uReturn) 
@@ -748,8 +756,11 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
         }
         VariantClear(&vtProp);
         pclsObj->Release();
-        monitor->GetMonitorThread()->UpdateTick(); //update tick on each loop, then we can check this value from a different thread to see if someone has suspended it
-        Sleep(50); //ease the CPU a little bit
+        
+        if(monitor->GetMonitorThread() != nullptr)
+            monitor->GetMonitorThread()->UpdateTick(); //update tick on each loop, then we can check this value from a different thread to see if someone has suspended it
+
+        Sleep(50); //ease the CPU a bit
     }
 
     pSvc->Release();
@@ -857,8 +868,8 @@ void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
     HANDLE hEvents[KEY_COUNT];
     const TCHAR* subKeys[KEY_COUNT] = 
     {
-        TEXT("SYSTEM\\CurrentControlSet\\Control\\SecureBoot\\State\\"),
-        TEXT("SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\") //test
+        TEXT("SYSTEM\\CurrentControlSet\\Control\\SecureBoot\\State\\"),  //we haven't found the best keys to monitor yet, perhaps in future releases
+        TEXT("SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\") 
     };
 
     DWORD filter = REG_NOTIFY_CHANGE_LAST_SET;
@@ -894,7 +905,9 @@ void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
 
     Logger::logf("UltimateAnticheat.log", Warning, "Monitoring multiple registry keys...");
 
-    while (1) 
+    bool monitoringKeys = true;
+
+    while (monitoringKeys)
     {        
         DWORD waitResult = WaitForMultipleObjects(KEY_COUNT, hEvents, FALSE, INFINITE); //wait for any of the events to be signaled
 
