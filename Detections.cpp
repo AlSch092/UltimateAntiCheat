@@ -465,7 +465,7 @@ BOOL Detections::CheckOpenHandles()
 
     for (auto& handle : handles)
     {
-        if (Handles::DoesProcessHaveOpenHandleTous(handle.ProcessId, handles))
+        if (Handles::DoesProcessHaveOpenHandleToUs(handle.ProcessId, handles))
         {
             wstring procName = Process::GetProcessName(handle.ProcessId);
             int size = sizeof(Handles::Whitelisted) / sizeof(UINT64);
@@ -474,7 +474,7 @@ BOOL Detections::CheckOpenHandles()
             {
                 if (wcscmp(Handles::Whitelisted[i], procName.c_str()) == 0) //whitelisted program has open handle
                 {
-                    goto inner_break;
+                    goto inner_break; //break out of inner for() loop without triggering foundHandle=true
                 }
             }
 
@@ -501,6 +501,7 @@ bool Detections::AddDetectedFlag(DetectionFlags flag)
         if (f == flag)
         {
             isDuplicate = true;
+            break;
         }
     }
 
@@ -541,7 +542,7 @@ bool Detections::Flag(DetectionFlags flag)
 }
 
 /*
-    IsBlacklistedWindowPresent - Checks if windows with specific title or class names are present
+    IsBlacklistedWindowPresent - Checks if windows with specific title or class names are present.
     *Note* this function should not be used on its own to determine if someone is running a cheat tool, it should be combined with other methods. An opened folder with a blacklisted name will be caught but doesn't imply the actual program is opened, for example
 */
 BOOL Detections::IsBlacklistedWindowPresent()
@@ -576,14 +577,14 @@ BOOL Detections::IsBlacklistedWindowPresent()
             char original_CheatEngine[13]{ 0 };
             char original_LUAScript[12]{ 0 };
 
-            for (int i = 0; i < 13 - 1; i++) //13 - 1 to stop last 00 from being xor'd
+            for (int i = 0; i < sizeof(original_CheatEngine) - 1; i++) //13 - 1 to stop last 00 from being xor'd
             {
                 original_CheatEngine[i] = (char)(CheatEngine[i] ^ xorKey1);
             }
 
-            for (int i = 0; i < 12; i++)
+            for (int i = 0; i < sizeof(original_LUAScript) - 1; i++)
             {
-                original_LUAScript[i] = (char)(CheatEngine[i] ^ xorKey2);
+                original_LUAScript[i] = (char)(LuaScript[i] ^ xorKey2);
             }
 
             if (GetWindowTextA(hwnd, windowTitle, sizeof(windowTitle)))
