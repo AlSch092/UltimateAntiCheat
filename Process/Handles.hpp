@@ -49,10 +49,10 @@ namespace Handles
     std::vector<SYSTEM_HANDLE> GetHandles();
     std::vector<SYSTEM_HANDLE>  DetectOpenHandlesToProcess();
 
-    bool DoesProcessHaveOpenHandleTous(DWORD pid, std::vector <Handles::SYSTEM_HANDLE> handleList);
+    bool DoesProcessHaveOpenHandleToUs(DWORD pid, std::vector <Handles::SYSTEM_HANDLE> handleList);
 
-#ifdef _DEBUG
-    static const wchar_t* Whitelisted[] = { {L"conhost.exe"}, {L"devenv.exe"}, {L"VsDebugConsole.exe"} };
+#ifdef _DEBUG //in addition to checking process names, we should check the file's certificate to ensure a whitelisted process can't be spoofed to obtain a whitelisted handle
+    static const wchar_t* Whitelisted[] = { {L"conhost.exe"}, {L"devenv.exe"}, {L"VsDebugConsole.exe"} }; //on different people's PC's, different processes might be opening handles to our process. 
 #else
     static const wchar_t* Whitelisted[] = { {L"conhost.exe"} }; //non-console version of this project will be different and conhost should not be considered whitelisted 
 #endif

@@ -60,7 +60,7 @@ std::vector<Handles::SYSTEM_HANDLE> Handles::DetectOpenHandlesToProcess()
     {
         if (handle.ProcessId != currentProcessId)
         {
-            if (handle.ProcessId == 0 || handle.ProcessId == 4)
+            if (handle.ProcessId == 0 || handle.ProcessId == 4) //skip any system processes
             {
                 continue;
             }
@@ -121,9 +121,9 @@ std::vector<Handles::SYSTEM_HANDLE> Handles::DetectOpenHandlesToProcess()
     DoesProcessHaveOpenHandleTous - returns true if any handle in vector `handles`  points to our process
     Can be used to detect open process handles to our process from other processes
 */
-bool Handles::DoesProcessHaveOpenHandleTous(DWORD pid, std::vector <Handles::SYSTEM_HANDLE> handles)
+bool Handles::DoesProcessHaveOpenHandleToUs(DWORD pid, std::vector <Handles::SYSTEM_HANDLE> handles)
 {
-    if (pid == 0 || pid == 4) //system idle process + system pids
+    if (pid == 0 || pid == 4) //normally system-related processes
         return false;
 
     for (const auto& handle : handles)
