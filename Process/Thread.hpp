@@ -12,15 +12,25 @@ class Thread
 {
 public:
 
+	/*  A Thread constructor with only a thread id implies the thread was spawned by some other mechanism than our own code, and we'd like to keep track of it
+	*/
 	Thread(DWORD id) : Id(id) //Thread classes that call this constructor are ones we aren't creating ourselves to execute code, and rather ones collected in the TLS callback for bookkeeping purposes
 	{
 		this->ShutdownSignalled = false;
 		this->ShouldRunForever = false;
 	}
 
+	/* A Thread constructor with enough information to launch a new thread will do so
+	*/
 	Thread(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalParam, BOOL shouldRunForever) : ExecutionAddress((UINT_PTR)toExecute), OptionalParam(lpOptionalParam), ShouldRunForever(shouldRunForever)
 	{
-		BeginExecution(toExecute, lpOptionalParam, shouldRunForever);
+		if (!BeginExecution(toExecute, lpOptionalParam, shouldRunForever))
+		{
+			Logger::logf("UltimateAnticheat.log", Err, "Thread which was scheduled to execute at: %llX failed to spawn", this->ExecutionAddress);
+
+			//std::terminate();  //Optionally, terminate the program since a scheduled thread could not start properly. Integrity cannot be guaranteed if one or more threads fails
+		}
+
 		this->ShutdownSignalled = false;
 	}
 
@@ -28,11 +38,18 @@ public:
 	{
 		Logger::logf("UltimateAnticheat.log", Info, "Ending thread which originally executed at: %llX", this->ExecutionAddress);
 
-		if (this->t.native_handle() != INVALID_HANDLE_VALUE)
+		if (this->t.joinable())
 		{
 			this->ShutdownSignalled = true;
 
-			WaitForSingleObject(this->t.native_handle(), 10000); //wait for thread to end, we'll give them 10 seconds max
+			DWORD result = WaitForSingleObject(this->t.native_handle(), 10000); //wait for thread to end, we'll give them 10 seconds max
+
+			if (result == WAIT_TIMEOUT)
+			{
+				Logger::logf("UltimateAnticheat.log", Warning, "Thread did not finish execution within the timeout period.");
+			}
+
+			this->t.join();
 		}
 	}
 
@@ -58,6 +75,7 @@ public:
 
 	BOOL RunsForever() const { return this->ShouldRunForever; }
 	BOOL IsShutdownSignalled() const { return this->ShutdownSignalled; }
+
 	void SignalShutdown(BOOL toShutdown) { this->ShutdownSignalled = toShutdown; }
 
 	BOOL BeginExecution(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalParam, BOOL shouldRunForever);
@@ -68,14 +86,14 @@ private:
 
 	std::thread t;
 
-	HANDLE handle = INVALID_HANDLE_VALUE;
-	DWORD Id = 0; //thread id
+	HANDLE handle = INVALID_HANDLE_VALUE; //assigned to in `BeginExecution`
+	DWORD Id = 0; //thread id, assigned to in `BeginExecution` or class constructor
 
-	UINT64 ExecutionAddress = 0;
+	DWORD_PTR ExecutionAddress = 0;
 	LPVOID OptionalParam = nullptr;
 
 	BOOL ShouldRunForever;
 	std::atomic<bool> ShutdownSignalled;
 
-	std::chrono::steady_clock::time_point Tick; //used in cross checks to ensure thread is running as expected. should be incremented by the thread itself during execution
+	std::chrono::steady_clock::time_point Tick; //can be used in cross checks to ensure thread is running as expected. should be updated by the owning thread during execution loops
 };
