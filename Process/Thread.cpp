@@ -2,55 +2,43 @@
 #include "Thread.hpp"
 
 /*
-    Thread::BeginExecution - Managed thread creation & start. this overloaded routine is used when thread data members are already set from other places of code
-    return `true` on success, `false` on failure
-*/
-BOOL Thread::BeginExecution()
-{
-	if (this->ExecutionAddress != NULL)
-	{
-		this->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&this->ExecutionAddress, this->OptionalParam, 0, &this->Id);
-
-		if (this->handle == INVALID_HANDLE_VALUE)
-		{
-            Logger::logf("UltimateAnticheat.log", Err, " CreateThread failed @ BeginExecution: %d\n", GetLastError());
-			this->Id = NULL;
-			return FALSE;
-		}
-	}
-
-	return TRUE;
-}
-
-/*
     Thread::BeginExecution - Managed thread creation & start
     return `true` on success, `false` on failure
 */
 BOOL Thread::BeginExecution(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalParam, BOOL shouldRunForever)
 {
-	if (ExecutionAddress != NULL)
-	{
-		this->ExecutionAddress = (UINT64)toExecute;
-		this->OptionalParam = lpOptionalParam;
-		this->ShouldRunForever = shouldRunForever;
+    if (toExecute != NULL)
+    {
+        this->ExecutionAddress = (UINT64)toExecute;
+        this->OptionalParam = lpOptionalParam;
+        this->ShouldRunForever = shouldRunForever;
 
-		this->handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)ExecutionAddress, OptionalParam, 0, &this->Id);
+        try
+        {
+            // Use a lambda to wrap the LPTHREAD_START_ROUTINE for std::thread
+            this->t = std::thread([toExecute, lpOptionalParam]() { toExecute(lpOptionalParam); });
 
-		if (this->handle == INVALID_HANDLE_VALUE)
-		{
-            Logger::logf("UltimateAnticheat.log", Err, " CreateThread failed @ BeginExecution: %d\n", GetLastError());
-			this->Id = NULL;
-			return FALSE;
-		}
+            this->handle = t.native_handle(); // Get the native handle
+            this->Id = GetThreadId(this->handle);
 
-        Tick = std::chrono::steady_clock::now();
+            t.detach();
 
-		return TRUE;
-	}
-	else
-		return FALSE;
+            Tick = std::chrono::steady_clock::now();
+
+            return TRUE;
+        }
+        catch (const std::system_error& e)
+        {
+            Logger::logf("UltimateAnticheat.log", Err, "std::thread failed @ BeginExecution: %s\n", e.what());
+            this->Id = NULL;
+            return FALSE;
+        }
+    }
+    else
+    {
+        return FALSE;
+    }
 }
-
 bool Thread::IsThreadRunning(HANDLE threadHandle)
 {
     if (threadHandle == NULL)
