@@ -65,8 +65,17 @@ bool Thread::IsThreadSuspended(HANDLE threadHandle)
         return false;
 
     bool suspended = false;
+    DWORD suspendCount = 0;
 
-    DWORD suspendCount = SuspendThread(threadHandle);
+    __try
+    {
+        suspendCount = SuspendThread(threadHandle); //invalid handle passed to suspendthread throws excepton
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
+        Logger::logf("UltimateAnticheat.log", Warning, "Thread handle was NULL @ IsThreadSuspended");
+        return false;
+    }
 
     if (suspendCount == (DWORD)-1)
     {
