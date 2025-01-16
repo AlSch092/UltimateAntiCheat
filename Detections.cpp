@@ -704,7 +704,9 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
         return;
     }
 
-    monitor->GetMonitorThread()->UpdateTick();
+    if(monitor->GetMonitorThread() != nullptr)
+        monitor->GetMonitorThread()->UpdateTick();
+	
     IWbemClassObject* pclsObj = NULL;
     ULONG uReturn = 0;
 
