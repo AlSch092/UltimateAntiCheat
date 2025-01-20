@@ -9,6 +9,7 @@
 #include <string>
 #include <Psapi.h>
 #include <stdio.h>
+#include <map>
 
 using namespace std;
 
@@ -56,9 +57,19 @@ public:
 	
 	static vector<uint64_t> GetMemoryHash(uint64_t Address, int nBytes);
 
-	void SetMemoryHashList(vector<uint64_t> hList);
+	void SetSectionHashList(vector<uint64_t> hList, const string section);
 
-	vector<uint64_t> GetMemoryHashList() const { return this->_MemorySectionHashes; }
+	vector<uint64_t> GetSectionHashList(const string sectionName) const 
+	{
+		auto it = this->SectionHashes.find(sectionName);
+
+		if (it != this->SectionHashes.end())
+		{
+			return it->second;
+		}
+
+		return {};
+	}
 
 	bool IsUnknownModulePresent();
 
@@ -76,7 +87,8 @@ public:
 
 private:
 	
-	vector<uint64_t> _MemorySectionHashes; //hashes of .text section of executable module
+	map<string, vector<uint64_t>> SectionHashes; //section hashes for current module's sections
+
 	vector<ProcessData::MODULE_DATA>* WhitelistedModules = nullptr;
-	vector<ModuleHashData*>* ModuleHashes = nullptr; //tuple of module name, and their list of hashes
+	vector<ModuleHashData*>* ModuleHashes = nullptr;
 };

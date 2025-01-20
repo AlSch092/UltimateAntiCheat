@@ -51,9 +51,14 @@ vector<uint64_t> Integrity::GetMemoryHash(uint64_t Address, int nBytes)
 	return hashList;
 }
 
-void Integrity::SetMemoryHashList(vector<uint64_t> hList)
+void Integrity::SetSectionHashList(vector<uint64_t> hList, const string section)
 {
-	this->_MemorySectionHashes.assign(hList.begin(), hList.end());
+	//if(section == ".text")
+	//	this->_TextSectionHashes.assign(hList.begin(), hList.end());
+	//else if(section == ".rdata")
+	//	this->_RDataSectionHashes.assign(hList.begin(), hList.end());
+
+	this->SectionHashes[section].assign(hList.begin(), hList.end());
 }
 
 /*
