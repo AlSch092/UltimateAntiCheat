@@ -82,8 +82,8 @@ public:
 	void SetCheater(BOOL cheating) { this->CheaterWasDetected->SetData((uint8_t)cheating); } //obfuscated bool/int variable. cast to uint8 to avoid getting stuck as 0/1 by compilers bool interpretation
 	BOOL IsUserCheater() const  { return this->CheaterWasDetected->GetData(); }
 
-	list<ProcessData::Section*>* SetSectionHash(const char* module, const char* sectionName);
-	BOOL CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize);
+	BOOL SetSectionHash(const char* module, const char* sectionName);
+	BOOL CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize, const string section);
 
 	Thread* GetMonitorThread() const { return this->MonitorThread; }
 	Thread* GetProcessCreationMonitorThread() const { return this->ProcessCreationMonitorThread; }

@@ -69,12 +69,18 @@ void Detections::Monitor(LPVOID thisPtr)
         return;
     }
 
-    UINT64 CachedSectionAddress = 0;
-    DWORD CachedSectionSize = 0;
+    UINT64 CachedTextSectionAddress = 0;
+    DWORD CachedTextSectionSize = 0;
+
+    UINT64 CachedRDataSectionAddress = 0;
+    DWORD CachedRDataSectionSize = 0;
 
     if (Monitor->Config->bCheckIntegrity) //integrity check setup if option is enabled
     {
-        list<ProcessData::Section*>* sections = Monitor->SetSectionHash("UltimateAnticheat.exe", ".text"); //set our memory hashes of .text
+        list<ProcessData::Section*>* sections = Process::GetSections("UltimateAnticheat.exe");
+            
+        Monitor->SetSectionHash("UltimateAnticheat.exe", ".text"); //set our memory hashes of .text
+        Monitor->SetSectionHash("UltimateAnticheat.exe", ".rdata");
 
         if (sections == nullptr)
         {
@@ -106,9 +112,13 @@ void Detections::Monitor(LPVOID thisPtr)
 
             if (strcmp(s->name, ".text") == 0) //cache our .text sections address and memory size, since an attacker could possibly spoof the section name or # of sections in ntheaders to prevent section traversing
             {
-                CachedSectionAddress = s->address + ModuleAddr; //any strings such as ".text" can be encrypted at compile time and decrypted at runtime to make reversing a bit more difficult
-                CachedSectionSize = s->size;
-                break;
+                CachedTextSectionAddress = s->address + ModuleAddr; //any strings such as ".text" can be encrypted at compile time and decrypted at runtime to make reversing a bit more difficult
+                CachedTextSectionSize = s->size;
+            }
+            else if (strcmp(s->name, ".rdata") == 0)
+            {
+                CachedRDataSectionAddress = s->address + ModuleAddr;
+                CachedRDataSectionSize = s->size;
             }
         }
     }
@@ -134,9 +144,15 @@ void Detections::Monitor(LPVOID thisPtr)
                 Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
             }
 
-            if (Monitor->CheckSectionHash(CachedSectionAddress, CachedSectionSize)) //compare hashes of .text for modifications
+            if (Monitor->CheckSectionHash(CachedTextSectionAddress, CachedTextSectionSize, ".text")) //compare hashes of .text for modifications
             {
                 Logger::logf("UltimateAnticheat.log", Detection, "Found modified .text section (or you're debugging with software breakpoints)!\n");
+                Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
+            }
+
+            if (Monitor->CheckSectionHash(CachedRDataSectionAddress, CachedRDataSectionSize, ".rdata")) //compare hashes of .text for modifications
+            {
+                Logger::logf("UltimateAnticheat.log", Detection, "Found modified .rdata section!\n");
                 Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
             }
         }
@@ -204,14 +220,14 @@ void Detections::Monitor(LPVOID thisPtr)
 }
 
 /*
-SetSectionHash sets the member variable `_MemorySectionHashes` via SetMemoryHashList() call after finding the `sectionName` named section (.text in our case)
+SetSectionHash sets the member variable `_TextSectionHashes` or `_RDataSectionHashes` via SetSectionHashList() call after finding the `sectionName` named section (.text in our case)
  Returns a list<Section*>  which we can use in later hashing calls to compare sets of these hashes and detect memory tampering within the section
 */
-list<ProcessData::Section*>* Detections::SetSectionHash(const char* moduleName, const char* sectionName)
+BOOL Detections::SetSectionHash(const char* moduleName, const char* sectionName)
 {
     if (moduleName == NULL || sectionName == NULL)
     {
-        return nullptr;
+        return FALSE;
     }
 
     list<ProcessData::Section*>* sections = Process::GetSections(moduleName);
@@ -221,13 +237,13 @@ list<ProcessData::Section*>* Detections::SetSectionHash(const char* moduleName, 
     if (ModuleAddr == 0)
     {
         Logger::logf("UltimateAnticheat.log", Err, "ModuleAddr was 0 @ SetSectionHash\n", sectionName);
-        return nullptr;
+        return FALSE;
     }
 
     if (sections->size() == 0)
     {
         Logger::logf("UltimateAnticheat.log", Err, "sections.size() of section %s was 0 @ SetSectionHash\n", sectionName);
-        return nullptr;
+        return FALSE;
     }
 
     std::list<ProcessData::Section*>::iterator it;
@@ -241,29 +257,29 @@ list<ProcessData::Section*>* Detections::SetSectionHash(const char* moduleName, 
 
         if (strcmp(s->name, sectionName) == 0)
         {
-            vector<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)s->address + ModuleAddr, s->size); //check most of section, a few short to stop edge read cases
+            vector<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)s->address + ModuleAddr, s->size);
 
             if (hashes.size() > 0)
             {
-                GetIntegrityChecker()->SetMemoryHashList(hashes);
+                GetIntegrityChecker()->SetSectionHashList(hashes, sectionName);
                 break;
             }
             else
             {
                 Logger::logf("UltimateAnticheat.log", Err, "hashes.size() was 0 @ SetSectionHash\n", sectionName);
-                return nullptr;
+                return FALSE;
             }
         }
     }
 
-    return sections;
+    return TRUE;
 }
 
 /*
     CheckSectionHash  compares our collected hash list from ::SetSectionHash() , we use cached address + size to prevent spoofing (sections can be renamed at runtime by an attacker)
     Returns true if the two sets of hashes do not match, implying memory was modified
 */
-BOOL Detections::CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize)
+BOOL Detections::CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize, const string section)
 {
     if (cachedAddress == 0 || cachedSize == 0)
     {
@@ -273,15 +289,31 @@ BOOL Detections::CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize)
 
     Logger::logf("UltimateAnticheat.log", Info, "Checking hashes of address: %llx (%d bytes) for memory integrity\n", cachedAddress, cachedSize);
 
-    if (GetIntegrityChecker()->Check((uint64_t)cachedAddress, cachedSize, GetIntegrityChecker()->GetMemoryHashList())) //compares hash to one gathered previously
+    if (section == ".text")
     {
-        Logger::logf("UltimateAnticheat.log", Info, "Hashes match: Program's .text section appears genuine.\n");
-        return FALSE;
+        if (GetIntegrityChecker()->Check((uint64_t)cachedAddress, cachedSize, GetIntegrityChecker()->GetSectionHashList(".text"))) //compares hash to one gathered previously
+        {
+            Logger::logf("UltimateAnticheat.log", Info, "Hashes match: Program's .text section appears genuine.\n");
+            return FALSE;
+        }
+        else
+        {
+            Logger::logf("UltimateAnticheat.log", Detection, " .text section of program is modified!\n");
+            return TRUE;
+        }
     }
-    else
+    else if (section == ".rdata")
     {
-        Logger::logf("UltimateAnticheat.log", Detection, " .text section of program is modified!\n");
-        return TRUE;
+        if (GetIntegrityChecker()->Check((uint64_t)cachedAddress, cachedSize, GetIntegrityChecker()->GetSectionHashList(".rdata"))) //compares hash to one gathered previously
+        {
+            Logger::logf("UltimateAnticheat.log", Info, "Hashes match: Program's .text section appears genuine.\n");
+            return FALSE;
+        }
+        else
+        {
+            Logger::logf("UltimateAnticheat.log", Detection, " .rdata section of program is modified!\n");
+            return TRUE;
+        }
     }
 }
 
@@ -704,9 +736,9 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
         return;
     }
 
-    if(monitor->GetMonitorThread() != nullptr)
+    if (monitor->GetMonitorThread() != nullptr)
         monitor->GetMonitorThread()->UpdateTick();
-	
+
     IWbemClassObject* pclsObj = NULL;
     ULONG uReturn = 0;
 
@@ -871,8 +903,8 @@ void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
     HANDLE hEvents[KEY_COUNT];
     const TCHAR* subKeys[KEY_COUNT] = 
     {
-        TEXT("SYSTEM\\CurrentControlSet\\Control\\SecureBoot\\State\\"),  //we haven't found the best keys to monitor yet, perhaps in future releases
-        TEXT("SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\") 
+        TEXT("SYSTEM\\CurrentControlSet\\Control\\SecureBoot\\State\\"),  //secureboot keys being changed at runtime isn't a big deal in this context
+        TEXT("SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\")  //we'll need to find better keys to monitor which can impact integrity at runtime, however this shows as an example of how we can monitor registry changes
     };
 
     DWORD filter = REG_NOTIFY_CHANGE_LAST_SET;
