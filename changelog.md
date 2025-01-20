@@ -1,4 +1,6 @@
 ## Updates
+- Jan 20, '25: Added `.rdata` section hashing, change section hash lists to `map<string, vector<uint64_t>>` for better scaling
+  
 - Jan 4, '25: Happy new year, LLVM/clang-cl compiler support has been added to the branch `llvm-clang`, which uses the LLVM compiler by default (and has a few header changes and code differences). We will work towards being able to obfuscate the project's binary/IR using LLVM transformative passes.  
 
 - Dec 17, '24: Fixed DetectOpenHandlesToProcess to not warn for whitelisted processes
