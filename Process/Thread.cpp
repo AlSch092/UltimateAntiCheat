@@ -59,13 +59,18 @@ bool Thread::IsThreadRunning(HANDLE threadHandle)
     IsThreadSuspended - checks if a thread is currently suspended by suspending it
     has its drawbacks since it suspends threads very briefly, but it works fine
 */
-bool Thread::IsThreadSuspended(HANDLE threadHandle)
+bool Thread::IsThreadSuspended(DWORD tid)
 {
-    if (threadHandle == INVALID_HANDLE_VALUE || threadHandle == NULL)
+    if (tid == 0)
         return false;
 
     bool suspended = false;
     DWORD suspendCount = 0;
+
+    HANDLE threadHandle = OpenThread(THREAD_SUSPEND_RESUME, FALSE, tid);
+
+    if (threadHandle == INVALID_HANDLE_VALUE || threadHandle == 0)
+        return false;
 
     __try
     {

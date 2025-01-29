@@ -65,9 +65,9 @@ public:
 	Thread operator/(Thread&) = delete;
 
 	static bool IsThreadRunning(HANDLE threadHandle); //these could potentially go into Process.hpp/cpp, since we have one Thread class for each thread, thus a static function is not as well suited to be here
-	static bool IsThreadSuspended(HANDLE threadHandle);
+	static bool IsThreadSuspended(DWORD tid);
 
-	HANDLE GetHandle() const { return handle; }
+	HANDLE GetHandle() const { return this->handle; }
 	DWORD GetId() const { return this->Id; }
 	auto GetTick() const { return this->Tick; }
 	DWORD_PTR GetExecutionAddress() const { return this->ExecutionAddress; }
