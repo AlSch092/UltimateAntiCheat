@@ -119,22 +119,22 @@ private:
 */
 __forceinline bool AntiCheat::IsAnyThreadSuspended()
 {
-	if (Monitor->GetMonitorThread()!= nullptr && Thread::IsThreadSuspended(Monitor->GetMonitorThread()->GetHandle()))
+	if (Monitor->GetMonitorThread()!= nullptr && Thread::IsThreadSuspended(Monitor->GetMonitorThread()->GetId()))
 	{
 		Logger::logf("UltimateAnticheat.log", Detection, "Monitor was found suspended! Abnormal program execution.");
 		return true;
 	}
-	else if (Monitor->GetProcessCreationMonitorThread() != nullptr && Thread::IsThreadSuspended(Monitor->GetProcessCreationMonitorThread()->GetHandle()))
+	else if (Monitor->GetProcessCreationMonitorThread() != nullptr && Thread::IsThreadSuspended(Monitor->GetProcessCreationMonitorThread()->GetId()))
 	{
 		Logger::logf("UltimateAnticheat.log", Detection, "Monitor's process creation thread was found suspended! Abnormal program execution.");
 		return true;
 	}
-	else if (Config->bUseAntiDebugging && Thread::IsThreadSuspended(AntiDebugger->GetDetectionThread()->GetHandle()))
+	else if (Config->bUseAntiDebugging && AntiDebugger->GetDetectionThread() != nullptr && Thread::IsThreadSuspended(AntiDebugger->GetDetectionThread()->GetId()))
 	{
 		Logger::logf("UltimateAnticheat.log", Detection, "Anti-debugger was found suspended! Abnormal program execution.");
 		return true;
 	}
-	else if (NetworkClient->GetRecvThread() != nullptr && Thread::IsThreadSuspended(NetworkClient->GetRecvThread()->GetHandle()))
+	else if (NetworkClient->GetRecvThread() != nullptr && Thread::IsThreadSuspended(NetworkClient->GetRecvThread()->GetId()))
 	{
 		Logger::logf("UltimateAnticheat.log", Detection, "Netclient comms thread was found suspended! Abnormal program execution.");
 		return true;
