@@ -7,9 +7,9 @@
 #include <vector>
 
 #ifdef _DEBUG
-#pragma comment(lib, "libcurl-d.lib")
+#pragma comment(lib, "Libs/libcurl-d.lib")
 #else
-#pragma comment(lib, "libcurl.lib") //located in project root folder
+#pragma comment(lib, "Libs/libcurl.lib") //located in project root folder
 #endif
 
 using namespace std;
