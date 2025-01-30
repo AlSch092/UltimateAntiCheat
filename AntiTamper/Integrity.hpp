@@ -14,7 +14,7 @@ using namespace std;
 
 struct ModuleHashData 
 {
-	wchar_t* Name;
+	wstring Name;
 	vector<uint64_t> Hashes;
 };
 
@@ -51,9 +51,6 @@ public:
 		{
 			for (std::vector<ModuleHashData*>::const_iterator it = ModuleHashes->begin(); it != ModuleHashes->end(); ++it)
 			{
-				if ((*it)->Name != nullptr)
-					delete[](*it)->Name;
-
 				delete* it;
 			}
 		}

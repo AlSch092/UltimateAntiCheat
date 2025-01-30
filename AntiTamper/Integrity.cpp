@@ -5,7 +5,7 @@
     Integrity::Check - fetches list of hashes from .text section and compares to `hashList`
 	returns `true` if hash lists match
 */
-bool Integrity::Check(uint64_t Address, int nBytes, vector<uint64_t> hashList)
+bool Integrity::Check(__in uint64_t Address, __in int nBytes, __in vector<uint64_t> hashList)
 {
 	bool hashesMatch = true;
 
@@ -23,7 +23,7 @@ bool Integrity::Check(uint64_t Address, int nBytes, vector<uint64_t> hashList)
 	return hashesMatch;
 }
 
-vector<uint64_t> Integrity::GetMemoryHash(uint64_t Address, int nBytes)
+vector<uint64_t> Integrity::GetMemoryHash(__in uint64_t Address, __in int nBytes)
 {
 	std::vector<uint64_t> hashList;
 
@@ -51,13 +51,8 @@ vector<uint64_t> Integrity::GetMemoryHash(uint64_t Address, int nBytes)
 	return hashList;
 }
 
-void Integrity::SetSectionHashList(vector<uint64_t> hList, const string section)
+void Integrity::SetSectionHashList(__out vector<uint64_t> hList, __in const string section)
 {
-	//if(section == ".text")
-	//	this->_TextSectionHashes.assign(hList.begin(), hList.end());
-	//else if(section == ".rdata")
-	//	this->_RDataSectionHashes.assign(hList.begin(), hList.end());
-
 	this->SectionHashes[section].assign(hList.begin(), hList.end());
 }
 
@@ -112,7 +107,7 @@ bool Integrity::IsUnknownModulePresent()
 	GetModuleHash - fetches .text section hashes for a specific module,
      returns a `ModuleHashData` object, returns nullptr if module or section not found
 */
-ModuleHashData* Integrity::GetModuleHash(const wchar_t* moduleName)
+ModuleHashData* Integrity::GetModuleHash(__in const wchar_t* moduleName)
 {
 	string modName = Utility::ConvertWStringToString(moduleName);
 	list<ProcessData::Section*>* sections = Process::GetSections(modName);
@@ -125,9 +120,7 @@ ModuleHashData* Integrity::GetModuleHash(const wchar_t* moduleName)
 			vector<uint64_t> hashes = GetMemoryHash(sec_addr, s->size); //make hashes of .text of module
 
 			ModuleHashData* moduleHashData = new ModuleHashData();
-			int name_len = (int)wcslen(moduleName);
-			moduleHashData->Name = new wchar_t[name_len + 1];
-			wcscpy(moduleHashData->Name, moduleName);
+			moduleHashData->Name = moduleName;
 			moduleHashData->Hashes = hashes;
 
 			return moduleHashData;
@@ -160,7 +153,7 @@ vector<ModuleHashData*>* Integrity::GetModuleHashes()
 	IsModuleModified - checks if module `moduleName` has had its .text section modified (compared to `ModuleHashes` member)
 	returns true if current module hash does not match original from `ModuleHashes`
 */
-bool Integrity::IsModuleModified(const wchar_t* moduleName)
+bool Integrity::IsModuleModified(__in const wchar_t* moduleName)
 {
 	bool foundModified = false;
 
@@ -168,11 +161,10 @@ bool Integrity::IsModuleModified(const wchar_t* moduleName)
 
 	for (ModuleHashData* modHash : *this->ModuleHashes)
 	{
-		if (wcscmp(modHash->Name, currentModuleHash->Name) == 0) //moduleName matches module in list
+		if (modHash->Name == currentModuleHash->Name) //moduleName matches module in list
 		{
 			if (modHash->Hashes.size() != currentModuleHash->Hashes.size()) //size check
 			{
-				delete[] currentModuleHash->Name;
 				delete currentModuleHash; //return true if sizes dont match, attacker may have increased memory size at end of section to avoid detection (or they re-wrote entire dll's memory)
 				return true;
 			}
@@ -196,7 +188,6 @@ bool Integrity::IsModuleModified(const wchar_t* moduleName)
 		}
 	}
 
-	delete[] currentModuleHash->Name;
 	delete currentModuleHash;
 	return foundModified;
 }
@@ -204,7 +195,7 @@ bool Integrity::IsModuleModified(const wchar_t* moduleName)
 /*
 	AddModuleHash - fetches hash list for `moduleName` and adds to `moduleHashList`
 */
-void Integrity::AddModuleHash(vector<ModuleHashData*>* moduleHashList, wchar_t* moduleName)
+void Integrity::AddModuleHash(__in vector<ModuleHashData*>* moduleHashList, __in wchar_t* moduleName)
 {
 	if (moduleHashList == nullptr || moduleName == nullptr)
 		return;
@@ -220,9 +211,7 @@ void Integrity::AddModuleHash(vector<ModuleHashData*>* moduleHashList, wchar_t* 
 			vector<uint64_t> hashes = GetMemoryHash(sec_addr, s->size); //make hashes of .text of module
 
 			ModuleHashData* moduleHashData = new ModuleHashData();
-			int name_len = (int)wcslen(moduleName);
-			moduleHashData->Name = new wchar_t[name_len + 1];
-			wcscpy(moduleHashData->Name, moduleName);
+			moduleHashData->Name = moduleName;
 			moduleHashData->Hashes = hashes;
 
 			moduleHashList->push_back(moduleHashData);
