@@ -83,7 +83,7 @@ public:
 	BOOL IsUserCheater() const  { return this->CheaterWasDetected->GetData(); }
 
 	BOOL SetSectionHash(const char* module, const char* sectionName);
-	BOOL CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize, const string section);
+	BOOL IsSectionHashUnmatching(UINT64 cachedAddress, DWORD cachedSize, const string section);
 
 	Thread* GetMonitorThread() const { return this->MonitorThread; }
 	Thread* GetProcessCreationMonitorThread() const { return this->ProcessCreationMonitorThread; }

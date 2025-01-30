@@ -144,13 +144,13 @@ void Detections::Monitor(LPVOID thisPtr)
                 Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
             }
 
-            if (Monitor->CheckSectionHash(CachedTextSectionAddress, CachedTextSectionSize, ".text")) //compare hashes of .text for modifications
+            if (Monitor->IsSectionHashUnmatching(CachedTextSectionAddress, CachedTextSectionSize, ".text")) //compare hashes of .text for modifications
             {
                 Logger::logf("UltimateAnticheat.log", Detection, "Found modified .text section (or you're debugging with software breakpoints)!\n");
                 Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
             }
 
-            if (Monitor->CheckSectionHash(CachedRDataSectionAddress, CachedRDataSectionSize, ".rdata")) //compare hashes of .text for modifications
+            if (Monitor->IsSectionHashUnmatching(CachedRDataSectionAddress, CachedRDataSectionSize, ".rdata")) //compare hashes of .text for modifications
             {
                 Logger::logf("UltimateAnticheat.log", Detection, "Found modified .rdata section!\n");
                 Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
@@ -276,10 +276,10 @@ BOOL Detections::SetSectionHash(const char* moduleName, const char* sectionName)
 }
 
 /*
-    CheckSectionHash  compares our collected hash list from ::SetSectionHash() , we use cached address + size to prevent spoofing (sections can be renamed at runtime by an attacker)
+    IsSectionHashUnmatching  compares our collected hash list from ::SetSectionHash() , we use cached address + size to prevent spoofing (sections can be renamed at runtime by an attacker)
     Returns true if the two sets of hashes do not match, implying memory was modified
 */
-BOOL Detections::CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize, const string section)
+BOOL Detections::IsSectionHashUnmatching(UINT64 cachedAddress, DWORD cachedSize, const string section)
 {
     if (cachedAddress == 0 || cachedSize == 0)
     {
@@ -315,6 +315,8 @@ BOOL Detections::CheckSectionHash(UINT64 cachedAddress, DWORD cachedSize, const 
             return TRUE;
         }
     }
+
+    return FALSE;
 }
 
 /*
