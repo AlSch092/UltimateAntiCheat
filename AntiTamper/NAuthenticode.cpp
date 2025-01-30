@@ -130,10 +130,8 @@ BOOL Authenticode::VerifyCatalogSignature(LPCWSTR filePath)
 /// <returns>True if file has a signature</returns>
 BOOL Authenticode::HasSignature(LPCWSTR filePath)
 {
-    return (Authenticode::VerifyEmbeddedSignature(filePath) ||
-        Authenticode::VerifyCatalogSignature(filePath));
+    return (Authenticode::VerifyCatalogSignature(filePath) || Authenticode::VerifyEmbeddedSignature(filePath));
 }
-
 
 BOOL Authenticode::GetDateOfTimeStamp(PCMSG_SIGNER_INFO pSignerInfo, SYSTEMTIME* st)
 {
