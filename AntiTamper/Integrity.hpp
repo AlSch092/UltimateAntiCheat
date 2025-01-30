@@ -12,17 +12,24 @@
 
 using namespace std;
 
-struct ModuleHashData //to avoid needing a `list<tuple<wstring,list<uint64>>>`  as ModuleHashes
+struct ModuleHashData 
 {
 	wchar_t* Name;
 	vector<uint64_t> Hashes;
 };
 
+/*
+	The Integrity class provides functionalities for determining if aspects of any program modules have been modified
+
+	Hash lists (vector<uint64_t>) are used such that we can pinpoint the memory offset of any particular modifications, as opposed to using a CRC32 or SHA of a module or section
+
+	..Probably the messiest class in the program, it could really use a code cleanup
+*/
 class Integrity final
 {
 public:
 
-	Integrity(vector<ProcessData::MODULE_DATA>* startupModuleList) //modules gathered at program startup
+	Integrity(__in vector<ProcessData::MODULE_DATA>* startupModuleList) //modules gathered at program startup
 	{
 		WhitelistedModules = new vector<ProcessData::MODULE_DATA>();
 		ModuleHashes = new vector< ModuleHashData*>();
@@ -52,13 +59,13 @@ public:
 		}
 	}
 
-	bool Check(uint64_t Address, int nBytes, vector<uint64_t> hashList);
+	bool Check(__in uint64_t Address, __in int nBytes, __in vector<uint64_t> hashList); //returns true if hashes calculated at `Address` don't match hashList
 	
-	static vector<uint64_t> GetMemoryHash(uint64_t Address, int nBytes);
+	static vector<uint64_t> GetMemoryHash(__in uint64_t Address, __in int nBytes); //get hash list at `Address`
 
-	void SetSectionHashList(vector<uint64_t> hList, const string section);
+	void SetSectionHashList(__out vector<uint64_t> hList, __in const string section);
 
-	vector<uint64_t> GetSectionHashList(const string sectionName) const 
+	vector<uint64_t> GetSectionHashList(__in const string sectionName) const 
 	{
 		auto it = this->SectionHashes.find(sectionName);
 
@@ -74,14 +81,14 @@ public:
 
 	vector<ProcessData::MODULE_DATA>* GetWhitelistedModules() const { return this->WhitelistedModules; }
 	
-	void AddToWhitelist(ProcessData::MODULE_DATA mod) { if(this->WhitelistedModules != nullptr) WhitelistedModules->push_back(mod); }
+	void AddToWhitelist(__in ProcessData::MODULE_DATA mod) { if(this->WhitelistedModules != nullptr) WhitelistedModules->push_back(mod); }
 
-	void AddModuleHash(vector<ModuleHashData*>* moduleHashList, wchar_t* moduleName);
-	ModuleHashData* GetModuleHash(const wchar_t* moduleName);
+	void AddModuleHash(__in vector<ModuleHashData*>* moduleHashList, __in wchar_t* moduleName);
+	ModuleHashData* GetModuleHash(__in const wchar_t* moduleName);
 
 	vector<ModuleHashData*>* GetModuleHashes();
 
-	bool IsModuleModified(const wchar_t* moduleName); //pinpoint any specific modules that have had their .text sections changed
+	bool IsModuleModified(__in const wchar_t* moduleName); //pinpoint any specific modules that have had their .text sections changed
 
 	bool IsTLSCallbackStructureModified() const; //checks the TLSCallback structure in data directory for mods
 
