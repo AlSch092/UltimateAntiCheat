@@ -77,9 +77,11 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -173,6 +175,7 @@
     <ClCompile Include="Common\Utility.cpp" />
     <ClCompile Include="Detections.cpp" />
     <ClCompile Include="Environment\Services.cpp" />
+    <ClCompile Include="Network\HttpClient.cpp" />
     <ClCompile Include="Network\NetClient.cpp" />
     <ClCompile Include="Network\Packets\Packets.cpp" />
     <ClCompile Include="Preventions.cpp" />
@@ -200,6 +203,7 @@
     <ClInclude Include="Common\Utility.hpp" />
     <ClInclude Include="Detections.hpp" />
     <ClInclude Include="Environment\Services.hpp" />
+    <ClInclude Include="Network\HttpClient.hpp" />
     <ClInclude Include="Network\NetClient.hpp" />
     <ClInclude Include="Network\Packets\PacketReader.hpp" />
     <ClInclude Include="Network\Packets\Packets.hpp" />

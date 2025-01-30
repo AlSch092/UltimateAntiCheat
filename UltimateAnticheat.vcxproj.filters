@@ -108,6 +108,9 @@
     <ClCompile Include="Common\Logger.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="Network\HttpClient.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AntiCheat.hpp">
@@ -199,6 +202,9 @@
     </ClInclude>
     <ClInclude Include="AntiDebug\DebuggerDetections.hpp">
       <Filter>AntiDebug</Filter>
+    </ClInclude>
+    <ClInclude Include="Network\HttpClient.hpp">
+      <Filter>Network</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
