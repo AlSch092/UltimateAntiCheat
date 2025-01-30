@@ -4,12 +4,11 @@
 #include "../Common/SHA256.hpp"
 #include "../Common/Globals.hpp"
 #include "../Common/Settings.hpp"
+#include "../Network/HttpClient.hpp"
 #include "NAuthenticode.hpp"
-#include <vector>
-#include <string>
+
 #include <Psapi.h>
-#include <stdio.h>
-#include <map>
+#include <unordered_map>
 
 using namespace std;
 
@@ -71,7 +70,7 @@ public:
 		return {};
 	}
 
-	bool IsUnknownModulePresent();
+	bool IsUnknownModulePresent(); //traverse loaded modules to find any unknown ones (not signed & not whitelisted, in particular)
 
 	vector<ProcessData::MODULE_DATA>* GetWhitelistedModules() const { return this->WhitelistedModules; }
 	
@@ -79,6 +78,7 @@ public:
 
 	void AddModuleHash(vector<ModuleHashData*>* moduleHashList, wchar_t* moduleName);
 	ModuleHashData* GetModuleHash(const wchar_t* moduleName);
+
 	vector<ModuleHashData*>* GetModuleHashes();
 
 	bool IsModuleModified(const wchar_t* moduleName); //pinpoint any specific modules that have had their .text sections changed
@@ -87,8 +87,11 @@ public:
 
 private:
 	
-	map<string, vector<uint64_t>> SectionHashes; //section hashes for current module's sections
+	unordered_map<string, vector<uint64_t>> SectionHashes; //section hashes for current module's sections
 
 	vector<ProcessData::MODULE_DATA>* WhitelistedModules = nullptr;
 	vector<ModuleHashData*>* ModuleHashes = nullptr;
+
+	const char* BlacklistedDriversRepository = "http://github.com/someUser/someBlacklistedDriverRepo"; //will be adding this in future code pushes - fetch blacklisted drivers from some cloud location
+	const char* BlacklisteBytePatternRepository = "http://github.com/someUser/someBlacklistedBytePatternsRepo"; //will be adding this in future code pushes - fetch blacklisted byte signatures/patterns from some cloud location
 };
