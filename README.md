@@ -13,33 +13,33 @@ The project now supports CMake & using the LLVM/clang-cl compiler, which can be 
 
 ## Current Detections and protective features:
 - Monitors new process creation using WMI
-- Monitors modifications to important registry keys such as ones related to secure boot   
+- Monitors modifications to specific registry keys   
 - New processes are scanned for blacklisted patterns
 - Detects Open Process Handles to our process (`OpenProcess` detection)
 - Blocks APC injection (undocumented  `ntdll.Ordinal8` patching)
-- Debugger detection (hardware/DR, PEB, kernelmode)
+- Debugger detections (hardware/DR, software, kernelmode)
 - Destroys common debugger processes by creating remote threads on their `ExitProcess` function
 - Hides threads from debuggers via `NtSetInformationThread`  
-- Blocks Cheat Engine VEH debugger (`initializeVEH` patching, module name renaming)
+- Blocks Cheat Engine VEH debugger (`initializeVEH` patching & loaded VEH module name renaming)
 - Integrity checks on program memory (`.text` & `.rdata` section checks, WINAPI hook checks, IAT hook checks)
 - Remapping sections & re-re-mapping checks (anti-tamper, thanks to user [changeofpace](https://github.com/changeofpace))
 - Dll load notifcations/callback & signature checks of loaded modules (thanks to user [discriminating](https://github.com/discriminating) for this contribution)
-- Spoofs `NumberOfSections`, `SizeOfImage`, & `AddressOfEntryPoint` to prevent dynamic info lookups (process manipulation)
+- Spoofs `NumberOfSections`, `SizeOfImage`, & `AddressOfEntryPoint` to prevent runtime image info lookups (process manipulation)
 - Parent process check
 - Blacklisted running process checks & whitelisted loaded modules check
-- Main module name random renaming (process manipulation)
-- Exported function names random renaming (process manipulation, anti-injection)
+- Main module name random renaming at runtime (process manipulation)
+- Export directory function names random renaming at runtime (process manipulation)
 - Data obfuscation class to help hide sensitive variables
 - Check for if Windows is in 'Test Signing mode' and 'debug mode'
-- Secure boot enforcement (anti-bootloader cheats)
-- Hypervisor check  
-- TLS Callback & thread function address `ret` patching (anti-DLL/shellcode injection)
+- Secure boot enforcement (anti-bootloader)
+- Hypervisor checks  
+- TLS Callback & new thread start routine address `ret` patching (anti-execution)
 - TLS Callback spoofing (changing TLS callbacks at runtime), along with checks to ensure the TLS callback structure has not been modified or added to  
-- Networked heartbeat system to ensure client is running the AC module
+- Optional networked heartbeat system to ensure client is running the AC module
 - Stops multiple instances of the process from being run by mapping shared memory
-- Return address checks in important routines such as heartbeat generation to prevent remote calling
-- Basic window title & class name checks for commonly used attack tools such as Cheat Engine
-- Optional kernelmode + usermode hybrid approach (you must make/provide your own driver for this, and ideally it would be signed)
+- Return address checks in important routines such as heartbeat generation to prevent being called by unknown modules
+- Basic window title & class name checks for commonly used cheat tools such as Cheat Engine
+- Optional kernelmode + usermode hybrid approach (you must make/provide your own driver for this, and ideally it would be properly signed)
 
 ## Enabling/Disabling Networking:
 Networking support is available in the project - the server can be found in the `Server` folder as its own solution. Using networking is optional, and can be turned on/off through the variable `bool bNetworkingAvailable` in the file `main.cpp` (as part of the `Settings` class). If you choose to use networking, please follow the instructions in the README.md file of the server.  
