@@ -60,3 +60,7 @@ The GNU Affero general public license is used in this project. Please be aware o
 Each bold line indicates the above class holds an object or pointer of the bottom class. Shared classes are generally stored as a `shared_ptr` in code, and inheritance is currently only used in the `DebuggerDetections` class. Only important classes relevant to core functionality are shown in the diagram:
 
 ![ClassDiagram](https://github.com/user-attachments/assets/1b1ea458-93dd-4e6e-a4c1-ab9f6c3cf96e)
+
+## Final Thoughts
+
+Anti-cheat systems are a great deal of work to do correctly, and easy to get wrong. There will always be new ways to get past these systems, especially since each game has a unique set of features and challenges. Going with an approach which makes use of both client-side protections and game data on the server-side will almost always be ideal, as any client-facing software will inevitably be bypassed. 
