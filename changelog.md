@@ -1,4 +1,6 @@
 ## Updates
+- Jan 31, '25: Added web-fetching of blacklisted byte patterns at runtime from a url, along with blacklisted/vulnerable driver list
+  
 - Jan 20, '25: Added `.rdata` section hashing, change section hash lists to `map<string, vector<uint64_t>>` for better scaling
   
 - Jan 4, '25: Happy new year, LLVM/clang-cl compiler support has been added to the branch `llvm-clang`, which uses the LLVM compiler by default (and has a few header changes and code differences). We will work towards being able to obfuscate the project's binary/IR using LLVM transformative passes.  
