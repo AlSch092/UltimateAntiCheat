@@ -1,6 +1,7 @@
 //By AlSch092 @github
 #pragma once
 #include "Network/NetClient.hpp" //Net Comms
+#include "Network/HttpClient.hpp"
 #include "AntiDebug/DebuggerDetections.hpp"
 #include "AntiTamper/Integrity.hpp" //Code Integrity
 #include "Environment/Services.hpp" //`Services` class
@@ -12,6 +13,14 @@
 #include <comdef.h>  //for process event creation (WMI)
 
 #pragma comment(lib, "wbemuuid.lib")  //for process event creation (WMI)
+
+typedef struct BytePattern //byte pattern used in process creation callbacks
+{
+	vector<BYTE> data;
+	size_t size;
+
+	BytePattern(vector<BYTE> d, size_t s) : data(d), size(s) {}
+};
 
 /*
 	The detections class contains a set of static functions to help detect fragments of cheating, along with a thread for looping detections and a thread for process creation events
@@ -30,6 +39,7 @@ public:
 		{
 			_Proc = make_unique<Process>(EXPECTED_SECTIONS);
 			_Services = make_unique<Services>(true);
+
 			integrityChecker = make_shared<Integrity>(currentModules);
 		}
 		catch (const std::bad_alloc& e) 
@@ -38,7 +48,9 @@ public:
 			std::terminate();
 		}
 	
-		this->CheaterWasDetected = new ObfuscatedData<uint8_t>((bool)false); //using 'bool' as the templated type will force values to 0/1 by the compiler when we need to xor them to other values
+		FetchBlacklistedBytePatterns(BlacklisteBytePatternRepository);
+
+		this->CheaterWasDetected = new ObfuscatedData<uint8_t>((bool)false);
 
 		HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
 
@@ -116,6 +128,10 @@ public:
 
 private:
 
+	shared_ptr<Settings> Config = nullptr; //non-owning pointer to the original unique_ptr<Settings> in main.cpp
+
+	bool FetchBlacklistedBytePatterns(const char* url);
+
 	void InitializeBlacklistedProcessesList();
 
 	static void MonitorProcessCreation(LPVOID thisPtr);
@@ -134,10 +150,11 @@ private:
 	Thread* RegistryMonitorThread = nullptr;
 
 	list<wstring> BlacklistedProcesses;
+	list<BytePattern> BlacklistedBytePatterns;
 
 	unique_ptr<Process> _Proc = nullptr; //keep track of our sections, loaded modules, etc using a managed class
 
-	shared_ptr<Settings> Config = nullptr; //non-owning pointer to the original unique_ptr<Settings> in main.cpp
-
 	list<DetectionFlags> DetectedFlags;
+
+	const char* BlacklisteBytePatternRepository = "https://raw.githubusercontent.com/AlSch092/UltimateAntiCheat/refs/heads/main/MiscFiles/BlacklistedBytePatternList.txt";
 };

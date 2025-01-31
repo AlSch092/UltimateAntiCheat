@@ -220,6 +220,52 @@ void Detections::Monitor(LPVOID thisPtr)
 }
 
 /*
+    FetchBlacklistedBytePatterns - read file from `url`, add each line of file to our blacklisted byte pattern list
+    Each line of the file located at `url` should be a space-seperated hex byte string, eg) 48 8D 05 12 33 CD
+    returns `false` on failure
+*/
+bool Detections::FetchBlacklistedBytePatterns(const char* url)
+{
+    if (url == nullptr)
+        return false;
+
+    HttpClient* h = new HttpClient();
+    vector<string> responseHeaders;
+    string response = h->ReadWebPage(BlacklisteBytePatternRepository, {}, "", responseHeaders); //fetch blacklisted drivers
+    delete h;
+
+    if (response.size() == 0)
+        return false;
+
+    stringstream ss (response);
+
+    string bytePattern;
+
+    while (getline(ss, bytePattern))
+    {
+        vector<uint8_t> bytes;
+
+        if (!bytePattern.empty() && bytePattern.back() == '\r')
+        {
+            bytePattern.pop_back(); //remove \n
+            if (!bytePattern.empty() && bytePattern.back() == ' ')
+                bytePattern.pop_back(); //remove space
+        }
+
+        stringstream ss2(bytePattern);
+        string _byte;
+        
+        while (getline(ss2, _byte, ' '))
+        {
+            uint8_t byte = stoul(_byte, nullptr, 16);
+            bytes.push_back(byte);
+        }
+     
+        this->BlacklistedBytePatterns.emplace_back(BytePattern(bytes, bytes.size()));
+    }
+}
+
+/*
 SetSectionHash sets the member variable `_TextSectionHashes` or `_RDataSectionHashes` via SetSectionHashList() call after finding the `sectionName` named section (.text in our case)
  Returns a list<Section*>  which we can use in later hashing calls to compare sets of these hashes and detect memory tampering within the section
 */
@@ -813,7 +859,7 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
 */
 void Detections::InitializeBlacklistedProcessesList()
 {
-    this->BlacklistedProcesses.push_back(L"Cheat Engine.exe"); //todo: hide these strings
+    this->BlacklistedProcesses.push_back(L"Cheat Engine.exe");
     this->BlacklistedProcesses.push_back(L"CheatEngine.exe"); 
     this->BlacklistedProcesses.push_back(L"cheatengine-x86_64-SSE4-AVX2.exe");
     this->BlacklistedProcesses.push_back(L"x64dbg.exe");
@@ -830,24 +876,9 @@ bool Detections::FindBlacklistedProgramsThroughByteScan(DWORD pid)
     if (pid <= 4)
         return false;
 
-    struct Pattern 
-    {
-        BYTE* data;
-        size_t size;
-
-        Pattern(BYTE* d, size_t s) : data(d), size(s) {}
-    };
-
     bool foundSignature = false;
 
-    vector<Pattern> BlacklistedPatterns;
-
-    //signature persists even with different optimizations options in compilation
-    BYTE signaturePattern_CheatEngine[] = { 0x48, 0x8D, 0x64, 0x24, 0x28, 0xC3, 0x00, 0x48, 0x8D, 0x64, 0x24,0xD8, 0xC6, 0x05 }; //lea rsp,[rsp+28] -> ret -> add [rax-73],cl -> and al,-28
-
-    BlacklistedPatterns.emplace_back(signaturePattern_CheatEngine, sizeof(signaturePattern_CheatEngine));
-
-    for (Pattern pattern : BlacklistedPatterns)
+    for (BytePattern pattern : this->BlacklistedBytePatterns)
     {
         DWORD patternSize = pattern.size;
 
@@ -940,7 +971,7 @@ void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
         }
     }
 
-    Logger::logf("UltimateAnticheat.log", Warning, "Monitoring multiple registry keys...");
+    Logger::logf("UltimateAnticheat.log", Info, "Monitoring multiple registry keys...");
 
     bool monitoringKeys = true;
 
