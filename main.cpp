@@ -123,13 +123,22 @@ int main(int argc, char** argv)
     if (ConfigInstance->bCheckHypervisor) 
     {
         if (Services::IsHypervisorPresent()) //we can either block all hypervisors to try and stop SLAT/EPT manipulation, or only allow certain vendors.
-        {
-            char vendor[255]{ 0 };
+        {       
+            string vendor = Services::GetHypervisorVendor(); //...however, many custom hypervisors will likely spoof their vendorId to be 'HyperV' or 'VMWare' 
 
-            Services::GetHypervisorVendor(vendor); //...however, many custom hypervisors will likely spoof their vendorId to be 'HyperV' or 'VMWare' 
-
-            Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor was present with vendor: %s", vendor);
-            return 0;
+            if (vendor.size() == 0)
+            {
+                Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor vendor was empty, some custom hypervisor may be hooking cpuid instruction");
+            }
+            else if (vendor == "Microsoft Hv" || vendor == "VMwareVMware" || vendor == "XenVMMXenVMM" || vendor == "VBoxVBoxVBox")
+            {
+                Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor was present with vendor: %s", vendor);
+            }              
+            else
+            {
+                Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor was present with unknown/non-standard vendor: %s.", vendor);
+                return 0;
+            }
         }
     }
 

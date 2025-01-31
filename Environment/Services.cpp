@@ -711,23 +711,47 @@ bool Services::IsHypervisorPresent()
 }
 
 /*
-    Services::GetHypervisorVendor - fetches the hypervisor vendor as `vendor`
+    Services::GetCPUVendor - fetches the CPU vendor
 Additionally, 0x40000001 to 0x400000FF can be queries in the 2nd parameter to __cpuid for more hypervisor-specific info
 */
-void Services::GetHypervisorVendor(__out char* vendor) 
+string Services::GetCPUVendor() 
 {
-    if (vendor == nullptr)
-        return;
+    int cpuInfo[4] = { 0 };
 
+    __cpuid(cpuInfo, 0);
+
+    char vendor[13] = { 0 };
+
+    memcpy(vendor, &cpuInfo[1], 4);
+    memcpy(vendor + 4, &cpuInfo[3], 4);
+    memcpy(vendor + 8, &cpuInfo[2], 4);
+
+    return string(vendor);
+}
+
+/*
+  GetHypervisorVendor - check vendor of hypervisor, if present
+  Common results:
+"Microsoft Hv"	Hyper-V
+"KVMKVMKVM"	KVM
+"VMwareVMware"	VMware
+"XenVMMXenVMM"	Xen
+"prl hyperv"	Parallels
+"VBoxVBoxVBox"	VirtualBox
+*/
+string Services::GetHypervisorVendor()
+{
     int cpuInfo[4] = { 0 };
 
     __cpuid(cpuInfo, 0x40000000);
 
-    // Copy vendor ID from EBX, ECX, EDX to vendor string
-    ((int*)vendor)[0] = cpuInfo[1];  //BX
-    ((int*)vendor)[1] = cpuInfo[2];  //CX
-    ((int*)vendor)[2] = cpuInfo[3];  //DX
-    vendor[12] = '\0'; 
+    char vendor[13] = { 0 };
+
+    memcpy(vendor, &cpuInfo[1], 4);
+    memcpy(vendor + 4, &cpuInfo[3], 4);
+    memcpy(vendor + 8, &cpuInfo[2], 4);
+
+    return string(vendor);
 }
 
 /*
