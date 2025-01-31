@@ -703,7 +703,7 @@ WindowsVersion Services::GetWindowsVersion()
     Services::IsHypervisor - returns true if a hypervisor is detected by using the __cpuid intrinsic function
     the 31st bit of ECX indicates a hypervisor
 */
-bool Services::IsHypervisor()
+bool Services::IsHypervisorPresent()
 {
     int cpuInfo[4] = { 0 };
     __cpuid(cpuInfo, 1);

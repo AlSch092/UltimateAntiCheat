@@ -122,7 +122,7 @@ int main(int argc, char** argv)
 
     if (ConfigInstance->bCheckHypervisor) 
     {
-        if (Services::IsHypervisor()) //we can either block all hypervisors to try and stop SLAT/EPT manipulation, or only allow certain vendors.
+        if (Services::IsHypervisorPresent()) //we can either block all hypervisors to try and stop SLAT/EPT manipulation, or only allow certain vendors.
         {
             char vendor[255]{ 0 };
 

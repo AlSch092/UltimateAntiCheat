@@ -106,7 +106,7 @@ public:
 
 	static WindowsVersion GetWindowsVersion();
 	
-	static bool IsHypervisor();
+	static bool IsHypervisorPresent();
 	static void GetHypervisorVendor(__out char* vendor);
 
 	static bool LoadDriver(const std::wstring& driverName, const std::wstring& driverPath);
