@@ -14,7 +14,7 @@ The project now supports CMake & using the LLVM/clang-cl compiler, which can be 
 ## Current Detections and protective features:
 - Monitors new process creation using WMI
 - Monitors modifications to specific registry keys   
-- New processes are scanned for blacklisted patterns
+- New processes are scanned for blacklisted patterns (patterns are fetched at runtime from a web location)
 - Detects Open Process Handles to our process (`OpenProcess` detection)
 - Blocks APC injection (undocumented  `ntdll.Ordinal8` patching)
 - Debugger detections (hardware/DR, software, kernelmode)
