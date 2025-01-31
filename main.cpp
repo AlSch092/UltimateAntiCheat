@@ -44,13 +44,13 @@ int main(int argc, char** argv)
     bool bUseAntiDebugging = true;
     bool bUseIntegrityChecking = true;
     bool bCheckThreadIntegrity = true;
-    bool bCheckHypervisor = false;
+    bool bCheckHypervisor = true;
     bool bRequireRunAsAdministrator = true;
     bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
 #else
     bool bEnableNetworking = false; //change this to false if you don't want to use the server
     bool bEnforceSecureBoot = false; //secure boot is recommended in distribution builds
-    bool bEnforceDSE = true;
+    bool bEnforceDSE = false;
     bool bEnforceNoKDBG = true;
     bool bUseAntiDebugging = true;
     bool bUseIntegrityChecking = true;
@@ -104,7 +104,7 @@ int main(int argc, char** argv)
     {
         if (!Services::IsSecureBootEnabled()) //enforce secure boot to stop bootloader cheats
         {
-            MessageBoxA(0, "Secure boot is not enabled, thus you cannot proceed. Please enable secure boot in your BIOS or change `bEnforceSecureBoot` to false.", "UltimateAntiCheat", 0);
+            MessageBoxA(0, "Secure boot is not enabled, you cannot proceed. Please enable secure boot in your BIOS or change `bEnforceSecureBoot` to false.", "UltimateAntiCheat", 0);
             Logger::logf("UltimateAnticheat.log", Detection, "Secure boot is not enabled, thus you cannot proceed. Please enable secure boot in your BIOS or change `bEnforceSecureBoot` to false.");
             return 0;
         }
@@ -114,19 +114,19 @@ int main(int argc, char** argv)
     {
         if (Services::IsTestsigningEnabled()) //check test signing mode before startup
         {
-            MessageBoxA(0, "Test signing was enabled, thus you cannot proceed. Please turn off test signing via `bcdedit.exe`, or change `bEnforceDSE` to false.", "UltimateAntiCheat", 0);
+            MessageBoxA(0, "Test signing was enabled, you cannot proceed. Please turn off test signing via `bcdedit.exe`, or change `bEnforceDSE` to false.", "UltimateAntiCheat", 0);
             Logger::logf("UltimateAnticheat.log", Detection, "Test signing was enabled, thus you cannot proceed. Please turn off test signing via `bcdedit.exe`, or change `bEnforceDSE` to false.");
             return 0;
         }
     }
 
-    if (ConfigInstance->bCheckHypervisor) //initial check on hypervisor, do not let program proceed if a hypervisor is detected
+    if (ConfigInstance->bCheckHypervisor) 
     {
-        if (Services::IsHypervisor())  
+        if (Services::IsHypervisor()) //we can either block all hypervisors to try and stop SLAT/EPT manipulation, or only allow certain vendors.
         {
             char vendor[255]{ 0 };
 
-            Services::GetHypervisorVendor(vendor);
+            Services::GetHypervisorVendor(vendor); //...however, many custom hypervisors will likely spoof their vendorId to be 'HyperV' or 'VMWare' 
 
             Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor was present with vendor: %s", vendor);
             return 0;

@@ -714,11 +714,14 @@ bool Services::IsHypervisor()
     Services::GetHypervisorVendor - fetches the hypervisor vendor as `vendor`
 Additionally, 0x40000001 to 0x400000FF can be queries in the 2nd parameter to __cpuid for more hypervisor-specific info
 */
-void Services::GetHypervisorVendor(__out char vendor[13]) 
+void Services::GetHypervisorVendor(__out char* vendor) 
 {
+    if (vendor == nullptr)
+        return;
+
     int cpuInfo[4] = { 0 };
 
-    __cpuid(cpuInfo, 0x40000000); //2nd param is passed to EAX
+    __cpuid(cpuInfo, 0x40000000);
 
     // Copy vendor ID from EBX, ECX, EDX to vendor string
     ((int*)vendor)[0] = cpuInfo[1];  //BX
