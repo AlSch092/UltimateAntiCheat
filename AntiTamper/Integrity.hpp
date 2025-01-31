@@ -94,8 +94,5 @@ private:
 	unordered_map<string, vector<uint64_t>> SectionHashes; //section hashes for current module's sections
 
 	vector<ProcessData::MODULE_DATA>* WhitelistedModules = nullptr;
-	vector<ModuleHashData*>* ModuleHashes = nullptr;
-
-	const char* BlacklistedDriversRepository = "http://github.com/someUser/someBlacklistedDriverRepo"; //will be adding this in future code pushes - fetch blacklisted drivers from some cloud location
-	const char* BlacklisteBytePatternRepository = "http://github.com/someUser/someBlacklistedBytePatternsRepo"; //will be adding this in future code pushes - fetch blacklisted byte signatures/patterns from some cloud location
+	vector<ModuleHashData*>* ModuleHashes = nullptr;	
 };
