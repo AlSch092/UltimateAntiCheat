@@ -247,7 +247,7 @@ bool Detections::FetchBlacklistedBytePatterns(const char* url)
 
         if (!bytePattern.empty() && bytePattern.back() == '\r')
         {
-            bytePattern.pop_back(); //remove \n
+            bytePattern.pop_back(); //remove \r
             if (!bytePattern.empty() && bytePattern.back() == ' ')
                 bytePattern.pop_back(); //remove space
         }
@@ -263,6 +263,8 @@ bool Detections::FetchBlacklistedBytePatterns(const char* url)
      
         this->BlacklistedBytePatterns.emplace_back(BytePattern(bytes, bytes.size()));
     }
+
+    return true;
 }
 
 /*
