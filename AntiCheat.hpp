@@ -45,18 +45,25 @@ public:
 			std::terminate();  //do not allow proceed if any pointers fail to alloc
 		}
 
-		if (config->bUsingDriver) //register + load the driver using the "sc" command, unload it when the program exits
+		if (config->bUsingDriver) //register + load the driver if it's correctly signed, unload it when the program is exiting
 		{
-			//additionally, we need to check the signature on our driver to make sure someone isn't spoofing it. this will be added soon after initial testing is done
-
 			wchar_t absolutePath[MAX_PATH] = { 0 };
 			
 			if (!GetFullPathName(Config->GetKMDriverPath().c_str(), MAX_PATH, absolutePath, nullptr))
 			{
 				Logger::logf("UltimateAnticheat.log", Err, "Could not get absolute path from driver relative path, shutting down.");
-				std::terminate();  //do not allow proceed since config is set to using driver
+				std::terminate();  //do not allow proceed since config is set to using driver but we cannot find the driver
 			}
 				
+			//additionally, we need to check the signature on our driver to make sure someone isn't spoofing it. this will be added soon after initial testing is done
+			wstring driverCertSubject = Authenticode::GetSignerFromFile(absolutePath);
+
+			if (driverCertSubject.size() == 0 || driverCertSubject != DriverSignerSubject) //check if driver cert has correct sign subject
+			{
+				Logger::logf("UltimateAnticheat.log", Err, "Driver certificate subject/signer was not correct, shutting down...");
+				std::terminate();
+			}
+
 			if (!Services::LoadDriver(Config->GetKMDriverName().c_str(), absolutePath))
 			{
 				Logger::logf("UltimateAnticheat.log", Err, "Could not get load the driver, shutting down.");
@@ -111,6 +118,8 @@ private:
 	shared_ptr<Settings> Config; //the unique_ptr for this is made in main.cpp
 
 	WindowsVersion WinVersion;
+
+	const wstring DriverSignerSubject = L"AlSch092";  //this refers to the company/party who initiated the file signing, for example "Valve Corp.". If you have an EV certificate, you can change this to your own company
 };
 
 /*
