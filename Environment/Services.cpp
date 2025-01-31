@@ -6,6 +6,41 @@
 #endif
 
 /*
+    FetchBlacklistedDrivers - read internet page at `url`, parse each line of the response to add to our blacklisted driver list
+    returns `false` on failure
+*/
+bool Services::FetchBlacklistedDrivers(const char* url)
+{
+    if (url == nullptr)
+        return false;
+
+    HttpClient* h = new HttpClient();
+    vector<string> responseHeaders;
+    string response = h->ReadWebPage(BlacklistedDriversRepository, {}, "", responseHeaders); //fetch blacklisted drivers
+    delete h;
+
+    if (response.size() == 0)
+        return false;
+
+    stringstream ss(response);
+
+    string blacklistedDriver;
+
+    while (getline(ss, blacklistedDriver))
+    {
+        if (!blacklistedDriver.empty() && blacklistedDriver.back() == '\r')
+        {
+            blacklistedDriver.pop_back();
+        }
+
+        wstring s = Utility::ConvertStringToWString(blacklistedDriver);
+        BlacklistedDrivers.push_back(s);
+    }
+    
+    return true;
+}
+
+/*
     GetServiceModules - Fills the `DriverPaths` class member variable with a list of drivers loaded on the system
     returns TRUE if the function succeeded
 */
@@ -154,7 +189,7 @@ list<wstring> Services::GetUnsignedDrivers()
         }
         else
         {
-            Logger::logfw("UltimateAnticheat.log", Info, L"Driver is signed: %s\n", driverPath.c_str());
+            //Logger::logfw("UltimateAnticheat.log", Info, L"Driver is signed: %s\n", driverPath.c_str());
         }
     }
 
