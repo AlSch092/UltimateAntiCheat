@@ -19,11 +19,11 @@ struct ResponseHeaders
     vector<std::string> headers;
 };
 
-class HttpClient //a simple class for making web/http requests. *** CLASS CURRENTLY IN-PROGRESS / NOT FINISHED  ***
+class HttpClient final //a simple class for making web/http requests.
 {
 public:
 
-    string ReadWebPage(__in string url, __in vector<string> headers, __in string cookie);
+    string ReadWebPage(__in string url, __in vector<string> headers, __in string cookie, __in vector<string>& responseHeaders);
 
 private:
     CURL* curl = nullptr;

@@ -5,7 +5,7 @@
     ReadWebPage - returns contents at `url` using cURL library
     returns empty string on failure
 */
-string HttpClient::ReadWebPage(__in string url, __in vector<string> headers, __in string cookie) //GET request
+string HttpClient::ReadWebPage(__in string url, __in vector<string> headers, __in string cookie, __in vector<string>& responseHeaders) //GET request
 {   
     const int OPERATION_TIMEOUT = 15L;
     const int CONNECT_TIMEOUT = 15L;
@@ -20,7 +20,7 @@ string HttpClient::ReadWebPage(__in string url, __in vector<string> headers, __i
 
     if (curl)
     {
-        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
@@ -55,6 +55,7 @@ string HttpClient::ReadWebPage(__in string url, __in vector<string> headers, __i
         for (const auto& response_header : response_headers) //extract cookies from header if needed or do any additional parsing
         {
             cout << "Response header: " << response_header << endl;
+            responseHeaders.push_back(response_header);
         }
     }
 
