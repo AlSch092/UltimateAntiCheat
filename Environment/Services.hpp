@@ -64,11 +64,11 @@ public:
 	{
 		if (Initialize)
 		{
-			HardwareDevices = GetHardwareDevicesW(); //fetch PCI devices
+		    HardwareDevices = GetHardwareDevicesW(); //fetch PCI devices
 		    GetLoadedDrivers();
 		    GetServiceModules();
 
-			
+		    FetchBlacklistedDrivers(BlacklistedDriversRepository);
 		}
 	}
 
