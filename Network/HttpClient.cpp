@@ -41,7 +41,7 @@ string HttpClient::ReadWebPage(__in string url, __in vector<string> headers, __i
                 request_headers = curl_slist_append(request_headers, header.c_str());
             }
 
-            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, request_headers);
         }
 
         res = curl_easy_perform(curl);
