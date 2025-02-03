@@ -252,98 +252,6 @@ string NetClient::GetHostname()
 }
 
 /*
-	GetMACAddress - Generates MAC address of the network adapter
-	returns empty string on failure
-*/
-string NetClient::GetMACAddress()
-{
-	PIP_ADAPTER_INFO AdapterInfo;
-	DWORD dwBufLen = sizeof(IP_ADAPTER_INFO);
-	char* mac_addr = (char*)malloc(sizeof(char)*255);
-
-	AdapterInfo = (IP_ADAPTER_INFO*)malloc(sizeof(IP_ADAPTER_INFO));
-	if (AdapterInfo == NULL)
-	{
-		Logger::logf("UltimateAnticheat.log", Err, "Error allocating memory needed to call GetAdaptersinfo @ GetMACAddress");
-		free(mac_addr);
-		return "";
-	}
-
-	if (GetAdaptersInfo(AdapterInfo, &dwBufLen) == ERROR_BUFFER_OVERFLOW) 
-	{
-		free(AdapterInfo);
-		AdapterInfo = (IP_ADAPTER_INFO*)malloc(dwBufLen);
-		if (AdapterInfo == NULL) 
-		{
-			Logger::logf("UltimateAnticheat.log", Err, "Error allocating memory needed to call GetAdaptersinfo @ GetMACAddress");
-			free(mac_addr);
-			return "";
-		}
-	}
-
-	if (GetAdaptersInfo(AdapterInfo, &dwBufLen) == NO_ERROR) 
-	{
-
-		PIP_ADAPTER_INFO pAdapterInfo = AdapterInfo;
-		do 
-		{
-			if(mac_addr != nullptr)
-				sprintf(mac_addr, "%02X:%02X:%02X:%02X:%02X:%02X", pAdapterInfo->Address[0], pAdapterInfo->Address[1], pAdapterInfo->Address[2], pAdapterInfo->Address[3], pAdapterInfo->Address[4], pAdapterInfo->Address[5]); pAdapterInfo = pAdapterInfo->Next;
-		} while (pAdapterInfo);
-	}
-	free(AdapterInfo);
-	return mac_addr; // caller must free!
-}
-
-/*
-	GetHardwareID - Generates and returns a unique identifier based on PC name and hardware components
-*/
-string NetClient::GetHardwareID()
-{
-	std::string HWID = "";
-
-	CHAR volumeName[MAX_PATH + 1] = { 0 };
-	CHAR fileSystemName[MAX_PATH + 1] = { 0 };
-	DWORD serialNumber = 0;
-	DWORD maxComponentLen = 0;
-	DWORD fileSystemFlags = 0;
-
-	DWORD dwSize = MAX_PATH;
-	char szLogicalDrives[MAX_PATH] = { 0 };
-	DWORD dwResult = GetLogicalDriveStringsA(dwSize, szLogicalDrives);
-
-	char firstDrive[10] = { 0 };
-
-	if (dwResult > 0 && dwResult <= MAX_PATH) //fetch the list of drives and use the first one detected
-	{
-		char* szSingleDrive = szLogicalDrives;
-		while (*szSingleDrive)
-		{
-			strcpy_s(firstDrive, szSingleDrive);
-			szSingleDrive += strlen(szSingleDrive) + 1;
-		}
-	}
-
-	if (GetVolumeInformationA(firstDrive, volumeName, ARRAYSIZE(volumeName),&serialNumber,&maxComponentLen,&fileSystemFlags,fileSystemName,ARRAYSIZE(fileSystemName)))
-	{
-		CHAR serialBuf[20];
-		_itoa(serialNumber, serialBuf, 10);
-
-		CHAR username[1024 + 1];
-		DWORD size = 1024 + 1;
-		GetUserNameA((CHAR*)username, &size);
-
-		HWID = username;
-		HWID += "-";
-		HWID += serialBuf;
-	}
-	else 
-		HWID = "Failed to generate HWID.";
-	
-	return HWID;
-}
-
-/*
 	HandleInboundPacket - read packet `p`  and take action based on its opcode
 */
 Error NetClient::HandleInboundPacket(PacketReader* p)
@@ -483,10 +391,10 @@ __forceinline const char* NetClient::MakeHeartbeat(string cookie)
 /*
 	EncryptData - encrypts `buffer` using xor /w sub/add operation
 */
-void NetClient::CipherData(LPBYTE buffer, int length)
+void __forceinline NetClient::CipherData(LPBYTE buffer, int length)
 {
 	const byte XorKey = 0x90;
-	const byte OperationKey = 0x90;
+	const byte OperationKey = 0x14;
 
 	for (int i = 0; i < length; i++)
 	{
@@ -495,4 +403,98 @@ void NetClient::CipherData(LPBYTE buffer, int length)
 		else
 			buffer[i] = (buffer[i] ^ XorKey) - OperationKey;
 	}
+}
+
+/*
+	GetMACAddress - Generates MAC address of the network adapter
+	returns empty string on failure
+*/
+string NetClient::GetMACAddress()
+{
+	PIP_ADAPTER_INFO AdapterInfo;
+	DWORD dwBufLen = sizeof(IP_ADAPTER_INFO);
+	char* mac_addr = new char[255];
+
+	AdapterInfo = (IP_ADAPTER_INFO*)malloc(sizeof(IP_ADAPTER_INFO));
+	if (AdapterInfo == NULL)
+	{
+		Logger::logf("playerforge-protect.log", Err, "Error allocating memory needed to call GetAdaptersinfo @ GetMACAddress");
+		delete[] mac_addr;
+		return "";
+	}
+
+	if (GetAdaptersInfo(AdapterInfo, &dwBufLen) == ERROR_BUFFER_OVERFLOW)
+	{
+		free(AdapterInfo);
+		AdapterInfo = (IP_ADAPTER_INFO*)malloc(dwBufLen);
+		if (AdapterInfo == NULL)
+		{
+			Logger::logf("playerforge-protect.log", Err, "Error allocating memory needed to call GetAdaptersinfo @ GetMACAddress");
+			delete[] mac_addr;
+			return "";
+		}
+	}
+
+	if (GetAdaptersInfo(AdapterInfo, &dwBufLen) == NO_ERROR)
+	{
+		PIP_ADAPTER_INFO pAdapterInfo = AdapterInfo;
+		do
+		{
+			if (mac_addr != nullptr)
+				sprintf(mac_addr, "%02X:%02X:%02X:%02X:%02X:%02X", pAdapterInfo->Address[0], pAdapterInfo->Address[1], pAdapterInfo->Address[2], pAdapterInfo->Address[3], pAdapterInfo->Address[4], pAdapterInfo->Address[5]); pAdapterInfo = pAdapterInfo->Next;
+		} while (pAdapterInfo);
+	}
+
+	free(AdapterInfo);
+	string s_mac_addr = mac_addr;
+	delete[] mac_addr;
+	return s_mac_addr;
+}
+
+/*
+	GetHardwareID - Generates and returns a unique identifier based on PC name and hardware components
+*/
+string NetClient::GetHardwareID()
+{
+	string HWID = "";
+
+	CHAR volumeName[MAX_PATH + 1] = { 0 };
+	CHAR fileSystemName[MAX_PATH + 1] = { 0 };
+	DWORD serialNumber = 0;
+	DWORD maxComponentLen = 0;
+	DWORD fileSystemFlags = 0;
+
+	DWORD dwSize = MAX_PATH;
+	char szLogicalDrives[MAX_PATH] = { 0 };
+	DWORD dwResult = GetLogicalDriveStringsA(dwSize, szLogicalDrives);
+
+	char firstDrive[10] = { 0 };
+
+	if (dwResult > 0 && dwResult <= MAX_PATH) //fetch the list of drives and use the first one detected
+	{
+		char* szSingleDrive = szLogicalDrives;
+		while (*szSingleDrive)
+		{
+			strcpy_s(firstDrive, szSingleDrive);
+			szSingleDrive += strlen(szSingleDrive) + 1;
+		}
+	}
+
+	if (GetVolumeInformationA(firstDrive, volumeName, ARRAYSIZE(volumeName), &serialNumber, &maxComponentLen, &fileSystemFlags, fileSystemName, ARRAYSIZE(fileSystemName)))
+	{
+		CHAR serialBuf[20];
+		_itoa(serialNumber, serialBuf, 10);
+
+		CHAR username[128];
+		DWORD size = sizeof(username);
+		GetUserNameA(username, &size);
+
+		HWID = username;
+		HWID += "-";
+		HWID += serialBuf;
+	}
+	else
+		HWID = "Failed to generate HWID.";
+
+	return HWID;
 }

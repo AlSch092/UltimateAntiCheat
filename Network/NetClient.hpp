@@ -97,7 +97,7 @@ public:
 	uint16_t GetConnectedPort() const { return this->Port; }
 	Thread* GetRecvThread() const { return this->RecvLoopThread; }
 
-	void CipherData(LPBYTE buffer, int length); //encrypt in/out data 
+	void __forceinline CipherData(LPBYTE buffer, int length); //encrypt in/out data 
 
 private:
 
