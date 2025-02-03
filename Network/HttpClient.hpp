@@ -29,8 +29,8 @@ class HttpClient //a simple class for making web/http requests.
 {
 public:
 
-    static string ReadWebPage(__in string url, __in vector<string> headers, __in string cookie, __in vector<string>& responseHeaders);
-    static string PostRequest(__in string url, __in vector<string> headers, __in string cookie, __in string body, __in vector<string>& responseHeaders);
+    static string ReadWebPage(__in const string url, __in const vector<string> headers, __in const string cookie, __out vector<string>& responseHeaders);
+    static string PostRequest(__in const string url, __in const vector<string> headers, __in const string cookie, __in const string body, __out vector<string>& responseHeaders);
 
 private:
     static size_t read_callback(void* ptr, size_t size, size_t nmemb, void* userdata);

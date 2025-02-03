@@ -5,7 +5,7 @@
     ReadWebPage - returns contents at `url` using cURL library
     returns empty string on failure
 */
-string HttpClient::ReadWebPage(__in string url, __in vector<string> headers, __in string cookie, __in vector<string>& responseHeaders) //GET request
+string HttpClient::ReadWebPage(__in const string url, __in const vector<string> headers, __in const string cookie, __out vector<string>& responseHeaders) //GET request
 {
     const int OPERATION_TIMEOUT = 15L;
     const int CONNECT_TIMEOUT = 15L;
@@ -72,7 +72,7 @@ cleanup:
     return readBuffer;
 }
 
-string HttpClient::PostRequest(__in string url, __in vector<string> headers, __in string cookie, __in string body, __in vector<string>& responseHeaders)
+string HttpClient::PostRequest(__in const string url, __in const vector<string> headers, __in const string cookie, __in const string body, __out vector<string>& responseHeaders)
 {
     CURL* curl = nullptr;
     CURLcode res;
