@@ -137,9 +137,9 @@
       <TreatLinkerWarningAsErrors>false</TreatLinkerWarningAsErrors>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(ProjectDir)\splash.png" "$(ProjectDir)\x64\Debug\splash.png"
- copy "$(ProjectDir)\DLLs\libcurl-d.dll" "$(ProjectDir)\x64\Release\libcurl-d.dll"
- copy "$(ProjectDir)\DLLs\zlib1d.dll" "$(ProjectDir)\x64\Release\zlib1d.dll"</Command>
+      <Command>copy "$(ProjectDir)\splash.png" "$(ProjectDir)\x64\Debug\splash.png" 
+copy "$(ProjectDir)\DLLs\libcurl-d.dll" "$(ProjectDir)\x64\Debug\libcurl-d.dll"
+copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Command>
       <Message>Copy Splash Image</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
