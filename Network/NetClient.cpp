@@ -418,7 +418,7 @@ string NetClient::GetMACAddress()
 	AdapterInfo = (IP_ADAPTER_INFO*)malloc(sizeof(IP_ADAPTER_INFO));
 	if (AdapterInfo == NULL)
 	{
-		Logger::logf("playerforge-protect.log", Err, "Error allocating memory needed to call GetAdaptersinfo @ GetMACAddress");
+		Logger::logf("UltimateAnticheat.log", Err, "Error allocating memory needed to call GetAdaptersinfo @ GetMACAddress");
 		delete[] mac_addr;
 		return "";
 	}
@@ -429,7 +429,7 @@ string NetClient::GetMACAddress()
 		AdapterInfo = (IP_ADAPTER_INFO*)malloc(dwBufLen);
 		if (AdapterInfo == NULL)
 		{
-			Logger::logf("playerforge-protect.log", Err, "Error allocating memory needed to call GetAdaptersinfo @ GetMACAddress");
+			Logger::logf("UltimateAnticheat.log", Err, "Error allocating memory needed to call GetAdaptersinfo @ GetMACAddress");
 			delete[] mac_addr;
 			return "";
 		}
