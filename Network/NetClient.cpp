@@ -48,7 +48,7 @@ Error NetClient::Initialize(string ip, uint16_t port, string gameCode)
 		return Error::CANT_SEND;
 	}
 
-	RecvLoopThread = new Thread((LPTHREAD_START_ROUTINE)&NetClient::ProcessRequests, this, true);
+	RecvLoopThread = new Thread((LPTHREAD_START_ROUTINE)&NetClient::ProcessRequests, this, true, true);
 
 	if (RecvLoopThread->GetHandle() == INVALID_HANDLE_VALUE || RecvLoopThread->GetHandle() == NULL)
 	{
