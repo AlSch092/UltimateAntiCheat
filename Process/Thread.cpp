@@ -5,11 +5,11 @@
     Thread::BeginExecution - Managed thread creation & start
     return `true` on success, `false` on failure
 */
-BOOL Thread::BeginExecution(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalParam, BOOL shouldRunForever)
+bool Thread::BeginExecution(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalParam, bool shouldRunForever, bool shouldDetach)
 {
     if (toExecute != NULL)
     {
-        this->ExecutionAddress = (UINT64)toExecute;
+        this->ExecutionAddress = (DWORD_PTR)toExecute;
         this->OptionalParam = lpOptionalParam;
         this->ShouldRunForever = shouldRunForever;
 
@@ -19,24 +19,25 @@ BOOL Thread::BeginExecution(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalP
             this->t = std::thread([toExecute, lpOptionalParam]() { toExecute(lpOptionalParam); });
 
             this->handle = t.native_handle(); // Get the native handle
-            this->Id = GetThreadId(this->handle);
+            this->Id = GetThreadId(this->handle); //the std::thread's id won't be the same as windows thread ids, so use the native handle to get the tid which we can use with winapi
 
-            t.detach();
+            if (shouldDetach)
+                t.detach();
 
             Tick = std::chrono::steady_clock::now();
 
-            return TRUE;
+            return true;
         }
         catch (const std::system_error& e)
         {
             Logger::logf("UltimateAnticheat.log", Err, "std::thread failed @ BeginExecution: %s\n", e.what());
             this->Id = NULL;
-            return FALSE;
+            return false;
         }
     }
     else
     {
-        return FALSE;
+        return false;
     }
 }
 bool Thread::IsThreadRunning(HANDLE threadHandle)
@@ -74,11 +75,10 @@ bool Thread::IsThreadSuspended(DWORD tid)
 
     __try
     {
-        suspendCount = SuspendThread(threadHandle); //invalid handle passed to suspendthread throws excepton
+        suspendCount = SuspendThread(threadHandle); //warning: invalid handle will throw exception here
     }
     __except (EXCEPTION_EXECUTE_HANDLER)
     {
-        Logger::logf("UltimateAnticheat.log", Warning, "Thread handle was NULL @ IsThreadSuspended");
         return false;
     }
 
@@ -94,7 +94,7 @@ bool Thread::IsThreadSuspended(DWORD tid)
     else
     {
         ResumeThread(threadHandle);
-    }  
+    }
 
     return suspended;
 }
