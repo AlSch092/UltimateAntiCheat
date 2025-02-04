@@ -48,7 +48,10 @@ public:
 			std::terminate();
 		}
 	
-		FetchBlacklistedBytePatterns(BlacklisteBytePatternRepository);
+		if (!FetchBlacklistedBytePatterns(BlacklisteBytePatternRepository))
+		{
+			Logger::logf("UltimateAnticheat.log", Warning, "Failed to fetch blacklisted byte patterns from web location!");
+		}
 
 		this->CheaterWasDetected = new ObfuscatedData<uint8_t>((bool)false);
 
@@ -130,8 +133,6 @@ private:
 
 	shared_ptr<Settings> Config = nullptr; //non-owning pointer to the original unique_ptr<Settings> in main.cpp
 
-	bool FetchBlacklistedBytePatterns(const char* url);
-
 	void InitializeBlacklistedProcessesList();
 
 	static void MonitorProcessCreation(LPVOID thisPtr);
@@ -156,5 +157,6 @@ private:
 
 	list<DetectionFlags> DetectedFlags;
 
+	bool FetchBlacklistedBytePatterns(const char* url);
 	const char* BlacklisteBytePatternRepository = "https://raw.githubusercontent.com/AlSch092/UltimateAntiCheat/refs/heads/main/MiscFiles/BlacklistedBytePatternList.txt";
 };
