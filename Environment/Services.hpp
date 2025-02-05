@@ -80,7 +80,8 @@ public:
 	~Services()
 	{
 		for (auto it = ServiceList.begin(); it != ServiceList.end(); ++it) 
-			delete* it;
+			if(*it != nullptr)
+				delete* it;
 		
 		ServiceList.clear();
 	}
@@ -125,7 +126,7 @@ private:
 
 	list<DeviceW> HardwareDevices;
 
-	list<wstring> BlacklistedDrivers; //vulnerable driver list (BYOVD concept) which allow an attacker to read/write mem while having test signing/secure boot enabled 
+	list<wstring> BlacklistedDrivers; //vulnerable driver list (BYOVD concept) which allow an attacker to read/write mem while having test signing or secure boot enabled 
 	list<wstring> FoundBlacklistedDrivers; //any drivers which are loaded and blacklisted
 
 	list<wstring> WhitelistedUnsignedDrivers; // dump_diskdump.sys, dump_storahci.sys, dump_dumpfve.sys
