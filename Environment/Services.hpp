@@ -68,6 +68,11 @@ public:
 			GetLoadedDrivers();
 			GetServiceModules();
 
+			//these 3 drivers are unsigned, and have no file on disk but cant still run in memory while secure boot & DSE is on - crash-dump related drivers windows uses
+			WhitelistedUnsignedDrivers.emplace_back(L"\\SystemRoot\\System32\\Drivers\\dump_diskdump.sys");
+			WhitelistedUnsignedDrivers.emplace_back(L"\\SystemRoot\\System32\\Drivers\\dump_storahci.sys");
+			WhitelistedUnsignedDrivers.emplace_back(L"\\SystemRoot\\System32\\Drivers\\dump_dumpfve.sys");
+
 			FetchBlacklistedDrivers(BlacklistedDriversRepository);
 		}
 	}
@@ -122,6 +127,8 @@ private:
 
 	list<wstring> BlacklistedDrivers; //vulnerable driver list (BYOVD concept) which allow an attacker to read/write mem while having test signing/secure boot enabled 
 	list<wstring> FoundBlacklistedDrivers; //any drivers which are loaded and blacklisted
+
+	list<wstring> WhitelistedUnsignedDrivers; // dump_diskdump.sys, dump_storahci.sys, dump_dumpfve.sys
 
 	bool FetchBlacklistedDrivers(const char* url);
 	const char* BlacklistedDriversRepository = "https://raw.githubusercontent.com/AlSch092/UltimateAntiCheat/refs/heads/main/MiscFiles/BlacklistedDriverList.txt"; 

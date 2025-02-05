@@ -165,7 +165,7 @@ BOOL Services::GetLoadedDrivers()
 }
 
 /*
-    GetUnsignedDrivers - returns a list of unsigned driver names loaded on the machine
+    GetUnsignedDrivers - returns a list of unsigned driver names (wstring) loaded on the machine
 */
 list<wstring> Services::GetUnsignedDrivers()
 {
@@ -185,6 +185,7 @@ list<wstring> Services::GetUnsignedDrivers()
     for (const std::wstring& driverPath : DriverPaths)
     {
         wstring fixedDriverPath;
+        bool foundWhitelisted = false;
 
         if (driverPath.find(L"\\SystemRoot\\", 0) != wstring::npos)
         {
@@ -195,7 +196,16 @@ list<wstring> Services::GetUnsignedDrivers()
             fixedDriverPath = driverPath;
         }
 
-        if (!Authenticode::HasSignature(fixedDriverPath.c_str()))
+        for (const wstring& whitelisted : WhitelistedUnsignedDrivers) //std::find won't work well here because of possible case sensitivity differences
+        {
+            if (Utility::wcscmp_insensitive(whitelisted.c_str(), driverPath.c_str()))
+            {
+                foundWhitelisted = true;
+                break;
+            }
+        }
+
+        if (!foundWhitelisted && !Authenticode::HasSignature(fixedDriverPath.c_str()))
         {
             Logger::logfw("UltimateAnticheat.log", Warning, L"Found unsigned or outdated certificate on driver: %s\n", fixedDriverPath.c_str());
             unsignedDrivers.push_back(fixedDriverPath);
