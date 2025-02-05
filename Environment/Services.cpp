@@ -180,17 +180,30 @@ list<wstring> Services::GetUnsignedDrivers()
         }
     }
 
-    for (const std::wstring& driverPath : DriverPaths) 
+    const wstring windowsDrive = Services::GetWindowsDriveW();
+
+    for (const std::wstring& driverPath : DriverPaths)
     {
-        if (!Authenticode::HasSignature(driverPath.c_str()))
+        wstring fixedDriverPath;
+
+        if (driverPath.find(L"\\SystemRoot\\", 0) != wstring::npos)
         {
-            Logger::logfw("UltimateAnticheat.log", Detection, L"Found unsigned or outdated certificate on driver: %s\n", driverPath.c_str());
-            unsignedDrivers.push_back(driverPath);
+            fixedDriverPath = L"\\??\\" + windowsDrive + L"WINDOWS\\" + driverPath.substr(12);
         }
         else
         {
-            //Logger::logfw("UltimateAnticheat.log", Info, L"Driver is signed: %s\n", driverPath.c_str());
+            fixedDriverPath = driverPath;
         }
+
+        if (!Authenticode::HasSignature(fixedDriverPath.c_str()))
+        {
+            Logger::logfw("UltimateAnticheat.log", Warning, L"Found unsigned or outdated certificate on driver: %s\n", fixedDriverPath.c_str());
+            unsignedDrivers.push_back(fixedDriverPath);
+        }
+        //else
+        //{
+        //    Logger::logfw("UltimateAnticheat.log", Info, L"Driver is signed: %s\n", fixedDriverPath.c_str()); //commented out to prevent flooding the console
+        //}
     }
 
     return unsignedDrivers;
