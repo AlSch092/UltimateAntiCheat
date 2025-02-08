@@ -1,4 +1,6 @@
 ## Updates
+- Feb 8, '25: Adding manually mapped image checks (not yet detecting erased PE headers, this will come next)
+  
 - Jan 31, '25: Added web-fetching of blacklisted byte patterns at runtime from a url, along with blacklisted/vulnerable driver list
   
 - Jan 20, '25: Added `.rdata` section hashing, change section hash lists to `map<string, vector<uint64_t>>` for better scaling
