@@ -267,3 +267,40 @@ bool Integrity::IsTLSCallbackStructureModified() const
 
 	return false;
 }
+
+bool Integrity::IsPEHeader(__in unsigned char* pMemory)
+{
+	__try
+	{
+		if (*((WORD*)pMemory) != IMAGE_DOS_SIGNATURE) //check for "MZ" at the start
+			return false;
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+		return false;
+	}
+
+	IMAGE_DOS_HEADER* pDosHeader = (IMAGE_DOS_HEADER*)pMemory;
+	IMAGE_NT_HEADERS* pNtHeaders = (IMAGE_NT_HEADERS*)(pMemory + pDosHeader->e_lfanew);
+
+	if (pNtHeaders->Signature != IMAGE_NT_SIGNATURE) //check for "PE" signature
+		return false;
+
+	return true;
+}
+
+/*
+	IsAddressInModule - check if `address` falls within a known module (element of `modules`)
+	returns `true` if `address` falls within a known module (element of `modules`)
+*/
+bool Integrity::IsAddressInModule(const std::vector<ProcessData::MODULE_DATA>& modules, uintptr_t address)
+{
+	for (const auto& module : modules)
+	{
+		if (address >= (DWORD_PTR)module.hModule && address < ((DWORD_PTR)module.hModule + module.dllInfo.SizeOfImage))
+		{
+			return true; // Address is within a known module
+		}
+	}
+	return false;
+}

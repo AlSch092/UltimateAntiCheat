@@ -18,6 +18,12 @@ struct ModuleHashData
 	vector<uint64_t> Hashes;
 };
 
+struct ModuleInfo
+{
+	uintptr_t baseAddress;
+	uintptr_t size;
+};
+
 /*
 	The Integrity class provides functionalities for determining if aspects of any program modules have been modified
 
@@ -89,9 +95,12 @@ public:
 
 	bool IsTLSCallbackStructureModified() const; //checks the TLSCallback structure in data directory for mods
 
+	static bool IsPEHeader(__in unsigned char* pMemory); //checks for MZ and PE signatures
+	static bool IsAddressInModule(const std::vector<ProcessData::MODULE_DATA>& modules, uintptr_t address);
+
 private:
 	
-	unordered_map<string, vector<uint64_t>> SectionHashes; //section hashes for current module's sections
+	unordered_map<string, vector<uint64_t>> SectionHashes; //section hashes for current/main module's sections
 
 	vector<ProcessData::MODULE_DATA>* WhitelistedModules = nullptr;
 	vector<ModuleHashData*>* ModuleHashes = nullptr;	
