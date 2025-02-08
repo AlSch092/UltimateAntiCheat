@@ -25,6 +25,7 @@ The project now supports CMake & using the LLVM/clang-cl compiler, which can be 
 - Remapping sections & re-re-mapping checks (anti-tamper, thanks to user [changeofpace](https://github.com/changeofpace))
 - Dll load notifcations/callback & signature checks of loaded modules (thanks to user [discriminating](https://github.com/discriminating) for this contribution)
 - Spoofs `NumberOfSections`, `SizeOfImage`, & `AddressOfEntryPoint` to prevent runtime image info lookups (process manipulation)
+- Manually mapped image checks
 - Parent process check
 - Blacklisted running process checks & whitelisted loaded modules check
 - Main module name random renaming at runtime (process manipulation)
