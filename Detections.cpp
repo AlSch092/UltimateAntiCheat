@@ -163,6 +163,12 @@ void Detections::Monitor(LPVOID thisPtr)
             Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
         }
 
+        if (Monitor->DetectManualMapping(GetCurrentProcess()))
+        {
+            Logger::logf("UltimateAnticheat.log", Detection, "Found potentially manually mapped region!");
+            Monitor->Flag(DetectionFlags::MANUAL_MAPPING);
+        }
+
         if (Monitor->IsBlacklistedProcessRunning()) //external applications running on machine
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Found blacklisted process!");
@@ -857,7 +863,7 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
 /*
     InitializeBlacklistedProcessesList - add static list of blacklisted process names to our Detections object
     ...we should also scan for window class names, possible exported functions (in any DLLs running in those programs), etc.
-    Most people will of course just rename any common cheat tool names
+    Most people will of course just rename any common cheat tool names, much better to use byte scanning 
 */
 void Detections::InitializeBlacklistedProcessesList()
 {
@@ -1005,10 +1011,122 @@ void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
 
     for (int i = 0; i < KEY_COUNT; i++) 
     {
-        if(hEvents[i] != INVALID_HANDLE_VALUE)
+        if(hEvents[i] != 0 && hEvents[i] != INVALID_HANDLE_VALUE)
             CloseHandle(hEvents[i]);
 
         RegCloseKey(hKeys[i]);
     }
+}
 
+/*
+    DetectManualMapping - detects if a manually mapped module is injected. also tries to detect PE header erased mapped modules, however this is tricky and possible to throw false positives!
+    returns `true` if manual mapped was found  **NOTE - This routine is not yet finished, it works with basic PE header finding but throws false positives
+*/
+bool Detections::DetectManualMapping(__in HANDLE hProcess)
+{
+    HMODULE hMods[1024];
+    DWORD cbNeeded;
+
+    auto modules = Process::GetLoadedModules();
+
+    MEMORY_BASIC_INFORMATION mbi;
+
+    uint64_t addr = 0;  //scan start address
+    uintptr_t userModeLimit = 0x00007FFFFFFFFFFF;
+
+    while ((uintptr_t)addr < userModeLimit && VirtualQuery((LPCVOID)addr, &mbi, sizeof(mbi)) == sizeof(mbi)) //loop through all memory regions in the process
+    {
+        if (mbi.State != MEM_COMMIT) //skip memory regions that are reserved or free
+        {
+            addr += mbi.RegionSize;
+            continue;
+        }
+
+        if (mbi.Protect & (PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_READ | PAGE_EXECUTE_WRITECOPY)) //check if the memory region has executable permissions - lazy or unaware cheaters may forget to set their injected code to readonly
+        {
+            if (Integrity::IsAddressInModule(*modules, (uintptr_t)mbi.BaseAddress)) //check if the memory region is part of a known module
+            {
+                addr += mbi.RegionSize; //skip modules which have been loaded properly
+                continue;
+            }
+
+            unsigned char buffer[512];
+
+            memcpy_s(buffer, sizeof(buffer), (const void*)mbi.BaseAddress, sizeof(buffer));
+
+            if (Integrity::IsPEHeader(buffer)) //if the PE header is deleted, this won't detect it
+            {
+                Logger::logf("UltimateAnticheat.log", Detection, "Suspicious memory region found at %llX with PE header", mbi.BaseAddress);
+                delete modules;
+                return true;
+            }
+            //else //check for possible erased headers with manual mapping, this will be the tricky to do with 100% accuracy due to possible differing section alignment
+            //{
+            //	PSAPI_WORKING_SET_EX_INFORMATION wsInfo;
+            //	wsInfo.VirtualAddress = mbi.BaseAddress;
+
+            //	bool foundPossibleErasedHeaderModule = true;
+            //	if (QueryWorkingSetEx(hProcess, &wsInfo, sizeof(wsInfo)))
+            //	{
+            //		if (wsInfo.VirtualAttributes.Valid)
+            //		{
+            //			if (!wsInfo.VirtualAttributes.Shared)
+            //			{
+            //				for (int i = 0; i < sizeof(buffer); i++) //check for erased header manually mapped module
+            //				{
+            //					if (buffer[i] != 0)
+            //					{
+            //						foundPossibleErasedHeaderModule = false;
+            //						break; //possibly not an erased header if 00 isn't found, however 'erasing' a header could also mean replacing with something else than 00's 
+            //					}
+            //				}
+
+            //				if (!foundPossibleErasedHeaderModule)
+            //				{
+            //					addr += mbi.RegionSize;
+            //					continue;
+            //				}
+
+            //				bool foundPossibleTextSection = false;
+            //				unsigned char buffer_possibleTextSection[128];
+            //				const UINT64 defaultTextSectionOffset = 0x1000; //this could easily change with a more advanced manual mapper or different section alignment.. bleh
+            //				UINT64 possibleTextSectionAddress = (UINT64)(mbi.BaseAddress) + defaultTextSectionOffset;
+
+            //				MEMORY_BASIC_INFORMATION mbi_2;
+            //				if (VirtualQuery((LPCVOID)possibleTextSectionAddress, &mbi_2, sizeof(mbi_2)) != sizeof(mbi_2))
+            //					continue;
+
+            //				if (mbi_2.State == MEM_COMMIT && (mbi_2.Protect & PAGE_EXECUTE))
+            //					memcpy_s(buffer_possibleTextSection, sizeof(buffer_possibleTextSection), (const void*)possibleTextSectionAddress, sizeof(buffer_possibleTextSection));
+            //				else
+            //					continue;
+
+            //				for (int i = 0; i < sizeof(buffer_possibleTextSection); i++)
+            //				{
+            //					if (buffer_possibleTextSection[i] != 0)
+            //					{
+            //						foundPossibleTextSection = true; //check for non 0x00's
+            //						break;
+            //					}
+            //				}
+            //				
+            //				if (foundPossibleTextSection) //this will be the most likely spot which gives false positives, but its also the trickest to detect
+            //				{
+            //					Logger::logf("UltimateAnticheat.log", Detection, " possible .text section of erased-header manual mapped module at %llX", possibleTextSectionAddress);
+            //					DWORD dwOldProt = 0;
+            //					VirtualProtect((LPVOID)possibleTextSectionAddress, 1024, PAGE_READONLY, &dwOldProt); //change this region to non-execute to possibly thwart injected executable code
+            //					delete modules;
+            //					return true;
+            //				}
+            //			}
+            //		}
+            //	}
+            //}		
+        }
+
+        addr += mbi.RegionSize;
+    }
+
+    delete modules;
+    return false;
 }

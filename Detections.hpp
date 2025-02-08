@@ -129,6 +129,8 @@ public:
 
 	static void MonitorImportantRegistryKeys(LPVOID thisPtr); //threaded func, pass this class ptr to it
 
+	static bool DetectManualMapping(__in HANDLE hProcess);
+
 private:
 
 	shared_ptr<Settings> Config = nullptr; //non-owning pointer to the original unique_ptr<Settings> in main.cpp
