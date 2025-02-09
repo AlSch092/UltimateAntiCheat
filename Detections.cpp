@@ -467,26 +467,19 @@ BOOL __forceinline Detections::DoesIATContainHooked()
 
     auto modules = Process::GetLoadedModules();
 
-    if (modules == nullptr)
-    {
-        Logger::logf("UltimateAnticheat.log", Err, " Couldn't fetch  module list @ Detections::DoesIATContainHooked");
-        return FALSE;
-    }
-
     for (ProcessData::ImportFunction* IATEntry : IATFunctions)
     {
         DWORD moduleSize = Process::GetModuleSize(IATEntry->Module);
 
         if (moduleSize != 0)
         {   //some IAT functions in k32 can point to ntdll (forwarding), thus we have to compare IAT to each other whitelisted DLL range
-            for (std::vector<ProcessData::MODULE_DATA>::iterator it = modules->begin(); it != modules->end(); ++it)
+            for (std::vector<ProcessData::MODULE_DATA>::iterator it = modules.begin(); it != modules.end(); ++it)
             {
                 UINT64 LowAddr = (UINT64)it->dllInfo.lpBaseOfDll;
                 UINT64 HighAddr = (UINT64)it->dllInfo.lpBaseOfDll + it->dllInfo.SizeOfImage;
 
                 if (IATEntry->AddressOfData > LowAddr && IATEntry->AddressOfData < HighAddr)
                 {
-                    delete modules; modules = nullptr;
                     return FALSE; //IAT function was found to be inside address range of loaded DLL, thus its not hooked
                 }
             }
@@ -494,12 +487,10 @@ BOOL __forceinline Detections::DoesIATContainHooked()
         else //error, we shouldnt get here!
         {
             Logger::logf("UltimateAnticheat.log", Err, " Couldn't fetch  module size @ Detections::DoesIATContainHooked");
-            delete modules; modules = nullptr;
             return FALSE;
         }
     }
 
-    delete modules; modules = nullptr;
     return TRUE;
 }
 
@@ -1024,9 +1015,6 @@ void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
 */
 bool Detections::DetectManualMapping(__in HANDLE hProcess)
 {
-    HMODULE hMods[1024];
-    DWORD cbNeeded;
-
     auto modules = Process::GetLoadedModules();
 
     MEMORY_BASIC_INFORMATION mbi;
@@ -1044,7 +1032,7 @@ bool Detections::DetectManualMapping(__in HANDLE hProcess)
 
         if (mbi.Protect & (PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_READ | PAGE_EXECUTE_WRITECOPY)) //check if the memory region has executable permissions - lazy or unaware cheaters may forget to set their injected code to readonly
         {
-            if (Integrity::IsAddressInModule(*modules, (uintptr_t)mbi.BaseAddress)) //check if the memory region is part of a known module
+            if (Integrity::IsAddressInModule(modules, (uintptr_t)mbi.BaseAddress)) //check if the memory region is part of a known module
             {
                 addr += mbi.RegionSize; //skip modules which have been loaded properly
                 continue;
@@ -1057,7 +1045,6 @@ bool Detections::DetectManualMapping(__in HANDLE hProcess)
             if (Integrity::IsPEHeader(buffer)) //if the PE header is deleted, this won't detect it
             {
                 Logger::logf("UltimateAnticheat.log", Detection, "Suspicious memory region found at %llX with PE header", mbi.BaseAddress);
-                delete modules;
                 return true;
             }
             //else //check for possible erased headers with manual mapping, this will be the tricky to do with 100% accuracy due to possible differing section alignment
@@ -1127,6 +1114,5 @@ bool Detections::DetectManualMapping(__in HANDLE hProcess)
         addr += mbi.RegionSize;
     }
 
-    delete modules;
     return false;
 }

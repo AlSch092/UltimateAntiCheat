@@ -14,7 +14,7 @@
 
 #pragma comment(lib, "wbemuuid.lib")  //for process event creation (WMI)
 
-typedef struct BytePattern //byte pattern used in process creation callbacks
+struct BytePattern //byte pattern used in process creation callbacks
 {
 	vector<BYTE> data;
 	size_t size;
@@ -29,18 +29,20 @@ class Detections final
 {
 public:
 
-	Detections(shared_ptr<Settings> s, BOOL StartMonitor, shared_ptr<NetClient> client, vector<ProcessData::MODULE_DATA>* currentModules) : Config(s), netClient(client)
+	Detections(shared_ptr<Settings> s, BOOL StartMonitor, shared_ptr<NetClient> client) : Config(s), netClient(client)
 	{
 		this->InitializeBlacklistedProcessesList();
 
 		MonitoringProcessCreation = false; //gets set to true inside `MonitorProcessCreation`
+
+		auto ModuleList = Process::GetLoadedModules();
 
 		try 
 		{
 			_Proc = make_unique<Process>(EXPECTED_SECTIONS);
 			_Services = make_unique<Services>(true);
 
-			integrityChecker = make_shared<Integrity>(currentModules);
+			integrityChecker = make_shared<Integrity>(ModuleList);
 		}
 		catch (const std::bad_alloc& e) 
 		{
