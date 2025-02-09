@@ -276,3 +276,25 @@ bool Debugger::AntiDebug::PreventWindowsDebuggers()
 	return true;
 
 }
+
+/*
+	HideThreadFromDebugger - hides `hThread` from windows debuggers by calling NtSetInformationThread
+	returns `true` on success
+*/
+bool Debugger::AntiDebug::HideThreadFromDebugger(HANDLE hThread)
+{
+	typedef NTSTATUS(NTAPI* pNtSetInformationThread) (HANDLE, UINT, PVOID, ULONG);
+	NTSTATUS Status;
+
+	pNtSetInformationThread NtSetInformationThread = (pNtSetInformationThread)GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtSetInformationThread");
+
+	if (NtSetInformationThread == NULL)
+		return false;
+
+	if (hThread == NULL)
+		Status = NtSetInformationThread(GetCurrentThread(), 0x11, 0, 0);
+	else
+		Status = NtSetInformationThread(hThread, 0x11, 0, 0);
+
+	return Status != 0 ? false : true;
+}

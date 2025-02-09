@@ -61,6 +61,8 @@ namespace Debugger
 
         static bool PreventWindowsDebuggers(); //experimental method, patch DbgBreakpoint + DbgUiRemoteBreakin
 
+        static bool HideThreadFromDebugger(HANDLE hThread);
+
         bool AddDetectedFlag(Detections f);
         bool Flag(Detections flag); //notify server 
 
