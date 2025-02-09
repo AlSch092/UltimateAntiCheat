@@ -265,11 +265,12 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 
         case DLL_THREAD_ATTACH: //add to our thread list, or if thread is not executing valid address range, patch over execution address
         {         
+#ifndef _DEBUG
             if (!Debugger::AntiDebug::HideThreadFromDebugger(GetCurrentThread())) //hide thread from debuggers, placing this in the TLS callback allows all threads to be hidden
             {
                 Logger::logf("UltimateAnticheat.log", Warning, " Failed to hide thread from debugger @ TLSCallback: thread id %d\n", GetCurrentThreadId());
             }
-
+#endif
             if (!UnmanagedGlobals::AddThread(GetCurrentThreadId()))
             {
                 Logger::logf("UltimateAnticheat.log", Err, " Failed to add thread to ThreadList @ TLSCallback: thread id %d\n", GetCurrentThreadId());
@@ -280,33 +281,31 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
                 if (Services::GetWindowsVersion() == Windows11) //Windows 11 no longer has the thread's start address on the its stack, bummer
                     return;
 
-                UINT64 ThreadExecutionAddress = (UINT64)_AddressOfReturnAddress(); //check down the stack for the thread execution address, compare it to good module range, and if not in range then we've detected a rogue thread
+                UINT64 ThreadExecutionAddress = *(UINT64*)((UINT64)_AddressOfReturnAddress() + ThreadExecutionAddressStackOffset); //check down the stack for the thread execution address, compare it to good module range, and if not in range then we've detected a rogue thread
                 
-                ThreadExecutionAddress += (UINT64)ThreadExecutionAddressStackOffset; //offset in stack to thread's execution address
-                ThreadExecutionAddress = *(UINT64*)ThreadExecutionAddress;
+                if (ThreadExecutionAddress == 0) //this generally should never be 0, but we'll add a check for good measure incase the offset changes on different W10 builds
+                    return;
 
                 auto modules = Process::GetLoadedModules();
 
-                for (std::vector<ProcessData::MODULE_DATA>::iterator it = modules->begin(); it != modules->end(); ++it)
+                for (std::vector<ProcessData::MODULE_DATA>::iterator it = modules.begin(); it != modules.end(); ++it)
                 {
                     UINT64 LowAddr = (UINT64)it->dllInfo.lpBaseOfDll;
                     UINT64 HighAddr = (UINT64)it->dllInfo.lpBaseOfDll + it->dllInfo.SizeOfImage;
 
-                    if (ThreadExecutionAddress > LowAddr && ThreadExecutionAddress < HighAddr)
+                    if (ThreadExecutionAddress > LowAddr && ThreadExecutionAddress < HighAddr) //a properly loaded DLL is making the thread, so allow it to execute
                     {
-                        delete modules; modules = nullptr;
-                        return; //some loaded dll is making a thread, in a whitelisted address space
+                        //if any unsigned .dll is loaded, it will be caught in the DLL load callback/notifications, so we shouldnt need to cert check in this routine (this will cause slowdowns in execution, also cert checking inside the TLS callback doesn't seem to work properly here)
+                        return; //any manually mapped modules' threads will be stopped since they arent using the loader and thus won't be in the loaded modules list
                     }
                 }
-
-                delete modules; modules = nullptr;
 
                 Logger::logf("UltimateAnticheat.log", Info, " Stopping unknown thread from being created  @ TLSCallback: thread id %d", GetCurrentThreadId());
                 Logger::logf("UltimateAnticheat.log", Info, " Thread id %d wants to execute function @ %llX. Patching over this address.", GetCurrentThreadId(), ThreadExecutionAddress);
 
                 DWORD dwOldProt = 0;
 
-                if(!VirtualProtect((LPVOID)ThreadExecutionAddress, sizeof(byte), PAGE_EXECUTE_READWRITE, &dwOldProt))
+                if(!VirtualProtect((LPVOID)ThreadExecutionAddress, sizeof(byte), PAGE_EXECUTE_READWRITE, &dwOldProt)) //make thread start address writable
                 {
                     Logger::logf("UltimateAnticheat.log", Warning, "Failed to call VirtualProtect on ThreadStart address @ TLSCallback: %llX", ThreadExecutionAddress);
                 }
@@ -314,6 +313,8 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
                 {
                     if(ThreadExecutionAddress != 0)
                         *(BYTE*)ThreadExecutionAddress = 0xC3; //write over any functions which are scheduled to execute next by this thread and not inside our whitelisted address range
+
+                    //VirtualProtect((LPVOID)ThreadExecutionAddress, sizeof(byte), PAGE_READONLY, &dwOldProt); // take away executable protections for the rogue thread's start address
                 }
             }
 
@@ -346,8 +347,6 @@ void NTAPI __stdcall FakeTLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserv
             Logger::logf("UltimateAnticheat.log", Err, "Could not initialize program: ModifyTLSCallback failed. Shutting down.");
             std::terminate();
         }
-
-        UnmanagedGlobals::ModulesAtStartup = Process::GetLoadedModules();  //take a snapshot of loaded modules at program startup for later comparison. If you're loading dlls dynamically, you'll need to update this member with a new MODULE_DATA*
 
         Logger::logf("UltimateAnticheat.log", Info, " New process attached, current thread %d\n", GetCurrentThreadId());
 
