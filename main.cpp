@@ -39,9 +39,9 @@ int main(int argc, char** argv)
 #ifdef _DEBUG //in debug compilation, we are more lax with our protections for easier testing purposes
     bool bEnableNetworking = false;  //change this to false if you don't want to use the server
     bool bEnforceSecureBoot = false;
-    bool bEnforceDSE = false;
-    bool bEnforceNoKDBG = false;
-    bool bUseAntiDebugging = true;
+    bool bEnforceDSE = true;
+    bool bEnforceNoKDBG = true;
+    bool bUseAntiDebugging = false;
     bool bUseIntegrityChecking = true;
     bool bCheckThreadIntegrity = true;
     bool bCheckHypervisor = true;
@@ -50,7 +50,7 @@ int main(int argc, char** argv)
 #else
     bool bEnableNetworking = false; //change this to false if you don't want to use the server
     bool bEnforceSecureBoot = false; //secure boot is recommended in distribution builds
-    bool bEnforceDSE = false;
+    bool bEnforceDSE = true;
     bool bEnforceNoKDBG = true;
     bool bUseAntiDebugging = true;
     bool bUseIntegrityChecking = true;
@@ -265,6 +265,11 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 
         case DLL_THREAD_ATTACH: //add to our thread list, or if thread is not executing valid address range, patch over execution address
         {         
+            if (!Debugger::AntiDebug::HideThreadFromDebugger(GetCurrentThread())) //hide thread from debuggers, placing this in the TLS callback allows all threads to be hidden
+            {
+                Logger::logf("UltimateAnticheat.log", Warning, " Failed to hide thread from debugger @ TLSCallback: thread id %d\n", GetCurrentThreadId());
+            }
+
             if (!UnmanagedGlobals::AddThread(GetCurrentThreadId()))
             {
                 Logger::logf("UltimateAnticheat.log", Err, " Failed to add thread to ThreadList @ TLSCallback: thread id %d\n", GetCurrentThreadId());
@@ -272,6 +277,9 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 
             if (UnmanagedGlobals::SupressingNewThreads)
             {
+                if (Services::GetWindowsVersion() == Windows11) //Windows 11 no longer has the thread's start address on the its stack, bummer
+                    return;
+
                 UINT64 ThreadExecutionAddress = (UINT64)_AddressOfReturnAddress(); //check down the stack for the thread execution address, compare it to good module range, and if not in range then we've detected a rogue thread
                 
                 ThreadExecutionAddress += (UINT64)ThreadExecutionAddressStackOffset; //offset in stack to thread's execution address
