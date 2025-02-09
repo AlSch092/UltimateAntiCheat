@@ -12,15 +12,13 @@ namespace UnmanagedGlobals
 	static std::wstring wCurrentModuleName;
     static std::string CurrentModuleName;
 
-    static std::vector<ProcessData::MODULE_DATA>* ModulesAtStartup; //snapshot at program startup
-
     static std::list<Thread*>* ThreadList = new std::list<Thread*>();
     static bool AddThread(DWORD id);
     static void RemoveThread(DWORD tid);
 
     static LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo);
 
-    static bool SupressingNewThreads = false; //this member is usually set to true after initialization is complete
+    static bool SupressingNewThreads = true; //this member is usually set to true after initialization is complete
     static bool SetExceptionHandler = false;
     static bool FirstProcessAttach = true;
 }
