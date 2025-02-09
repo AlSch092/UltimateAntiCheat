@@ -1,10 +1,9 @@
 #include "NAuthenticode.hpp"
 
-/// <summary>
-/// Takes in a file path and returns if module is signed of not
-/// </summary>
-/// <param name="filePath:">Full file path to DLL</param>
-/// <returns>True if file has a signature</returns>
+/*
+    HasSignature - check if `filePath` has a valid embedded signature or a valid catalog sig file
+    returns `TRUE` if the `filePath` is properly signed
+*/
 BOOL Authenticode::HasSignature(LPCWSTR filePath)
 {
     return (Authenticode::VerifyEmbeddedSignature(filePath) || Authenticode::VerifyCatalogSignature(filePath));
@@ -45,7 +44,7 @@ BOOL Authenticode::VerifyEmbeddedSignature(LPCWSTR filePath)
         {
 			Logger::log("UltimateAnticheat.log", LogType::Detection, "Revoked or expired signature detected");
 			return FALSE;
-		}
+	}
     }
 
     /* success, cleanup */
