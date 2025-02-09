@@ -950,7 +950,7 @@ wstring Process::GetProcessName(DWORD pid)
     GetLoadedModules - returns a vector<MODULE_DATA>*  representing a set of loaded modules in the current process
     returns nullptr on failure
 */
-std::vector<ProcessData::MODULE_DATA>* Process::GetLoadedModules()
+std::vector<ProcessData::MODULE_DATA> Process::GetLoadedModules()
 {
 
 #ifdef _M_IX86
@@ -966,7 +966,7 @@ std::vector<ProcessData::MODULE_DATA>* Process::GetLoadedModules()
 
     current_record = start->Flink;
 
-    std::vector<ProcessData::MODULE_DATA>* moduleList = new std::vector<ProcessData::MODULE_DATA>();
+    std::vector<ProcessData::MODULE_DATA> moduleList;
 
     while (true)
     {
@@ -979,7 +979,7 @@ std::vector<ProcessData::MODULE_DATA>* Process::GetLoadedModules()
         module.hModule = (HMODULE)module_entry->DllBase;
         module.dllInfo.lpBaseOfDll = module_entry->DllBase;
         module.dllInfo.SizeOfImage = module_entry->SizeOfImage;
-        moduleList->push_back(module);
+        moduleList.push_back(module);
 
         current_record = current_record->Flink;
 

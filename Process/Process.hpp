@@ -158,7 +158,7 @@ public:
 
 	static bool IsReturnAddressInModule(UINT64 RetAddr, const wchar_t* module);
 
-	static std::vector<ProcessData::MODULE_DATA>* GetLoadedModules();
+	static std::vector<ProcessData::MODULE_DATA> GetLoadedModules();
 	static ProcessData::MODULE_DATA* GetModuleInfo(const wchar_t* name);
 	
 	static HMODULE GetModuleHandle_Ldr(const wchar_t* moduleName);
