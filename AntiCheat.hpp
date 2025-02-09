@@ -35,7 +35,7 @@ public:
 
 			this->AntiDebugger = make_unique<DebuggerDetections>(config, NetworkClient); //any detection methods need the netclient for comms
 
-			this->Monitor = make_unique<Detections>(config, false, NetworkClient, UnmanagedGlobals::ModulesAtStartup);
+			this->Monitor = make_unique<Detections>(config, false, NetworkClient);
 
 			this->Barrier = make_unique<Preventions>(config, true, Monitor.get()->GetIntegrityChecker()); //true = prevent new threads from being made
 		}
