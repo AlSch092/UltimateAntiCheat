@@ -64,14 +64,14 @@ bool Integrity::IsUnknownModulePresent()
 {
 	bool foundUnknown = false;
 
-	vector<ProcessData::MODULE_DATA> currentModules = *Process::GetLoadedModules();
+	vector<ProcessData::MODULE_DATA> currentModules = Process::GetLoadedModules();
 	list<ProcessData::MODULE_DATA> modulesToAdd;
 
 	for (auto it = currentModules.begin(); it != currentModules.end(); ++it)  //if an attacker signs their dll, they'll be able to get past this
 	{
 		bool found_whitelisted = false;
 
-		for (auto it2 = this->WhitelistedModules->begin(); it2 != this->WhitelistedModules->end(); ++it2) //our whitelisted module list is initially populated inside the constructor with modules gathered at program startup
+		for (auto it2 = this->WhitelistedModules.begin(); it2 != this->WhitelistedModules.end(); ++it2) //our whitelisted module list is initially populated inside the constructor with modules gathered at program startup
 		{
 			if (wcscmp(it->baseName, it2->baseName) == 0)
 			{
@@ -97,7 +97,7 @@ bool Integrity::IsUnknownModulePresent()
 
 	for (const ProcessData::MODULE_DATA& mod : modulesToAdd) //add any signed modules to our whitelist
 	{
-		this->WhitelistedModules->push_back(mod);
+		this->WhitelistedModules.push_back(mod);
 	}
 
 	return foundUnknown;
@@ -138,7 +138,7 @@ vector<ModuleHashData*>* Integrity::GetModuleHashes()
 {
 	vector<ModuleHashData*>* moduleHashes = new vector<ModuleHashData*>();
 
-	for (auto it = this->WhitelistedModules->begin(); it != this->WhitelistedModules->end(); ++it) //traverse whitelisted modules
+	for (auto it = this->WhitelistedModules.begin(); it != this->WhitelistedModules.end(); ++it) //traverse whitelisted modules
 	{
 		if (it->dllInfo.lpBaseOfDll == GetModuleHandleA(NULL)) //skip main executable module, we're tracking that with another member. they could probably be merged into one list to optimize
 			continue;

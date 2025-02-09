@@ -35,14 +35,13 @@ class Integrity final
 {
 public:
 
-	Integrity(__in vector<ProcessData::MODULE_DATA>* startupModuleList) //modules gathered at program startup
+	Integrity(__in vector<ProcessData::MODULE_DATA> startupModuleList) //modules gathered at program startup
 	{
-		WhitelistedModules = new vector<ProcessData::MODULE_DATA>();
 		ModuleHashes = new vector< ModuleHashData*>();
 
-		for (const ProcessData::MODULE_DATA& mod : *startupModuleList)
+		for (const ProcessData::MODULE_DATA& mod : startupModuleList)
 		{
-			WhitelistedModules->push_back(mod);
+			WhitelistedModules.push_back(mod);
 		}
 
 		ModuleHashes = GetModuleHashes(); 
@@ -50,8 +49,6 @@ public:
 
 	~Integrity()
 	{
-		if(WhitelistedModules != nullptr)
-			delete WhitelistedModules;
 
 		if (ModuleHashes != nullptr)
 		{
@@ -82,9 +79,9 @@ public:
 
 	bool IsUnknownModulePresent(); //traverse loaded modules to find any unknown ones (not signed & not whitelisted, in particular)
 
-	vector<ProcessData::MODULE_DATA>* GetWhitelistedModules() const { return this->WhitelistedModules; }
+	vector<ProcessData::MODULE_DATA> GetWhitelistedModules() const { return this->WhitelistedModules; }
 	
-	void AddToWhitelist(__in ProcessData::MODULE_DATA mod) { if(this->WhitelistedModules != nullptr) WhitelistedModules->push_back(mod); }
+	void AddToWhitelist(__in ProcessData::MODULE_DATA mod) { WhitelistedModules.push_back(mod); }
 
 	void AddModuleHash(__in vector<ModuleHashData*>* moduleHashList, __in wchar_t* moduleName);
 	ModuleHashData* GetModuleHash(__in const wchar_t* moduleName);
@@ -102,6 +99,6 @@ private:
 	
 	unordered_map<string, vector<uint64_t>> SectionHashes; //section hashes for current/main module's sections
 
-	vector<ProcessData::MODULE_DATA>* WhitelistedModules = nullptr;
+	vector<ProcessData::MODULE_DATA> WhitelistedModules;
 	vector<ModuleHashData*>* ModuleHashes = nullptr;	
 };
