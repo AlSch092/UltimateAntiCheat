@@ -6,6 +6,7 @@
 #include <wintrust.h>
 #include <mscat.h>
 #include "../Common/Logger.hpp"
+#include "../Environment/Services.hpp"
 
 #pragma comment (lib, "wintrust")
 #pragma comment (lib, "Crypt32")
@@ -23,6 +24,7 @@ typedef struct
 
 namespace Authenticode
 {
+	BOOL PowershellVerification(LPCWSTR filePath);
 	BOOL VerifyEmbeddedSignature(LPCWSTR pwszSourceFile);
 	BOOL VerifyCatalogSignature(LPCWSTR filePath);
 	BOOL HasSignature(LPCWSTR filePath);

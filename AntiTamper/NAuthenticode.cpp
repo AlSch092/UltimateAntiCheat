@@ -1,5 +1,19 @@
 #include "NAuthenticode.hpp"
 
+/// <summary>
+/// Takes in a file path and returns if module is signed of not
+/// </summary>
+/// <param name="filePath:">Full file path to DLL</param>
+/// <returns>True if file has a signature</returns>
+BOOL Authenticode::HasSignature(LPCWSTR filePath)
+{
+    return (Authenticode::VerifyEmbeddedSignature(filePath) || Authenticode::VerifyCatalogSignature(filePath));
+}
+
+/*
+    VerifyEmbeddedSignature - checks embedded signature in `filePath`
+    returns `TRUE` if the file has a properly signed embedded signature
+*/
 BOOL Authenticode::VerifyEmbeddedSignature(LPCWSTR filePath)
 {
     WINTRUST_FILE_INFO fileData;
@@ -18,7 +32,9 @@ BOOL Authenticode::VerifyEmbeddedSignature(LPCWSTR filePath)
     winTrustData.pFile = &fileData;
     winTrustData.dwStateAction = WTD_STATEACTION_VERIFY;
 
-    LONG status = WinVerifyTrust(NULL, &actionGUID, &winTrustData);
+    LONG status = 0;
+
+    status = WinVerifyTrust(NULL, &actionGUID, &winTrustData);
 
     if (status != ERROR_SUCCESS)
     {
@@ -27,7 +43,7 @@ BOOL Authenticode::VerifyEmbeddedSignature(LPCWSTR filePath)
 
         if (status == CERT_E_REVOKED || status == CERT_E_EXPIRED || status == CERT_E_UNTRUSTEDROOT || status == CERT_E_CHAINING)
         {
-			Logger::log("UltimateAnticheat.log", LogType::Detection, "Revoked signature detected");
+			Logger::log("UltimateAnticheat.log", LogType::Detection, "Revoked or expired signature detected");
 			return FALSE;
 		}
     }
@@ -39,6 +55,10 @@ BOOL Authenticode::VerifyEmbeddedSignature(LPCWSTR filePath)
     return TRUE;
 }
 
+/*
+    VerifyCatalogSignature - checks the OS's database for any known catalogs for `filePath`
+    returns `TRUE` if the file has a verified signature
+*/
 BOOL Authenticode::VerifyCatalogSignature(LPCWSTR filePath) 
 {
     HANDLE hFile = CreateFileW(filePath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -71,7 +91,7 @@ BOOL Authenticode::VerifyCatalogSignature(LPCWSTR filePath)
     HCATINFO hCatInfo = CryptCATAdminEnumCatalogFromHash(hCatAdmin, pbHash, cbHash, 0, NULL);
     if (hCatInfo == NULL) 
     {
-        Logger::logfw("UltimateAnticheat.log", LogType::Warning, L"No catalog file found for: %s @ VerifyCatalogSignature", filePath);
+        //Logger::logfw("UltimateAnticheat.log", LogType::Warning, L"No catalog file found for: %s @ VerifyCatalogSignature", filePath);
         CryptCATAdminReleaseContext(hCatAdmin, 0);
         CloseHandle(hFile);
         return false;
@@ -123,16 +143,10 @@ BOOL Authenticode::VerifyCatalogSignature(LPCWSTR filePath)
     return lStatus == ERROR_SUCCESS;
 }
 
-/// <summary>
-/// Takes in a file path and returns if module is signed of not
-/// </summary>
-/// <param name="filePath:">Full file path to DLL</param>
-/// <returns>True if file has a signature</returns>
-BOOL Authenticode::HasSignature(LPCWSTR filePath)
-{
-    return (Authenticode::VerifyCatalogSignature(filePath) || Authenticode::VerifyEmbeddedSignature(filePath));
-}
-
+/*
+    GetDateOfTimeStamp - Checks the date of a cert's timestamp
+    returns `TRUE` on success, filling `st` with valid information
+*/
 BOOL Authenticode::GetDateOfTimeStamp(PCMSG_SIGNER_INFO pSignerInfo, SYSTEMTIME* st)
 {
     BOOL fResult;
@@ -167,14 +181,17 @@ BOOL Authenticode::GetDateOfTimeStamp(PCMSG_SIGNER_INFO pSignerInfo, SYSTEMTIME*
 
             fReturn = TRUE;
 
-            break; // Break from for loop.
-
-        } //lstrcmp szOID_RSA_signingTime
-    } // for 
+            break;
+        }
+    } 
 
     return fReturn;
 }
 
+/*
+    AllocateAndCopyWideString - helper routine used by several certificate routines in this file (this code was part of Microsoft's example, so it's packaged into the same file for consistency)
+    returns a wide string which must be manually freed by the caller
+*/
 LPWSTR Authenticode::AllocateAndCopyWideString(LPCWSTR inputString) //used in other routines found in NAuthenticode.cpp
 {
     LPWSTR outputString = NULL;
@@ -187,7 +204,11 @@ LPWSTR Authenticode::AllocateAndCopyWideString(LPCWSTR inputString) //used in ot
     return outputString;
 }
 
-BOOL Authenticode::GetProgAndPublisherInfo(PCMSG_SIGNER_INFO pSignerInfo, PSPROG_PUBLISHERINFO Info)
+/*
+    GetProgAndPublisherInfo - checks the subject & publisher information of a certificate
+    returns `TRUE` on success, and fills the `Info` parameter
+*/
+BOOL Authenticode::GetProgAndPublisherInfo(__in PCMSG_SIGNER_INFO pSignerInfo, __out PSPROG_PUBLISHERINFO Info)
 {
     BOOL fReturn = FALSE;
     PSPC_SP_OPUS_INFO OpusInfo = NULL;
@@ -313,7 +334,11 @@ BOOL Authenticode::GetProgAndPublisherInfo(PCMSG_SIGNER_INFO pSignerInfo, PSPROG
     return fReturn;
 }
 
-BOOL Authenticode::GetTimeStampSignerInfo(PCMSG_SIGNER_INFO pSignerInfo, PCMSG_SIGNER_INFO* pCounterSignerInfo)
+/*
+    GetTimeStampSignerInfo - retrieves a PCMSG_SIGNER_INFO object ( `pCounterSignerInfo`) for the input `pSignerInfo` (certificate signer info)
+    returns `TRUE` on success, and fills `pCounterSignerInfo`
+*/
+BOOL Authenticode::GetTimeStampSignerInfo(__in PCMSG_SIGNER_INFO pSignerInfo, __out PCMSG_SIGNER_INFO* pCounterSignerInfo)
 {
     PCCERT_CONTEXT pCertContext = NULL;
     BOOL fReturn = FALSE;
@@ -383,22 +408,17 @@ BOOL Authenticode::GetTimeStampSignerInfo(PCMSG_SIGNER_INFO pSignerInfo, PCMSG_S
     return fReturn;
 }
 
-
-wstring Authenticode::GetCertificateSubject(PCCERT_CONTEXT pCertContext)
+/*
+    GetCertificateSubject - fetches a certificate's subject (name of the entity who requested the signing) from the cert's context (`pCertContext`)
+    returns a wide string on success with size > 0
+*/
+wstring Authenticode::GetCertificateSubject(__in PCCERT_CONTEXT pCertContext)
 {
     BOOL fReturn = FALSE;
     LPTSTR szName = NULL;
     DWORD dwData;
 
-    // Print Serial Number.
-    //_tprintf(_T("Serial Number: "));
     dwData = pCertContext->pCertInfo->SerialNumber.cbData;
-
-    //for (DWORD n = 0; n < dwData; n++)
-    //{
-    //    _tprintf(_T("%02x "), pCertContext->pCertInfo->SerialNumber.pbData[dwData - (n + 1)]);
-    //}
-    //_tprintf(_T("\n"));
 
     // Get Issuer name size.
     if (!(dwData = CertGetNameString(pCertContext, CERT_NAME_SIMPLE_DISPLAY_TYPE, CERT_NAME_ISSUER_FLAG, NULL, NULL, 0)))
@@ -407,34 +427,28 @@ wstring Authenticode::GetCertificateSubject(PCCERT_CONTEXT pCertContext)
         goto end;
     }
 
-    // Allocate memory for Issuer name.
-    szName = (LPTSTR)LocalAlloc(LPTR, dwData * sizeof(TCHAR));
-    if (!szName)
+    szName = (LPTSTR)LocalAlloc(LPTR, dwData * sizeof(TCHAR));     // Allocate memory for Issuer name.
+    if (!szName) 
     {
         Logger::logf("UltimateAnticheat.log", Err, "Unable to allocate memory for issuer name @ GetCertificateSubject");
         goto end;
     }
 
-    // Get Issuer name.
-    if (!(CertGetNameString(pCertContext, CERT_NAME_SIMPLE_DISPLAY_TYPE, CERT_NAME_ISSUER_FLAG, NULL, szName, dwData)))
+    if (!(CertGetNameString(pCertContext, CERT_NAME_SIMPLE_DISPLAY_TYPE, CERT_NAME_ISSUER_FLAG, NULL, szName, dwData)))    // Get Issuer name.
     {
         Logger::logf("UltimateAnticheat.log", Err, "CertGetNameString failed @ GetCertificateSubject");
         goto end;
     }
 
-    // print Issuer name.
-    //_tprintf(_T("Issuer Name: %s\n"), szName);
     LocalFree(szName);
     szName = NULL;
 
-    // Get Subject name size.
-    if (!(dwData = CertGetNameString(pCertContext, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, NULL, NULL, 0)))
+    if (!(dwData = CertGetNameString(pCertContext, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, NULL, NULL, 0)))     // Get Subject name size.
     {
         Logger::logf("UltimateAnticheat.log", Err, "CertGetNameString failed @ GetCertificateSubject");
         goto end;
     }
 
-    // Allocate memory for subject name.
     szName = (LPTSTR)LocalAlloc(LPTR, dwData * sizeof(TCHAR));
     if (!szName)
     {
@@ -442,17 +456,13 @@ wstring Authenticode::GetCertificateSubject(PCCERT_CONTEXT pCertContext)
         goto end;
     }
 
-    // Get subject name.
-    if (!(CertGetNameString(pCertContext, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, NULL, szName, dwData)))
+    if (!(CertGetNameString(pCertContext, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, NULL, szName, dwData)))     // Get subject name
     {
         Logger::logf("UltimateAnticheat.log", Err, "CertGetNameString failed @ GetCertificateSubject");
         goto end;
     }
 
-    // Print Subject Name.
-    //_tprintf(_T("Subject Name: %s\n"), szName);
     return wstring(szName);
-    fReturn = TRUE;
 
 end:
     if (szName != NULL) LocalFree(szName);
@@ -460,7 +470,10 @@ end:
     return {};
 }
 
-
+/*
+    GetSignerFromFile - retrieves the entity who requested a signature on `filePath`
+    returns a wide string on success with size > 0
+*/
 wstring Authenticode::GetSignerFromFile(const std::wstring& filePath)
 {
     WCHAR szFileName[MAX_PATH];
@@ -527,7 +540,7 @@ wstring Authenticode::GetSignerFromFile(const std::wstring& filePath)
     // signer info structure.
     if (GetProgAndPublisherInfo(pSignerInfo, &ProgPubInfo))
     {
-        //if (ProgPubInfo.lpszProgramName != NULL)
+        //if (ProgPubInfo.lpszProgramName != NULL) //uncomment if you want to print any additional information
         //{
         //    wprintf(L"Program Name : %s\n",
         //        ProgPubInfo.lpszProgramName);
