@@ -24,7 +24,6 @@ typedef struct
 
 namespace Authenticode
 {
-	BOOL PowershellVerification(LPCWSTR filePath);
 	BOOL VerifyEmbeddedSignature(LPCWSTR pwszSourceFile);
 	BOOL VerifyCatalogSignature(LPCWSTR filePath);
 	BOOL HasSignature(LPCWSTR filePath);
