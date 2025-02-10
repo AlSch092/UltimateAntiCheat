@@ -235,10 +235,8 @@ bool Detections::FetchBlacklistedBytePatterns(const char* url)
     if (url == nullptr)
         return false;
 
-    HttpClient* h = new HttpClient();
     vector<string> responseHeaders;
-    string response = h->ReadWebPage(BlacklisteBytePatternRepository, {}, "", responseHeaders); //fetch blacklisted drivers
-    delete h;
+    string response = HttpClient::ReadWebPage(BlacklisteBytePatternRepository, {}, "", responseHeaders); 
 
     if (response.size() == 0)
         return false;
@@ -263,6 +261,9 @@ bool Detections::FetchBlacklistedBytePatterns(const char* url)
         
         while (getline(ss2, _byte, ' '))
         {
+            if (_byte.size() >= 2 && _byte[0] == '/' && _byte[1] == '/') //found comment at end of pattern, don't parse this part
+                break;
+
             uint8_t byte = stoul(_byte, nullptr, 16);
             bytes.push_back(byte);
         }
