@@ -1132,23 +1132,56 @@ HMODULE Process::GetRemoteModuleBaseAddress(DWORD processId, const wchar_t* modu
     return hModule;
 }
 
-bool Process::GetRemoteTextSection(HANDLE hProcess, uintptr_t& baseAddress, SIZE_T& sectionSize) 
+bool Process::GetRemoteTextSection(HANDLE hProcess, uintptr_t& baseAddress, SIZE_T& sectionSize)
 {
-    MEMORY_BASIC_INFORMATION mbi;
-    uintptr_t address = 0;
+    HMODULE hModule = nullptr;
+    MODULEENTRY32 me32;
+    me32.dwSize = sizeof(MODULEENTRY32);
 
-    while (VirtualQueryEx(hProcess, reinterpret_cast<LPCVOID>(address), &mbi, sizeof(mbi)) == sizeof(mbi)) 
+    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetProcessId(hProcess));
+    if (hSnapshot == INVALID_HANDLE_VALUE)
+        return false;
+
+    if (Module32First(hSnapshot, &me32))
+        hModule = me32.hModule;
+
+    CloseHandle(hSnapshot);
+    if (!hModule)
+        return false;
+
+    IMAGE_DOS_HEADER dosHeader;
+    SIZE_T bytesRead;
+    if (!ReadProcessMemory(hProcess, hModule, &dosHeader, sizeof(dosHeader), &bytesRead) || bytesRead != sizeof(dosHeader))
+        return false;
+
+    if (dosHeader.e_magic != IMAGE_DOS_SIGNATURE)
+        return false;
+
+    IMAGE_NT_HEADERS ntHeaders;
+    if (!ReadProcessMemory(hProcess, (LPCVOID)((uintptr_t)hModule + dosHeader.e_lfanew), &ntHeaders, sizeof(ntHeaders), &bytesRead) || bytesRead != sizeof(ntHeaders))
+        return false;
+
+    if (ntHeaders.Signature != IMAGE_NT_SIGNATURE)
+        return false;
+
+    IMAGE_SECTION_HEADER sectionHeader;
+    uintptr_t sectionOffset = (uintptr_t)hModule + dosHeader.e_lfanew + offsetof(IMAGE_NT_HEADERS, OptionalHeader) + ntHeaders.FileHeader.SizeOfOptionalHeader;
+
+    for (WORD i = 0; i < ntHeaders.FileHeader.NumberOfSections; i++)
     {
-        // Check if the memory region is committed and executable
-        if ((mbi.State == MEM_COMMIT) && (mbi.Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE))) 
+        if (!ReadProcessMemory(hProcess, (LPCVOID)sectionOffset, &sectionHeader, sizeof(sectionHeader), &bytesRead) || bytesRead != sizeof(sectionHeader))
+            return false;
+
+        if (memcmp(sectionHeader.Name, ".text", 5) == 0)
         {
-            // Optionally: refine this logic to inspect PE headers to ensure it's the `.text` section
-            baseAddress = reinterpret_cast<uintptr_t>(mbi.BaseAddress);
-            sectionSize = mbi.RegionSize;
+            baseAddress = (uintptr_t)hModule + sectionHeader.VirtualAddress;
+            sectionSize = sectionHeader.Misc.VirtualSize;
             return true;
         }
-        address += mbi.RegionSize;
+
+        sectionOffset += sizeof(IMAGE_SECTION_HEADER);
     }
+
     return false;
 }
 
