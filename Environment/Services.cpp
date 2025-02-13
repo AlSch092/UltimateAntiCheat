@@ -936,6 +936,7 @@ std::string Services::GetProcessDirectory(DWORD pid)
         {
             *lastSlash = '\0';
             CloseHandle(hProcess);
+	    strcat(imagePath, "\\");
             return std::string(imagePath);
         }
         else
