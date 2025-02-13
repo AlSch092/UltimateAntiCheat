@@ -130,13 +130,13 @@ int main(int argc, char** argv)
             {
                 Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor vendor was empty, some custom hypervisor may be hooking cpuid instruction");
             }
-            else if (vendor == "Microsoft Hv" || vendor == "VMwareVMware" || vendor == "XenVMMXenVMM" || vendor == "VBoxVBoxVBox")
+            else if (vendor == "Microsoft Hv" || vendor == "Micrt Hvosof" || vendor == "VMwareVMware" || vendor == "XenVMMXenVMM" || vendor == "VBoxVBoxVBox")
             {
-                Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor was present with vendor: %s", vendor);
-            }              
+                Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor was present with vendor: %s", vendor.c_str());
+            }
             else
             {
-                Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor was present with unknown/non-standard vendor: %s.", vendor);
+                Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor was present with unknown/non-standard vendor: %s.", vendor.c_str());
                 return 0;
             }
         }
