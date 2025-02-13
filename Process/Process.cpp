@@ -33,10 +33,9 @@ uint32_t Process::GetMemorySize() //returns uint32_t value of combined byte size
 */
 BOOL Process::CheckParentProcess(wstring desiredParent)
 {
-    if (GetParentProcessId() == GetProcessIdByName(desiredParent))
-        return true;
-    
-    return false;
+    std::list<DWORD> pids = GetProcessIdsByName(desiredParent);
+    DWORD parentPid = GetParentProcessId();
+    return (std::find(std::begin(pids), std::end(pids), parentPid) != std::end(pids));
 }
 
 /*
@@ -527,7 +526,8 @@ DWORD Process::GetParentProcessId()
 }
 
 /*
-    GetProcessIdByName - Get pid given a process name
+    GetProcessIdByName - Get first pid given a process name.
+    You should probably use GetProcessIdsByName instead.
     returns a DWORD pid if procName is a running process, otherwise returns 0
 */
 DWORD Process::GetProcessIdByName(wstring procName)
@@ -552,8 +552,8 @@ DWORD Process::GetProcessIdByName(wstring procName)
 
 
 /*
-    GetProcessIdByName - Get pid given a process name
-    returns a DWORD pid if procName is a running process, otherwise returns 0
+    GetProcessIdsByName - Get all pids given a process name
+    returns a list of DWORD pids of processes running with procName.
 */
 list<DWORD> Process::GetProcessIdsByName(wstring procName)
 {

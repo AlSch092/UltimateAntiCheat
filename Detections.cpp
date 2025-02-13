@@ -828,9 +828,13 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
                     }
                 }
 
-                if (monitor->FindBlacklistedProgramsThroughByteScan(Process::GetProcessIdByName(vtName.bstrVal)))
+                std::list<DWORD> pidList = Process::GetProcessIdsByName(vtName.bstrVal);
+		        for (auto pid: pidList)
                 {
-                    Logger::logfw("UltimateAnticheat.log", Detection, L"Blacklisted process was found through byte signature: %s", vtName.bstrVal);
+                    if (monitor->FindBlacklistedProgramsThroughByteScan(pid))
+                    {
+                        Logger::logfw("UltimateAnticheat.log", Detection, L"Blacklisted process was found through byte signature: %s", vtName.bstrVal);
+                    }
                 }
 
                 VariantClear(&vtName);
