@@ -552,6 +552,31 @@ DWORD Process::GetProcessIdByName(wstring procName)
 
 
 /*
+    GetProcessIdByName - Get pid given a process name
+    returns a DWORD pid if procName is a running process, otherwise returns 0
+*/
+list<DWORD> Process::GetProcessIdsByName(wstring procName)
+{
+    list<DWORD> pids;
+    PROCESSENTRY32 entry;
+    entry.dwSize = sizeof(PROCESSENTRY32);
+    DWORD pid = 0;
+
+    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL);
+
+    if (Process32First(snapshot, &entry) == TRUE)
+    {
+        while (Process32Next(snapshot, &entry) == TRUE)
+            if (wcscmp(entry.szExeFile, procName.c_str()) == 0)
+                pids.push_back(entry.th32ProcessID);
+
+    }
+
+    CloseHandle(snapshot);
+    return pids;
+}
+
+/*
 RemovePEHeader - Experimental method to zero the memory of the NT headers, not recommended in production code but should trip up quite a few tools in theory
 
 */
@@ -1184,6 +1209,7 @@ bool Process::GetRemoteTextSection(HANDLE hProcess, uintptr_t& baseAddress, SIZE
 
     return false;
 }
+
 
 std::vector<BYTE> Process::ReadRemoteTextSection(DWORD pid) 
 {

@@ -118,6 +118,7 @@ public:
 
 	static wstring GetProcessName(DWORD pid);
 	static DWORD GetProcessIdByName(wstring procName);
+	static list<DWORD> GetProcessIdsByName(wstring procName);
 
 	static DWORD GetParentProcessId();
 	static BOOL CheckParentProcess(wstring desiredParent);
