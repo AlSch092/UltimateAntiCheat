@@ -118,6 +118,11 @@ public:
 
 	static bool LoadDriver(const std::wstring& driverName, const std::wstring& driverPath);
 	static bool UnloadDriver(const std::wstring& driverName); 
+	
+	static string GetProcessDirectory(DWORD pid);
+	static wstring GetProcessDirectoryW(DWORD pid);
+
+	static list<DWORD> EnumerateProcesses();
 
 private:
 

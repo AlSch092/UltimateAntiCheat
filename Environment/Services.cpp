@@ -885,3 +885,115 @@ bool Services::UnloadDriver(const std::wstring& driverName)
     CloseServiceHandle(hSCManager);
     return unloadSuccess;
 }
+
+
+/*
+    EnumerateProcesses - return list of running processes ids
+*/
+list<DWORD> Services::EnumerateProcesses()
+{
+    list<DWORD> procs;
+
+    PROCESSENTRY32 entry;
+    entry.dwSize = sizeof(PROCESSENTRY32);
+
+    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL);
+
+    if (Process32First(snapshot, &entry) == TRUE)
+    {
+        while (Process32Next(snapshot, &entry) == TRUE)
+        {
+            procs.push_back(entry.th32ProcessID);
+        }
+    }
+
+    CloseHandle(snapshot);
+    return procs;
+}
+
+/*
+    GetProcessDirectoryW - return directory of process `pid`
+*/
+std::string Services::GetProcessDirectory(DWORD pid)
+{
+    if (pid <= 4)
+        return "";
+
+    HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+    if (hProcess == nullptr)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to open process with PID %d @ GetProcessDirectory", pid);
+        return "";
+    }
+
+    char imagePath[MAX_PATH];
+    DWORD size = MAX_PATH;
+
+    if (QueryFullProcessImageNameA(hProcess, 0, imagePath, &size))
+    {
+        char* lastSlash = strrchr(imagePath, '\\');
+        if (lastSlash != nullptr)
+        {
+            *lastSlash = '\0';
+            CloseHandle(hProcess);
+            return std::string(imagePath);
+        }
+        else
+        {
+            Logger::logf("UltimateAnticheat.log", Err, "Failed to find directory in the image path (pid %d) @ GetProcessDirectory", pid);
+        }
+    }
+    else
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to query process image name with pid %d @ GetProcessDirectory", pid);
+    }
+
+    CloseHandle(hProcess);
+    return "";
+}
+
+/*
+    GetProcessDirectoryW - return directory of process `pid`
+*/
+wstring Services::GetProcessDirectoryW(DWORD pid)
+{
+    if (pid <= 4)
+        return L"";
+
+    HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+
+    if (hProcess == nullptr)
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to open process with PID %d @ GetProcessDirectory", pid);
+        return L"";
+    }
+
+    wchar_t imagePath[MAX_PATH];
+    DWORD size = MAX_PATH;
+
+    if (QueryFullProcessImageNameW(hProcess, 0, imagePath, &size))
+    {
+        wchar_t* lastSlash = wcsrchr(imagePath, L'\\'); //get last occurance of \\ as a ptr
+
+        if (lastSlash != nullptr)
+        {
+            *lastSlash = '\0';
+
+            CloseHandle(hProcess);
+            wcscat(imagePath, L"\\");
+            return std::wstring(imagePath);
+        }
+        else
+        {
+            Logger::logf("UltimateAnticheat.log", Err, "Failed to find directory in the image path (pid %d) @ GetProcessDirectory", pid);
+        }
+    }
+    else
+    {
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to query process image name with pid %d @ GetProcessDirectory", pid);
+    }
+
+
+    CloseHandle(hProcess);
+    return L"";
+}
