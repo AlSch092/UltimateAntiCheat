@@ -333,9 +333,8 @@ bool DebuggerDetections::_ExitCommonDebuggers()
 
 	for (wstring debugger : commonDebuggers)
 	{
-		DWORD foundPid = Process::GetProcessIdByName(debugger);
-
-		if (foundPid != NULL)
+		std::list<DWORD> pids = Process::GetProcessIdsByName(debugger);
+		for (auto foundPid: pids)
 		{
 			UINT64 K32Base = (UINT64)GetModuleHandleW(L"kernel32.dll");
 

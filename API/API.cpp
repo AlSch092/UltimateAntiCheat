@@ -19,7 +19,7 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessNam
 	}
 	else //bad parent process detected, or parent process mismatch, shut down the program (and optionally report the error to the server)
 	{
-		Logger::logf("UltimateAnticheat.log", Detection, "Parent process was not whitelisted, shutting down program! Make sure parent process is the same as specified in API.hpp. If you are using VS to debug, this might become VsDebugConsole.exe, rather than explorer.exe");
+		Logger::logfw("UltimateAnticheat.log", Detection, L"Parent process was not whitelisted, shutting down program! Make sure parent process is the same as specified in API.hpp. If you are using VS to debug, this might become VsDebugConsole.exe, rather than %s", parentProcessName.c_str());
 		errorCode = Error::PARENT_PROCESS_MISMATCH;
 	}
 
