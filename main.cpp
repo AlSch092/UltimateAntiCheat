@@ -7,6 +7,7 @@
 
     Author: AlSch092 @ Github
 */
+#include <map>
 
 #include "API/API.hpp"  //API.hpp includes anticheat.hpp
 #include "SplashScreen.hpp"
@@ -178,6 +179,26 @@ int main(int argc, char** argv)
     if (Anti_Cheat->GetMonitor()->IsUserCheater())
     {
         Logger::logf("UltimateAnticheat.log", Info, "Detected a possible cheater in first %d milliseconds of runtime!", MillisecondsBeforeShutdown);
+    }
+
+    list<DetectionFlags> flags = Anti_Cheat->GetMonitor()->GetDetectedFlags();
+    std::map<DetectionFlags, const char*> explanations = {
+        { DetectionFlags::DEBUGGER, "Debugger detected" },
+        { DetectionFlags::PAGE_PROTECTIONS, ".text section is writable, memory was re-mapped" },
+        { DetectionFlags::CODE_INTEGRITY, "process patched" },
+        { DetectionFlags::DLL_TAMPERING, "Networking WINAPI hooked" },
+        { DetectionFlags::BAD_IAT, "DLL hooking via Import Adress Table modification" },
+        { DetectionFlags::OPEN_PROCESS_HANDLES, "A process has handles on our process" },
+        { DetectionFlags::UNSIGNED_DRIVERS, "unsigned drivers on machine" },
+        { DetectionFlags::INJECTED_ILLEGAL_PROGRAM, "unsigned DLL injected on the process" },
+        { DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM, "blacklisted program name running on machine" },
+        { DetectionFlags::REGISTRY_KEY_MODIFICATIONS, "changes to registry keys related to secure boot, CI, testsigning mode, etc..." },
+        { DetectionFlags::MANUAL_MAPPING, "manually mapped module injected" },
+        { DetectionFlags::SUSPENDED_THREAD, "not implemented for now" },
+        { DetectionFlags::HYPERVISOR, "an hypervisor is running on the machine" }
+    };
+    for (DetectionFlags flag : flags) {
+            Logger::logf("UltimateAnticheat.log", Info, explanations[flag]);
     }
 
 cleanup: //jump to here on any error with AC initialization
