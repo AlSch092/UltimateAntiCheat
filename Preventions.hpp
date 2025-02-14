@@ -47,11 +47,9 @@ public:
 
 	static bool StopMultipleProcessInstances(); //stop multi-boxing via shared memory
 
-	bool RandomizeModuleName(); //uses OriginalModuleName member, thus is not static
+	bool RandomizeModuleName();
 
 private:
-
-	const wstring OriginalModuleName = L"UltimateAnticheat.exe"; //since we rename the module in the process context to something random, store the original
 
 	bool IsPreventingThreadCreation; //used in TLS callback if we want to supress or track new threads
 

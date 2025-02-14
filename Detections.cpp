@@ -77,10 +77,10 @@ void Detections::Monitor(LPVOID thisPtr)
 
     if (Monitor->Config->bCheckIntegrity) //integrity check setup if option is enabled
     {
-        list<ProcessData::Section*>* sections = Process::GetSections("UltimateAnticheat.exe");
+        list<ProcessData::Section*>* sections = Process::GetSections(_MAIN_MODULE_NAME);
             
-        Monitor->SetSectionHash("UltimateAnticheat.exe", ".text"); //set our memory hashes of .text
-        Monitor->SetSectionHash("UltimateAnticheat.exe", ".rdata");
+        Monitor->SetSectionHash(_MAIN_MODULE_NAME, ".text"); //set our memory hashes of .text
+        Monitor->SetSectionHash(_MAIN_MODULE_NAME, ".rdata");
 
         if (sections == nullptr)
         {

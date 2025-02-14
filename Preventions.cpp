@@ -9,7 +9,7 @@ bool Preventions::RandomizeModuleName()
 {
     bool success = false;
 
-    int moduleNameSize = (int)wcslen(OriginalModuleName.c_str());
+    int moduleNameSize = (int)wcslen(_MAIN_MODULE_NAME_W);
 
     if (moduleNameSize == 0)
     {
@@ -18,7 +18,7 @@ bool Preventions::RandomizeModuleName()
 
     wchar_t* newModuleName = Utility::GenerateRandomWString(moduleNameSize); //intentionally set to -2 to trip up external programs like CE from enumerating dlls & symbols
 
-    if (Process::ChangeModuleName(OriginalModuleName.c_str(), newModuleName)) //in addition to changing export function names, we can also modify the names of loaded modules/libraries.
+    if (Process::ChangeModuleName(_MAIN_MODULE_NAME_W, newModuleName)) //in addition to changing export function names, we can also modify the names of loaded modules/libraries.
     {
         success = true;
         UnmanagedGlobals::wCurrentModuleName = wstring(newModuleName);
@@ -51,7 +51,7 @@ Error Preventions::DeployBarrier()
     IsPreventingThreadCreation = false; //TLS callback anti-dll injection switch var
 #endif
 
-    if (!Process::ChangeNumberOfSections("UltimateAnticheat.exe", 1)) //change # of sections to 1
+    if (!Process::ChangeNumberOfSections(_MAIN_MODULE_NAME, 1)) //change # of sections to 1
     {
         Logger::logf("UltimateAnticheat.log", Err, "Failed to change number of sections @ Preventions::DeployBarrier");
         retError = Error::CANT_APPLY_TECHNIQUE;
