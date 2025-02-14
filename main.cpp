@@ -47,6 +47,8 @@ int main(int argc, char** argv)
     bool bCheckHypervisor = true;
     bool bRequireRunAsAdministrator = true;
     bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
+    const std::list<std::wstring> allowedParents = {L"VsDebugConsole.exe", L"powershell.exe", L"bash.exe", L"zsh.exe", L"explorer.exe"};
+
 #else
     bool bEnableNetworking = false; //change this to false if you don't want to use the server
     bool bEnforceSecureBoot = false; //secure boot is recommended in distribution builds
@@ -58,6 +60,7 @@ int main(int argc, char** argv)
     bool bCheckHypervisor = true;
     bool bRequireRunAsAdministrator = true;
     bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
+    const std::list<std::wstring> allowedParents = {L"explorer.exe", L"steam.exe"}; //add your launcher here
 #endif
 
 #ifdef _DEBUG
@@ -71,6 +74,11 @@ int main(int argc, char** argv)
     cout << "\tCheck Thread Integrity:\t" << boolalpha << bCheckThreadIntegrity << "\n";
     cout << "\tCheck Hypervisor:\t" << boolalpha << bCheckHypervisor << "\n";
     cout << "\tRequire Admin:\t\t" << boolalpha << bRequireRunAsAdministrator << "\n";
+    cout << "\tAllowed parent processes: \t\t";
+    for (auto parent: allowedParents) {
+        wcout << parent << " ";
+    }
+    cout << "\n";
 #endif
 
     const int MillisecondsBeforeShutdown = 120000;
@@ -88,7 +96,7 @@ int main(int argc, char** argv)
     cout << "|           discriminating@github (dll load notifcations, catalog verification)          |\n";
     cout << "------------------------------------------------------------------------------------------\n";
 
-    shared_ptr<Settings> ConfigInstance = Settings::CreateInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator, bUsingDriver);
+    shared_ptr<Settings> ConfigInstance = Settings::CreateInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator, bUsingDriver, allowedParents);
 
     if (ConfigInstance->bRequireRunAsAdministrator)
     {

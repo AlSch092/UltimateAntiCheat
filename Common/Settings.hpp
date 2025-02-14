@@ -17,7 +17,8 @@ public:
 		bool bCheckThreads,
 		bool bCheckHypervisor, 
 		bool bRequireRunAsAdministrator,
-		bool bUsingDriver)
+		bool bUsingDriver,
+		const std::list<std::wstring> allowedParents)
 	{
 		if (!Instance)
 		{
@@ -31,7 +32,8 @@ public:
 				bCheckThreads, 
 				bCheckHypervisor, 
 				bRequireRunAsAdministrator,
-				bUsingDriver));
+				bUsingDriver,
+				allowedParents));
 		}
 
 		return Instance;
@@ -51,6 +53,7 @@ public:
 
 	bool bNetworkingEnabled; //previously in API.hpp
 	bool bUsingDriver; //signed kernelmode driver for hybrid approach
+	const std::list<std::wstring> allowedParents;
 
 	wstring GetKMDriverName() const { return this->KMDriverName; }
 	wstring GetKMDriverPath() const { return this->KMDriverPath; }
@@ -67,8 +70,9 @@ private:
 		bool bCheckThreads,
 		bool bCheckHypervisor, 
 		bool bRequireRunAsAdministrator,
-		bool bUsingDriver)
-		: bNetworkingEnabled(bNetworkingEnabled), bEnforceSecureBoot(bEnforceSecureBoot), bEnforceDSE(bEnforceDSE), bEnforceNoKDbg(bEnforceNoKDbg), bUseAntiDebugging(bUseAntiDebugging), bCheckIntegrity(bCheckIntegrity), bCheckThreads(bCheckThreads), bCheckHypervisor(bCheckHypervisor), bRequireRunAsAdministrator(bRequireRunAsAdministrator), bUsingDriver(bUsingDriver)
+		bool bUsingDriver,
+		const std::list<std::wstring> allowedParents)
+		: bNetworkingEnabled(bNetworkingEnabled), bEnforceSecureBoot(bEnforceSecureBoot), bEnforceDSE(bEnforceDSE), bEnforceNoKDbg(bEnforceNoKDbg), bUseAntiDebugging(bUseAntiDebugging), bCheckIntegrity(bCheckIntegrity), bCheckThreads(bCheckThreads), bCheckHypervisor(bCheckHypervisor), bRequireRunAsAdministrator(bRequireRunAsAdministrator), bUsingDriver(bUsingDriver), allowedParents(allowedParents)
 	{
 	}
 	 
