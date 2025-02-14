@@ -14,4 +14,5 @@ enum DetectionFlags //used in client-server comms to flag cheaters. needs to be 
 	REGISTRY_KEY_MODIFICATIONS,
 	MANUAL_MAPPING,
 	SUSPENDED_THREAD,
+	HYPERVISOR,
 };
