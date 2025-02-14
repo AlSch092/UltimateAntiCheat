@@ -864,6 +864,7 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
                 {
                     if (monitor->FindBlacklistedProgramsThroughByteScan(pid))
                     {
+                        monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
                         Logger::logfw("UltimateAnticheat.log", Detection, L"Blacklisted process was found through byte signature: %s", vtName.bstrVal);
                     }
                 }
