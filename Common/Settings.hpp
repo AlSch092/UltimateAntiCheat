@@ -2,6 +2,7 @@
 #pragma once
 #include <memory>
 
+#include "Logger.hpp"
 //Settings don't come in a .ini or .cfg file as we don't want end-users modifying program flow on compiled releases
 class Settings final
 {
@@ -18,7 +19,8 @@ public:
 		bool bCheckHypervisor, 
 		bool bRequireRunAsAdministrator,
 		bool bUsingDriver,
-		const std::list<std::wstring> allowedParents)
+		const std::list<std::wstring> allowedParents,
+		bool logToFile)
 	{
 		if (!Instance)
 		{
@@ -33,7 +35,8 @@ public:
 				bCheckHypervisor, 
 				bRequireRunAsAdministrator,
 				bUsingDriver,
-				allowedParents));
+				allowedParents,
+				logToFile));
 		}
 
 		return Instance;
@@ -54,6 +57,7 @@ public:
 	bool bNetworkingEnabled; //previously in API.hpp
 	bool bUsingDriver; //signed kernelmode driver for hybrid approach
 	const std::list<std::wstring> allowedParents;
+	bool logToFile;
 
 	wstring GetKMDriverName() const { return this->KMDriverName; }
 	wstring GetKMDriverPath() const { return this->KMDriverPath; }
@@ -71,9 +75,11 @@ private:
 		bool bCheckHypervisor, 
 		bool bRequireRunAsAdministrator,
 		bool bUsingDriver,
-		const std::list<std::wstring> allowedParents)
-		: bNetworkingEnabled(bNetworkingEnabled), bEnforceSecureBoot(bEnforceSecureBoot), bEnforceDSE(bEnforceDSE), bEnforceNoKDbg(bEnforceNoKDbg), bUseAntiDebugging(bUseAntiDebugging), bCheckIntegrity(bCheckIntegrity), bCheckThreads(bCheckThreads), bCheckHypervisor(bCheckHypervisor), bRequireRunAsAdministrator(bRequireRunAsAdministrator), bUsingDriver(bUsingDriver), allowedParents(allowedParents)
+		const std::list<std::wstring> allowedParents,
+		bool logToFile)
+		: bNetworkingEnabled(bNetworkingEnabled), bEnforceSecureBoot(bEnforceSecureBoot), bEnforceDSE(bEnforceDSE), bEnforceNoKDbg(bEnforceNoKDbg), bUseAntiDebugging(bUseAntiDebugging), bCheckIntegrity(bCheckIntegrity), bCheckThreads(bCheckThreads), bCheckHypervisor(bCheckHypervisor), bRequireRunAsAdministrator(bRequireRunAsAdministrator), bUsingDriver(bUsingDriver), allowedParents(allowedParents), logToFile(logToFile)
 	{
+		Logger::logToFile = logToFile; //put this line here to be as early as possible.
 	}
 	 
 	const wstring KMDriverName = L"UltimateKernelAnticheat"; //optional hybrid approach

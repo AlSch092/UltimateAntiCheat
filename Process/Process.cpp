@@ -1221,7 +1221,7 @@ std::vector<BYTE> Process::ReadRemoteTextSection(DWORD pid)
     HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
     if (!hProcess) 
     {
-        std::cerr << "Failed to open process. Error: " << GetLastError() << std::endl;
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to open process. Error: %d", GetLastError());
         return {};
     }
 
@@ -1230,7 +1230,7 @@ std::vector<BYTE> Process::ReadRemoteTextSection(DWORD pid)
 
     if (!GetRemoteTextSection(hProcess, baseAddress, sectionSize)) 
     {
-        std::cerr << "Failed to find the .text section." << std::endl;
+        Logger::log("UltimateAnticheat.log", Err, "Failed to find the .text section.");
         CloseHandle(hProcess);
         return {};
     }
@@ -1240,7 +1240,7 @@ std::vector<BYTE> Process::ReadRemoteTextSection(DWORD pid)
     SIZE_T bytesRead = 0;
     if (!ReadProcessMemory(hProcess, reinterpret_cast<LPCVOID>(baseAddress), buffer.data(), sectionSize, &bytesRead)) 
     {
-        std::cerr << "Failed to read memory. Error: " << GetLastError() << std::endl;
+        Logger::logf("UltimateAnticheat.log", Err, "Failed to read memory. Error: %d",  GetLastError());
         CloseHandle(hProcess);
         return {};
     }

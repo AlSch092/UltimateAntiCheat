@@ -635,7 +635,7 @@ BOOL Services::CheckUSBDevices()
 
     if (deviceInfoSet == INVALID_HANDLE_VALUE) 
     {
-        //std::cerr << "Failed to get device information set." << std::endl;
+        //Logger::log("UltimateAnticheat.log", Err, "Failed to get device information set.");
         return FALSE;
     }
 
