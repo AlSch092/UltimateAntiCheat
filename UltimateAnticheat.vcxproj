@@ -161,9 +161,7 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
       <AdditionalDependencies>ntdll.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(ProjectDir)\splash.png" "$(ProjectDir)\x64\Release\splash.png" 
-copy "$(ProjectDir)\DLLs\libcurl.dll" "$(ProjectDir)\x64\Release\libcurl.dll"
- copy "$(ProjectDir)\DLLs\zlib1.dll" "$(ProjectDir)\x64\Release\zlib1.dll"</Command>
+      <Command>copy "$(ProjectDir)\splash.png" "$(ProjectDir)\x64\Release\splash.png" </Command>
       <Message>Copy Splash Image</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
