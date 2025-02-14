@@ -11,7 +11,7 @@ BOOL Detections::StartMonitor()
 
     this->MonitorThread = new Thread((LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, true, true);
 
-    //Logger::logf("UltimateAnticheat.log", Info, "Created monitoring thread with ID %d", this->MonitorThread->GetId());
+    Logger::logf("UltimateAnticheat.log", Info, "Created monitoring thread with ID %d", this->MonitorThread->GetId());
     
     if (this->MonitorThread->GetHandle() == NULL || this->MonitorThread->GetHandle() == INVALID_HANDLE_VALUE)
     {
@@ -127,13 +127,41 @@ void Detections::Monitor(LPVOID thisPtr)
     bool Monitoring = true;
     const int MonitorLoopMilliseconds = 5000;
 
-    while (Monitoring) //&& !Monitor->IsUserCheater()) //uncomment if you'd like monitoring to stop once a cheater has been detected
+    while (Monitoring)
     {
-        if (Monitor->GetMonitorThread()->IsShutdownSignalled())
+        if (Monitor == nullptr) //critical error
+        {
+            Logger::logf("UltimateAnticheat.log", Err, "Monitor ptr was NULL @ Detections::Monitor, shutting down");
+            std::terminate();
+        }
+
+        if (Monitor->GetMonitorThread()->IsShutdownSignalled()) //end thread if thread shutdown is signalled
         {
             Logger::logf("UltimateAnticheat.log", Info, "STOPPING  Detections::Monitor , ending detections thread");
-            //Monitor->GetMonitorThread()->CurrentlyRunning = false;
             return;
+        }
+
+        if (Monitor->Config->bCheckHypervisor)
+        {
+            if (Services::IsHypervisorPresent()) //we can either block all hypervisors to try and stop SLAT/EPT manipulation, or only allow certain vendors.
+            {
+                string vendor = Services::GetHypervisorVendor(); //...however, many custom hypervisors will likely spoof their vendorId to be 'HyperV' or 'VMWare' 
+
+                if (vendor.size() == 0) //custom hypervisors might empty the vendor
+                {
+                    Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor vendor was empty, some custom hypervisor might be hooking cpuid instruction");
+                }
+                else if (vendor == "Microsoft Hv" || vendor == "Micrt Hvosof" || vendor == "VMwareVMware" || vendor == "XenVMMXenVMM" || vendor == "VBoxVBoxVBox")
+                {
+                    Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor was present with vendor: %s", vendor.c_str());
+                }
+                else
+                {
+                    Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor was present with unknown/non-standard vendor: %s.", vendor.c_str());
+                }
+
+                Monitor->Flag(DetectionFlags::HYPERVISOR);
+            }
         }
 
         if (Monitor->Config->bCheckIntegrity)
@@ -817,7 +845,7 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
 
             if (pClassObj)
             {
-                VARIANT vtName;
+                VARIANT vtName {};
                 pClassObj->Get(L"Name", 0, &vtName, 0, 0);
 
                 for (wstring blacklistedProcess : monitor->BlacklistedProcesses)
@@ -828,8 +856,11 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
                     }
                 }
 
-                std::list<DWORD> pidList = Process::GetProcessIdsByName(vtName.bstrVal);
-		        for (auto pid: pidList)
+                std::list<DWORD> pidList = Process::GetProcessIdsByName(wstring(vtName.bstrVal));
+
+                Logger::logfw("UltimateAnticheat.log", Info, L"Scanning process for blacklisted patterns: %s", vtName.bstrVal);
+
+                for (auto pid: pidList)
                 {
                     if (monitor->FindBlacklistedProgramsThroughByteScan(pid))
                     {
@@ -847,7 +878,7 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
         if(monitor->GetMonitorThread() != nullptr)
             monitor->GetMonitorThread()->UpdateTick(); //update tick on each loop, then we can check this value from a different thread to see if someone has suspended it
 
-        Sleep(50); //ease the CPU a bit
+        this_thread::sleep_for(std::chrono::milliseconds(100)); //ease the CPU a bit
     }
 
     pSvc->Release();
@@ -1025,7 +1056,7 @@ bool Detections::DetectManualMapping(__in HANDLE hProcess)
     MEMORY_BASIC_INFORMATION mbi;
 
     uint64_t addr = 0;  //scan start address
-    uintptr_t userModeLimit = 0x00007FFFFFFFFFFF;
+    uintptr_t userModeLimit = 0x00007FFFFFFFFFFF; //end scan at va
 
     while ((uintptr_t)addr < userModeLimit && VirtualQuery((LPCVOID)addr, &mbi, sizeof(mbi)) == sizeof(mbi)) //loop through all memory regions in the process
     {
