@@ -1,5 +1,6 @@
 //By AlSch092 @ Github
 #include "API.hpp"
+#include "../AntiCheat.hpp"
 
 /*
 	Initialize - Initializes the anti-cheat module by connecting to the auth server (if available) and sending it the game's unique code, and checking the parent process to ensure a rogue launcher wasn't used

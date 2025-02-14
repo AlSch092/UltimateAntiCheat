@@ -1,7 +1,9 @@
 //By AlSch092 @ Github
 #pragma once
-#include "../AntiCheat.hpp"
 #include "../Common/Error.hpp"
+#include <string>
+
+class AntiCheat;
 
 using namespace std;
 

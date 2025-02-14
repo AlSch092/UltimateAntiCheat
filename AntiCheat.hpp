@@ -13,6 +13,7 @@
 #include "Preventions.hpp"
 #include "Common/Logger.hpp"
 #include "Common/Settings.hpp"
+#include "API/API.hpp"
 
 /*
 	The `AntiCheat` class is a container for the necessary classes of our program, including the monitor, barrier, netclient, and anti-debugger
@@ -83,7 +84,15 @@ public:
 			{
 				Logger::logf("UltimateAnticheat.log", Warning, "Failed to unload kernelmode driver!");
 			}
-		}	
+		}
+		if (API::Dispatch(this, API::DispatchCode::CLIENT_EXIT) == Error::OK) //clean up memory & threads -> this will soon be removed once all threads and objects are changed to smart pointers
+	    {
+        	Logger::logf("UltimateAnticheat.log", Info, " Cleanup successful. Shutting down program");
+    	}
+	    else
+    	{
+        	Logger::logf("UltimateAnticheat.log", Err, "Cleanup unsuccessful... Shutting down program");
+    	}
 	}
 
 	AntiCheat& operator=(AntiCheat&& other) = delete; //delete move assignments

@@ -9,7 +9,8 @@
 */
 #include <map>
 
-#include "API/API.hpp"  //API.hpp includes anticheat.hpp
+#include "API/API.hpp"
+#include "AntiCheat.hpp"
 #include "SplashScreen.hpp"
 
 #pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper) - each section gets its own region, align with system allocation granularity
@@ -168,7 +169,7 @@ int main(int argc, char** argv)
     if (API::Dispatch(Anti_Cheat.get(), API::DispatchCode::INITIALIZE) != Error::OK) //initialize AC , this will start all detections + preventions
     {
         Logger::logf("UltimateAnticheat.log", Err, "Could not initialize program: API::Dispatch failed. Shutting down.");
-        goto cleanup;
+        return 1;
     }
 
     if (ConfigInstance->bCheckThreads)
@@ -176,7 +177,7 @@ int main(int argc, char** argv)
         if (Anti_Cheat->IsAnyThreadSuspended()) //make sure that all our necessary threads aren't suspended by an attacker
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Atleast one of our threads was found suspended! All threads must be running for proper module functionality.");
-            goto cleanup;
+            return 1;
         }
     }
 
@@ -210,17 +211,6 @@ int main(int argc, char** argv)
     };
     for (DetectionFlags flag : flags) {
             Logger::logf("UltimateAnticheat.log", Info, explanations[flag]);
-    }
-
-cleanup: //jump to here on any error with AC initialization
-
-    if (API::Dispatch(Anti_Cheat.get(), API::DispatchCode::CLIENT_EXIT) == Error::OK) //clean up memory & threads -> this will soon be removed once all threads and objects are changed to smart pointers
-    {
-        Logger::logf("UltimateAnticheat.log", Info, " Cleanup successful. Shutting down program");
-    }
-    else
-    {
-        Logger::logf("UltimateAnticheat.log", Err, "Cleanup unsuccessful... Shutting down program");
     }
 
     return 0;
