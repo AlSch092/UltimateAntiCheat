@@ -519,7 +519,7 @@ DWORD Process::GetParentProcessId()
     }
     __finally 
     {
-        if (hSnapshot != INVALID_HANDLE_VALUE) 
+        if (hSnapshot != INVALID_HANDLE_VALUE && hSnapshot != 0) 
             CloseHandle(hSnapshot);
     }
     return ppid;
@@ -542,8 +542,10 @@ DWORD Process::GetProcessIdByName(wstring procName)
     {
         while (Process32Next(snapshot, &entry) == TRUE)
             if (wcscmp(entry.szExeFile, procName.c_str()) == 0)
+            {
                 pid = entry.th32ProcessID;
-                   
+                break;
+            }              
     }
 
     CloseHandle(snapshot);
@@ -557,6 +559,9 @@ DWORD Process::GetProcessIdByName(wstring procName)
 */
 list<DWORD> Process::GetProcessIdsByName(wstring procName)
 {
+    if (procName.size() == 0)
+        return {};
+
     list<DWORD> pids;
     PROCESSENTRY32 entry;
     entry.dwSize = sizeof(PROCESSENTRY32);
