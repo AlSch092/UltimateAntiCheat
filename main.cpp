@@ -7,8 +7,10 @@
 
     Author: AlSch092 @ Github
 */
+#include <map>
 
-#include "API/API.hpp"  //API.hpp includes anticheat.hpp
+#include "API/API.hpp"
+#include "AntiCheat.hpp"
 #include "SplashScreen.hpp"
 
 #pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper) - each section gets its own region, align with system allocation granularity
@@ -46,6 +48,9 @@ int main(int argc, char** argv)
     bool bCheckHypervisor = true;
     bool bRequireRunAsAdministrator = true;
     bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
+    bool logToFile = true;
+    const std::list<std::wstring> allowedParents = {L"VsDebugConsole.exe", L"powershell.exe", L"bash.exe", L"zsh.exe", L"explorer.exe"};
+
 #else
     bool bEnableNetworking = false; //change this to false if you don't want to use the server
     bool bEnforceSecureBoot = false; //secure boot is recommended in distribution builds
@@ -56,7 +61,9 @@ int main(int argc, char** argv)
     bool bCheckThreadIntegrity = true;
     bool bCheckHypervisor = true;
     bool bRequireRunAsAdministrator = true;
+    bool logToFile = true; // set to false to not create a detailed AntiCheat log file on the user's system
     bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
+    const std::list<std::wstring> allowedParents = {L"explorer.exe", L"steam.exe"}; //add your launcher here
 #endif
 
 #ifdef _DEBUG
@@ -70,6 +77,12 @@ int main(int argc, char** argv)
     cout << "\tCheck Thread Integrity:\t" << boolalpha << bCheckThreadIntegrity << "\n";
     cout << "\tCheck Hypervisor:\t" << boolalpha << bCheckHypervisor << "\n";
     cout << "\tRequire Admin:\t\t" << boolalpha << bRequireRunAsAdministrator << "\n";
+    cout << "\tAllowed parent processes: \t\t";
+    for (auto parent: allowedParents) {
+        wcout << parent << " ";
+    }
+    cout << "\n";
+    cout << "\tEnable logging to file:\t\t" << boolalpha << logToFile << "\n";
 #endif
 
     const int MillisecondsBeforeShutdown = 120000;
@@ -87,7 +100,7 @@ int main(int argc, char** argv)
     cout << "|           discriminating@github (dll load notifcations, catalog verification)          |\n";
     cout << "------------------------------------------------------------------------------------------\n";
 
-    shared_ptr<Settings> ConfigInstance = Settings::CreateInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator, bUsingDriver);
+    shared_ptr<Settings> ConfigInstance = Settings::CreateInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator, bUsingDriver, allowedParents, logToFile);
 
     if (ConfigInstance->bRequireRunAsAdministrator)
     {
@@ -156,7 +169,7 @@ int main(int argc, char** argv)
     if (API::Dispatch(Anti_Cheat.get(), API::DispatchCode::INITIALIZE) != Error::OK) //initialize AC , this will start all detections + preventions
     {
         Logger::logf("UltimateAnticheat.log", Err, "Could not initialize program: API::Dispatch failed. Shutting down.");
-        goto cleanup;
+        return 1;
     }
 
     if (ConfigInstance->bCheckThreads)
@@ -164,7 +177,7 @@ int main(int argc, char** argv)
         if (Anti_Cheat->IsAnyThreadSuspended()) //make sure that all our necessary threads aren't suspended by an attacker
         {
             Logger::logf("UltimateAnticheat.log", Detection, "Atleast one of our threads was found suspended! All threads must be running for proper module functionality.");
-            goto cleanup;
+            return 1;
         }
     }
 
@@ -180,15 +193,24 @@ int main(int argc, char** argv)
         Logger::logf("UltimateAnticheat.log", Info, "Detected a possible cheater in first %d milliseconds of runtime!", MillisecondsBeforeShutdown);
     }
 
-cleanup: //jump to here on any error with AC initialization
-
-    if (API::Dispatch(Anti_Cheat.get(), API::DispatchCode::CLIENT_EXIT) == Error::OK) //clean up memory & threads -> this will soon be removed once all threads and objects are changed to smart pointers
-    {
-        Logger::logf("UltimateAnticheat.log", Info, " Cleanup successful. Shutting down program");
-    }
-    else
-    {
-        Logger::logf("UltimateAnticheat.log", Err, "Cleanup unsuccessful... Shutting down program");
+    list<DetectionFlags> flags = Anti_Cheat->GetMonitor()->GetDetectedFlags();
+    std::map<DetectionFlags, const char*> explanations = {
+        { DetectionFlags::DEBUGGER, "Debugger detected" },
+        { DetectionFlags::PAGE_PROTECTIONS, ".text section is writable, memory was re-mapped" },
+        { DetectionFlags::CODE_INTEGRITY, "process patched" },
+        { DetectionFlags::DLL_TAMPERING, "Networking WINAPI hooked" },
+        { DetectionFlags::BAD_IAT, "DLL hooking via Import Adress Table modification" },
+        { DetectionFlags::OPEN_PROCESS_HANDLES, "A process has handles on our process" },
+        { DetectionFlags::UNSIGNED_DRIVERS, "unsigned drivers on machine" },
+        { DetectionFlags::INJECTED_ILLEGAL_PROGRAM, "unsigned DLL injected on the process" },
+        { DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM, "blacklisted program name running on machine" },
+        { DetectionFlags::REGISTRY_KEY_MODIFICATIONS, "changes to registry keys related to secure boot, CI, testsigning mode, etc..." },
+        { DetectionFlags::MANUAL_MAPPING, "manually mapped module injected" },
+        { DetectionFlags::SUSPENDED_THREAD, "not implemented for now" },
+        { DetectionFlags::HYPERVISOR, "an hypervisor is running on the machine" }
+    };
+    for (DetectionFlags flag : flags) {
+            Logger::logf("UltimateAnticheat.log", Info, explanations[flag]);
     }
 
     return 0;

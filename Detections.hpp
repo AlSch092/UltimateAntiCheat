@@ -98,6 +98,7 @@ public:
 
 	void SetCheater(BOOL cheating) { this->CheaterWasDetected->SetData((uint8_t)cheating); } //obfuscated bool/int variable. cast to uint8 to avoid getting stuck as 0/1 by compilers bool interpretation
 	BOOL IsUserCheater() const  { return this->CheaterWasDetected->GetData(); }
+	list<DetectionFlags> GetDetectedFlags() const { return this->DetectedFlags; }
 
 	BOOL SetSectionHash(const char* module, const char* sectionName);
 	BOOL IsSectionHashUnmatching(UINT64 cachedAddress, DWORD cachedSize, const string section);

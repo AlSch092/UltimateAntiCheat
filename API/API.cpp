@@ -1,11 +1,12 @@
 //By AlSch092 @ Github
 #include "API.hpp"
+#include "../AntiCheat.hpp"
 
 /*
 	Initialize - Initializes the anti-cheat module by connecting to the auth server (if available) and sending it the game's unique code, and checking the parent process to ensure a rogue launcher wasn't used
 	returns Error::OK on success.
 */
-Error API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessName, bool isServerAvailable)
+Error API::Initialize(AntiCheat* AC, string licenseKey, bool isServerAvailable)
 {
 	Error errorCode = Error::OK;
 	bool isLicenseValid = false;
@@ -13,13 +14,17 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, wstring parentProcessNam
 	if (AC == NULL)
 		return Error::NULL_MEMORY_REFERENCE;
 
-	if (Process::CheckParentProcess(parentProcessName)) //check parent process before startup, kick out if bad
-	{
-		AC->GetMonitor()->GetProcessObj()->SetParentName(parentProcessName);
+	std::list<wstring> allowedParents = AC->GetConfig()->allowedParents;
+	auto it = std::find_if(allowedParents.begin(), allowedParents.end(), [](const wstring& parentName) {
+		return Process::CheckParentProcess(parentName);
+	});
+
+	if (it != allowedParents.end()) {
+		AC->GetMonitor()->GetProcessObj()->SetParentName(*it);
 	}
 	else //bad parent process detected, or parent process mismatch, shut down the program (and optionally report the error to the server)
 	{
-		Logger::logfw("UltimateAnticheat.log", Detection, L"Parent process was not whitelisted, shutting down program! Make sure parent process is the same as specified in API.hpp. If you are using VS to debug, this might become VsDebugConsole.exe, rather than %s", parentProcessName.c_str());
+		Logger::logfw("UltimateAnticheat.log", Detection, L"Parent process was not whitelisted, shutting down program!");
 		errorCode = Error::PARENT_PROCESS_MISMATCH;
 	}
 
@@ -130,7 +135,7 @@ Error API::LaunchDefenses(AntiCheat* AC) //currently in the process to split the
 
 	if (!Process::CheckParentProcess(AC->GetMonitor()->GetProcessObj()->GetParentName())) //parent process check, the parent process would normally be set using our API methods
 	{
-		Logger::logf("UltimateAnticheat.log", Detection, "Parent process was not % s! cheater detected!\n", API::whitelistedParentProcess);
+		Logger::logf("UltimateAnticheat.log", Detection, "Parent process was not in whitelist! cheater detected!\n");
 		errorCode = Error::PARENT_PROCESS_MISMATCH;
 	}
 
@@ -149,7 +154,7 @@ Error API::Dispatch(AntiCheat* AC, DispatchCode code)
 	{
 		case INITIALIZE:
 		{			
-			errorCode = Initialize(AC, "GAMECODE-XyIlqRmRj", whitelistedParentProcess, AC->GetConfig()->bNetworkingEnabled); //if explorer.exe isn't our parent process, shut 'er down!
+			errorCode = Initialize(AC, "GAMECODE-XyIlqRmRj", AC->GetConfig()->bNetworkingEnabled); //if explorer.exe isn't our parent process, shut 'er down!
 
 			if (errorCode == Error::OK)
 			{

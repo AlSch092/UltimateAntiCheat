@@ -6,6 +6,9 @@ project(UltimateAnticheat VERSION 1.0)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+# Define the location of the splash.png in the project root
+set(EXECUTABLE_NAME "UltimateAntiCheat.exe")
+
 # Collect all .cpp files from the base directory and subdirectories
 file(GLOB_RECURSE SOURCES 
     "*.cpp" 
@@ -42,6 +45,7 @@ file(GLOB_RECURSE RESOURCES
 
 # Explicitly remove CMakeCXXCompilerId.cpp if it's in the list of sources
 list(REMOVE_ITEM SOURCES "${CMAKE_BINARY_DIR}/CMakeCXXCompilerId.cpp")
+list(REMOVE_ITEM SOURCES "${CMAKE_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION}/CompilerIdCXX/CMakeCXXCompilerId.cpp")
 
 # Define the location of the splash.png in the project root
 set(SPLASH_IMAGE "${CMAKE_SOURCE_DIR}/splash.png")
@@ -56,6 +60,11 @@ add_executable(UltimateAnticheat ${SOURCES} ${HEADERS} ${RESOURCES})
 
 # Target windows version -> change this if you're on a different major version of windows
 target_compile_definitions(UltimateAnticheat PRIVATE _WIN32_WINNT=0x0A00)
+
+# Module name 
+target_compile_definitions(UltimateAnticheat PUBLIC _MAIN_MODULE_NAME="${EXECUTABLE_NAME}")
+target_compile_definitions(UltimateAnticheat PUBLIC _MAIN_MODULE_NAME_W=L"${EXECUTABLE_NAME}")
+
 
 # Check for MSVC compiler and add MSVC-specific definitions
 if(MSVC)
