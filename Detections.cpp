@@ -493,6 +493,7 @@ BOOL __forceinline Detections::DoesFunctionAppearHooked(const char* moduleName, 
 BOOL __forceinline Detections::DoesIATContainHooked()
 {
     list<ProcessData::ImportFunction*> IATFunctions = Process::GetIATEntries();
+    BOOL isIATHooked = FALSE;
 
     auto modules = Process::GetLoadedModules();
 
@@ -500,18 +501,27 @@ BOOL __forceinline Detections::DoesIATContainHooked()
     {
         DWORD moduleSize = Process::GetModuleSize(IATEntry->Module);
 
+        BOOL FoundIATEntryInModule = FALSE;
+
         if (moduleSize != 0)
         {   //some IAT functions in k32 can point to ntdll (forwarding), thus we have to compare IAT to each other whitelisted DLL range
-            for (std::vector<ProcessData::MODULE_DATA>::iterator it = modules.begin(); it != modules.end(); ++it)
+            for (auto mod : modules)
             {
-                UINT64 LowAddr = (UINT64)it->dllInfo.lpBaseOfDll;
-                UINT64 HighAddr = (UINT64)it->dllInfo.lpBaseOfDll + it->dllInfo.SizeOfImage;
+                UINT64 LowAddr = (UINT64)mod.dllInfo.lpBaseOfDll;
+                UINT64 HighAddr = (UINT64)mod.dllInfo.lpBaseOfDll + mod.dllInfo.SizeOfImage;
 
-                if (IATEntry->AddressOfData > LowAddr && IATEntry->AddressOfData < HighAddr)
+                if (IATEntry->AddressOfData > LowAddr && IATEntry->AddressOfData < HighAddr) //each IAT entry needs to be checked thru all loaded ranges
                 {
-                    return FALSE; //IAT function was found to be inside address range of loaded DLL, thus its not hooked
+                    FoundIATEntryInModule = TRUE;
                 }
             }
+
+            if (!FoundIATEntryInModule)
+            {
+                isIATHooked = TRUE;
+                break;
+            }
+                
         }
         else //error, we shouldnt get here!
         {
@@ -520,7 +530,7 @@ BOOL __forceinline Detections::DoesIATContainHooked()
         }
     }
 
-    return TRUE;
+    return isIATHooked;
 }
 
 
