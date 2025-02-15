@@ -1,4 +1,6 @@
 ## Updates
+- Feb 15, '25: Started Wiki page for documentation, fixed some bugs, and several QoL improvements (thanks LucasParsy for your contributions)
+  
 - Feb 8, '25: Adding manually mapped image checks (not yet detecting erased PE headers, this will come next)
   
 - Jan 31, '25: Added web-fetching of blacklisted byte patterns at runtime from a url, along with blacklisted/vulnerable driver list
