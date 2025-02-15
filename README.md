@@ -36,8 +36,7 @@ The project now supports CMake & using the LLVM/clang-cl compiler, which can be 
 - Check for if Windows is in 'Test Signing mode' and 'debug mode'
 - Secure boot enforcement (anti-bootloader)
 - Hypervisor checks  
-- TLS Callback & new thread start routine address `ret` patching (anti-execution)
-- TLS Callback spoofing (changing TLS callbacks at runtime), along with checks to ensure the TLS callback structure has not been modified or added to  
+- TLS Callback & new thread start routine address `ret` patching (anti-execution), along with checks to ensure the TLS callback pointer has not been modified
 - Optional networked heartbeat system to ensure client is running the AC module
 - Stops multiple instances of the process from being run by mapping shared memory
 - Return address checks in important routines such as heartbeat generation to prevent being called by other modules
