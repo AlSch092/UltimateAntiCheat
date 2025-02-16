@@ -24,7 +24,7 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, bool isServerAvailable)
 	}
 	else //bad parent process detected, or parent process mismatch, shut down the program (and optionally report the error to the server)
 	{
-		Logger::logfw("UltimateAnticheat.log", Detection, L"Parent process was not whitelisted, shutting down program!");
+		Logger::logfw("UltimateAnticheat.log", Detection, L"Parent process '%s' was not whitelisted, shutting down program!", Process::GetProcessName(Process::GetParentProcessId()).c_str());
 		errorCode = Error::PARENT_PROCESS_MISMATCH;
 	}
 
