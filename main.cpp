@@ -49,7 +49,7 @@ int main(int argc, char** argv)
     bool bRequireRunAsAdministrator = true;
     bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
     bool logToFile = true;
-    const std::list<std::wstring> allowedParents = {L"VsDebugConsole.exe", L"powershell.exe", L"bash.exe", L"zsh.exe", L"explorer.exe"};
+    const std::list<std::wstring> allowedParents = {L"VsDebugConsole.exe", L"vsdbg.exe", L"powershell.exe", L"bash.exe", L"zsh.exe", L"explorer.exe"};
 
 #else
     bool bEnableNetworking = false; //change this to false if you don't want to use the server

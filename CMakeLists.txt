@@ -44,8 +44,7 @@ file(GLOB_RECURSE RESOURCES
 )
 
 # Explicitly remove CMakeCXXCompilerId.cpp if it's in the list of sources
-list(REMOVE_ITEM SOURCES "${CMAKE_BINARY_DIR}/CMakeCXXCompilerId.cpp")
-list(REMOVE_ITEM SOURCES "${CMAKE_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION}/CompilerIdCXX/CMakeCXXCompilerId.cpp")
+list(FILTER SOURCES EXCLUDE REGEX ".*CMakeCXXCompilerId.cpp$")
 
 # Define the location of the splash.png in the project root
 set(SPLASH_IMAGE "${CMAKE_SOURCE_DIR}/splash.png")
