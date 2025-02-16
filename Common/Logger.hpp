@@ -27,11 +27,11 @@ const WORD ConsoleTextColors[] =
 class Logger final
 {
 public:
-    static bool logToFile;
+    static bool enableLogging;
 
     static void log(const std::string& filename, LogType type, const std::string& message)
     {
-        if (!logToFile) {
+        if (!enableLogging) {
             return;
         }
         std::lock_guard<std::mutex> lock(consoleMutex);
@@ -108,7 +108,7 @@ public:
 
     static void logw(const std::string& filename, LogType type, const std::wstring& message)
     {
-        if (!logToFile) {
+        if (!enableLogging) {
             return;
         }
         std::wofstream logFile(filename, std::ios::out | std::ios::app);

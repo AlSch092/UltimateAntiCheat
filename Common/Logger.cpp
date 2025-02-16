@@ -1,5 +1,5 @@
 //AlSch092 @ Github
 #include "Logger.hpp"
 
-bool Logger::logToFile = true;
+bool Logger::enableLogging = true;
 std::mutex Logger::consoleMutex; 

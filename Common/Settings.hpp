@@ -20,7 +20,7 @@ public:
 		bool bRequireRunAsAdministrator,
 		bool bUsingDriver,
 		const std::list<std::wstring> allowedParents,
-		bool logToFile)
+		bool enableLogging)
 	{
 		if (!Instance)
 		{
@@ -36,7 +36,7 @@ public:
 				bRequireRunAsAdministrator,
 				bUsingDriver,
 				allowedParents,
-				logToFile));
+				enableLogging));
 		}
 
 		return Instance;
@@ -57,7 +57,7 @@ public:
 	bool bNetworkingEnabled; //previously in API.hpp
 	bool bUsingDriver; //signed kernelmode driver for hybrid approach
 	const std::list<std::wstring> allowedParents;
-	bool logToFile;
+	bool enableLogging;
 
 	wstring GetKMDriverName() const { return this->KMDriverName; }
 	wstring GetKMDriverPath() const { return this->KMDriverPath; }
@@ -76,10 +76,10 @@ private:
 		bool bRequireRunAsAdministrator,
 		bool bUsingDriver,
 		const std::list<std::wstring> allowedParents,
-		bool logToFile)
-		: bNetworkingEnabled(bNetworkingEnabled), bEnforceSecureBoot(bEnforceSecureBoot), bEnforceDSE(bEnforceDSE), bEnforceNoKDbg(bEnforceNoKDbg), bUseAntiDebugging(bUseAntiDebugging), bCheckIntegrity(bCheckIntegrity), bCheckThreads(bCheckThreads), bCheckHypervisor(bCheckHypervisor), bRequireRunAsAdministrator(bRequireRunAsAdministrator), bUsingDriver(bUsingDriver), allowedParents(allowedParents), logToFile(logToFile)
+		bool enableLogging)
+		: bNetworkingEnabled(bNetworkingEnabled), bEnforceSecureBoot(bEnforceSecureBoot), bEnforceDSE(bEnforceDSE), bEnforceNoKDbg(bEnforceNoKDbg), bUseAntiDebugging(bUseAntiDebugging), bCheckIntegrity(bCheckIntegrity), bCheckThreads(bCheckThreads), bCheckHypervisor(bCheckHypervisor), bRequireRunAsAdministrator(bRequireRunAsAdministrator), bUsingDriver(bUsingDriver), allowedParents(allowedParents), enableLogging(enableLogging)
 	{
-		Logger::logToFile = logToFile; //put this line here to be as early as possible.
+		Logger::enableLogging = enableLogging; //put this line here to be as early as possible.
 	}
 	 
 	const wstring KMDriverName = L"UltimateKernelAnticheat"; //optional hybrid approach

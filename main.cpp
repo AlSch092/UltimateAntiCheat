@@ -48,7 +48,7 @@ int main(int argc, char** argv)
     bool bCheckHypervisor = true;
     bool bRequireRunAsAdministrator = true;
     bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
-    bool logToFile = true;
+    bool enableLogging = true;
     const std::list<std::wstring> allowedParents = {L"VsDebugConsole.exe", L"vsdbg.exe", L"powershell.exe", L"bash.exe", L"zsh.exe", L"explorer.exe"};
 
 #else
@@ -61,7 +61,7 @@ int main(int argc, char** argv)
     bool bCheckThreadIntegrity = true;
     bool bCheckHypervisor = true;
     bool bRequireRunAsAdministrator = true;
-    bool logToFile = true; // set to false to not create a detailed AntiCheat log file on the user's system
+    bool enableLogging = true; // set to false to not create a detailed AntiCheat log file on the user's system
     bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
     const std::list<std::wstring> allowedParents = {L"explorer.exe", L"steam.exe"}; //add your launcher here
 #endif
@@ -82,7 +82,7 @@ int main(int argc, char** argv)
         wcout << parent << " ";
     }
     cout << "\n";
-    cout << "\tEnable logging to file:\t\t" << boolalpha << logToFile << "\n";
+    cout << "\tEnable logging :\t\t" << boolalpha << enableLogging << "\n";
 #endif
 
     const int MillisecondsBeforeShutdown = 120000;
@@ -100,7 +100,7 @@ int main(int argc, char** argv)
     cout << "|           discriminating@github (dll load notifcations, catalog verification)          |\n";
     cout << "------------------------------------------------------------------------------------------\n";
 
-    shared_ptr<Settings> ConfigInstance = Settings::CreateInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator, bUsingDriver, allowedParents, logToFile);
+    shared_ptr<Settings> ConfigInstance = Settings::CreateInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator, bUsingDriver, allowedParents, enableLogging);
 
     if (ConfigInstance->bRequireRunAsAdministrator)
     {
