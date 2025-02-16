@@ -18,7 +18,7 @@ bool DebuggerDetections::_IsKernelDebuggerPresent()
 
 	if (hModule == NULL)
 	{
-		Logger::logf("UltimateAnticheat.log", Err, "Error fetching module ntdll.dll @ _IsKernelDebuggerPresent: %d", GetLastError());
+		Logger::logf(Err, "Error fetching module ntdll.dll @ _IsKernelDebuggerPresent: %d", GetLastError());
 		return false;
 	}
 
@@ -32,7 +32,7 @@ bool DebuggerDetections::_IsKernelDebuggerPresent()
 		{
 			if (!Flag(Detections::KERNEL_DEBUGGER))
 			{
-				Logger::logf("UltimateAnticheat.log", Warning, "Failed to notify server of debugging method (server may be offline or duplicate entry)");
+				Logger::logf(Warning, "Failed to notify server of debugging method (server may be offline or duplicate entry)");
 			}
 
 			return true;
@@ -55,7 +55,7 @@ bool DebuggerDetections::_IsKernelDebuggerPresent_SharedKData()
 
 		if (!Flag(Detections::KERNEL_DEBUGGER))
 		{
-			Logger::logf("UltimateAnticheat.log", Warning, "Failed to notify server of debugging method (server may be offline or duplicate entry)");
+			Logger::logf(Warning, "Failed to notify server of debugging method (server may be offline or duplicate entry)");
 		}
 	}
 
@@ -92,7 +92,7 @@ bool DebuggerDetections::_IsDebuggerPresent_HeapFlags()
 		}
 		__except (EXCEPTION_EXECUTE_HANDLER)
 		{
-			Logger::logf("UltimateAnticheat.log", Warning, "Failed to dereference heapForceFlagsPtr @ _IsDebuggerPresent_HeapFlags");
+			Logger::logf(Warning, "Failed to dereference heapForceFlagsPtr @ _IsDebuggerPresent_HeapFlags");
 			return false;
 		}
 	}
@@ -154,7 +154,7 @@ bool DebuggerDetections::_IsDebuggerPresent_DbgBreak()
 		return false;
 	}
 
-	Logger::logf("UltimateAnticheat.log", Info, "Calling __fastfail() to prevent further execution since a debugger was found running.");
+	Logger::logf(Info, "Calling __fastfail() to prevent further execution since a debugger was found running.");
 
 	if (!Flag(Detections::DBG_BREAK))
 	{//optionally take further action, `Flag` will already log a warning
@@ -191,7 +191,7 @@ bool DebuggerDetections::_IsDebuggerPresent_VEH()
 
 			if (!VirtualProtect((void*)veh_addr, 1, PAGE_EXECUTE_READWRITE, &dwOldProt))
 			{
-				Logger::logf("UltimateAnticheat.log", Warning, "VirtualProtect failed @ _IsDebuggerPresent_VEH");
+				Logger::logf(Warning, "VirtualProtect failed @ _IsDebuggerPresent_VEH");
 				return true; //return true since we found the routine, even though we can't patch over it. if virtualprotect fails, the program will probably crash if trying to patch it
 			}
 
@@ -199,12 +199,12 @@ bool DebuggerDetections::_IsDebuggerPresent_VEH()
 
 			if (!VirtualProtect((void*)veh_addr, 1, dwOldProt, &dwOldProt)) //change back to old prot's
 			{
-				Logger::logf("UltimateAnticheat.log", Warning, "VirtualProtect failed @ _IsDebuggerPresent_VEH");
+				Logger::logf(Warning, "VirtualProtect failed @ _IsDebuggerPresent_VEH");
 			}
 
 			if (Process::ChangeModuleName(L"vehdebug-x86_64.dll", L"STOP_CHEATING")) //change the vehdebug module name to something else for fun
 			{
-				Logger::logf("UltimateAnticheat.log", Info, "Changed module name of vehdebug-x86_64.dll to STOP_CHEATING to prevent VEH debugging.");
+				Logger::logf(Info, "Changed module name of vehdebug-x86_64.dll to STOP_CHEATING to prevent VEH debugging.");
 			}
 		}
 	}
@@ -268,12 +268,12 @@ bool DebuggerDetections::_IsDebuggerPresent_DebugPort()
 		}
 		else
 		{
-			Logger::logf("UltimateAnticheat.log", Warning, "Failed to fetch NtQueryInformationProcess address @ _IsDebuggerPresent_DebugPort ");
+			Logger::logf(Warning, "Failed to fetch NtQueryInformationProcess address @ _IsDebuggerPresent_DebugPort ");
 		}
 	}
 	else
 	{
-		Logger::logf("UltimateAnticheat.log", Warning, "Failed to fetch ntdll.dll address @ _IsDebuggerPresent_DebugPort ");
+		Logger::logf(Warning, "Failed to fetch ntdll.dll address @ _IsDebuggerPresent_DebugPort ");
 	}
 
 	return false;
@@ -310,7 +310,7 @@ bool DebuggerDetections::_IsDebuggerPresent_ProcessDebugFlags()
 	}
 	else
 	{
-		Logger::logf("UltimateAnticheat.log", Warning, "Failed to fetch ntdll.dll address @ _IsDebuggerPresent_ProcessDebugFlags ");
+		Logger::logf(Warning, "Failed to fetch ntdll.dll address @ _IsDebuggerPresent_ProcessDebugFlags ");
 	}
 	return false;
 }
@@ -340,7 +340,7 @@ bool DebuggerDetections::_ExitCommonDebuggers()
 
 			if (K32Base == NULL)
 			{
-				Logger::logf("UltimateAnticheat.log", Warning, "Failed to fetch kernel32.dll address @ _ExitCommonDebuggers ");
+				Logger::logf(Warning, "Failed to fetch kernel32.dll address @ _ExitCommonDebuggers ");
 				return false;
 			}
 
@@ -348,7 +348,7 @@ bool DebuggerDetections::_ExitCommonDebuggers()
 
 			if (ExitProcessAddr == NULL)
 			{
-				Logger::logf("UltimateAnticheat.log", Warning, "Failed to fetch ExitProcess address @ _ExitCommonDebuggers ");
+				Logger::logf(Warning, "Failed to fetch ExitProcess address @ _ExitCommonDebuggers ");
 				return false;
 			}
 
@@ -359,7 +359,7 @@ bool DebuggerDetections::_ExitCommonDebuggers()
 			if (remoteProcHandle)
 			{
 				HANDLE RemoteThread = CreateRemoteThread(remoteProcHandle, 0, 0, (LPTHREAD_START_ROUTINE)(Process::GetRemoteModuleBaseAddress(foundPid, L"kernel32.dll") + ExitProcessOffset), 0, 0, 0);
-				Logger::logf("UltimateAnticheat.log", Info, "Created remote thread at %llX address", (Process::GetRemoteModuleBaseAddress(foundPid, L"kernel32.dll") + ExitProcessOffset));
+				Logger::logf(Info, "Created remote thread at %llX address", (Process::GetRemoteModuleBaseAddress(foundPid, L"kernel32.dll") + ExitProcessOffset));
 				triedEndDebugger = true;
 			}
 		}

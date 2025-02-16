@@ -24,13 +24,13 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, bool isServerAvailable)
 	}
 	else //bad parent process detected, or parent process mismatch, shut down the program (and optionally report the error to the server)
 	{
-		Logger::logfw("UltimateAnticheat.log", Detection, L"Parent process '%s' was not whitelisted, shutting down program!", Process::GetProcessName(Process::GetParentProcessId()).c_str());
+		Logger::logfw(Detection, L"Parent process '%s' was not whitelisted, shutting down program!", Process::GetProcessName(Process::GetParentProcessId()).c_str());
 		errorCode = Error::PARENT_PROCESS_MISMATCH;
 	}
 
 	if (isServerAvailable)
 	{
-		Logger::logf("UltimateAnticheat.log", Info, "Starting networking component...");
+		Logger::logf(Info, "Starting networking component...");
 
 		auto client = AC->GetNetworkClient().lock();
 
@@ -44,13 +44,13 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, bool isServerAvailable)
 		}
 		else
 		{
-			Logger::logf("UltimateAnticheat.log", Err, "Could not fetch/lock network client, exiting...");
+			Logger::logf(Err, "Could not fetch/lock network client, exiting...");
 			return Error::NULL_MEMORY_REFERENCE;
 		}
 	}
 	else
 	{
-		Logger::logf("UltimateAnticheat.log", Info, "Networking is currently disabled, no heartbeats will occur");
+		Logger::logf(Info, "Networking is currently disabled, no heartbeats will occur");
 	}
 
 end:	
@@ -90,7 +90,7 @@ Error API::Cleanup(AntiCheat* AC)
 	}
 	else
 	{
-		Logger::logf("UltimateAnticheat.log", Err, "Couldn't fetch/lock netclient @  API::Cleanup");
+		Logger::logf(Err, "Couldn't fetch/lock netclient @  API::Cleanup");
 		return Error::NULL_MEMORY_REFERENCE;
 	}
 
@@ -110,17 +110,17 @@ Error API::LaunchDefenses(AntiCheat* AC) //currently in the process to split the
 
 	if (AC->GetBarrier()->DeployBarrier() == Error::OK) //activate all techniques to stop cheaters
 	{
-		Logger::logf("UltimateAnticheat.log", Info, " Barrier techniques were applied successfully!");
+		Logger::logf(Info, " Barrier techniques were applied successfully!");
 	}
 	else
 	{
-		Logger::logf("UltimateAnticheat.log", Err, "Could not initialize the barrier @ API::LaunchBasicTests");
+		Logger::logf(Err, "Could not initialize the barrier @ API::LaunchBasicTests");
 		errorCode = Error::CANT_APPLY_TECHNIQUE;
 	}
 
 	if (!AC->GetMonitor()->StartMonitor()) //start looped detections
 	{
-		Logger::logf("UltimateAnticheat.log", Err, "Could not initialize the barrier @ API::LaunchBasicTests");
+		Logger::logf(Err, "Could not initialize the barrier @ API::LaunchBasicTests");
 		errorCode = Error::CANT_STARTUP;
 	}
 
@@ -135,7 +135,7 @@ Error API::LaunchDefenses(AntiCheat* AC) //currently in the process to split the
 
 	if (!Process::CheckParentProcess(AC->GetMonitor()->GetProcessObj()->GetParentName())) //parent process check, the parent process would normally be set using our API methods
 	{
-		Logger::logf("UltimateAnticheat.log", Detection, "Parent process was not in whitelist! cheater detected!\n");
+		Logger::logf(Detection, "Parent process was not in whitelist! cheater detected!\n");
 		errorCode = Error::PARENT_PROCESS_MISMATCH;
 	}
 
@@ -160,13 +160,13 @@ Error API::Dispatch(AntiCheat* AC, DispatchCode code)
 			{
 				if (LaunchDefenses(AC) != Error::OK)
 				{
-					Logger::logf("UltimateAnticheat.log", Warning, " At least one technique experienced abnormal behavior when launching tests.");
+					Logger::logf(Warning, " At least one technique experienced abnormal behavior when launching tests.");
 					return Error::CANT_APPLY_TECHNIQUE;
 				}
 			}
 			else
 			{
-				Logger::logf("UltimateAnticheat.log", Warning, "Couldn't start up, either the parent process was wrong or no auth server was present.");
+				Logger::logf(Warning, "Couldn't start up, either the parent process was wrong or no auth server was present.");
 				return Error::CANT_CONNECT;
 			}
 		}break;
@@ -186,7 +186,7 @@ Error API::Dispatch(AntiCheat* AC, DispatchCode code)
 		} break;
 
 		default:
-			Logger::logf("UltimateAnticheat.log", Warning, "Unrecognized dispatch code @ API::Dispatch: %d\n", code);
+			Logger::logf(Warning, "Unrecognized dispatch code @ API::Dispatch: %d\n", code);
 			break;
 	};
 

@@ -31,7 +31,7 @@ void SetPEBAddress(UINT64 address)
 	}
 	__except (EXCEPTION_EXECUTE_HANDLER)
 	{
-		Logger::logf("UltimateAnticheat.log", Err, "Failed at SetPEBAddress: memory exception writing PEB ptr");
+		Logger::logf(Err, "Failed at SetPEBAddress: memory exception writing PEB ptr");
 		return;
 	}
 }
@@ -76,7 +76,7 @@ BYTE* CopyPEBBytes(unsigned int pebSize)
 	BOOL success = ReadProcessMemory(GetCurrentProcess(), pebAddress, peb_bytes, size_copy, NULL);
 	if (!success)
 	{
-		Logger::logf("UltimateAnticheat.log", Err, "Failed to copy PEB bytes. Error: %d\n", GetLastError());
+		Logger::logf(Err, "Failed to copy PEB bytes. Error: %d\n", GetLastError());
 		delete[] peb_bytes;
 		return NULL;
 	}
@@ -94,7 +94,7 @@ BYTE* CopyAndSetPEB()
 	}
 	else
 	{
-		Logger::logf("UltimateAnticheat.log", Err, "Failed to copy PEB bytes. Error: %d\n");
+		Logger::logf(Err, "Failed to copy PEB bytes. Error: %d\n");
 	}
 
 	return newPeb;

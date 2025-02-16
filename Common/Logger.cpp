@@ -2,4 +2,5 @@
 #include "Logger.hpp"
 
 bool Logger::enableLogging = true;
-std::mutex Logger::consoleMutex; 
+std::string Logger::logFileName = "";
+std::mutex Logger::consoleMutex;

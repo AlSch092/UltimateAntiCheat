@@ -38,7 +38,7 @@ namespace Debugger
         {
             if (!PreventWindowsDebuggers())
             {
-                Logger::logf("UltimateAnticheat.log", Warning, "Failed to apply anti-debugging technique @ AntiDebug()");
+                Logger::logf(Warning, "Failed to apply anti-debugging technique @ AntiDebug()");
             }
         }
 

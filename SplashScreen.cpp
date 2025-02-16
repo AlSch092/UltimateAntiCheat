@@ -75,7 +75,7 @@ LRESULT CALLBACK Splash::SplashWndProc(HWND hWnd, UINT message, WPARAM wParam, L
 
         if (imgWidth == 0 || imgHeight == 0) //failed to fetch image, check path
         {
-            Logger::logf("UltimateAnticheat.log", Warning, "Failed to load splash screen: please ensure splash.png is in the current folder or project root folder.");
+            Logger::logf(Warning, "Failed to load splash screen: please ensure splash.png is in the current folder or project root folder.");
             return 0;
         }
 

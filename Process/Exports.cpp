@@ -22,7 +22,7 @@ bool Exports::ChangeFunctionName(string dllName, string functionName, string new
 	{
 		if (LoadedImage.MappedAddress == 0)
 		{
-			Logger::logf("UltimateAnticheat.log", Err, "LoadedImage.MappedAddress was 0 at ChangeFunctionName!");
+			Logger::logf(Err, "LoadedImage.MappedAddress was 0 at ChangeFunctionName!");
 			return false;
 		}
 
@@ -43,7 +43,7 @@ bool Exports::ChangeFunctionName(string dllName, string functionName, string new
 
 					if (!VirtualProtect((LPVOID)funcName_Address, 1024, PAGE_EXECUTE_READWRITE, &oldProt))
 					{
-						Logger::logf("UltimateAnticheat.log", Err, "VirtualProtect failed @ Exports::ChangeFunctionName: %d\n", GetLastError());
+						Logger::logf(Err, "VirtualProtect failed @ Exports::ChangeFunctionName: %d\n", GetLastError());
 					}
 					else
 					{
@@ -56,13 +56,13 @@ bool Exports::ChangeFunctionName(string dllName, string functionName, string new
 		}
 		else
 		{
-			Logger::logf("UltimateAnticheat.log", Err, "MapAndLoad failed @ Exports::ChangeFunctionName: %d\n", GetLastError());
+			Logger::logf(Err, "MapAndLoad failed @ Exports::ChangeFunctionName: %d\n", GetLastError());
 			goto ending;
 		}
 	}
 	else
 	{
-		Logger::logf("UltimateAnticheat.log", Err, "ImageExportDirectory was NULL @ Exports::ChangeFunctionName");
+		Logger::logf(Err, "ImageExportDirectory was NULL @ Exports::ChangeFunctionName");
 		return false;
 	}
 

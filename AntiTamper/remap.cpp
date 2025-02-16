@@ -128,12 +128,12 @@ RmpRemapImage(
     REMAP_ROUTINE fpRemapRoutine = NULL;
     BOOL status = TRUE;
 
-    Logger::logf("UltimateAnticheat.log", Info, "Remapping image at 0x%IX\n", ImageBase);
+    Logger::logf(Info, "Remapping image at 0x%IX\n", ImageBase);
 
     pNtHeaders = RtlImageNtHeader((PVOID)ImageBase);
     if (!pNtHeaders)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "RtlImageNtHeader failed. (BaseAddress = 0x%IX)\n",
+        Logger::logf(Err, "RtlImageNtHeader failed. (BaseAddress = 0x%IX)\n",
             ImageBase);
         status = FALSE;
         goto exit;
@@ -142,7 +142,7 @@ RmpRemapImage(
     status = RmppVerifyPeSectionAlignment(pNtHeaders);
     if (!status)
     {
-        Logger::logf("UltimateAnticheat.log",Err ,"RmppVerifyPeSectionAlignment failed.\n");
+        Logger::logf(Err ,"RmppVerifyPeSectionAlignment failed.\n");
         goto exit;
     }
 
@@ -155,7 +155,7 @@ RmpRemapImage(
         PAGE_EXECUTE_READWRITE);
     if (!pRemapRegion)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "VirtualAlloc failed: %u\n", GetLastError());
+        Logger::logf(Err, "VirtualAlloc failed: %u\n", GetLastError());
         status = FALSE;
         goto exit;
     }
@@ -179,7 +179,7 @@ RmpRemapImage(
     status = fpRemapRoutine(pRemapRegion);
     if (!status)
     {
-        Logger::logf("UltimateAnticheat.log", Err,"RmppRemapImageRoutine failed.\n");
+        Logger::logf(Err,"RmppRemapImageRoutine failed.\n");
         goto exit;
     }
 
@@ -189,7 +189,7 @@ RmpRemapImage(
     status = RmppValidateRemappedImageProtection(ImageBase);
     if (!status)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "RmppValidateRemappedImageProtection failed.\n");
+        Logger::logf(Err, "RmppValidateRemappedImageProtection failed.\n");
         goto exit;
     }
 
@@ -198,7 +198,7 @@ exit:
     {
         if (!VirtualFree(pRemapRegion, 0, MEM_RELEASE))
         {
-            Logger::logf("UltimateAnticheat.log", Err, "VirtualFree failed: %u\n", GetLastError());
+            Logger::logf(Err, "VirtualFree failed: %u\n", GetLastError());
         }
     }
 
@@ -245,7 +245,7 @@ RmppVerifyPeSectionAlignment(
             SystemInfo.dwAllocationGranularity);
         if (!status)
         {
-            Logger::logf("UltimateAnticheat.log", Err, "Unexpected section alignment. (SectionBase = 0x%IX)\n",
+            Logger::logf(Err, "Unexpected section alignment. (SectionBase = 0x%IX)\n",
                 SectionBase);
             goto exit;
         }
@@ -259,7 +259,7 @@ RmppVerifyPeSectionAlignment(
         SystemInfo.dwAllocationGranularity);
     if (!status)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Unexpected section alignment. (SectionBase = 0x%IX)\n",
+        Logger::logf(Err, "Unexpected section alignment. (SectionBase = 0x%IX)\n",
             SectionBase);
         goto exit;
     }
@@ -334,7 +334,7 @@ RmppRemapImageRoutine(
     pNtHeaders = RtlImageNtHeader(pRemapRegion);
     if (!pNtHeaders)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "RtlImageNtHeader failed. (BaseAddress = 0x%IX)\n",
+        Logger::logf(Err, "RtlImageNtHeader failed. (BaseAddress = 0x%IX)\n",
             pRemapRegion);
         status = FALSE;
         goto exit;
@@ -355,7 +355,7 @@ RmppRemapImageRoutine(
         NULL);
     if (!NT_SUCCESS(ntstatus))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "NtCreateSection failed: 0x%X\n", ntstatus);
+        Logger::logf(Err, "NtCreateSection failed: 0x%X\n", ntstatus);
         status = FALSE;
         goto exit;
     }
@@ -376,7 +376,7 @@ RmppRemapImageRoutine(
         PAGE_READWRITE);
     if (!NT_SUCCESS(ntstatus))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "NtMapViewOfSection failed: 0x%X\n", ntstatus);
+        Logger::logf(Err, "NtMapViewOfSection failed: 0x%X\n", ntstatus);
         status = FALSE;
         goto exit;
     }
@@ -392,7 +392,7 @@ RmppRemapImageRoutine(
     ntstatus = NtUnmapViewOfSection(NtCurrentProcess(), pViewBase);
     if (!NT_SUCCESS(ntstatus))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "NtUnmapViewOfSection failed: 0x%X\n", ntstatus);
+        Logger::logf(Err, "NtUnmapViewOfSection failed: 0x%X\n", ntstatus);
         status = FALSE;
         goto exit;
     }
@@ -405,7 +405,7 @@ RmppRemapImageRoutine(
     ntstatus = NtUnmapViewOfSection(NtCurrentProcess(), (PVOID)ImageBase);
     if (!NT_SUCCESS(ntstatus))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "NtUnmapViewOfSection failed: 0x%X\n", ntstatus);
+        Logger::logf(Err, "NtUnmapViewOfSection failed: 0x%X\n", ntstatus);
         status = FALSE;
         goto exit;
     }
@@ -429,7 +429,7 @@ RmppRemapImageRoutine(
             Protection);
         if (!status)
         {
-            Logger::logf("UltimateAnticheat.log", Err, "RmppMapProtectedView failed.\n");
+            Logger::logf(Err, "RmppMapProtectedView failed.\n");
             goto exit;
         }
     }
@@ -445,7 +445,7 @@ RmppRemapImageRoutine(
         PAGE_READONLY);
     if (!status)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "RmppMapProtectedView failed.\n");
+        Logger::logf(Err, "RmppMapProtectedView failed.\n");
         goto exit;
     }
 
@@ -455,7 +455,7 @@ exit:
         ntstatus = NtClose(hSection);
         if (!NT_SUCCESS(ntstatus))
         {
-            Logger::logf("UltimateAnticheat.log", Err, "NtClose failed: 0x%X\n", ntstatus);
+            Logger::logf(Err, "NtClose failed: 0x%X\n", ntstatus);
         }
     }
 
@@ -542,7 +542,7 @@ RmppMapProtectedView(
         Protection);
     if (!NT_SUCCESS(ntstatus))
     {
-        Logger::logf("UltimateAnticheat.log", Err,
+        Logger::logf(Err,
             "NtMapViewOfSection failed: 0x%X (Base = 0x%IX, Offset = 0x%IX, Size = 0x%IX)\n",
             ntstatus,
             pViewBase,
@@ -571,12 +571,12 @@ RmppValidateRemappedImageProtection(
     PIMAGE_SECTION_HEADER pSectionHeader = NULL;
     BOOL status = TRUE;
 
-    Logger::logf("UltimateAnticheat.log", Info, "Validating remapped image protection.\n");
+    Logger::logf(Info, "Validating remapped image protection.\n");
 
     pNtHeaders = RtlImageNtHeader((PVOID)ImageBase);
     if (!pNtHeaders)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "RtlImageNtHeader failed. (BaseAddress = 0x%IX)\n",
+        Logger::logf(Err, "RtlImageNtHeader failed. (BaseAddress = 0x%IX)\n",
             ImageBase);
         status = FALSE;
         goto exit;
@@ -590,7 +590,7 @@ RmppValidateRemappedImageProtection(
             (PVOID)(ImageBase + pSectionHeader[i].VirtualAddress));
         if (!status)
         {
-            Logger::logf("UltimateAnticheat.log", Err, "RmppValidateRemappedPeSectionProtection failed.\n");
+            Logger::logf(Err, "RmppValidateRemappedPeSectionProtection failed.\n");
             goto exit;
         }
     }
@@ -601,7 +601,7 @@ RmppValidateRemappedImageProtection(
     status = RmppValidateRemappedPeSectionProtection((PVOID)ImageBase);
     if (!status)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "RmppValidateRemappedPeSectionProtection failed.\n");
+        Logger::logf(Err, "RmppValidateRemappedPeSectionProtection failed.\n");
         goto exit;
     }
 
@@ -630,7 +630,7 @@ RmppValidateRemappedPeSectionProtection(
     //
     if (!VirtualQuery(pSectionBase, &MemoryBasicInfo, sizeof(MemoryBasicInfo)))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "VirtualQuery failed: %u (BaseAddress = 0x%IX)\n",
+        Logger::logf(Err, "VirtualQuery failed: %u (BaseAddress = 0x%IX)\n",
             GetLastError(),
             pSectionBase);
         status = FALSE;
@@ -662,7 +662,7 @@ RmppValidateRemappedPeSectionProtection(
         &PreviousProtect);
     if (status)
     {
-        Logger::logf("UltimateAnticheat.log", Err,
+        Logger::logf(Err,
             "Section is not protected. (BaseAddress = 0x%IX, Protect = 0x%X)\n",
             pSectionBase,
             PreviousProtect);

@@ -32,7 +32,7 @@ bool Preventions::RandomizeModuleName()
             delete mod;
         }
 
-        Logger::logfw("UltimateAnticheat.log", Info, L"Changed module name to: %s\n", UnmanagedGlobals::wCurrentModuleName.c_str());
+        Logger::logfw(Info, L"Changed module name to: %s\n", UnmanagedGlobals::wCurrentModuleName.c_str());
     }
 
     delete[] newModuleName;
@@ -53,14 +53,14 @@ Error Preventions::DeployBarrier()
 
     if (!Process::ChangeNumberOfSections(_MAIN_MODULE_NAME, 1)) //change # of sections to 1
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to change number of sections @ Preventions::DeployBarrier");
+        Logger::logf(Err, "Failed to change number of sections @ Preventions::DeployBarrier");
         retError = Error::CANT_APPLY_TECHNIQUE;
     }
 
 #ifndef _DEBUG
     if (!RemapProgramSections()) //anti-memory write on .text through sections remapping, thanks to changeofpace
     {
-        Logger::logf("UltimateAnticheat.log", Err, " Couldn't remap memory @ DeployBarrier!\n");
+        Logger::logf(Err, " Couldn't remap memory @ DeployBarrier!\n");
         retError = Error::CANT_STARTUP;
     }
 #endif
@@ -69,17 +69,17 @@ Error Preventions::DeployBarrier()
 
     if (RandomizeModuleName()) //randomize our main module name at runtime
     {
-        Logger::logf("UltimateAnticheat.log", Info, " Randomized our executable's module's name!");
+        Logger::logf(Info, " Randomized our executable's module's name!");
     }
     else
     {
-        Logger::logf("UltimateAnticheat.log", Err, " Couldn't change our module's name @ Preventions::DeployBarrier");
+        Logger::logf(Err, " Couldn't change our module's name @ Preventions::DeployBarrier");
         retError = Error::CANT_APPLY_TECHNIQUE;
     }
 
     if (!StopAPCInjection()) //patch over ntdll.dll Ordinal8 unnamed function
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Couldn't apply anti-APC technique @ Preventions::DeployBarrier");
+        Logger::logf(Err, "Couldn't apply anti-APC technique @ Preventions::DeployBarrier");
         retError = Error::CANT_APPLY_TECHNIQUE;
     }
 
@@ -106,23 +106,23 @@ bool Preventions::RemapProgramSections()
         {
             if (!RmpRemapImage(ImageBase)) //re-mapping of image to stop patching, and of course we can easily detect if someone bypasses this
             {
-                Logger::logf("UltimateAnticheat.log", Err, " RmpRemapImage failed.\n");
+                Logger::logf(Err, " RmpRemapImage failed.\n");
             }
             else
             {
-                Logger::logf("UltimateAnticheat.log", Info, " Successfully remapped\n");
+                Logger::logf(Info, " Successfully remapped\n");
                 remap_succeeded = true;
             }
         }
         __except (EXCEPTION_EXECUTE_HANDLER)
         {
-            Logger::logf("UltimateAnticheat.log", Err, " Remapping image failed!");
+            Logger::logf(Err, " Remapping image failed!");
             return false;
         }
     }
     else
     {
-        Logger::logf("UltimateAnticheat.log", Err, " Imagebase was NULL @ RemapAndCheckPages!\n");
+        Logger::logf(Err, " Imagebase was NULL @ RemapAndCheckPages!\n");
         return false;
     }
 
@@ -140,7 +140,7 @@ bool Preventions::StopMultipleProcessInstances()
 
     if (hSharedMemory == NULL)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to create shared memory. Error code: %lu\n", GetLastError());
+        Logger::logf(Err, "Failed to create shared memory. Error code: %lu\n", GetLastError());
         return false;
     }
 
@@ -148,7 +148,7 @@ bool Preventions::StopMultipleProcessInstances()
 
     if (pIsRunning == NULL)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to map view of file. Error code : % lu\n", GetLastError());
+        Logger::logf(Err, "Failed to map view of file. Error code : % lu\n", GetLastError());
         CloseHandle(hSharedMemory);
         return false;
     }
@@ -176,7 +176,7 @@ bool Preventions::StopAPCInjection()
 
     if (!ntdll)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to fetch ntdll module @ StopAPCInjection. Error code : % lu\n", GetLastError());
+        Logger::logf(Err, "Failed to fetch ntdll module @ StopAPCInjection. Error code : % lu\n", GetLastError());
         return false;
     }
 
@@ -185,7 +185,7 @@ bool Preventions::StopAPCInjection()
 
     if (!Oridinal8)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to fetch ntdll.Ordinal8 address @ StopAPCInjection");
+        Logger::logf(Err, "Failed to fetch ntdll.Ordinal8 address @ StopAPCInjection");
         return false;
     }
 
@@ -195,7 +195,7 @@ bool Preventions::StopAPCInjection()
 
         if (!VirtualProtect((LPVOID)Oridinal8, sizeof(byte), PAGE_EXECUTE_READWRITE, &dwOldProt))
         {
-            Logger::logf("UltimateAnticheat.log", Warning, "Failed to call VirtualProtect on Oridinal8 address @ StopAPCInjection: %llX", Oridinal8);
+            Logger::logf(Warning, "Failed to call VirtualProtect on Oridinal8 address @ StopAPCInjection: %llX", Oridinal8);
             return false;
         }
         else
@@ -209,7 +209,7 @@ bool Preventions::StopAPCInjection()
     }
     __except (EXCEPTION_EXECUTE_HANDLER)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to patch over Ordinal8 address @ StopAPCInjection");
+        Logger::logf(Err, "Failed to patch over Ordinal8 address @ StopAPCInjection");
         return false;
     }
 
@@ -230,7 +230,7 @@ void Preventions::EnableProcessMitigations(bool useDEP, bool useASLR, bool useDy
 
         if (!SetProcessMitigationPolicy(ProcessDEPPolicy, &depPolicy, sizeof(depPolicy)))
         {
-            Logger::logf("UltimateAnticheat.log", Warning, "Failed to set DEP policy @ EnableProcessMitigations: %d", GetLastError());
+            Logger::logf(Warning, "Failed to set DEP policy @ EnableProcessMitigations: %d", GetLastError());
         }
     }
 
@@ -244,7 +244,7 @@ void Preventions::EnableProcessMitigations(bool useDEP, bool useASLR, bool useDy
 
         if (!SetProcessMitigationPolicy(ProcessASLRPolicy, &aslrPolicy, sizeof(aslrPolicy)))
         {
-            Logger::logf("UltimateAnticheat.log", Warning, "Failed to set ASLR policy @ EnableProcessMitigations: %d", GetLastError());
+            Logger::logf(Warning, "Failed to set ASLR policy @ EnableProcessMitigations: %d", GetLastError());
         }
     }
 
@@ -255,7 +255,7 @@ void Preventions::EnableProcessMitigations(bool useDEP, bool useASLR, bool useDy
 
         if (!SetProcessMitigationPolicy(ProcessDynamicCodePolicy, &dynamicCodePolicy, sizeof(dynamicCodePolicy)))
         {
-            Logger::logf("UltimateAnticheat.log", Warning, "Failed to set dynamic code policy @ EnableProcessMitigations: %d", GetLastError());
+            Logger::logf(Warning, "Failed to set dynamic code policy @ EnableProcessMitigations: %d", GetLastError());
         }
     }
 
@@ -267,7 +267,7 @@ void Preventions::EnableProcessMitigations(bool useDEP, bool useASLR, bool useDy
 
         if (!SetProcessMitigationPolicy(ProcessStrictHandleCheckPolicy, &handlePolicy, sizeof(handlePolicy)))
         {
-            Logger::logf("UltimateAnticheat.log", Warning, "Failed to set strict handle check policy @ EnableProcessMitigations: %d", GetLastError());
+            Logger::logf(Warning, "Failed to set strict handle check policy @ EnableProcessMitigations: %d", GetLastError());
         }
     }
 
@@ -278,7 +278,7 @@ void Preventions::EnableProcessMitigations(bool useDEP, bool useASLR, bool useDy
 
         if (!SetProcessMitigationPolicy(ProcessSystemCallDisablePolicy, &syscallPolicy, sizeof(syscallPolicy)))
         {
-            Logger::logf("UltimateAnticheat.log", Warning, "Failed to set system call disable policy @ EnableProcessMitigations: %d", GetLastError());
+            Logger::logf(Warning, "Failed to set system call disable policy @ EnableProcessMitigations: %d", GetLastError());
         }
     }
 }
@@ -343,12 +343,12 @@ BYTE* Preventions::SpoofPEB() //experimental, don't use this right now as it cau
 
     if (newPEBBytes == NULL)
     {
-        Logger::logf("UltimateAnticheat.log", Err, " Failed to copy PEB @ SpoofPEB!");
+        Logger::logf(Err, " Failed to copy PEB @ SpoofPEB!");
         return NULL;
     }
 
     _MYPEB* ourPEB = (_MYPEB*)&newPEBBytes[0];
 
-    Logger::logf("UltimateAnticheat.log", Info, " Being debugged (PEB Spoofing test): %d. Address of new PEB : %llx\n", ourPEB->BeingDebugged, (UINT64)&newPEBBytes[0]);
+    Logger::logf(Info, " Being debugged (PEB Spoofing test): %d. Address of new PEB : %llx\n", ourPEB->BeingDebugged, (UINT64)&newPEBBytes[0]);
     return newPEBBytes;
 }

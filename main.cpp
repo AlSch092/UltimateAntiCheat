@@ -50,6 +50,7 @@ int main(int argc, char** argv)
     bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
     bool enableLogging = true;
     const std::list<std::wstring> allowedParents = {L"VsDebugConsole.exe", L"vsdbg.exe", L"powershell.exe", L"bash.exe", L"zsh.exe", L"explorer.exe"};
+    const std::string logFileName = "UltimateAnticheat.log";
 
 #else
     bool bEnableNetworking = false; //change this to false if you don't want to use the server
@@ -64,6 +65,7 @@ int main(int argc, char** argv)
     bool enableLogging = true; // set to false to not create a detailed AntiCheat log file on the user's system
     bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
     const std::list<std::wstring> allowedParents = {L"explorer.exe", L"steam.exe"}; //add your launcher here
+    const std::string logFileName = ""; //empty : does not log to file
 #endif
 
 #ifdef _DEBUG
@@ -100,14 +102,14 @@ int main(int argc, char** argv)
     cout << "|           discriminating@github (dll load notifcations, catalog verification)          |\n";
     cout << "------------------------------------------------------------------------------------------\n";
 
-    shared_ptr<Settings> ConfigInstance = Settings::CreateInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator, bUsingDriver, allowedParents, enableLogging);
+    shared_ptr<Settings> ConfigInstance = Settings::CreateInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator, bUsingDriver, allowedParents, enableLogging, logFileName);
 
     if (ConfigInstance->bRequireRunAsAdministrator)
     {
         if (!Services::IsRunningAsAdmin()) //enforce secure boot to stop bootloader cheats
         {
             MessageBoxA(0, "Program must be running as administrator in order to proceed, or change `bRequireRunAsAdministrator` to false.", "UltimateAntiCheat", 0);
-            Logger::logf("UltimateAnticheat.log", Detection, "Program must be running as administrator in order to proceed, or change `bRequireRunAsAdministrator` to false.");
+            Logger::logf(Detection, "Program must be running as administrator in order to proceed, or change `bRequireRunAsAdministrator` to false.");
             return 0;
         }
     }
@@ -117,7 +119,7 @@ int main(int argc, char** argv)
         if (!Services::IsSecureBootEnabled()) //enforce secure boot to stop bootloader cheats
         {
             MessageBoxA(0, "Secure boot is not enabled, you cannot proceed. Please enable secure boot in your BIOS or change `bEnforceSecureBoot` to false.", "UltimateAntiCheat", 0);
-            Logger::logf("UltimateAnticheat.log", Detection, "Secure boot is not enabled, thus you cannot proceed. Please enable secure boot in your BIOS or change `bEnforceSecureBoot` to false.");
+            Logger::logf(Detection, "Secure boot is not enabled, thus you cannot proceed. Please enable secure boot in your BIOS or change `bEnforceSecureBoot` to false.");
             return 0;
         }
     }
@@ -127,7 +129,7 @@ int main(int argc, char** argv)
         if (Services::IsTestsigningEnabled()) //check test signing mode before startup
         {
             MessageBoxA(0, "Test signing was enabled, you cannot proceed. Please turn off test signing via `bcdedit.exe`, or change `bEnforceDSE` to false.", "UltimateAntiCheat", 0);
-            Logger::logf("UltimateAnticheat.log", Detection, "Test signing was enabled, thus you cannot proceed. Please turn off test signing via `bcdedit.exe`, or change `bEnforceDSE` to false.");
+            Logger::logf(Detection, "Test signing was enabled, thus you cannot proceed. Please turn off test signing via `bcdedit.exe`, or change `bEnforceDSE` to false.");
             return 0;
         }
     }
@@ -140,15 +142,15 @@ int main(int argc, char** argv)
 
             if (vendor.size() == 0)
             {
-                Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor vendor was empty, some custom hypervisor may be hooking cpuid instruction");
+                Logger::logf(Detection, "Hypervisor vendor was empty, some custom hypervisor may be hooking cpuid instruction");
             }
             else if (vendor == "Microsoft Hv" || vendor == "Micrt Hvosof" || vendor == "VMwareVMware" || vendor == "XenVMMXenVMM" || vendor == "VBoxVBoxVBox")
             {
-                Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor was present with vendor: %s", vendor.c_str());
+                Logger::logf(Detection, "Hypervisor was present with vendor: %s", vendor.c_str());
             }
             else
             {
-                Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor was present with unknown/non-standard vendor: %s.", vendor.c_str());
+                Logger::logf(Detection, "Hypervisor was present with unknown/non-standard vendor: %s.", vendor.c_str());
                 return 0;
             }
         }
@@ -162,13 +164,13 @@ int main(int argc, char** argv)
     }
     catch (const std::bad_alloc& e)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Anticheat pointer could not be allocated @ main(): %s", e.what());
+        Logger::logf(Err, "Anticheat pointer could not be allocated @ main(): %s", e.what());
         std::terminate();
     }
 
     if (API::Dispatch(Anti_Cheat.get(), API::DispatchCode::INITIALIZE) != Error::OK) //initialize AC , this will start all detections + preventions
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Could not initialize program: API::Dispatch failed. Shutting down.");
+        Logger::logf(Err, "Could not initialize program: API::Dispatch failed. Shutting down.");
         return 1;
     }
 
@@ -176,7 +178,7 @@ int main(int argc, char** argv)
     {   //typically thread should cross-check eachother to ensure nothing is suspended, in this version of the program we only check thread suspends once at the start
         if (Anti_Cheat->IsAnyThreadSuspended()) //make sure that all our necessary threads aren't suspended by an attacker
         {
-            Logger::logf("UltimateAnticheat.log", Detection, "Atleast one of our threads was found suspended! All threads must be running for proper module functionality.");
+            Logger::logf(Detection, "Atleast one of our threads was found suspended! All threads must be running for proper module functionality.");
             return 1;
         }
     }
@@ -190,7 +192,7 @@ int main(int argc, char** argv)
 
     if (Anti_Cheat->GetMonitor()->IsUserCheater())
     {
-        Logger::logf("UltimateAnticheat.log", Info, "Detected a possible cheater in first %d milliseconds of runtime!", MillisecondsBeforeShutdown);
+        Logger::logf(Info, "Detected a possible cheater in first %d milliseconds of runtime!", MillisecondsBeforeShutdown);
     }
 
     list<DetectionFlags> flags = Anti_Cheat->GetMonitor()->GetDetectedFlags();
@@ -210,7 +212,7 @@ int main(int argc, char** argv)
         { DetectionFlags::HYPERVISOR, "an hypervisor is running on the machine" }
     };
     for (DetectionFlags flag : flags) {
-            Logger::logf("UltimateAnticheat.log", Info, explanations[flag]);
+            Logger::logf(Info, explanations[flag]);
     }
 
     return 0;
@@ -222,7 +224,7 @@ int main(int argc, char** argv)
 bool UnmanagedGlobals::AddThread(DWORD id)
 {
     DWORD tid = GetCurrentThreadId();
-    Logger::logf("UltimateAnticheat.log", Info, " New thread spawned: %d", tid);
+    Logger::logf(Info, " New thread spawned: %d", tid);
 
     CONTEXT context;
     context.ContextFlags = CONTEXT_ALL;
@@ -231,7 +233,7 @@ bool UnmanagedGlobals::AddThread(DWORD id)
 
     if (threadHandle == NULL)
     {
-        Logger::logf("UltimateAnticheat.log", Warning, " Couldn't open thread handle @ TLS Callback: Thread %d", tid);
+        Logger::logf(Warning, " Couldn't open thread handle @ TLS Callback: Thread %d", tid);
         return false;
     }
     else
@@ -277,11 +279,11 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
         {
             if (!Preventions::StopMultipleProcessInstances()) //prevent multi-clients by using shared memory-mapped region
             {
-                Logger::logf("UltimateAnticheat.log", Err, "Could not initialize program: shared memory check failed, make sure only one instance of the program is open. Shutting down.");
+                Logger::logf(Err, "Could not initialize program: shared memory check failed, make sure only one instance of the program is open. Shutting down.");
                 std::terminate();
             }
 
-            Logger::logf("UltimateAnticheat.log", Info, " New process attached, current thread %d\n", GetCurrentThreadId());
+            Logger::logf(Info, " New process attached, current thread %d\n", GetCurrentThreadId());
 
             if (UnmanagedGlobals::FirstProcessAttach) //process creation will trigger PROCESS_ATTACH, so we can put some initialize stuff in here incase main() is hooked or statically modified by the attacker
             {
@@ -291,7 +293,7 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 
                     if (!AddVectoredExceptionHandler(1, UnmanagedGlobals::ExceptionHandler))
                     {
-                        Logger::logf("UltimateAnticheat.log", Err, " Failed to register Vectored Exception Handler @ TLSCallback: %d\n", GetLastError());
+                        Logger::logf(Err, " Failed to register Vectored Exception Handler @ TLSCallback: %d\n", GetLastError());
                     }
 
                     UnmanagedGlobals::SetExceptionHandler = true;
@@ -301,7 +303,7 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
             }
             else
             {
-                Logger::logf("UltimateAnticheat.log", Detection, " Some unknown process attached @ TLSCallback "); //this should generally never be triggered in this example
+                Logger::logf(Detection, " Some unknown process attached @ TLSCallback "); //this should generally never be triggered in this example
             }
         }break;
 
@@ -316,12 +318,12 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 #ifndef _DEBUG
             if (!Debugger::AntiDebug::HideThreadFromDebugger(GetCurrentThread())) //hide thread from debuggers, placing this in the TLS callback allows all threads to be hidden
             {
-                Logger::logf("UltimateAnticheat.log", Warning, " Failed to hide thread from debugger @ TLSCallback: thread id %d\n", GetCurrentThreadId());
+                Logger::logf(Warning, " Failed to hide thread from debugger @ TLSCallback: thread id %d\n", GetCurrentThreadId());
             }
 #endif
             if (!UnmanagedGlobals::AddThread(GetCurrentThreadId()))
             {
-                Logger::logf("UltimateAnticheat.log", Err, " Failed to add thread to ThreadList @ TLSCallback: thread id %d\n", GetCurrentThreadId());
+                Logger::logf(Err, " Failed to add thread to ThreadList @ TLSCallback: thread id %d\n", GetCurrentThreadId());
             }
 
             if (UnmanagedGlobals::SupressingNewThreads)
@@ -348,14 +350,14 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
                     }
                 }
 
-                Logger::logf("UltimateAnticheat.log", Info, " Stopping unknown thread from being created  @ TLSCallback: thread id %d", GetCurrentThreadId());
-                Logger::logf("UltimateAnticheat.log", Info, " Thread id %d wants to execute function @ %llX. Patching over this address.", GetCurrentThreadId(), ThreadExecutionAddress);
+                Logger::logf(Info, " Stopping unknown thread from being created  @ TLSCallback: thread id %d", GetCurrentThreadId());
+                Logger::logf(Info, " Thread id %d wants to execute function @ %llX. Patching over this address.", GetCurrentThreadId(), ThreadExecutionAddress);
 
                 DWORD dwOldProt = 0;
 
                 if(!VirtualProtect((LPVOID)ThreadExecutionAddress, sizeof(byte), PAGE_EXECUTE_READWRITE, &dwOldProt)) //make thread start address writable
                 {
-                    Logger::logf("UltimateAnticheat.log", Warning, "Failed to call VirtualProtect on ThreadStart address @ TLSCallback: %llX", ThreadExecutionAddress);
+                    Logger::logf(Warning, "Failed to call VirtualProtect on ThreadStart address @ TLSCallback: %llX", ThreadExecutionAddress);
                 }
                 else
                 {
@@ -382,7 +384,7 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 LONG WINAPI UnmanagedGlobals::ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo)  //handler that will be called whenever an unhandled exception occurs in any thread of the process
 {
     DWORD exceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
-    Logger::logf("UltimateAnticheat.log", Warning, "Program threw exception: %x at %llX\n", exceptionCode, ExceptionInfo->ExceptionRecord->ExceptionAddress);
+    Logger::logf(Warning, "Program threw exception: %x at %llX\n", exceptionCode, ExceptionInfo->ExceptionRecord->ExceptionAddress);
     
     if (exceptionCode == EXCEPTION_BREAKPOINT) //one or two of our debug checks may throw this exception
     {

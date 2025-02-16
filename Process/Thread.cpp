@@ -30,7 +30,7 @@ bool Thread::BeginExecution(LPTHREAD_START_ROUTINE toExecute, LPVOID lpOptionalP
         }
         catch (const std::system_error& e)
         {
-            Logger::logf("UltimateAnticheat.log", Err, "std::thread failed @ BeginExecution: %s\n", e.what());
+            Logger::logf(Err, "std::thread failed @ BeginExecution: %s\n", e.what());
             this->Id = NULL;
             return false;
         }
@@ -52,7 +52,7 @@ bool Thread::IsThreadRunning(HANDLE threadHandle)
         return (exitCode == STILL_ACTIVE);
     }
 
-    Logger::logf("UltimateAnticheat.log", Err, " GetExitCodeThread failed @ IsThreadRunning: %d\n", GetLastError());
+    Logger::logf(Err, " GetExitCodeThread failed @ IsThreadRunning: %d\n", GetLastError());
     return false;
 }
 
