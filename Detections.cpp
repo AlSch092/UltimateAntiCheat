@@ -1,5 +1,6 @@
 //By AlSch092 @github
 #include "Detections.hpp"
+#include "AntiCheatInitFail.hpp"
 
 /*
     Detections::StartMonitor - use class member MonitorThread to start our main detections loop
@@ -1174,4 +1175,58 @@ bool Detections::DetectManualMapping(__in HANDLE hProcess)
     }
 
     return false;
+}
+
+void Detections::startupChecks(shared_ptr<Settings> ConfigInstance) {
+    if (ConfigInstance->bRequireRunAsAdministrator)
+    {
+        if (!Services::IsRunningAsAdmin()) //enforce secure boot to stop bootloader cheats
+        {
+            MessageBoxA(0, "Program must be running as administrator in order to proceed, or change `bRequireRunAsAdministrator` to false.", "UltimateAntiCheat", 0);
+            Logger::logf(Detection, "Program must be running as administrator in order to proceed, or change `bRequireRunAsAdministrator` to false.");
+            throw AntiCheatInitFail(AntiCheatInitFailReason::NotAdministrator);
+        }
+    }
+
+    if (ConfigInstance->bEnforceSecureBoot)
+    {
+        if (!Services::IsSecureBootEnabled()) //enforce secure boot to stop bootloader cheats
+        {
+            MessageBoxA(0, "Secure boot is not enabled, you cannot proceed. Please enable secure boot in your BIOS or change `bEnforceSecureBoot` to false.", "UltimateAntiCheat", 0);
+            Logger::logf(Detection, "Secure boot is not enabled, thus you cannot proceed. Please enable secure boot in your BIOS or change `bEnforceSecureBoot` to false.");
+            throw AntiCheatInitFail(AntiCheatInitFailReason::NoSecureBoot);
+        }
+    }
+
+    if (ConfigInstance->bEnforceDSE)
+    {
+        if (Services::IsTestsigningEnabled()) //check test signing mode before startup
+        {
+            MessageBoxA(0, "Test signing was enabled, you cannot proceed. Please turn off test signing via `bcdedit.exe`, or change `bEnforceDSE` to false.", "UltimateAntiCheat", 0);
+            throw AntiCheatInitFail(AntiCheatInitFailReason::TestSigningEnabled);
+        }
+    }
+
+    if (ConfigInstance->bCheckHypervisor)
+    {
+        if (Services::IsHypervisorPresent()) //we can either block all hypervisors to try and stop SLAT/EPT manipulation, or only allow certain vendors.
+        {
+            string vendor = Services::GetHypervisorVendor(); //...however, many custom hypervisors will likely spoof their vendorId to be 'HyperV' or 'VMWare' 
+
+            if (vendor.size() == 0)
+            {
+                Logger::logf(Detection, "Hypervisor vendor was empty, some custom hypervisor may be hooking cpuid instruction");
+                throw AntiCheatInitFail(AntiCheatInitFailReason::HypervisorPresent);
+            }
+            else if (vendor == "Microsoft Hv" || vendor == "Micrt Hvosof" || vendor == "VMwareVMware" || vendor == "XenVMMXenVMM" || vendor == "VBoxVBoxVBox")
+            {
+                Logger::logf(Detection, "Hypervisor was present with vendor: %s", vendor.c_str());
+            }
+            else
+            {
+                Logger::logf(Detection, "Hypervisor was present with unknown/non-standard vendor: %s.", vendor.c_str());
+                throw AntiCheatInitFail(AntiCheatInitFailReason::HypervisorPresent);
+            }
+        }
+    }
 }

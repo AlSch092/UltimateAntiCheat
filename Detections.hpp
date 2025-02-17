@@ -149,8 +149,10 @@ public:
 
 	static bool DetectManualMapping(__in HANDLE hProcess);
 
-private:
+	//throws AntiCheatInitFail on error
+	static void startupChecks(shared_ptr<Settings> ConfigInstance);
 
+private:
 	shared_ptr<Settings> Config = nullptr; //non-owning pointer to the original unique_ptr<Settings> in main.cpp
 
 	void InitializeBlacklistedProcessesList();

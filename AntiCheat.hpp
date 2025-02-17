@@ -22,15 +22,18 @@
 class AntiCheat final
 {
 public:
+	//thows AntiCheatInitFail on error
+	AntiCheat(shared_ptr<Settings> config): AntiCheat(config, Services::GetWindowsVersion()) {}
 
 	//thows AntiCheatInitFail on error
 	AntiCheat(shared_ptr<Settings> config, WindowsVersion WinVersion) : Config(config), WinVersion(WinVersion)
-	{		
+	{
 		if (config == nullptr)
 		{
 			throw AntiCheatInitFail(AntiCheatInitFailReason::NullSettings);
 		}
-		
+		Detections::startupChecks(config); //check for secure boot, admin mode, etc
+
 		try
 		{
 			this->NetworkClient = make_shared<NetClient>();
@@ -75,6 +78,8 @@ public:
     	{
 			throw AntiCheatInitFail(AntiCheatInitFailReason::DispatchFail);
     	}
+
+		UnmanagedGlobals::SupressingNewThreads = this->GetBarrier()->IsPreventingThreads(); //if this is set to TRUE, we can stop the creation of any new threads via the TLS callback
 	}
 
 	~AntiCheat() //the destructor is now empty since all pointers of this class were recently switched to unique_ptrs
