@@ -1,3 +1,9 @@
+#include <iostream>
+#include <thread>
+#include <future>
+#include <chrono>
+#include <functional>
+
 #include "NAuthenticode.hpp"
 
 /*
@@ -5,6 +11,27 @@
     returns `TRUE` if the `filePath` is properly signed
 */
 BOOL Authenticode::HasSignature(LPCWSTR filePath)
+{
+    const int timeout = 15000;
+
+    std::packaged_task<bool()> task([filePath]() { return HasSignatureHanging(filePath); });
+    std::future<bool> future = task.get_future();
+    std::thread t(std::move(task));
+
+    if (future.wait_for(std::chrono::milliseconds(timeout)) == std::future_status::timeout) {
+		Logger::logfw(LogType::Err, L"Signature verification of %s hanged, blindly assuming valid @ HasSignature", filePath);
+
+        // Thread termination is not safe in standard C++, so we detach instead
+        t.detach();
+        return true;
+    }
+
+    bool result = future.get();
+    t.join();
+    return result;
+}
+
+BOOL Authenticode::HasSignatureHanging(LPCWSTR filePath)
 {
     return (Authenticode::VerifyEmbeddedSignature(filePath) || Authenticode::VerifyCatalogSignature(filePath));
 }
