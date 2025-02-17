@@ -48,9 +48,10 @@ int main(int argc, char** argv)
     bool bCheckHypervisor = true;
     bool bRequireRunAsAdministrator = true;
     bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
-    bool enableLogging = true;
-    const std::list<std::wstring> allowedParents = {L"VsDebugConsole.exe", L"vsdbg.exe", L"powershell.exe", L"bash.exe", L"zsh.exe", L"explorer.exe"};
-    const std::string logFileName = "UltimateAnticheat.log";
+    bool bEnableLogging = true;
+
+    const list<wstring> allowedParents = {L"VsDebugConsole.exe", L"vsdbg.exe", L"powershell.exe", L"bash.exe", L"zsh.exe", L"explorer.exe"};
+    const string logFileName = "UltimateAnticheat.log";
 
 #else
     bool bEnableNetworking = false; //change this to false if you don't want to use the server
@@ -62,29 +63,35 @@ int main(int argc, char** argv)
     bool bCheckThreadIntegrity = true;
     bool bCheckHypervisor = true;
     bool bRequireRunAsAdministrator = true;
-    bool enableLogging = true; // set to false to not create a detailed AntiCheat log file on the user's system
+    bool bEnableLogging = true; // set to false to not create a detailed AntiCheat log file on the user's system
     bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
-    const std::list<std::wstring> allowedParents = {L"explorer.exe", L"steam.exe"}; //add your launcher here
-    const std::string logFileName = ""; //empty : does not log to file
+    
+    const list<wstring> allowedParents = {L"explorer.exe", L"steam.exe"}; //add your launcher here
+    const string logFileName = ""; //empty : does not log to file
 #endif
 
 #ifdef _DEBUG
+    cout << "\tEnable logging :\t\t" << boolalpha << bEnableLogging << endl;
     cout << "Settings for this instance:\n";
-    cout << "\tEnable Networking:\t" << boolalpha << bEnableNetworking << "\n";
-    cout << "\tEnforce Secure Boot: \t" << boolalpha << bEnforceSecureBoot << "\n";
-    cout << "\tEnforce DSE:\t\t" << boolalpha << bEnforceDSE << "\n";
-    cout << "\tEnforce No KDBG:\t" << boolalpha << bEnforceNoKDBG << "\n";
-    cout << "\tUse Anti-Debugging:\t" << boolalpha << bUseAntiDebugging << "\n";
-    cout << "\tUse Integrity Checking:\t" << boolalpha << bUseIntegrityChecking << "\n";
-    cout << "\tCheck Thread Integrity:\t" << boolalpha << bCheckThreadIntegrity << "\n";
-    cout << "\tCheck Hypervisor:\t" << boolalpha << bCheckHypervisor << "\n";
-    cout << "\tRequire Admin:\t\t" << boolalpha << bRequireRunAsAdministrator << "\n";
-    cout << "\tAllowed parent processes: \t\t";
-    for (auto parent: allowedParents) {
+    cout << "\tEnable Networking:\t" << boolalpha << bEnableNetworking << endl;
+    cout << "\tEnforce Secure Boot: \t" << boolalpha << bEnforceSecureBoot << endl;
+    cout << "\tEnforce DSE:\t\t" << boolalpha << bEnforceDSE << endl;
+    cout << "\tEnforce No KDBG:\t" << boolalpha << bEnforceNoKDBG << endl;
+    cout << "\tUse Anti-Debugging:\t" << boolalpha << bUseAntiDebugging << endl;
+    cout << "\tUse Integrity Checking:\t" << boolalpha << bUseIntegrityChecking << endl;
+    cout << "\tCheck Thread Integrity:\t" << boolalpha << bCheckThreadIntegrity << endl;
+    cout << "\tCheck Hypervisor:\t" << boolalpha << bCheckHypervisor << endl;
+    cout << "\tRequire Admin:\t\t" << boolalpha << bRequireRunAsAdministrator << endl;
+    
+    cout << "\tAllowed parent processes: \t\t" << endl;
+
+    for (auto parent: allowedParents) 
+    {
         wcout << parent << " ";
     }
-    cout << "\n";
-    cout << "\tEnable logging :\t\t" << boolalpha << enableLogging << "\n";
+
+    cout << endl;
+
 #endif
 
     const int MillisecondsBeforeShutdown = 120000;
@@ -102,7 +109,7 @@ int main(int argc, char** argv)
     cout << "|           discriminating@github (dll load notifcations, catalog verification)          |\n";
     cout << "------------------------------------------------------------------------------------------\n";
 
-    shared_ptr<Settings> ConfigInstance = Settings::CreateInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator, bUsingDriver, allowedParents, enableLogging, logFileName);
+    shared_ptr<Settings> ConfigInstance = Settings::CreateInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator, bUsingDriver, allowedParents, bEnableLogging, logFileName);
 
     if (ConfigInstance->bRequireRunAsAdministrator)
     {
@@ -162,7 +169,7 @@ int main(int argc, char** argv)
     {
         Anti_Cheat = make_unique<AntiCheat>(ConfigInstance, Services::GetWindowsVersion());   //after all environmental checks (secure boot, DSE, adminmode) are performed, create the AntiCheat object
     }
-    catch (const std::bad_alloc& e)
+    catch (const bad_alloc& e)
     {
         Logger::logf(Err, "Anticheat pointer could not be allocated @ main(): %s", e.what());
         return 1;
@@ -194,8 +201,10 @@ int main(int argc, char** argv)
         Logger::logf(Info, "Detected a possible cheater in first %d milliseconds of runtime!", MillisecondsBeforeShutdown);
     }
 
+#ifdef _DEBUG
     list<DetectionFlags> flags = Anti_Cheat->GetMonitor()->GetDetectedFlags();
-    std::map<DetectionFlags, const char*> explanations = {
+    map<DetectionFlags, const char*> explanations = 
+    {
         { DetectionFlags::DEBUGGER, "Debugger detected" },
         { DetectionFlags::PAGE_PROTECTIONS, ".text section is writable, memory was re-mapped" },
         { DetectionFlags::CODE_INTEGRITY, "process patched" },
@@ -210,9 +219,11 @@ int main(int argc, char** argv)
         { DetectionFlags::SUSPENDED_THREAD, "not implemented for now" },
         { DetectionFlags::HYPERVISOR, "an hypervisor is running on the machine" }
     };
-    for (DetectionFlags flag : flags) {
+    for (DetectionFlags flag : flags) 
+    {
             Logger::logf(Info, explanations[flag]);
     }
+#endif
 
     return 0;
 }
@@ -250,7 +261,7 @@ void UnmanagedGlobals::RemoveThread(DWORD tid)
 {
     Thread* ToRemove = NULL;
 
-    std::list<Thread*>::iterator it;
+    list<Thread*>::iterator it;
 
     for (it = ThreadList->begin(); it != ThreadList->end(); ++it)
     {
@@ -279,7 +290,7 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
             if (!Preventions::StopMultipleProcessInstances()) //prevent multi-clients by using shared memory-mapped region
             {
                 Logger::logf(Err, "Could not initialize program: shared memory check failed, make sure only one instance of the program is open. Shutting down.");
-                std::terminate();
+                terminate();
             }
 
             Logger::logf(Info, " New process attached, current thread %d\n", GetCurrentThreadId());
@@ -337,10 +348,10 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 
                 auto modules = Process::GetLoadedModules();
 
-                for (std::vector<ProcessData::MODULE_DATA>::iterator it = modules.begin(); it != modules.end(); ++it)
+                for (auto module : modules)
                 {
-                    UINT64 LowAddr = (UINT64)it->dllInfo.lpBaseOfDll;
-                    UINT64 HighAddr = (UINT64)it->dllInfo.lpBaseOfDll + it->dllInfo.SizeOfImage;
+                    UINT64 LowAddr = (UINT64)module.dllInfo.lpBaseOfDll;
+                    UINT64 HighAddr = (UINT64)module.dllInfo.lpBaseOfDll + module.dllInfo.SizeOfImage;
 
                     if (ThreadExecutionAddress > LowAddr && ThreadExecutionAddress < HighAddr) //a properly loaded DLL is making the thread, so allow it to execute
                     {
@@ -360,10 +371,11 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
                 }
                 else
                 {
-                    if(ThreadExecutionAddress != 0)
+                    if (ThreadExecutionAddress != 0)
+                    {
                         *(BYTE*)ThreadExecutionAddress = 0xC3; //write over any functions which are scheduled to execute next by this thread and not inside our whitelisted address range
-
-                    //VirtualProtect((LPVOID)ThreadExecutionAddress, sizeof(byte), PAGE_READONLY, &dwOldProt); // take away executable protections for the rogue thread's start address
+                        VirtualProtect((LPVOID)ThreadExecutionAddress, sizeof(byte), PAGE_READONLY, &dwOldProt); // (optional) take away executable protections for the rogue thread's start address
+                    }
                 }
             }
 
