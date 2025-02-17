@@ -12,6 +12,8 @@
 
 using namespace std;
 
+class Detections;
+
 struct ModuleHashData 
 {
 	wstring Name;
@@ -78,7 +80,7 @@ public:
 		return {};
 	}
 
-	bool IsUnknownModulePresent(); //traverse loaded modules to find any unknown ones (not signed & not whitelisted, in particular)
+	bool IsUnknownModulePresent(Detections* Monitor); //traverse loaded modules to find any unknown ones (not signed & not whitelisted, in particular)
 
 	vector<ProcessData::MODULE_DATA> GetWhitelistedModules() const { return this->WhitelistedModules; }
 	

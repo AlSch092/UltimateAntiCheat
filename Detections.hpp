@@ -74,10 +74,19 @@ public:
 	~Detections()
 	{
 		if (MonitorThread != NULL)
+		{
 			delete MonitorThread;
+			MonitorThread = NULL;
+		}
 
 		if(RegistryMonitorThread != NULL)
+		{
 			delete RegistryMonitorThread;
+			RegistryMonitorThread = NULL;
+		}
+		isMonitoring = false;
+		monitorMutex.lock();
+		monitorCallbackMutex.lock();
 	}
 
 	Detections(Detections&&) = delete;  //delete move constructr
@@ -91,7 +100,11 @@ public:
 	Detections operator*(Detections& other) = delete;
 	Detections operator/(Detections& other) = delete;
 
+	std::mutex monitorMutex;
+	std::mutex monitorCallbackMutex;
 	std::mutex monitorProcessCreationMutex;
+	bool isMonitoring = true;
+
 	weak_ptr<NetClient> GetNetClient() { return this->netClient; }
 
 	Services* GetServiceManager() const { return this->_Services.get(); }

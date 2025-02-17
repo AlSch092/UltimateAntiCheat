@@ -1,4 +1,5 @@
 //By AlSch092 @github
+#include "../Detections.hpp"
 #include "Integrity.hpp"
 
 /*
@@ -87,7 +88,7 @@ void Integrity::SetSectionHashList(__out vector<uint64_t> hList, __in const stri
 	IsUnknownModulePresent - compares current module list to one gathered at program startup, any delta modules are checked via WinVerifyTrust and added to our `WhitelistedModules` member
 	return true if an unsigned module (besides current executable) was found
 */
-bool Integrity::IsUnknownModulePresent()
+bool Integrity::IsUnknownModulePresent(Detections *Monitor)
 {
 	bool foundUnknown = false;
 
@@ -96,6 +97,10 @@ bool Integrity::IsUnknownModulePresent()
 
 	for (auto it = currentModules.begin(); it != currentModules.end(); ++it)  //if an attacker signs their dll, they'll be able to get past this
 	{
+		if (!Monitor->isMonitoring) { //program ends, stop all signature checks
+			break;
+		}
+
 		bool found_whitelisted = false;
 
 		for (auto it2 = this->WhitelistedModules.begin(); it2 != this->WhitelistedModules.end(); ++it2) //our whitelisted module list is initially populated inside the constructor with modules gathered at program startup

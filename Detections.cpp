@@ -33,7 +33,11 @@ BOOL Detections::StartMonitor()
 VOID CALLBACK Detections::OnDllNotification(ULONG NotificationReason, const PLDR_DLL_NOTIFICATION_DATA NotificationData, PVOID Context)
 {
     Detections* Monitor = reinterpret_cast<Detections*>(Context);
-    
+    if (Monitor->isMonitoring == false)
+        return;
+
+    Monitor->monitorCallbackMutex.lock();
+
     if (NotificationReason == LDR_DLL_NOTIFICATION_REASON_LOADED)
     {
         LPCWSTR FullDllName = NotificationData->Loaded.FullDllName->pBuffer;
@@ -45,6 +49,7 @@ VOID CALLBACK Detections::OnDllNotification(ULONG NotificationReason, const PLDR
             Monitor->Flag(DetectionFlags::INJECTED_ILLEGAL_PROGRAM);
         }
     }
+    Monitor->monitorCallbackMutex.unlock();
 }
 
 /*
@@ -124,10 +129,10 @@ void Detections::Monitor(LPVOID thisPtr)
     }
     
     //Main Monitor Loop, continuous detections go in here. we need access to CachedSectionAddress variables so this loop doesnt get its own function.
-    bool Monitoring = true;
     const int MonitorLoopMilliseconds = 5000;
 
-    while (Monitoring)
+    Monitor->monitorMutex.lock();
+    while (Monitor->isMonitoring)
     {
         if (Monitor == nullptr) //critical error
         {
@@ -138,7 +143,7 @@ void Detections::Monitor(LPVOID thisPtr)
         if (Monitor->GetMonitorThread()->IsShutdownSignalled()) //end thread if thread shutdown is signalled
         {
             Logger::logf(Info, "STOPPING  Detections::Monitor , ending detections thread");
-            return;
+            break;
         }
 
         if (Monitor->Config->bCheckHypervisor)
@@ -216,7 +221,7 @@ void Detections::Monitor(LPVOID thisPtr)
             Monitor->Flag(DetectionFlags::DLL_TAMPERING);
         }
 
-        if (Monitor->GetIntegrityChecker()->IsUnknownModulePresent()) //authenticode call and check against whitelisted module list
+        if (Monitor->GetIntegrityChecker()->IsUnknownModulePresent(Monitor)) //authenticode call and check against whitelisted module list
         {
             Logger::logf(Detection, "Found at least one unsigned dll loaded : We ideally only want verified, signed dlls in our application!");
             Monitor->Flag(DetectionFlags::INJECTED_ILLEGAL_PROGRAM);
@@ -257,6 +262,7 @@ void Detections::Monitor(LPVOID thisPtr)
 
         Sleep(MonitorLoopMilliseconds);
     }
+    Monitor->monitorMutex.unlock();
 }
 
 /*
@@ -1026,11 +1032,10 @@ void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
 
     Logger::logf(Info, "Monitoring multiple registry keys...");
 
-    bool monitoringKeys = true;
 
-    while (monitoringKeys)
+    while (Monitor->isMonitoring)
     {        
-        DWORD waitResult = WaitForMultipleObjects(KEY_COUNT, hEvents, FALSE, INFINITE); //wait for any of the events to be signaled
+        DWORD waitResult = WaitForMultipleObjects(KEY_COUNT, hEvents, FALSE, 0); //wait for any of the events to be signaled
 
         if (waitResult >= WAIT_OBJECT_0 && waitResult < WAIT_OBJECT_0 + KEY_COUNT) 
         {

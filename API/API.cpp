@@ -68,15 +68,17 @@ Error API::Cleanup(AntiCheat* AC)
 
 	if (AC->GetAntiDebugger()->GetDetectionThread() != NULL) //stop anti-debugger thread
 	{
-		AC->GetAntiDebugger()->GetDetectionThread()->SignalShutdown(true);
 		WaitForSingleObject(AC->GetAntiDebugger()->GetDetectionThread()->GetHandle(), 3000);
+		AC->GetAntiDebugger()->GetDetectionThread()->SignalShutdown(true);
 	}
 
-	if (AC->GetMonitor()->GetMonitorThread() != NULL) //stop anti-cheat monitor thread
+	Thread *monitorThread = AC->GetMonitor()->GetMonitorThread();
+	if (monitorThread != NULL) //stop anti-cheat monitor thread
 	{
-		AC->GetMonitor()->GetMonitorThread()->SignalShutdown(true);
+		HANDLE handle = monitorThread->GetHandle();
+		WaitForSingleObject(handle, 6000);
 		AC->GetMonitor()->monitorProcessCreationMutex.lock();
-		WaitForSingleObject(AC->GetMonitor()->GetMonitorThread()->GetHandle(), 6000);
+		AC->GetMonitor()->GetMonitorThread()->SignalShutdown(true);
 	}
 
 	auto client = AC->GetNetworkClient().lock();
@@ -85,8 +87,8 @@ Error API::Cleanup(AntiCheat* AC)
 	{
 		if (client->GetRecvThread() != NULL) //stop anti-cheat monitor thread
 		{
-			client->GetRecvThread()->SignalShutdown(true);
 			WaitForSingleObject(client->GetRecvThread()->GetHandle(), 5000);
+			client->GetRecvThread()->SignalShutdown(true);
 		}
 	}
 	else
@@ -131,7 +133,8 @@ Error API::LaunchDefenses(AntiCheat* AC) //currently in the process to split the
 
 	if (AC->GetMonitor()->GetServiceManager()->GetLoadedDrivers()) //enumerate drivers, will be re-added soon
 	{
-		list<wstring> unsigned_drivers = AC->GetMonitor()->GetServiceManager()->GetUnsignedDrivers(); //unsigned drivers, take further action if needed
+		//todo: takes way too long, to move in its own thread
+		// list<wstring> unsigned_drivers = AC->GetMonitor()->GetServiceManager()->GetUnsignedDrivers(); //unsigned drivers, take further action if needed
 	}
 
 	if (!Process::CheckParentProcess(AC->GetMonitor()->GetProcessObj()->GetParentName())) //parent process check, the parent process would normally be set using our API methods
