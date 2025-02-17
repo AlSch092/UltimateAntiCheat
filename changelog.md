@@ -1,4 +1,6 @@
 ## Updates
+- Feb 16, '25: Added extra integrity check which checks file on disc's .text section versus the runtime image's.
+  
 - Feb 15, '25: Started Wiki page for documentation, fixed some bugs, and several QoL improvements (thanks LucasParsy for your contributions)
   
 - Feb 8, '25: Adding manually mapped image checks (not yet detecting erased PE headers, this will come next)
