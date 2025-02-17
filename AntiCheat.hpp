@@ -13,7 +13,7 @@
 #include "Preventions.hpp"
 #include "Common/Logger.hpp"
 #include "Common/Settings.hpp"
-#include "Common/AntiCheatInitFail.hpp"
+#include "AntiCheatInitFail.hpp"
 #include "API/API.hpp"
 
 /*
