@@ -165,12 +165,11 @@ int main(int argc, char** argv)
     catch (const std::bad_alloc& e)
     {
         Logger::logf(Err, "Anticheat pointer could not be allocated @ main(): %s", e.what());
-        std::terminate();
+        return 1;
     }
-
-    if (API::Dispatch(Anti_Cheat.get(), API::DispatchCode::INITIALIZE) != Error::OK) //initialize AC , this will start all detections + preventions
+    catch (const AntiCheatInitFail& e)
     {
-        Logger::logf(Err, "Could not initialize program: API::Dispatch failed. Shutting down.");
+        Logger::logf(Err, "Anticheat init error: %d %s", e.reasonEnum, e.what());
         return 1;
     }
 
