@@ -183,11 +183,17 @@ void Detections::Monitor(LPVOID thisPtr)
                 Logger::logf(Detection, "Found modified .rdata section!\n");
                 Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
             }
+
+            if (!Monitor->GetIntegrityChecker()->CheckFileIntegrityFromDisc()) //check .text of file on disc versus runtime process - this fills the gap of gathering .text hashes at program startup and comparing to that
+            {
+                Logger::logf(Detection, ".text section of file on disc differs from runtime process!");
+                Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
+            }
         }
 
         if (Monitor->GetIntegrityChecker()->IsModuleModified(L"WINTRUST.dll")) //check hashes of wintrust.dll for signing-related hooks
         {
-            Logger::logf(Detection, "Found modified .text section in WINTRUST.dll!");
+            Logger::logf(Detection, "Found modified .text section in WINTRUST.dll!"); //checking .rdata would be helpful too
             Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
         }
 
@@ -389,7 +395,7 @@ BOOL Detections::IsSectionHashUnmatching(UINT64 cachedAddress, DWORD cachedSize,
     {
         if (GetIntegrityChecker()->Check((uint64_t)cachedAddress, cachedSize, GetIntegrityChecker()->GetSectionHashList(".rdata"))) //compares hash to one gathered previously
         {
-            Logger::logf(Info, "Hashes match: Program's .text section appears genuine.\n");
+            Logger::logf(Info, "Hashes match: Program's .rdata section appears genuine.\n");
             return FALSE;
         }
         else
