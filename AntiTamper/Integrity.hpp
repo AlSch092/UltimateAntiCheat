@@ -62,7 +62,8 @@ public:
 	bool Check(__in uint64_t Address, __in int nBytes, __in vector<uint64_t> hashList); //returns true if hashes calculated at `Address` don't match hashList
 	
 	static vector<uint64_t> GetMemoryHash(__in uint64_t Address, __in int nBytes); //get hash list at `Address`
-
+	static vector<uint64_t> GetMemoryHash(LPBYTE memory, int nBytes);
+	
 	void SetSectionHashList(__out vector<uint64_t> hList, __in const string section);
 
 	vector<uint64_t> GetSectionHashList(__in const string sectionName) const 
@@ -95,6 +96,8 @@ public:
 	static bool IsPEHeader(__in unsigned char* pMemory); //checks for MZ and PE signatures
 	static bool IsAddressInModule(const std::vector<ProcessData::MODULE_DATA>& modules, uintptr_t address);
 
+	static vector<uint64_t> GetSectionHashFromDisc(wstring path, const char* sectionName);
+	bool CheckFileIntegrityFromDisc();
 private:
 	
 	unordered_map<string, vector<uint64_t>> SectionHashes; //section hashes for current/main module's sections

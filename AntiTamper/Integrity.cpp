@@ -51,6 +51,33 @@ vector<uint64_t> Integrity::GetMemoryHash(__in uint64_t Address, __in int nBytes
 	return hashList;
 }
 
+
+/*
+	GetMemoryHash (overloaded) - returns a vector of sha256 hashes of memory of nBytes
+*/
+vector<uint64_t> Integrity::GetMemoryHash(LPBYTE memory, int nBytes)
+{
+	if (memory == nullptr)
+		return {};
+
+	vector<uint64_t> hashList;
+
+	SHA256 sha;
+	uint8_t* digest = 0;
+	UINT64 digestCache = 0;
+
+	for (int i = 0; i < nBytes; i = i + 32)
+	{
+		sha.update(&memory[i], 32);
+		digest = sha.digest();
+		digestCache += *(UINT64*)digest + i;
+		hashList.push_back(digestCache);
+		delete digest;
+	}
+
+	return hashList;
+}
+
 void Integrity::SetSectionHashList(__out vector<uint64_t> hList, __in const string section)
 {
 	this->SectionHashes[section].assign(hList.begin(), hList.end());
@@ -303,4 +330,99 @@ bool Integrity::IsAddressInModule(const std::vector<ProcessData::MODULE_DATA>& m
 		}
 	}
 	return false;
+}
+
+/*
+	GetSectionHashFromDisc - returns hash list (vector of uint64_t) from file `path` of section `sectionName`
+*/
+vector<uint64_t> Integrity::GetSectionHashFromDisc(wstring path, const char* sectionName)
+{
+	vector<uint8_t> sectionBytes;
+
+	std::ifstream file(path, std::ios::binary);
+	if (!file)
+	{
+		Logger::logfw(Detection, L"Error reading file: %s @ GetSectionHashFromDisc", path.c_str());
+		return {};
+	}
+
+	IMAGE_DOS_HEADER dosHeader;
+	file.read(reinterpret_cast<char*>(&dosHeader), sizeof(IMAGE_DOS_HEADER));
+	if (dosHeader.e_magic != IMAGE_DOS_SIGNATURE)
+	{
+		Logger::logfw(Detection, L"Lacking MZ signature in file: %s @ GetSectionHashFromDisc", path.c_str());
+		return {};
+	}
+
+	file.seekg(dosHeader.e_lfanew, std::ios::beg);
+	IMAGE_NT_HEADERS ntHeaders;
+	file.read(reinterpret_cast<char*>(&ntHeaders), sizeof(IMAGE_NT_HEADERS));
+	if (ntHeaders.Signature != IMAGE_NT_SIGNATURE)
+	{
+		Logger::logfw(Detection, L"Invalid PE signature in file: %s @ GetSectionHashFromDisc", path.c_str());
+		return {};
+	}
+
+	IMAGE_SECTION_HEADER sectionHeader;
+	bool found = false;
+	for (int i = 0; i < ntHeaders.FileHeader.NumberOfSections; i++)
+	{
+		file.read(reinterpret_cast<char*>(&sectionHeader), sizeof(IMAGE_SECTION_HEADER));
+		if (strcmp((const char*)sectionHeader.Name, ".text") == 0)
+		{
+			found = true;
+			break;
+		}
+	}
+
+	if (!found)
+	{
+		Logger::logfw(Detection, L".text section not found in file: %s @ GetSectionHashFromDisc", path.c_str());
+		return {};
+	}
+
+	sectionBytes.resize(sectionHeader.SizeOfRawData);
+	file.seekg(sectionHeader.PointerToRawData, std::ios::beg);
+	file.read(reinterpret_cast<char*>(sectionBytes.data()), sectionHeader.SizeOfRawData);
+
+	BYTE* sectionMemory = new BYTE[sectionHeader.SizeOfRawData];
+
+	for (int i = 0; i < sectionHeader.SizeOfRawData; i++)
+	{
+		sectionMemory[i] = sectionBytes[i];
+	}
+
+	vector<uint64_t> sectionHashes = GetMemoryHash(sectionMemory, sectionHeader.SizeOfRawData);
+
+	if(sectionMemory != nullptr)
+		delete[] sectionMemory;
+
+	return sectionHashes;
+}
+
+/*
+	CheckFileIntegrityFromDisc - check if file on disc's section differs from running file
+	returns `false` if hashes do not properly match
+*/
+bool Integrity::CheckFileIntegrityFromDisc()
+{
+	wstring procFolder = Services::GetProcessDirectoryW(GetCurrentProcessId());
+	procFolder += wstring(_MAIN_MODULE_NAME_W);
+
+	auto hashes = Integrity::GetSectionHashFromDisc(procFolder, ".text");
+
+	auto running_hashes = GetSectionHashList(".text");
+
+	hashes.resize(running_hashes.size()); //hash list of file on disc is slightly larger than the hashes we gathered at runtime
+
+	for (int i = 0; i < running_hashes.size() - 1; i++)
+	{
+		if (hashes[i] != running_hashes[i])
+		{
+			Logger::logfw(LogType::Detection, L"Hashes of disc .exe and memory don't match for .text at index %d (size %d)", i, running_hashes.size());
+			return false;
+		}
+	}
+
+	return true;
 }
