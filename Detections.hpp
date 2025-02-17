@@ -11,6 +11,7 @@
 #include "Obscure/ntldr.hpp" //dll notification structures
 #include <Wbemidl.h> //for process event creation (WMI)
 #include <comdef.h>  //for process event creation (WMI)
+#include <mutex>
 
 #pragma comment(lib, "wbemuuid.lib")  //for process event creation (WMI)
 
@@ -90,6 +91,7 @@ public:
 	Detections operator*(Detections& other) = delete;
 	Detections operator/(Detections& other) = delete;
 
+	std::mutex monitorProcessCreationMutex;
 	weak_ptr<NetClient> GetNetClient() { return this->netClient; }
 
 	Services* GetServiceManager() const { return this->_Services.get(); }

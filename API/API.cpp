@@ -75,6 +75,7 @@ Error API::Cleanup(AntiCheat* AC)
 	if (AC->GetMonitor()->GetMonitorThread() != NULL) //stop anti-cheat monitor thread
 	{
 		AC->GetMonitor()->GetMonitorThread()->SignalShutdown(true);
+		AC->GetMonitor()->monitorProcessCreationMutex.lock();
 		WaitForSingleObject(AC->GetMonitor()->GetMonitorThread()->GetHandle(), 6000);
 	}
 

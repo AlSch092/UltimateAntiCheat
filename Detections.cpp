@@ -836,19 +836,19 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
 
     while (pEnumerator && monitor->MonitoringProcessCreation) //keep looping while MonitoringProcessCreation is set to true
     {
-        if (monitor->GetProcessCreationMonitorThread() != nullptr)
+        if (monitor->GetProcessCreationMonitorThread() != nullptr && monitor->GetProcessCreationMonitorThread()->IsShutdownSignalled())
         {
-            if (monitor->GetProcessCreationMonitorThread()->IsShutdownSignalled())
-            {
-                break;
-            }
+            break;
         }
+        monitor->monitorProcessCreationMutex.lock();
 
-        HRESULT hr = pEnumerator->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+        HRESULT hr = pEnumerator->Next(WBEM_NO_WAIT, 1, &pclsObj, &uReturn);
 
-        if (0 == uReturn) 
+        if (0 == uReturn)
+        {
+            monitor->monitorProcessCreationMutex.unlock();
             continue;
-
+        }
         VARIANT vtProp;
 
         hr = pclsObj->Get(L"TargetInstance", 0, &vtProp, 0, 0);
@@ -895,6 +895,7 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
         if(monitor->GetMonitorThread() != nullptr)
             monitor->GetMonitorThread()->UpdateTick(); //update tick on each loop, then we can check this value from a different thread to see if someone has suspended it
 
+        monitor->monitorProcessCreationMutex.unlock();
         this_thread::sleep_for(std::chrono::milliseconds(100)); //ease the CPU a bit
     }
 
