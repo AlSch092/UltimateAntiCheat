@@ -7,6 +7,7 @@
 #include <cstdarg>
 #include <windows.h>
 #include <mutex>
+#include <map>
 
 enum LogType
 {
@@ -27,120 +28,81 @@ const WORD ConsoleTextColors[] =
 class Logger final
 {
 public:
-    static bool logToFile;
+    static std::string logFileName;
+    static bool enableLogging;
 
-    static void log(const std::string& filename, LogType type, const std::string& message)
-    {
-        if (!logToFile) {
+    static int getLogColor(LogType type) {
+        const std::map<LogType, int> logColors = {
+            { LogType::Detection,  ConsoleTextColors[0]},
+            { LogType::Info, ConsoleTextColors[3] },
+            { LogType::Err, ConsoleTextColors[5] },
+            { LogType::Warning, FOREGROUND_GREEN }
+        };
+        return logColors.at(type);
+    }
+
+    static void logToFile(std::string& message) {
+        if (logFileName.empty()) {
             return;
         }
-        std::lock_guard<std::mutex> lock(consoleMutex);
-
-        std::ofstream logFile(filename, std::ios::out | std::ios::app); //this can throw an exception if the program shuts down during this call 
-
+        std::ofstream logFile(logFileName, std::ios::out | std::ios::app);
         if (!logFile.is_open())
         {
-            std::cerr << "Error: Could not open log file: " << filename << std::endl;
+            std::cerr << "Error: Could not open log file: " << logFileName << std::endl;
             return;
         }
-
-        std::string msg_with_errorcode;
-        switch (type)
-        {
-        case Err:
-            msg_with_errorcode = "[ERROR] ";
-            break;
-        case Detection:
-            msg_with_errorcode = "[DETECTION] ";
-            break;
-        case Info:
-            msg_with_errorcode = "[INFO] ";
-            break;
-        case Warning:
-            msg_with_errorcode = "[WARNING] ";
-            break;
-        default:
-            msg_with_errorcode = "[ERROR] ";
-            break;
-        }
-        msg_with_errorcode += message;
 
         std::time_t now = std::time(nullptr);
         char timestamp[20];
         std::strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
 
-        logFile << "[" << timestamp << "] " << msg_with_errorcode << std::endl;
-
-        if (type == Detection)
-        {
-            SetColor(ConsoleTextColors[0]);
-            printf("%s\n", msg_with_errorcode.c_str());
-            ResetColor();
-        }
-        else if (type == Info)
-        {
-            SetColor(ConsoleTextColors[3]);
-            printf("%s\n", msg_with_errorcode.c_str());
-            ResetColor();
-        }
-        else if (type == Warning)
-        {
-            SetColor(FOREGROUND_GREEN);
-            printf("%s\n", msg_with_errorcode.c_str());
-            ResetColor();
-        }
-        else if (type == Err)
-        {
-            SetColor(ConsoleTextColors[5]);
-            printf("%s\n", msg_with_errorcode.c_str());
-            ResetColor();
-        }
-        else
-            printf("%s\n", msg_with_errorcode.c_str());
+        logFile << L"[" << timestamp << L"] " << message << std::endl;
 
         if (logFile.fail())
         {
-            std::cerr << "[ERROR] Failed to write to log file: " << filename << std::endl;
+            std::cerr << "[ERROR] Failed to write to log file: " << logFileName << std::endl;
+            return;
         }
 
-        logFile.close();
+        logFile.close(); // Close the file after writing
     }
 
-    static void logw(const std::string& filename, LogType type, const std::wstring& message)
+    static void log(LogType type, const std::string& message)
     {
-        if (!logToFile) {
+        if (!enableLogging) {
             return;
         }
-        std::wofstream logFile(filename, std::ios::out | std::ios::app);
+        std::lock_guard<std::mutex> lock(consoleMutex);
 
+        std::string msg_with_errorcode;
+
+        const std::map<LogType, const std::string> msgsTypes = {
+            { LogType::Detection,  "[DETECTION] "},
+            { LogType::Info, "[INFO] " },
+            { LogType::Err, "[ERROR] " },
+            { LogType::Warning, "[WARNING] " }
+        };
+
+        msg_with_errorcode = msgsTypes.at(type);
+        msg_with_errorcode += message;
+
+        logToFile(msg_with_errorcode);
+
+        SetColor(getLogColor(type));
+        printf("%s\n", msg_with_errorcode.c_str());
+        ResetColor();
+    }
+
+    static void logToWFile(std::wstring& message) {
+        if (logFileName.empty()) {
+            return;
+        }
+        std::wofstream logFile(logFileName, std::ios::out | std::ios::app);
         if (!logFile.is_open())
         {
-            std::cerr << "Error: Could not open log file: " << filename << std::endl;
+            std::cerr << "Error: Could not open log file: " << logFileName << std::endl;
             return;
         }
-
-        std::wstring msg_with_errorcode;
-
-        switch (type)
-        {
-        case Err:
-            msg_with_errorcode = L"[ERROR] ";
-            break;
-        case Detection:
-            msg_with_errorcode = L"[DETECTION] ";
-            break;
-        case Info:
-            msg_with_errorcode = L"[INFO] ";
-            break;
-        case Warning:
-            msg_with_errorcode = L"[WARNING] ";
-            break;
-        default:
-            msg_with_errorcode = L"[ERROR] ";
-            break;
-        }
-
-        msg_with_errorcode += message;
 
         std::time_t now = std::time(nullptr);
         std::tm localtime;
@@ -148,48 +110,46 @@ public:
         wchar_t timestamp[256] = { 0 };
         std::wcsftime(timestamp, 256, L"%Y-%m-%d %H:%M:%S", &localtime);
 
-        logFile << L"[" << timestamp << L"] " << msg_with_errorcode << std::endl;
-
-        if (type == Detection)
-        {
-            SetColor(ConsoleTextColors[0]);
-            wprintf(L"%s\n", msg_with_errorcode.c_str());
-            ResetColor();
-        }
-        else if (type == Info)
-        {
-            SetColor(ConsoleTextColors[3]);
-            wprintf(L"%s\n", msg_with_errorcode.c_str());
-            ResetColor();
-        }
-        else if (type == Warning)
-        {
-            SetColor(FOREGROUND_GREEN);
-            wprintf(L"%s\n", msg_with_errorcode.c_str());
-            ResetColor();
-        }
-        else if (type == Err)
-        {
-            SetColor(ConsoleTextColors[5]);
-            wprintf(L"%s\n", msg_with_errorcode.c_str());
-            ResetColor();
-        }
-        else
-            wprintf(L"%s\n", msg_with_errorcode.c_str());
+        logFile << L"[" << timestamp << L"] " << message << std::endl;
 
         if (logFile.fail())
         {
-            std::cerr << "[ERROR] Failed to write to log file: " << filename << std::endl;
+            std::cerr << "[ERROR] Failed to write to log file: " << logFileName << std::endl;
             return;
         }
 
         logFile.close(); // Close the file after writing
     }
 
-    template<typename... Args>
-    static void logf(const char* filename, LogType type, const char* format, Args... args)
+
+    static void logw(LogType type, const std::wstring& message)
     {
-        if (format == NULL || filename == NULL)
+        if (!enableLogging) {
+            return;
+        }
+
+        std::wstring msg_with_errorcode;
+
+        const std::map<LogType, const std::wstring> msgsTypes = {
+            { LogType::Detection,  L"[DETECTION] "},
+            { LogType::Info, L"[INFO] " },
+            { LogType::Err, L"[ERROR] " },
+            { LogType::Warning, L"[WARNING] " }
+        };
+
+        msg_with_errorcode = msgsTypes.at(type);
+        msg_with_errorcode += message;
+        logToWFile(msg_with_errorcode);
+
+        SetColor(getLogColor(type));
+        wprintf(L"%s\n", msg_with_errorcode.c_str());
+        ResetColor();
+    }
+
+    template<typename... Args>
+    static void logf(LogType type, const char* format, Args... args)
+    {
+        if (format == NULL)
             return;
 
         const int buffSize = 1024;
@@ -198,7 +158,7 @@ public:
         int ret = std::snprintf(buffer, buffSize, format, args...);
         if (ret >= 0 && ret < buffSize)
         {
-            log(filename, type, std::string(buffer));
+            log(type, std::string(buffer));
         }
         else 
         {
@@ -207,9 +167,9 @@ public:
     }
 
     template<typename... Args>
-    static void logfw(const char* filename, LogType type, const wchar_t* format, Args... args)
+    static void logfw(LogType type, const wchar_t* format, Args... args)
     {
-        if (format == NULL || filename == NULL)
+        if (format == NULL)
             return;
 
         const int buffSize = 1024;
@@ -218,7 +178,7 @@ public:
         int ret = _snwprintf(buffer, buffSize, format, args...);
         if (ret >= 0 && ret < buffSize)
         {
-            logw(filename, type, std::wstring(buffer));
+            logw(type, std::wstring(buffer));
         }
         else
         {
@@ -240,7 +200,7 @@ public:
     template<typename... Args>
     static bool LogErrorAndReturn(const char* format, Args... args)
     {
-		logf("UltimateAnticheat.log", Err, format, args...);
+		logf(Err, format, args...);
         return false;
     }
 

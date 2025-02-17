@@ -9,7 +9,7 @@ std::vector<Handles::SYSTEM_HANDLE> Handles::GetHandles()
     NtQuerySystemInformationFunc NtQuerySystemInformation = (NtQuerySystemInformationFunc)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "NtQuerySystemInformation");
     if (!NtQuerySystemInformation)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Could not get NtQuerySystemInformation function address @ Handles::GetHandles");
+        Logger::logf(Err, "Could not get NtQuerySystemInformation function address @ Handles::GetHandles");
         return {};
     }
 
@@ -22,7 +22,7 @@ std::vector<Handles::SYSTEM_HANDLE> Handles::GetHandles()
         buffer = malloc(bufferSize);
         if (!buffer) 
         {
-            Logger::logf("UltimateAnticheat.log", Err, "Memory allocation failed @ Handles::GetHandles");
+            Logger::logf(Err, "Memory allocation failed @ Handles::GetHandles");
             return {};
         }
 
@@ -34,7 +34,7 @@ std::vector<Handles::SYSTEM_HANDLE> Handles::GetHandles()
         }
         else if (!(((NTSTATUS)(status)) >= 0))
         {
-            Logger::logf("UltimateAnticheat.log", Err, "NtQuerySystemInformation failed @ Handles::GetHandles");
+            Logger::logf(Err, "NtQuerySystemInformation failed @ Handles::GetHandles");
             free(buffer);
             return {};
         }
@@ -91,7 +91,7 @@ std::vector<Handles::SYSTEM_HANDLE> Handles::DetectOpenHandlesToProcess()
 
                         if (!foundWhitelisted)
                         {
-                            Logger::logf("UltimateAnticheat.log", Detection, "Handle %d from process %d is referencing our process.", handle.Handle, handle.ProcessId);
+                            Logger::logf(Detection, "Handle %d from process %d is referencing our process.", handle.Handle, handle.ProcessId);
                             handle.ReferencingOurProcess = true;
                             handlesTous.push_back(handle);
                         }

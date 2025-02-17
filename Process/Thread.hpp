@@ -26,7 +26,7 @@ public:
 	{
 		if (!BeginExecution(toExecute, lpOptionalParam, shouldRunForever, shouldDetach))
 		{
-			Logger::logf("UltimateAnticheat.log", Err, "Thread which was scheduled to execute at: %llX failed to spawn", this->ExecutionAddress);
+			Logger::logf(Err, "Thread which was scheduled to execute at: %llX failed to spawn", this->ExecutionAddress);
 
 			//std::terminate();  //Optionally, terminate the program since a scheduled thread could not start properly. Integrity cannot be guaranteed if one or more threads fails
 		}
@@ -36,7 +36,7 @@ public:
 
 	~Thread()
 	{
-		Logger::logf("UltimateAnticheat.log", Info, "Ending thread which originally executed at: %llX", this->ExecutionAddress);
+		Logger::logf(Info, "Ending thread which originally executed at: %llX", this->ExecutionAddress);
 
 		if (this->t.joinable())
 		{
@@ -49,7 +49,7 @@ public:
 
 				if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() >= 10)  // If 10 seconds have passed, exit the loop
 				{
-					Logger::logf("UltimateAnticheat.log", Warning, "Thread did not finish execution within the timeout period.");
+					Logger::logf(Warning, "Thread did not finish execution within the timeout period.");
 					break;
 				}
 

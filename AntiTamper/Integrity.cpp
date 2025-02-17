@@ -89,7 +89,7 @@ bool Integrity::IsUnknownModulePresent()
 			}
 			else
 			{
-				Logger::logfw("UltimateAnticheat.log", Detection, L"Unsigned module was found loaded in the process: %s", it->name);
+				Logger::logfw(Detection, L"Unsigned module was found loaded in the process: %s", it->name);
 				foundUnknown = true;
 			}
 		}

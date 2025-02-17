@@ -51,7 +51,7 @@ string HttpClient::ReadWebPage(__in const string url, __in const vector<string> 
 
         if (res != CURLE_OK)
         {
-            Logger::logf("UltimateAnticheat.log", Warning, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+            Logger::logf(Warning, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
             goto cleanup;
         }
 
@@ -123,7 +123,7 @@ string HttpClient::PostRequest(__in const string url, __in const vector<string> 
 
         if (res != CURLE_OK)
         {
-            Logger::logf("UltimateAnticheat.log", Warning, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+            Logger::logf(Warning, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
             goto fail_cleanup;
         }
 
@@ -136,7 +136,7 @@ string HttpClient::PostRequest(__in const string url, __in const vector<string> 
     }
     else
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to initialize libcurl @ WeAuth::SignOut");
+        Logger::logf(Err, "Failed to initialize libcurl @ WeAuth::SignOut");
         return "";
     }
 

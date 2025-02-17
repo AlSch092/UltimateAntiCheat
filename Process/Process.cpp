@@ -96,12 +96,12 @@ bool Process::HasExportedFunction(string dllName, string functionName)
             }
         }
         else
-            Logger::log("UltimateAnticheat.log", Err, " ImageExportDirectory was NULL @ Process::HasExportedFunction");
+            Logger::log(Err, " ImageExportDirectory was NULL @ Process::HasExportedFunction");
         
         UnMapAndLoad(&LoadedImage);
     }
     else
-        Logger::logf("UltimateAnticheat.log", Err, "MapAndLoad failed: %d @ Process::HasExportedFunction \n", GetLastError());
+        Logger::logf(Err, "MapAndLoad failed: %d @ Process::HasExportedFunction \n", GetLastError());
     
 
     return bFound;
@@ -126,7 +126,7 @@ list<ProcessData::Section*>* Process::GetSections(string module)
 
     if (pDoH == NULL || hInst == NULL)
     {
-        Logger::logf("UltimateAnticheat.log", Err, " PIMAGE_DOS_HEADER or hInst was NULL at Process::GetSections\n");
+        Logger::logf(Err, " PIMAGE_DOS_HEADER or hInst was NULL at Process::GetSections\n");
         return Sections;
     }
 
@@ -323,7 +323,7 @@ bool Process::ChangeImageSize(DWORD newEntry)
 
     if (!pNtH) 
     { 
-        Logger::logf("UltimateAnticheat.log", Err, "NTHeader was somehow NULL at ChangeImageSize\n");
+        Logger::logf(Err, "NTHeader was somehow NULL at ChangeImageSize\n");
         return false;
     }
 
@@ -331,7 +331,7 @@ bool Process::ChangeImageSize(DWORD newEntry)
 
     if (!VirtualProtect((LPVOID)pEntry, sizeof(DWORD), PAGE_EXECUTE_READWRITE, &protect))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "VirtualProtect failed at ChangeImageSize: %d\n", GetLastError());
+        Logger::logf(Err, "VirtualProtect failed at ChangeImageSize: %d\n", GetLastError());
         return false;
     }
 
@@ -373,7 +373,7 @@ bool Process::ChangeSizeOfCode(DWORD newEntry) //modify the 'sizeofcode' variabl
 
     if (!pNtH)
     {
-        Logger::logf("UltimateAnticheat.log", Err, " NTHeader was somehow NULL @ ChangeSizeOfCode\n");
+        Logger::logf(Err, " NTHeader was somehow NULL @ ChangeSizeOfCode\n");
         return false;
     }
 
@@ -417,7 +417,7 @@ bool Process::ChangeNumberOfSections(string module, DWORD newSectionsCount)
 
     if (pDoH == NULL || hInst == NULL)
     {
-        Logger::logf("UltimateAnticheat.log", Err, " PIMAGE_DOS_HEADER or hInst was NULL @ Process::ChangeNumberOfSections");
+        Logger::logf(Err, " PIMAGE_DOS_HEADER or hInst was NULL @ Process::ChangeNumberOfSections");
         return false;
     }
 
@@ -428,7 +428,7 @@ bool Process::ChangeNumberOfSections(string module, DWORD newSectionsCount)
 
     if (!VirtualProtect((LPVOID)&pNtH->FileHeader.NumberOfSections, sizeof(DWORD), PAGE_EXECUTE_READWRITE, &dwOldProt))
     {
-        Logger::logf("UltimateAnticheat.log", Err, " VirtualProtect failed @ Process::ChangeNumberOfSections");
+        Logger::logf(Err, " VirtualProtect failed @ Process::ChangeNumberOfSections");
         return false;
     }
 
@@ -436,7 +436,7 @@ bool Process::ChangeNumberOfSections(string module, DWORD newSectionsCount)
 
     if (!VirtualProtect((LPVOID)&pNtH->FileHeader.NumberOfSections, sizeof(DWORD), dwOldProt, &dwOldProt)) //reset page protections
     {
-        Logger::logf("UltimateAnticheat.log", Err, " VirtualProtect (2nd call) failed @ Process::ChangeNumberOfSections");
+        Logger::logf(Err, " VirtualProtect (2nd call) failed @ Process::ChangeNumberOfSections");
         return false;
     }
 
@@ -462,7 +462,7 @@ bool Process::ChangeImageBase(UINT64 newEntry)
 
     if (!pNtH)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "NTHeader was somehow NULL at ChangeImageBase\n");
+        Logger::logf(Err, "NTHeader was somehow NULL at ChangeImageBase\n");
         return false;
     }
 
@@ -613,7 +613,7 @@ UINT64 Process::GetSectionAddress(const char* moduleName, const char* sectionNam
 
     if (hModule == NULL)
     {
-        Logger::logf("UltimateAnticheat.log", Err, " Failed to get module handle: %d @ GetSectionAddress\n", GetLastError());
+        Logger::logf(Err, " Failed to get module handle: %d @ GetSectionAddress\n", GetLastError());
         return 0;
     }
 
@@ -622,14 +622,14 @@ UINT64 Process::GetSectionAddress(const char* moduleName, const char* sectionNam
     PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)baseAddress;
     if (pDosHeader->e_magic != IMAGE_DOS_SIGNATURE)
     {
-        Logger::logf("UltimateAnticheat.log", Err, " Invalid DOS header @ GetSectionAddress.\n");
+        Logger::logf(Err, " Invalid DOS header @ GetSectionAddress.\n");
         return 0;
     }
 
     PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS)(baseAddress + pDosHeader->e_lfanew);
     if (pNtHeaders->Signature != IMAGE_NT_SIGNATURE)
     {
-        Logger::logf("UltimateAnticheat.log", Err, " Invalid NT header @ GetSectionAddress.\n");
+        Logger::logf(Err, " Invalid NT header @ GetSectionAddress.\n");
         return 0;
     }
 
@@ -648,7 +648,7 @@ UINT64 Process::GetSectionAddress(const char* moduleName, const char* sectionNam
         pSectionHeader++;
     }
 
-    Logger::logf("UltimateAnticheat.log", Warning, ".text section not found.\n");
+    Logger::logf(Warning, ".text section not found.\n");
     return 0;
 }
 
@@ -683,7 +683,7 @@ list<ProcessData::ImportFunction*> Process::GetIATEntries()
 
     if (hModule == NULL)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Couldn't fetch module handle @ Process::GetIATEntries ");
+        Logger::logf(Err, "Couldn't fetch module handle @ Process::GetIATEntries ");
         return (list<ProcessData::ImportFunction*>)NULL;
     }
 
@@ -691,7 +691,7 @@ list<ProcessData::ImportFunction*> Process::GetIATEntries()
 
     if (dosHeader == nullptr)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Couldn't fetch dosHeader @ Process::GetIATEntries ");
+        Logger::logf(Err, "Couldn't fetch dosHeader @ Process::GetIATEntries ");
         return (list<ProcessData::ImportFunction*>)NULL;
     }
 
@@ -781,7 +781,7 @@ bool Process::FillModuleList()
                 }
                 else
                 {
-                    Logger::logf("UltimateAnticheat.log", Err, "Unable to parse module information @ Process::FillModuleList");
+                    Logger::logf(Err, "Unable to parse module information @ Process::FillModuleList");
                     return false;
                 }
 
@@ -789,14 +789,14 @@ bool Process::FillModuleList()
             }
             else
             {
-                Logger::logf("UltimateAnticheat.log", Err, "Unable to parse module named @ Process::FillModuleList");
+                Logger::logf(Err, "Unable to parse module named @ Process::FillModuleList");
                 return false;
             }
         }
     }
     else
     {
-        Logger::logf("UltimateAnticheat.log", Err, "EnumProcessModules failed @ Process::FillModuleList");
+        Logger::logf(Err, "EnumProcessModules failed @ Process::FillModuleList");
         return false;
     }
 
@@ -828,7 +828,7 @@ bool Process::ModifyTLSCallbackPtr(UINT64 NewTLSFunction)
         }
         __except (EXCEPTION_EXECUTE_HANDLER)
         {
-            Logger::logf("UltimateAnticheat.log", Err, "Failed to write TLS callback ptr  @ Process::ModifyTLSCallbackPtr");
+            Logger::logf(Err, "Failed to write TLS callback ptr  @ Process::ModifyTLSCallbackPtr");
             return false;
         }
     }
@@ -884,7 +884,7 @@ FARPROC Process::_GetProcAddress(PCSTR Module, LPCSTR lpProcName)
         }
         else
         {
-            Logger::logf("UltimateAnticheat.log", Err, "ImageExportDirectory was NULL @ Process::_GetProcAddress with module %s and function %s", Module, lpProcName);
+            Logger::logf(Err, "ImageExportDirectory was NULL @ Process::_GetProcAddress with module %s and function %s", Module, lpProcName);
             UnMapAndLoad(&LoadedImage);
             return NULL;
         }
@@ -893,7 +893,7 @@ FARPROC Process::_GetProcAddress(PCSTR Module, LPCSTR lpProcName)
     }
     else
     {
-        Logger::logf("UltimateAnticheat.log", Err, "MapAndLoad failed @ Process::_GetProcAddress with module %s and function %s", Module, lpProcName);
+        Logger::logf(Err, "MapAndLoad failed @ Process::_GetProcAddress with module %s and function %s", Module, lpProcName);
         return (FARPROC)NULL;
     }
 
@@ -908,7 +908,7 @@ bool Process::IsReturnAddressInModule(UINT64 RetAddr, const wchar_t* module)
 {
     if (RetAddr == 0)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "RetAddr was 0 @ : Process::IsReturnAddressInModule");
+        Logger::logf(Err, "RetAddr was 0 @ : Process::IsReturnAddressInModule");
         return false;
     }
 
@@ -927,7 +927,7 @@ bool Process::IsReturnAddressInModule(UINT64 RetAddr, const wchar_t* module)
 
     if (size == 0)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "size was 0 @ : Process::IsReturnAddressInModule");
+        Logger::logf(Err, "size was 0 @ : Process::IsReturnAddressInModule");
         return false;
     }
 
@@ -959,18 +959,18 @@ wstring Process::GetProcessName(DWORD pid)
             }
             else 
             {
-                Logger::logf("UltimateAnticheat.log", Err, "GetModuleBaseName failed with error %d @  Process::GetProcessName", GetLastError());
+                Logger::logf(Err, "GetModuleBaseName failed with error %d @  Process::GetProcessName", GetLastError());
             }
         }
         else 
         {
-            Logger::logf("UltimateAnticheat.log", Err, "EnumProcessModules failed with error %d @  Process::GetProcessName", GetLastError());
+            Logger::logf(Err, "EnumProcessModules failed with error %d @  Process::GetProcessName", GetLastError());
         }
         CloseHandle(hProcess);
     }
     else 
     {
-        Logger::logf("UltimateAnticheat.log", Err, "OpenProcess failed with error %d @  Process::GetProcessName", GetLastError());
+        Logger::logf(Err, "OpenProcess failed with error %d @  Process::GetProcessName", GetLastError());
     }
 
     return processName;
@@ -1111,14 +1111,14 @@ DWORD Process::GetTextSectionSize(HMODULE hModule)
     PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)hModule;
     if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Invalid DOS signature @ GetTextSectionSize");
+        Logger::logf(Err, "Invalid DOS signature @ GetTextSectionSize");
         return 0;
     }
 
     PIMAGE_NT_HEADERS ntHeaders = (PIMAGE_NT_HEADERS)((BYTE*)hModule + dosHeader->e_lfanew);
     if (ntHeaders->Signature != IMAGE_NT_SIGNATURE)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Invalid NT signature @ GetTextSectionSize");
+        Logger::logf(Err, "Invalid NT signature @ GetTextSectionSize");
         return 0;
     }
 
@@ -1221,7 +1221,7 @@ std::vector<BYTE> Process::ReadRemoteTextSection(DWORD pid)
     HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
     if (!hProcess) 
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to open process. Error: %d", GetLastError());
+        Logger::logf(Err, "Failed to open process. Error: %d", GetLastError());
         return {};
     }
 
@@ -1230,7 +1230,7 @@ std::vector<BYTE> Process::ReadRemoteTextSection(DWORD pid)
 
     if (!GetRemoteTextSection(hProcess, baseAddress, sectionSize)) 
     {
-        Logger::log("UltimateAnticheat.log", Err, "Failed to find the .text section.");
+        Logger::log(Err, "Failed to find the .text section.");
         CloseHandle(hProcess);
         return {};
     }
@@ -1240,7 +1240,7 @@ std::vector<BYTE> Process::ReadRemoteTextSection(DWORD pid)
     SIZE_T bytesRead = 0;
     if (!ReadProcessMemory(hProcess, reinterpret_cast<LPCVOID>(baseAddress), buffer.data(), sectionSize, &bytesRead)) 
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to read memory. Error: %d",  GetLastError());
+        Logger::logf(Err, "Failed to read memory. Error: %d",  GetLastError());
         CloseHandle(hProcess);
         return {};
     }

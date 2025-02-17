@@ -52,7 +52,7 @@ Error NetClient::Initialize(string ip, uint16_t port, string gameCode)
 
 	if (RecvLoopThread->GetHandle() == INVALID_HANDLE_VALUE || RecvLoopThread->GetHandle() == NULL)
 	{
-		Logger::logf("UltimateAnticheat.log", Err, "RecvThread was NULL @ NetClient::Initialize");
+		Logger::logf(Err, "RecvThread was NULL @ NetClient::Initialize");
 		closesocket(Socket);
 		WSACleanup();
 		shutdown(Socket, 0);
@@ -140,13 +140,13 @@ void NetClient::ProcessRequests(LPVOID Param)
 	const int ms_between_loops = 1000;
 	unsigned char recvBuf[DEFAULT_RECV_LENGTH] = { 0 };
 
-	Logger::logf("UltimateAnticheat.log", Info, "Started thread on NetClient::ProcessRequests with id: %d", GetCurrentThreadId());
+	Logger::logf(Info, "Started thread on NetClient::ProcessRequests with id: %d", GetCurrentThreadId());
 
 	NetClient* Client = reinterpret_cast<NetClient*>(Param);
 
 	if (Client == nullptr)
 	{
-		Logger::logf("UltimateAnticheat.log", Err, "Client was NULL @ NetClient::ProcessRequests");
+		Logger::logf(Err, "Client was NULL @ NetClient::ProcessRequests");
 		receiving = false; //todo: send signals to rest of anticheat to shutdown
 		goto end;
 	}
@@ -177,7 +177,7 @@ void NetClient::ProcessRequests(LPVOID Param)
 		}
 		else if(s == SOCKET_ERROR)
 		{
-			Logger::logf("UltimateAnticheat.log", Err, "Socket error @  NetClient::ProcessRequests");
+			Logger::logf(Err, "Socket error @  NetClient::ProcessRequests");
 			receiving = false; //todo: send signals to rest of anticheat to shutdown
 		}
 
@@ -269,7 +269,7 @@ Error NetClient::HandleInboundPacket(PacketReader* p)
 		{
 			uint16_t softwareVersion = p->readShort();
 			HandshakeCompleted = true;
-			Logger::logf("UltimateAnticheat.log", Info, "Got reply from server with version: %d", softwareVersion);
+			Logger::logf(Info, "Got reply from server with version: %d", softwareVersion);
 		}break;
 
 		case Packets::Opcodes::SC_HEARTBEAT: //auth cookie every few minutes
@@ -289,7 +289,7 @@ Error NetClient::HandleInboundPacket(PacketReader* p)
 
 				if (SendData(Response) != Error::OK)
 				{
-					Logger::logf("UltimateAnticheat.log", Err, "Could not send heartbeat @ HandleInboundPacket");
+					Logger::logf(Err, "Could not send heartbeat @ HandleInboundPacket");
 					err = Error::BAD_HEARTBEAT;
 				}
 
@@ -298,7 +298,7 @@ Error NetClient::HandleInboundPacket(PacketReader* p)
 			}
 			else
 			{
-				Logger::logf("UltimateAnticheat.log", Err, "Failed to generate heartbeat @ HandleInboundPacket");
+				Logger::logf(Err, "Failed to generate heartbeat @ HandleInboundPacket");
 				err = Error::BAD_HEARTBEAT;
 			}
 		}break;
@@ -310,7 +310,7 @@ Error NetClient::HandleInboundPacket(PacketReader* p)
 
 			if (QueryMemory(address, size) != Error::OK)
 			{
-				Logger::logf("UltimateAnticheat.log", Err, "Could not query memory bytes for server auth @ HandleInboundPacket");
+				Logger::logf(Err, "Could not query memory bytes for server auth @ HandleInboundPacket");
 				err = Error::GENERIC_FAIL;
 			}
 		}break;
@@ -341,7 +341,7 @@ Error NetClient::QueryMemory(uint64_t address, uint32_t size)
 {
 	if (size == 0 || address == 0)
 	{
-		Logger::logf("UltimateAnticheat.log", Err, "Failed to fetch bytes at memory address (size or address was 0) @ NetClient::QueryMemory");
+		Logger::logf(Err, "Failed to fetch bytes at memory address (size or address was 0) @ NetClient::QueryMemory");
 		return Error::INCOMPLETE_SEND;
 	}
 
@@ -349,7 +349,7 @@ Error NetClient::QueryMemory(uint64_t address, uint32_t size)
 
 	if (bytes == nullptr)
 	{
-		Logger::logf("UltimateAnticheat.log", Err, "Failed to fetch bytes at memory address @ NetClient::QueryMemory");
+		Logger::logf(Err, "Failed to fetch bytes at memory address @ NetClient::QueryMemory");
 		return Error::NULL_MEMORY_REFERENCE;
 	}
 
@@ -367,7 +367,7 @@ __forceinline const char* NetClient::MakeHeartbeat(string cookie)
 {
 	if (!Process::IsReturnAddressInModule(*(UINT64*)_AddressOfReturnAddress(), NULL)) //return address check
 	{
-		Logger::logf("UltimateAnticheat.log", Detection, "Return address was outside of module @ NetClient::MakeHeartbeat : some attacker might be trying to spoof heartbeats");
+		Logger::logf(Detection, "Return address was outside of module @ NetClient::MakeHeartbeat : some attacker might be trying to spoof heartbeats");
 		return nullptr;
 	}
 
@@ -418,7 +418,7 @@ string NetClient::GetMACAddress()
 	AdapterInfo = (IP_ADAPTER_INFO*)malloc(sizeof(IP_ADAPTER_INFO));
 	if (AdapterInfo == NULL)
 	{
-		Logger::logf("UltimateAnticheat.log", Err, "Error allocating memory needed to call GetAdaptersinfo @ GetMACAddress");
+		Logger::logf(Err, "Error allocating memory needed to call GetAdaptersinfo @ GetMACAddress");
 		delete[] mac_addr;
 		return "";
 	}
@@ -429,7 +429,7 @@ string NetClient::GetMACAddress()
 		AdapterInfo = (IP_ADAPTER_INFO*)malloc(dwBufLen);
 		if (AdapterInfo == NULL)
 		{
-			Logger::logf("UltimateAnticheat.log", Err, "Error allocating memory needed to call GetAdaptersinfo @ GetMACAddress");
+			Logger::logf(Err, "Error allocating memory needed to call GetAdaptersinfo @ GetMACAddress");
 			delete[] mac_addr;
 			return "";
 		}

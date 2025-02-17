@@ -12,10 +12,11 @@
 /Debug
 
 # CMake
+/build
 /CMakeFiles
 /cmake_install.cmake
 /CMakeCache.txt
-/UltimateAnticheat.dir
+/Ultimate*
 /bin
 /ZERO_CHECK.vcxproj
 /ZERO_CHECK.vcxproj.filters

@@ -46,13 +46,13 @@ public:
 		}
 		catch (const std::bad_alloc& e) 
 		{
-			Logger::logf("UltimateAnticheat.log", Err, "One or more pointers could not be allocated @ Detections::Detections: %s", e.what());
+			Logger::logf(Err, "One or more pointers could not be allocated @ Detections::Detections: %s", e.what());
 			std::terminate();
 		}
 	
 		if (!FetchBlacklistedBytePatterns(BlacklisteBytePatternRepository))
 		{
-			Logger::logf("UltimateAnticheat.log", Warning, "Failed to fetch blacklisted byte patterns from web location!");
+			Logger::logf(Warning, "Failed to fetch blacklisted byte patterns from web location!");
 		}
 
 		this->CheaterWasDetected = new ObfuscatedData<uint8_t>((bool)false);

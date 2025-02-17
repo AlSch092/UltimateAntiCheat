@@ -39,12 +39,12 @@ public:
 	{
 		if (serverEndpoint == nullptr)
 		{
-			Logger::logf("UltimateAnticheat.log", Warning, "serverEndpoint was nullptr at NetClient::NetClient!");
+			Logger::logf(Warning, "serverEndpoint was nullptr at NetClient::NetClient!");
 		}
 
 		if (port == 0)
 		{
-			Logger::logf("UltimateAnticheat.log", Warning, "Port was 0 at NetClient::NetClient!");
+			Logger::logf(Warning, "Port was 0 at NetClient::NetClient!");
 		}
 
 		if(serverEndpoint != nullptr)

@@ -89,7 +89,7 @@ public:
 		
 		if (!FillModuleList())
 		{
-			Logger::logf("UltimateAnticheat.log", Err, "Unable to traverse loaded modules @ ::Process() .\n");
+			Logger::logf(Err, "Unable to traverse loaded modules @ ::Process() .\n");
 		}
 
 		SetParentName(GetProcessName(GetParentProcessId()));

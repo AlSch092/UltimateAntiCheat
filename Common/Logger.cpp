@@ -1,5 +1,6 @@
 //AlSch092 @ Github
 #include "Logger.hpp"
 
-bool Logger::logToFile = true;
-std::mutex Logger::consoleMutex; 
+bool Logger::enableLogging = true;
+std::string Logger::logFileName = "";
+std::mutex Logger::consoleMutex;

@@ -42,7 +42,7 @@ BOOL Authenticode::VerifyEmbeddedSignature(LPCWSTR filePath)
 
         if (status == CERT_E_REVOKED || status == CERT_E_EXPIRED || status == CERT_E_UNTRUSTEDROOT || status == CERT_E_CHAINING)
         {
-			Logger::log("UltimateAnticheat.log", LogType::Detection, "Revoked or expired signature detected");
+			Logger::log(LogType::Detection, "Revoked or expired signature detected");
 			return FALSE;
 	}
     }
@@ -63,7 +63,7 @@ BOOL Authenticode::VerifyCatalogSignature(LPCWSTR filePath)
     HANDLE hFile = CreateFileW(filePath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE) 
     {
-        Logger::logfw("UltimateAnticheat.log", LogType::Warning, L"Could not open file: %s @ VerifyCatalogSignature", filePath);
+        Logger::logfw(LogType::Warning, L"Could not open file: %s @ VerifyCatalogSignature", filePath);
         return false;
     }
 
@@ -90,7 +90,7 @@ BOOL Authenticode::VerifyCatalogSignature(LPCWSTR filePath)
     HCATINFO hCatInfo = CryptCATAdminEnumCatalogFromHash(hCatAdmin, pbHash, cbHash, 0, NULL);
     if (hCatInfo == NULL) 
     {
-        //Logger::logfw("UltimateAnticheat.log", LogType::Warning, L"No catalog file found for: %s @ VerifyCatalogSignature", filePath);
+        //Logger::logfw(LogType::Warning, L"No catalog file found for: %s @ VerifyCatalogSignature", filePath);
         CryptCATAdminReleaseContext(hCatAdmin, 0);
         CloseHandle(hFile);
         return false;
@@ -170,7 +170,7 @@ BOOL Authenticode::GetDateOfTimeStamp(PCMSG_SIGNER_INFO pSignerInfo, SYSTEMTIME*
                 &dwData);
             if (!fResult)
             {
-                Logger::logf("UltimateAnticheat.log", Err, "CryptDecodeObject failed with %x @ Authenticode::GetTimeStampSignerInfo", GetLastError());
+                Logger::logf(Err, "CryptDecodeObject failed with %x @ Authenticode::GetTimeStampSignerInfo", GetLastError());
                 break;
             }
 
@@ -233,7 +233,7 @@ BOOL Authenticode::GetProgAndPublisherInfo(__in PCMSG_SIGNER_INFO pSignerInfo, _
                     &dwData);
                 if (!fResult)
                 {
-                    Logger::logf("UltimateAnticheat.log", Err, "CryptDecodeObject failed with %x @ Authenticode::GetProgAndPublisherInfo", GetLastError());
+                    Logger::logf(Err, "CryptDecodeObject failed with %x @ Authenticode::GetProgAndPublisherInfo", GetLastError());
                     __leave;
                 }
 
@@ -241,7 +241,7 @@ BOOL Authenticode::GetProgAndPublisherInfo(__in PCMSG_SIGNER_INFO pSignerInfo, _
                 OpusInfo = (PSPC_SP_OPUS_INFO)LocalAlloc(LPTR, dwData);
                 if (!OpusInfo)
                 {
-                    Logger::logf("UltimateAnticheat.log", Err, "Unable to allocate memory for publisher info @ Authenticode::GetProgAndPublisherInfo");
+                    Logger::logf(Err, "Unable to allocate memory for publisher info @ Authenticode::GetProgAndPublisherInfo");
                     __leave;
                 }
 
@@ -255,7 +255,7 @@ BOOL Authenticode::GetProgAndPublisherInfo(__in PCMSG_SIGNER_INFO pSignerInfo, _
                     &dwData);
                 if (!fResult)
                 {
-                    Logger::logf("UltimateAnticheat.log", Err, "CryptDecodeObject failed with %x @ Authenticode::GetProgAndPublisherInfo", GetLastError());
+                    Logger::logf(Err, "CryptDecodeObject failed with %x @ Authenticode::GetProgAndPublisherInfo", GetLastError());
                     __leave;
                 }
 
@@ -365,7 +365,7 @@ BOOL Authenticode::GetTimeStampSignerInfo(__in PCMSG_SIGNER_INFO pSignerInfo, __
                     &dwSize);
                 if (!fResult)
                 {
-                    Logger::logf("UltimateAnticheat.log", Err, "CryptDecodeObject failed with %x @ Authenticode::GetTimeStampSignerInfo", GetLastError());
+                    Logger::logf(Err, "CryptDecodeObject failed with %x @ Authenticode::GetTimeStampSignerInfo", GetLastError());
                     __leave;
                 }
 
@@ -373,7 +373,7 @@ BOOL Authenticode::GetTimeStampSignerInfo(__in PCMSG_SIGNER_INFO pSignerInfo, __
                 *pCounterSignerInfo = (PCMSG_SIGNER_INFO)LocalAlloc(LPTR, dwSize);
                 if (!*pCounterSignerInfo)
                 {
-                    Logger::logf("UltimateAnticheat.log", Err, "Unable to allocate memory for timestamp info @ Authenticode::GetTimeStampSignerInfo");
+                    Logger::logf(Err, "Unable to allocate memory for timestamp info @ Authenticode::GetTimeStampSignerInfo");
                     __leave;
                 }
 
@@ -388,7 +388,7 @@ BOOL Authenticode::GetTimeStampSignerInfo(__in PCMSG_SIGNER_INFO pSignerInfo, __
                     &dwSize);
                 if (!fResult)
                 {
-                    Logger::logf("UltimateAnticheat.log", Err, "CryptDecodeObject failed with %x @ Authenticode::GetTimeStampSignerInfo", GetLastError());
+                    Logger::logf(Err, "CryptDecodeObject failed with %x @ Authenticode::GetTimeStampSignerInfo", GetLastError());
                     __leave;
                 }
 
@@ -422,20 +422,20 @@ wstring Authenticode::GetCertificateSubject(__in PCCERT_CONTEXT pCertContext)
     // Get Issuer name size.
     if (!(dwData = CertGetNameString(pCertContext, CERT_NAME_SIMPLE_DISPLAY_TYPE, CERT_NAME_ISSUER_FLAG, NULL, NULL, 0)))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "CertGetNameString failed @ GetCertificateSubject");
+        Logger::logf(Err, "CertGetNameString failed @ GetCertificateSubject");
         goto end;
     }
 
     szName = (LPTSTR)LocalAlloc(LPTR, dwData * sizeof(TCHAR));     // Allocate memory for Issuer name.
     if (!szName) 
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Unable to allocate memory for issuer name @ GetCertificateSubject");
+        Logger::logf(Err, "Unable to allocate memory for issuer name @ GetCertificateSubject");
         goto end;
     }
 
     if (!(CertGetNameString(pCertContext, CERT_NAME_SIMPLE_DISPLAY_TYPE, CERT_NAME_ISSUER_FLAG, NULL, szName, dwData)))    // Get Issuer name.
     {
-        Logger::logf("UltimateAnticheat.log", Err, "CertGetNameString failed @ GetCertificateSubject");
+        Logger::logf(Err, "CertGetNameString failed @ GetCertificateSubject");
         goto end;
     }
 
@@ -444,20 +444,20 @@ wstring Authenticode::GetCertificateSubject(__in PCCERT_CONTEXT pCertContext)
 
     if (!(dwData = CertGetNameString(pCertContext, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, NULL, NULL, 0)))     // Get Subject name size.
     {
-        Logger::logf("UltimateAnticheat.log", Err, "CertGetNameString failed @ GetCertificateSubject");
+        Logger::logf(Err, "CertGetNameString failed @ GetCertificateSubject");
         goto end;
     }
 
     szName = (LPTSTR)LocalAlloc(LPTR, dwData * sizeof(TCHAR));
     if (!szName)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Unable to allocate memory for subject name @ GetCertificateSubject");
+        Logger::logf(Err, "Unable to allocate memory for subject name @ GetCertificateSubject");
         goto end;
     }
 
     if (!(CertGetNameString(pCertContext, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, NULL, szName, dwData)))     // Get subject name
     {
-        Logger::logf("UltimateAnticheat.log", Err, "CertGetNameString failed @ GetCertificateSubject");
+        Logger::logf(Err, "CertGetNameString failed @ GetCertificateSubject");
         goto end;
     }
 
@@ -504,7 +504,7 @@ wstring Authenticode::GetSignerFromFile(const std::wstring& filePath)
         NULL);
     if (!fResult)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "CryptQueryObject failed with %x @ GetSignerFromFile", GetLastError());
+        Logger::logf(Err, "CryptQueryObject failed with %x @ GetSignerFromFile", GetLastError());
         return {};
     }
 
@@ -513,7 +513,7 @@ wstring Authenticode::GetSignerFromFile(const std::wstring& filePath)
 
     if (!fResult)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "CryptMsgGetParam failed with %x @ GetSignerFromFile", GetLastError());
+        Logger::logf(Err, "CryptMsgGetParam failed with %x @ GetSignerFromFile", GetLastError());
         return {};
     }
 
@@ -522,7 +522,7 @@ wstring Authenticode::GetSignerFromFile(const std::wstring& filePath)
 
     if (!pSignerInfo)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Unable to allocate memory for Signer Info @ GetSignerFromFile");
+        Logger::logf(Err, "Unable to allocate memory for Signer Info @ GetSignerFromFile");
         return {};
     }
 
@@ -531,7 +531,7 @@ wstring Authenticode::GetSignerFromFile(const std::wstring& filePath)
 
     if (!fResult)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "CryptMsgGetParam failed with %x @ GetSignerFromFile", GetLastError());
+        Logger::logf(Err, "CryptMsgGetParam failed with %x @ GetSignerFromFile", GetLastError());
         return {};
     }
 
@@ -571,7 +571,7 @@ wstring Authenticode::GetSignerFromFile(const std::wstring& filePath)
         NULL);
     if (!pCertContext)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "CertFindCertificateInStore failed with %x @ GetSignerFromFile", GetLastError());
+        Logger::logf(Err, "CertFindCertificateInStore failed with %x @ GetSignerFromFile", GetLastError());
         return {};
     }
 
@@ -615,7 +615,7 @@ wstring Authenticode::GetSignerFromFile(const std::wstring& filePath)
     //    }
     //    _tprintf(_T("\n"));
     //}
-    //Logger::log("UltimateAnticheat.log", LogType::Warning, "Failed to query file's digital signature @ GetSignerFromFile");
+    //Logger::log(LogType::Warning, "Failed to query file's digital signature @ GetSignerFromFile");
 
     return SubjectCert;
 }

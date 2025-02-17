@@ -13,6 +13,7 @@
 #include "Preventions.hpp"
 #include "Common/Logger.hpp"
 #include "Common/Settings.hpp"
+#include "Common/AntiCheatInitFail.hpp"
 #include "API/API.hpp"
 
 /*
@@ -22,12 +23,12 @@ class AntiCheat final
 {
 public:
 
+	//thows AntiCheatInitFail on error
 	AntiCheat(shared_ptr<Settings> config, WindowsVersion WinVersion) : Config(config), WinVersion(WinVersion)
 	{		
 		if (config == nullptr)
 		{
-			Logger::logf("UltimateAnticheat.log", Err, "Settings pointer was NULL @ AntiCheat::AntiCheat");
-			return;
+			throw AntiCheatInitFail(AntiCheatInitFailReason::NullSettings);
 		}
 		
 		try
@@ -40,10 +41,9 @@ public:
 
 			this->Barrier = make_unique<Preventions>(config, true, Monitor.get()->GetIntegrityChecker()); //true = prevent new threads from being made
 		}
-		catch (const std::bad_alloc& e)
+		catch (const std::bad_alloc& _)
 		{
-			Logger::logf("UltimateAnticheat.log", Err, "Critical allocation failure in AntiCheat::AntiCheat: %s", e.what());
-			std::terminate();  //do not allow proceed if any pointers fail to alloc
+			throw AntiCheatInitFail(AntiCheatInitFailReason::BadAlloc);
 		}
 
 		if (config->bUsingDriver) //register + load the driver if it's correctly signed, unload it when the program is exiting
@@ -52,8 +52,7 @@ public:
 			
 			if (!GetFullPathName(Config->GetKMDriverPath().c_str(), MAX_PATH, absolutePath, nullptr))
 			{
-				Logger::logf("UltimateAnticheat.log", Err, "Could not get absolute path from driver relative path, shutting down.");
-				std::terminate();  //do not allow proceed since config is set to using driver but we cannot find the driver
+				throw AntiCheatInitFail(AntiCheatInitFailReason::DriverNotFound);
 			}
 				
 			//additionally, we need to check the signature on our driver to make sure someone isn't spoofing it. this will be added soon after initial testing is done
@@ -61,19 +60,21 @@ public:
 
 			if (driverCertSubject.size() == 0 || driverCertSubject != DriverSignerSubject) //check if driver cert has correct sign subject
 			{
-				Logger::logf("UltimateAnticheat.log", Err, "Driver certificate subject/signer was not correct, shutting down...");
-				std::terminate();
+				throw AntiCheatInitFail(AntiCheatInitFailReason::DriverUnsigned);
 			}
 
 			if (!Services::LoadDriver(Config->GetKMDriverName().c_str(), absolutePath))
 			{
-				Logger::logf("UltimateAnticheat.log", Err, "Could not get load the driver, shutting down.");
-				std::terminate();  //do not allow to proceed since config is set to using driver
+				throw AntiCheatInitFail(AntiCheatInitFailReason::DriverLoadFail);
 			}
 
-			Logger::logfw("UltimateAnticheat.log", Info, L"Loaded driver: %s from path %s", Config->GetKMDriverName().c_str(), absolutePath);
+			Logger::logfw(Info, L"Loaded driver: %s from path %s", Config->GetKMDriverName().c_str(), absolutePath);
 		}
 
+		if (API::Dispatch(this, API::DispatchCode::INITIALIZE) != Error::OK) //initialize AC , this will start all detections + preventions
+    	{
+			throw AntiCheatInitFail(AntiCheatInitFailReason::DispatchFail);
+    	}
 	}
 
 	~AntiCheat() //the destructor is now empty since all pointers of this class were recently switched to unique_ptrs
@@ -82,16 +83,16 @@ public:
 		{
 			if (!Services::UnloadDriver(Config->GetKMDriverName()))
 			{
-				Logger::logf("UltimateAnticheat.log", Warning, "Failed to unload kernelmode driver!");
+				Logger::logf(Warning, "Failed to unload kernelmode driver!");
 			}
 		}
 		if (API::Dispatch(this, API::DispatchCode::CLIENT_EXIT) == Error::OK) //clean up memory & threads -> this will soon be removed once all threads and objects are changed to smart pointers
 	    {
-        	Logger::logf("UltimateAnticheat.log", Info, " Cleanup successful. Shutting down program");
+        	Logger::logf(Info, " Cleanup successful. Shutting down program");
     	}
 	    else
     	{
-        	Logger::logf("UltimateAnticheat.log", Err, "Cleanup unsuccessful... Shutting down program");
+        	Logger::logf(Err, "Cleanup unsuccessful... Shutting down program");
     	}
 	}
 
@@ -139,22 +140,22 @@ __forceinline bool AntiCheat::IsAnyThreadSuspended()
 {
 	if (Monitor->GetMonitorThread()!= nullptr && Thread::IsThreadSuspended(Monitor->GetMonitorThread()->GetId()))
 	{
-		Logger::logf("UltimateAnticheat.log", Detection, "Monitor was found suspended! Abnormal program execution.");
+		Logger::logf(Detection, "Monitor was found suspended! Abnormal program execution.");
 		return true;
 	}
 	else if (Monitor->GetProcessCreationMonitorThread() != nullptr && Thread::IsThreadSuspended(Monitor->GetProcessCreationMonitorThread()->GetId()))
 	{
-		Logger::logf("UltimateAnticheat.log", Detection, "Monitor's process creation thread was found suspended! Abnormal program execution.");
+		Logger::logf(Detection, "Monitor's process creation thread was found suspended! Abnormal program execution.");
 		return true;
 	}
 	else if (Config->bUseAntiDebugging && AntiDebugger->GetDetectionThread() != nullptr && Thread::IsThreadSuspended(AntiDebugger->GetDetectionThread()->GetId()))
 	{
-		Logger::logf("UltimateAnticheat.log", Detection, "Anti-debugger was found suspended! Abnormal program execution.");
+		Logger::logf(Detection, "Anti-debugger was found suspended! Abnormal program execution.");
 		return true;
 	}
 	else if (NetworkClient->GetRecvThread() != nullptr && Thread::IsThreadSuspended(NetworkClient->GetRecvThread()->GetId()))
 	{
-		Logger::logf("UltimateAnticheat.log", Detection, "Netclient comms thread was found suspended! Abnormal program execution.");
+		Logger::logf(Detection, "Netclient comms thread was found suspended! Abnormal program execution.");
 		return true;
 	}
 

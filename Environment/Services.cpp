@@ -55,7 +55,7 @@ BOOL Services::GetServiceModules()
 
     if (scmHandle == NULL) 
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to open Service Control Manager @ GetServiceModules: %lu\n", GetLastError());
+        Logger::logf(Err, "Failed to open Service Control Manager @ GetServiceModules: %lu\n", GetLastError());
         return FALSE;
     }
 
@@ -63,7 +63,7 @@ BOOL Services::GetServiceModules()
 
     if (!result && GetLastError() != ERROR_MORE_DATA) 
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to enumerate services @ GetServiceModules: %lu\n", GetLastError());
+        Logger::logf(Err, "Failed to enumerate services @ GetServiceModules: %lu\n", GetLastError());
         CloseServiceHandle(scmHandle);
         return FALSE;
     }
@@ -72,7 +72,7 @@ BOOL Services::GetServiceModules()
     
     if (services == NULL) 
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Memory allocation failed @ GetServiceModules");
+        Logger::logf(Err, "Memory allocation failed @ GetServiceModules");
         CloseServiceHandle(scmHandle);
         return FALSE;
     }
@@ -81,7 +81,7 @@ BOOL Services::GetServiceModules()
 
     if (!result) 
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to enumerate services @ GetServiceModules: %lu\n", GetLastError());
+        Logger::logf(Err, "Failed to enumerate services @ GetServiceModules: %lu\n", GetLastError());
         free(services);
         CloseServiceHandle(scmHandle);
         return FALSE;
@@ -130,7 +130,7 @@ BOOL Services::GetLoadedDrivers()
 
     if (!EnumDeviceDrivers((LPVOID*)drivers, sizeof(drivers), &cbNeeded)) 
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to enumerate device drivers @ GetLoadedDrivers");
+        Logger::logf(Err, "Failed to enumerate device drivers @ GetLoadedDrivers");
         return FALSE;
     }
 
@@ -149,14 +149,14 @@ BOOL Services::GetLoadedDrivers()
             {
                 if (Utility::ContainsWStringInsensitive(driverPath, blacklisted))
                 {
-                    Logger::logfw("UltimateAnticheat.log", Detection, L"Found Vulnerable loaded driver @ GetLoadedDrivers: %s", driverPath);
+                    Logger::logfw(Detection, L"Found Vulnerable loaded driver @ GetLoadedDrivers: %s", driverPath);
                     this->FoundBlacklistedDrivers.push_back(driverPath);
                 }
             }
         }
         else 
         {
-            Logger::logf("UltimateAnticheat.log", Err, "Failed to get driver information @ GetLoadedDrivers : error %d\n", GetLastError());
+            Logger::logf(Err, "Failed to get driver information @ GetLoadedDrivers : error %d\n", GetLastError());
             return FALSE;
         }
     }
@@ -175,7 +175,7 @@ list<wstring> Services::GetUnsignedDrivers()
     {
         if (!GetLoadedDrivers())
         {
-            Logger::logf("UltimateAnticheat.log", Err, "Failed to get driver list @ GetUnsignedDrivers : error %d\n", GetLastError());
+            Logger::logf(Err, "Failed to get driver list @ GetUnsignedDrivers : error %d\n", GetLastError());
             return unsignedDrivers;
         }
     }
@@ -207,12 +207,12 @@ list<wstring> Services::GetUnsignedDrivers()
 
         if (!foundWhitelisted && !Authenticode::HasSignature(fixedDriverPath.c_str()))
         {
-            Logger::logfw("UltimateAnticheat.log", Warning, L"Found unsigned or outdated certificate on driver: %s\n", fixedDriverPath.c_str());
+            Logger::logfw(Warning, L"Found unsigned or outdated certificate on driver: %s\n", fixedDriverPath.c_str());
             unsignedDrivers.push_back(fixedDriverPath);
         }
         //else
         //{
-        //    Logger::logfw("UltimateAnticheat.log", Info, L"Driver is signed: %s\n", fixedDriverPath.c_str()); //commented out to prevent flooding the console
+        //    Logger::logfw(Info, L"Driver is signed: %s\n", fixedDriverPath.c_str()); //commented out to prevent flooding the console
         //}
     }
 
@@ -241,7 +241,7 @@ BOOL Services::IsTestsigningEnabled()
 
     if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0)) //use a pipe to read output of bcdedit command
     {
-        Logger::logf("UltimateAnticheat.log", Err, "CreatePipe failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
+        Logger::logf(Err, "CreatePipe failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
         return foundTestsigning;
     }
 
@@ -255,7 +255,7 @@ BOOL Services::IsTestsigningEnabled()
 
     if (!CreateProcessA(fullpath_bcdedit.c_str(), NULL, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "CreateProcess failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
+        Logger::logf(Err, "CreateProcess failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
         CloseHandle(hReadPipe);
         CloseHandle(hWritePipe);
         return FALSE;
@@ -269,7 +269,7 @@ BOOL Services::IsTestsigningEnabled()
 
     if (!ReadFile(hReadPipe, szOutput, 1024 - 1, &bytesRead, NULL)) //now read our pipe
     {
-        Logger::logf("UltimateAnticheat.log", Err, "ReadFile failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
+        Logger::logf(Err, "ReadFile failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
         CloseHandle(hReadPipe);
         return FALSE;
     }
@@ -280,7 +280,7 @@ BOOL Services::IsTestsigningEnabled()
 
     if (strstr(szOutput, "The boot configuration data store could not be opened") != NULL)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to run bcdedit @ IsMachineAllowingSelfSignedDrivers. Please make sure program is run as administrator\n");
+        Logger::logf(Err, "Failed to run bcdedit @ IsMachineAllowingSelfSignedDrivers. Please make sure program is run as administrator\n");
         foundTestsigning = FALSE;
     }
 
@@ -322,7 +322,7 @@ BOOL Services::IsDebugModeEnabled()
 
     if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0)) //use a pipe to read output of bcdedit command
     {
-        Logger::logf("UltimateAnticheat.log", Err, "CreatePipe failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
+        Logger::logf(Err, "CreatePipe failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
         return foundKDebugMode;
     }
 
@@ -336,7 +336,7 @@ BOOL Services::IsDebugModeEnabled()
 
     if (!CreateProcessA(fullpath_bcdedit.c_str(), NULL, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "CreateProcess failed @ Services::IsDebugModeEnabled: %d\n", GetLastError());
+        Logger::logf(Err, "CreateProcess failed @ Services::IsDebugModeEnabled: %d\n", GetLastError());
         CloseHandle(hReadPipe);
         CloseHandle(hWritePipe);
         return foundKDebugMode;
@@ -350,7 +350,7 @@ BOOL Services::IsDebugModeEnabled()
 
     if (!ReadFile(hReadPipe, szOutput, 1024 - 1, &bytesRead, NULL)) //now read our pipe
     {
-        Logger::logf("UltimateAnticheat.log", Err, "ReadFile failed @ Services::IsDebugModeEnabled: %d\n", GetLastError());
+        Logger::logf(Err, "ReadFile failed @ Services::IsDebugModeEnabled: %d\n", GetLastError());
         CloseHandle(hReadPipe);
         return foundKDebugMode;
     }
@@ -361,7 +361,7 @@ BOOL Services::IsDebugModeEnabled()
 
     if (strstr(szOutput, "The boot configuration data store could not be opened") != NULL)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to run bcdedit @ IsMachineAllowingSelfSignedDrivers. Please make sure program is run as administrator\n");
+        Logger::logf(Err, "Failed to run bcdedit @ IsMachineAllowingSelfSignedDrivers. Please make sure program is run as administrator\n");
         foundKDebugMode = FALSE;
     }
 
@@ -399,7 +399,7 @@ BOOL Services::IsSecureBootEnabled()
 
     if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0)) //use a pipe to read output of bcdedit command
     {
-        Logger::logf("UltimateAnticheat.log", Err, "CreatePipe failed @ Services::IsSecureBootEnabled: %d\n", GetLastError());
+        Logger::logf(Err, "CreatePipe failed @ Services::IsSecureBootEnabled: %d\n", GetLastError());
         return FALSE;
     }
 
@@ -410,7 +410,7 @@ BOOL Services::IsSecureBootEnabled()
 
     if (!CreateProcessA(NULL, (LPSTR)"powershell -c \"Confirm-SecureBootUEFI\"", NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "CreateProcess failed @ Services::IsSecureBootEnabled: %d\n", GetLastError());
+        Logger::logf(Err, "CreateProcess failed @ Services::IsSecureBootEnabled: %d\n", GetLastError());
         CloseHandle(hReadPipe);
         CloseHandle(hWritePipe);
         return FALSE;
@@ -424,7 +424,7 @@ BOOL Services::IsSecureBootEnabled()
 
     if (!ReadFile(hReadPipe, szOutput, 1024 - 1, &bytesRead, NULL)) //now read our pipe
     {
-        Logger::logf("UltimateAnticheat.log", Err, "ReadFile failed @ Services::IsSecureBootEnabled: %d\n", GetLastError());
+        Logger::logf(Err, "ReadFile failed @ Services::IsSecureBootEnabled: %d\n", GetLastError());
         CloseHandle(hReadPipe);
         return FALSE;
     }
@@ -435,7 +435,7 @@ BOOL Services::IsSecureBootEnabled()
 
     if (strstr(szOutput, "Cmdlet not supported on this platform") != NULL) //
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to run bcdedit @ IsMachineAllowingSelfSignedDrivers. Please make sure program is run as administrator\n");
+        Logger::logf(Err, "Failed to run bcdedit @ IsMachineAllowingSelfSignedDrivers. Please make sure program is run as administrator\n");
         secureBootEnabled = FALSE;
     }
 
@@ -462,14 +462,14 @@ string Services::GetWindowsDrive()
     charCount = GetWindowsDirectoryA(volumePath, MAX_PATH);
     if (charCount == 0)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to retrieve Windows directory path @ Services::GetWindowsPath: %d\n", GetLastError());
+        Logger::logf(Err, "Failed to retrieve Windows directory path @ Services::GetWindowsPath: %d\n", GetLastError());
         return "";
     }
 
     CHAR volumeName[MAX_PATH];
     if (!GetVolumePathNameA(volumePath, volumeName, MAX_PATH))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to retrieve volume path name @ Services::GetWindowsPath: %d\n", GetLastError());
+        Logger::logf(Err, "Failed to retrieve volume path name @ Services::GetWindowsPath: %d\n", GetLastError());
         return "";
     }
 
@@ -487,14 +487,14 @@ wstring Services::GetWindowsDriveW()
     charCount = GetWindowsDirectoryW(volumePath, MAX_PATH);
     if (charCount == 0)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to retrieve Windows directory path @ Services::GetWindowsPathW: %d\n", GetLastError());
+        Logger::logf(Err, "Failed to retrieve Windows directory path @ Services::GetWindowsPathW: %d\n", GetLastError());
         return L"";
     }
 
     wchar_t volumeName[MAX_PATH];
     if (!GetVolumePathNameW(volumePath, volumeName, MAX_PATH))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to retrieve volume path name @ Services::GetWindowsPathW: %d\n", GetLastError());
+        Logger::logf(Err, "Failed to retrieve volume path name @ Services::GetWindowsPathW: %d\n", GetLastError());
         return L"";
     }
 
@@ -533,7 +533,7 @@ list<DeviceW> Services::GetHardwareDevicesW()
 
     if (deviceInfoSet == INVALID_HANDLE_VALUE) 
     {
-        Logger::logf("UltimateAnticheat.log", Warning, "SetupDiGetClassDevs failed with error: %d @ Services::GetHardwareDevicesW\n", GetLastError());
+        Logger::logf(Warning, "SetupDiGetClassDevs failed with error: %d @ Services::GetHardwareDevicesW\n", GetLastError());
         return {};
     }
 
@@ -564,13 +564,13 @@ list<DeviceW> Services::GetHardwareDevicesW()
             continue;
         }
 
-        Logger::logfw("UltimateAnticheat.log", Info, L"Found Device: %s\n", d.Description.c_str());
+        Logger::logfw(Info, L"Found Device: %s\n", d.Description.c_str());
         deviceList.push_back(d);
     }
 
     if (GetLastError() != ERROR_NO_MORE_ITEMS)
     {
-        Logger::logf("UltimateAnticheat.log", Warning, "SetupDiEnumDeviceInfo failed with error: %d @ Services::GetHardwareDevicesW\n", GetLastError());
+        Logger::logf(Warning, "SetupDiEnumDeviceInfo failed with error: %d @ Services::GetHardwareDevicesW\n", GetLastError());
     }
 
     SetupDiDestroyDeviceInfoList(deviceInfoSet); 
@@ -601,7 +601,7 @@ BOOL Services::IsSecureBootEnabled_RegKey()
 
     if (lResult != ERROR_SUCCESS) 
     {
-        Logger::logf("UltimateAnticheat.log", Warning, "RegCloseKey failed with error: %d @ Services::IsSecureBootEnabled_RegKey\n", lResult);
+        Logger::logf(Warning, "RegCloseKey failed with error: %d @ Services::IsSecureBootEnabled_RegKey\n", lResult);
         RegCloseKey(hKey);
         return FALSE;
     }
@@ -635,7 +635,7 @@ BOOL Services::CheckUSBDevices()
 
     if (deviceInfoSet == INVALID_HANDLE_VALUE) 
     {
-        //Logger::log("UltimateAnticheat.log", Err, "Failed to get device information set.");
+        //Logger::log(Err, "Failed to get device information set.");
         return FALSE;
     }
 
@@ -679,7 +679,7 @@ WindowsVersion Services::GetWindowsVersion()
 
     if (status != 0)
     {
-        Logger::logf("UltimateAnticheat.log", Warning, "Services::GetWindowsMajorVersion failed with error: %x", status);
+        Logger::logf(Warning, "Services::GetWindowsMajorVersion failed with error: %x", status);
         return ErrorUnknown;
     }
 
@@ -789,7 +789,7 @@ bool Services::LoadDriver(const std::wstring& driverName, const std::wstring& dr
 
     if (!hSCManager)
     {
-        Logger::logfw("UltimateAnticheat.log", Warning, L"Failed to open SCM: %d", GetLastError());
+        Logger::logfw(Warning, L"Failed to open SCM: %d", GetLastError());
         return false;
     }
 
@@ -812,7 +812,7 @@ bool Services::LoadDriver(const std::wstring& driverName, const std::wstring& dr
         }
         else
         {
-            Logger::logfw("UltimateAnticheat.log", Warning, L"Failed to create service:  %d", GetLastError());
+            Logger::logfw(Warning, L"Failed to create service:  %d", GetLastError());
             CloseServiceHandle(hSCManager);
             return false;
         }
@@ -822,13 +822,13 @@ bool Services::LoadDriver(const std::wstring& driverName, const std::wstring& dr
     {
         if (GetLastError() != ERROR_SERVICE_ALREADY_RUNNING)
         {
-            Logger::logfw("UltimateAnticheat.log", Warning, L"Failed to start service: %d", GetLastError());
+            Logger::logfw(Warning, L"Failed to start service: %d", GetLastError());
             loadSuccess = false;
         }
     }
 
     if(loadSuccess)
-        Logger::logfw("UltimateAnticheat.log", Info, L"Driver %s loaded successfully.", driverName.c_str());
+        Logger::logfw(Info, L"Driver %s loaded successfully.", driverName.c_str());
 
     CloseServiceHandle(hService);
     CloseServiceHandle(hSCManager);
@@ -847,7 +847,7 @@ bool Services::UnloadDriver(const std::wstring& driverName)
 
     if (!hSCManager)
     {
-        Logger::logfw("UltimateAnticheat.log", Warning, L"Failed to open SCM: %d", GetLastError());
+        Logger::logfw(Warning, L"Failed to open SCM: %d", GetLastError());
         return false;
     }
 
@@ -855,7 +855,7 @@ bool Services::UnloadDriver(const std::wstring& driverName)
 
     if (!hService)
     {
-        Logger::logfw("UltimateAnticheat.log", Warning, L"Failed to open driver service: %d", GetLastError());
+        Logger::logfw(Warning, L"Failed to open driver service: %d", GetLastError());
         CloseServiceHandle(hSCManager);
         return false;
     }
@@ -864,22 +864,22 @@ bool Services::UnloadDriver(const std::wstring& driverName)
 
     if (ControlService(hService, SERVICE_CONTROL_STOP, &status))     //stop driver
     {
-        Logger::logfw("UltimateAnticheat.log", Info, L"Driver stopped successfully.");
+        Logger::logfw(Info, L"Driver stopped successfully.");
     }
     else if (GetLastError() != ERROR_SERVICE_NOT_ACTIVE)
     {
-        Logger::logfw("UltimateAnticheat.log", Warning, L"Failed to stop driver service: %d", GetLastError()); //don't return false yet incase the service was already stopped, in that case delete it
+        Logger::logfw(Warning, L"Failed to stop driver service: %d", GetLastError()); //don't return false yet incase the service was already stopped, in that case delete it
         unloadSuccess = false;
     }
 
     if (!DeleteService(hService))     //delete service
     {
-        Logger::logfw("UltimateAnticheat.log", Warning, L"Failed to delete driver service: %d", GetLastError());
+        Logger::logfw(Warning, L"Failed to delete driver service: %d", GetLastError());
         unloadSuccess = false;
     }
 
     if(unloadSuccess)
-        Logger::logfw("UltimateAnticheat.log", Info, L"Driver %s unloaded successfully.", driverName.c_str());
+        Logger::logfw(Info, L"Driver %s unloaded successfully.", driverName.c_str());
 
     CloseServiceHandle(hService);
     CloseServiceHandle(hSCManager);
@@ -922,7 +922,7 @@ std::string Services::GetProcessDirectory(DWORD pid)
     HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
     if (hProcess == nullptr)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to open process with PID %d @ GetProcessDirectory", pid);
+        Logger::logf(Err, "Failed to open process with PID %d @ GetProcessDirectory", pid);
         return "";
     }
 
@@ -941,12 +941,12 @@ std::string Services::GetProcessDirectory(DWORD pid)
         }
         else
         {
-            Logger::logf("UltimateAnticheat.log", Err, "Failed to find directory in the image path (pid %d) @ GetProcessDirectory", pid);
+            Logger::logf(Err, "Failed to find directory in the image path (pid %d) @ GetProcessDirectory", pid);
         }
     }
     else
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to query process image name with pid %d @ GetProcessDirectory", pid);
+        Logger::logf(Err, "Failed to query process image name with pid %d @ GetProcessDirectory", pid);
     }
 
     CloseHandle(hProcess);
@@ -965,7 +965,7 @@ wstring Services::GetProcessDirectoryW(DWORD pid)
 
     if (hProcess == nullptr)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to open process with PID %d @ GetProcessDirectory", pid);
+        Logger::logf(Err, "Failed to open process with PID %d @ GetProcessDirectory", pid);
         return L"";
     }
 
@@ -986,12 +986,12 @@ wstring Services::GetProcessDirectoryW(DWORD pid)
         }
         else
         {
-            Logger::logf("UltimateAnticheat.log", Err, "Failed to find directory in the image path (pid %d) @ GetProcessDirectory", pid);
+            Logger::logf(Err, "Failed to find directory in the image path (pid %d) @ GetProcessDirectory", pid);
         }
     }
     else
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to query process image name with pid %d @ GetProcessDirectory", pid);
+        Logger::logf(Err, "Failed to query process image name with pid %d @ GetProcessDirectory", pid);
     }
 
 

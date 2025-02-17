@@ -11,11 +11,11 @@ BOOL Detections::StartMonitor()
 
     this->MonitorThread = new Thread((LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, true, true);
 
-    Logger::logf("UltimateAnticheat.log", Info, "Created monitoring thread with ID %d", this->MonitorThread->GetId());
+    Logger::logf(Info, "Created monitoring thread with ID %d", this->MonitorThread->GetId());
     
     if (this->MonitorThread->GetHandle() == NULL || this->MonitorThread->GetHandle() == INVALID_HANDLE_VALUE)
     {
-        Logger::logf("UltimateAnticheat.log", Err, " Failed to create monitor thread  @ Detections::StartMonitor");
+        Logger::logf(Err, " Failed to create monitor thread  @ Detections::StartMonitor");
         return FALSE;
     }
 
@@ -37,11 +37,11 @@ VOID CALLBACK Detections::OnDllNotification(ULONG NotificationReason, const PLDR
     if (NotificationReason == LDR_DLL_NOTIFICATION_REASON_LOADED)
     {
         LPCWSTR FullDllName = NotificationData->Loaded.FullDllName->pBuffer;
-        Logger::logfw("UltimateAnticheat.log", Info, L"[LdrpDllNotification Callback] dll loaded: %s, verifying signature...\n", FullDllName);
+        Logger::logfw(Info, L"[LdrpDllNotification Callback] dll loaded: %s, verifying signature...\n", FullDllName);
 
         if (!Authenticode::HasSignature(FullDllName))
         {
-			Logger::logfw("UltimateAnticheat.log", Detection, L"Failed to verify signature of %s\n", FullDllName);
+			Logger::logfw(Detection, L"Failed to verify signature of %s\n", FullDllName);
             Monitor->Flag(DetectionFlags::INJECTED_ILLEGAL_PROGRAM);
         }
     }
@@ -55,17 +55,17 @@ void Detections::Monitor(LPVOID thisPtr)
 {
     if (thisPtr == NULL)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "thisPtr was NULL @ Detections::Monitor. Aborting execution!");
+        Logger::logf(Err, "thisPtr was NULL @ Detections::Monitor. Aborting execution!");
         return;
     }
 
-    Logger::logf("UltimateAnticheat.log", Info, "Starting  Detections::Monitor");
+    Logger::logf(Info, "Starting  Detections::Monitor");
 
     Detections* Monitor = reinterpret_cast<Detections*>(thisPtr);
 
     if (Monitor == nullptr)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Monitor Ptr was NULL @ Detections::Monitor. Aborting execution!");
+        Logger::logf(Err, "Monitor Ptr was NULL @ Detections::Monitor. Aborting execution!");
         return;
     }
 
@@ -84,13 +84,13 @@ void Detections::Monitor(LPVOID thisPtr)
 
         if (sections == nullptr)
         {
-            Logger::logf("UltimateAnticheat.log", Err, "Sections was NULLPTR @ Detections::Monitor. Aborting execution!");
+            Logger::logf(Err, "Sections was NULLPTR @ Detections::Monitor. Aborting execution!");
             return;
         }
 
         if (sections->size() == 0)
         {
-            Logger::logf("UltimateAnticheat.log", Err, "Sections size was 0 @ Detections::Monitor. Aborting execution!");
+            Logger::logf(Err, "Sections size was 0 @ Detections::Monitor. Aborting execution!");
             return;
         }
 
@@ -98,7 +98,7 @@ void Detections::Monitor(LPVOID thisPtr)
 
         if (ModuleAddr == 0)
         {
-            Logger::logf("UltimateAnticheat.log", Err, "Module couldn't be retrieved @ Detections::Monitor. Aborting execution! (%d)\n", GetLastError());
+            Logger::logf(Err, "Module couldn't be retrieved @ Detections::Monitor. Aborting execution! (%d)\n", GetLastError());
             return;
         }
 
@@ -131,13 +131,13 @@ void Detections::Monitor(LPVOID thisPtr)
     {
         if (Monitor == nullptr) //critical error
         {
-            Logger::logf("UltimateAnticheat.log", Err, "Monitor ptr was NULL @ Detections::Monitor, shutting down");
+            Logger::logf(Err, "Monitor ptr was NULL @ Detections::Monitor, shutting down");
             std::terminate();
         }
 
         if (Monitor->GetMonitorThread()->IsShutdownSignalled()) //end thread if thread shutdown is signalled
         {
-            Logger::logf("UltimateAnticheat.log", Info, "STOPPING  Detections::Monitor , ending detections thread");
+            Logger::logf(Info, "STOPPING  Detections::Monitor , ending detections thread");
             return;
         }
 
@@ -149,15 +149,15 @@ void Detections::Monitor(LPVOID thisPtr)
 
                 if (vendor.size() == 0) //custom hypervisors might empty the vendor
                 {
-                    Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor vendor was empty, some custom hypervisor might be hooking cpuid instruction");
+                    Logger::logf(Detection, "Hypervisor vendor was empty, some custom hypervisor might be hooking cpuid instruction");
                 }
                 else if (vendor == "Microsoft Hv" || vendor == "Micrt Hvosof" || vendor == "VMwareVMware" || vendor == "XenVMMXenVMM" || vendor == "VBoxVBoxVBox")
                 {
-                    Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor was present with vendor: %s", vendor.c_str());
+                    Logger::logf(Detection, "Hypervisor was present with vendor: %s", vendor.c_str());
                 }
                 else
                 {
-                    Logger::logf("UltimateAnticheat.log", Detection, "Hypervisor was present with unknown/non-standard vendor: %s.", vendor.c_str());
+                    Logger::logf(Detection, "Hypervisor was present with unknown/non-standard vendor: %s.", vendor.c_str());
                 }
 
                 Monitor->Flag(DetectionFlags::HYPERVISOR);
@@ -168,69 +168,69 @@ void Detections::Monitor(LPVOID thisPtr)
         {
             if (Monitor->GetIntegrityChecker()->IsTLSCallbackStructureModified()) //check various aspects of the TLS callback structure for modifications
             {
-                Logger::logf("UltimateAnticheat.log", Detection, "Found modified TLS callback structure section (atleast one aspect of the TLS data directory structure was modified)");
+                Logger::logf(Detection, "Found modified TLS callback structure section (atleast one aspect of the TLS data directory structure was modified)");
                 Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
             }
 
             if (Monitor->IsSectionHashUnmatching(CachedTextSectionAddress, CachedTextSectionSize, ".text")) //compare hashes of .text for modifications
             {
-                Logger::logf("UltimateAnticheat.log", Detection, "Found modified .text section (or you're debugging with software breakpoints)!\n");
+                Logger::logf(Detection, "Found modified .text section (or you're debugging with software breakpoints)!\n");
                 Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
             }
 
             if (Monitor->IsSectionHashUnmatching(CachedRDataSectionAddress, CachedRDataSectionSize, ".rdata")) //compare hashes of .text for modifications
             {
-                Logger::logf("UltimateAnticheat.log", Detection, "Found modified .rdata section!\n");
+                Logger::logf(Detection, "Found modified .rdata section!\n");
                 Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
             }
         }
 
         if (Monitor->GetIntegrityChecker()->IsModuleModified(L"WINTRUST.dll")) //check hashes of wintrust.dll for signing-related hooks
         {
-            Logger::logf("UltimateAnticheat.log", Detection, "Found modified .text section in WINTRUST.dll!");
+            Logger::logf(Detection, "Found modified .text section in WINTRUST.dll!");
             Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
         }
 
         if (Monitor->DetectManualMapping(GetCurrentProcess()))
         {
-            Logger::logf("UltimateAnticheat.log", Detection, "Found potentially manually mapped region!");
+            Logger::logf(Detection, "Found potentially manually mapped region!");
             Monitor->Flag(DetectionFlags::MANUAL_MAPPING);
         }
 
         if (Monitor->IsBlacklistedProcessRunning()) //external applications running on machine
         {
-            Logger::logf("UltimateAnticheat.log", Detection, "Found blacklisted process!");
+            Logger::logf(Detection, "Found blacklisted process!");
             Monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
         }
 
         //make sure ws2_32.dll is actually loaded if this gives an error, on my build the dll is not loaded but we'll pretend it is
         if (Monitor->DoesFunctionAppearHooked("ws2_32.dll", "send") || Monitor->DoesFunctionAppearHooked("ws2_32.dll", "recv"))   //ensure you use this routine on functions that don't have jumps or calls as their first byte
         {
-            Logger::logf("UltimateAnticheat.log", Detection, "Networking WINAPI (send | recv) was hooked!\n"); //WINAPI hooks doesn't always determine someone is cheating since AV and other software can write the hooks
+            Logger::logf(Detection, "Networking WINAPI (send | recv) was hooked!\n"); //WINAPI hooks doesn't always determine someone is cheating since AV and other software can write the hooks
             Monitor->Flag(DetectionFlags::DLL_TAMPERING);
         }
 
         if (Monitor->GetIntegrityChecker()->IsUnknownModulePresent()) //authenticode call and check against whitelisted module list
         {
-            Logger::logf("UltimateAnticheat.log", Detection, "Found at least one unsigned dll loaded : We ideally only want verified, signed dlls in our application!");
+            Logger::logf(Detection, "Found at least one unsigned dll loaded : We ideally only want verified, signed dlls in our application!");
             Monitor->Flag(DetectionFlags::INJECTED_ILLEGAL_PROGRAM);
         }
 
         if (Services::IsTestsigningEnabled() || Services::IsDebugModeEnabled()) //test signing enabled, self-signed drivers
         {
-            Logger::logf("UltimateAnticheat.log", Detection, "Testsigning or debugging mode is enabled! In most cases we don't allow the game/process to continue if testsigning is enabled.");
+            Logger::logf(Detection, "Testsigning or debugging mode is enabled! In most cases we don't allow the game/process to continue if testsigning is enabled.");
             Monitor->Flag(DetectionFlags::UNSIGNED_DRIVERS);
         }
 
         if (Detections::DoesIATContainHooked()) //iat hook check
         {
-            Logger::logf("UltimateAnticheat.log", Detection, "IAT was hooked! One or more functions lead to addresses outside their respective modules!\n");
+            Logger::logf(Detection, "IAT was hooked! One or more functions lead to addresses outside their respective modules!\n");
             Monitor->Flag(DetectionFlags::BAD_IAT);
         }
 
         if (Detections::IsTextSectionWritable()) //page protections check, can be made more granular or loop over all mem pages
         {
-            Logger::logf("UltimateAnticheat.log", Detection, ".text section was writable, which means someone re-re-mapped our memory regions! (or you ran this in DEBUG build)");
+            Logger::logf(Detection, ".text section was writable, which means someone re-re-mapped our memory regions! (or you ran this in DEBUG build)");
             
 #ifndef _DEBUG           //in debug build we are not remapping, and software breakpoints in VS may cause page protections to be writable
             Monitor->Flag(DetectionFlags::PAGE_PROTECTIONS);
@@ -239,13 +239,13 @@ void Detections::Monitor(LPVOID thisPtr)
 
         if (Detections::CheckOpenHandles()) //open handles to our process check
         {
-            Logger::logf("UltimateAnticheat.log", Detection, "Found open process handles to our process from other processes");
+            Logger::logf(Detection, "Found open process handles to our process from other processes");
             Monitor->Flag(DetectionFlags::OPEN_PROCESS_HANDLES);
         }
 
         if (Monitor->IsBlacklistedWindowPresent())
         {
-            Logger::logf("UltimateAnticheat.log", Detection, "Found blacklisted window text!");
+            Logger::logf(Detection, "Found blacklisted window text!");
             Monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
         }
 
@@ -319,13 +319,13 @@ BOOL Detections::SetSectionHash(const char* moduleName, const char* sectionName)
 
     if (ModuleAddr == 0)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "ModuleAddr was 0 @ SetSectionHash\n", sectionName);
+        Logger::logf(Err, "ModuleAddr was 0 @ SetSectionHash\n", sectionName);
         return FALSE;
     }
 
     if (sections->size() == 0)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "sections.size() of section %s was 0 @ SetSectionHash\n", sectionName);
+        Logger::logf(Err, "sections.size() of section %s was 0 @ SetSectionHash\n", sectionName);
         return FALSE;
     }
 
@@ -349,7 +349,7 @@ BOOL Detections::SetSectionHash(const char* moduleName, const char* sectionName)
             }
             else
             {
-                Logger::logf("UltimateAnticheat.log", Err, "hashes.size() was 0 @ SetSectionHash\n", sectionName);
+                Logger::logf(Err, "hashes.size() was 0 @ SetSectionHash\n", sectionName);
                 return FALSE;
             }
         }
@@ -366,22 +366,22 @@ BOOL Detections::IsSectionHashUnmatching(UINT64 cachedAddress, DWORD cachedSize,
 {
     if (cachedAddress == 0 || cachedSize == 0)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Parameters were 0 @ Detections::CheckSectionHash");
+        Logger::logf(Err, "Parameters were 0 @ Detections::CheckSectionHash");
         return FALSE;
     }
 
-    Logger::logf("UltimateAnticheat.log", Info, "Checking hashes of address: %llx (%d bytes) for memory integrity\n", cachedAddress, cachedSize);
+    Logger::logf(Info, "Checking hashes of address: %llx (%d bytes) for memory integrity\n", cachedAddress, cachedSize);
 
     if (section == ".text")
     {
         if (GetIntegrityChecker()->Check((uint64_t)cachedAddress, cachedSize, GetIntegrityChecker()->GetSectionHashList(".text"))) //compares hash to one gathered previously
         {
-            Logger::logf("UltimateAnticheat.log", Info, "Hashes match: Program's .text section appears genuine.\n");
+            Logger::logf(Info, "Hashes match: Program's .text section appears genuine.\n");
             return FALSE;
         }
         else
         {
-            Logger::logf("UltimateAnticheat.log", Detection, " .text section of program is modified!\n");
+            Logger::logf(Detection, " .text section of program is modified!\n");
             return TRUE;
         }
     }
@@ -389,12 +389,12 @@ BOOL Detections::IsSectionHashUnmatching(UINT64 cachedAddress, DWORD cachedSize,
     {
         if (GetIntegrityChecker()->Check((uint64_t)cachedAddress, cachedSize, GetIntegrityChecker()->GetSectionHashList(".rdata"))) //compares hash to one gathered previously
         {
-            Logger::logf("UltimateAnticheat.log", Info, "Hashes match: Program's .text section appears genuine.\n");
+            Logger::logf(Info, "Hashes match: Program's .text section appears genuine.\n");
             return FALSE;
         }
         else
         {
-            Logger::logf("UltimateAnticheat.log", Detection, " .rdata section of program is modified!\n");
+            Logger::logf(Detection, " .rdata section of program is modified!\n");
             return TRUE;
         }
     }
@@ -413,7 +413,7 @@ BOOL __forceinline Detections::IsBlacklistedProcessRunning() const
     HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hSnapshot == INVALID_HANDLE_VALUE) 
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to create snapshot of processes. Error code: %d @ Detections::IsBlacklistedProcessRunning\n", GetLastError());
+        Logger::logf(Err, "Failed to create snapshot of processes. Error code: %d @ Detections::IsBlacklistedProcessRunning\n", GetLastError());
         return FALSE;
     }
 
@@ -421,7 +421,7 @@ BOOL __forceinline Detections::IsBlacklistedProcessRunning() const
     pe32.dwSize = sizeof(PROCESSENTRY32);
     if (!Process32First(hSnapshot, &pe32)) 
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to get first process. Error code:  %d @ Detections::IsBlacklistedProcessRunning\n", GetLastError());
+        Logger::logf(Err, "Failed to get first process. Error code:  %d @ Detections::IsBlacklistedProcessRunning\n", GetLastError());
         CloseHandle(hSnapshot);
         return FALSE;
     }
@@ -450,7 +450,7 @@ BOOL __forceinline Detections::DoesFunctionAppearHooked(const char* moduleName, 
 {
     if (moduleName == nullptr || functionName == nullptr)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "moduleName or functionName was NULL @ Detections::DoesFunctionAppearHooked");
+        Logger::logf(Err, "moduleName or functionName was NULL @ Detections::DoesFunctionAppearHooked");
         return FALSE;
     }
 
@@ -460,7 +460,7 @@ BOOL __forceinline Detections::DoesFunctionAppearHooked(const char* moduleName, 
 
     if (hMod == NULL)
     {
-        Logger::logf("UltimateAnticheat.log", Err, " Couldn't fetch module @ Detections::DoesFunctionAppearHooked: %s\n", moduleName);
+        Logger::logf(Err, " Couldn't fetch module @ Detections::DoesFunctionAppearHooked: %s\n", moduleName);
         return FALSE;
     }
 
@@ -468,7 +468,7 @@ BOOL __forceinline Detections::DoesFunctionAppearHooked(const char* moduleName, 
 
     if (AddressFunction == NULL)
     {
-        Logger::logf("UltimateAnticheat.log", Err, " Couldn't fetch address of function @ Detections::DoesFunctionAppearHooked: %s\n", functionName);
+        Logger::logf(Err, " Couldn't fetch address of function @ Detections::DoesFunctionAppearHooked: %s\n", functionName);
         return FALSE;
     }
 
@@ -479,7 +479,7 @@ BOOL __forceinline Detections::DoesFunctionAppearHooked(const char* moduleName, 
     }
     __except(EXCEPTION_EXECUTE_HANDLER)
     {
-        Logger::logf("UltimateAnticheat.log", Warning, " Couldn't read bytes @ Detections::DoesFunctionAppearHooked: %s\n", functionName);
+        Logger::logf(Warning, " Couldn't read bytes @ Detections::DoesFunctionAppearHooked: %s\n", functionName);
         return FALSE; //couldn't read memory at function
     }
 
@@ -525,7 +525,7 @@ BOOL __forceinline Detections::DoesIATContainHooked()
         }
         else //error, we shouldnt get here!
         {
-            Logger::logf("UltimateAnticheat.log", Err, " Couldn't fetch  module size @ Detections::DoesIATContainHooked");
+            Logger::logf(Err, " Couldn't fetch  module size @ Detections::DoesIATContainHooked");
             return FALSE;
         }
     }
@@ -549,7 +549,7 @@ UINT64 Detections::IsTextSectionWritable()
 
     if (textAddr == NULL)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "textAddr was NULL @ Detections::IsTextSectionWritable");
+        Logger::logf(Err, "textAddr was NULL @ Detections::IsTextSectionWritable");
         return 0;
     }
 
@@ -562,7 +562,7 @@ UINT64 Detections::IsTextSectionWritable()
 
         if (mbi.Protect != PAGE_EXECUTE_READ) //check if its not RX protections
         {
-            Logger::logfw("UltimateAnticheat.log", Detection, L"Memory region at address %p is not PAGE_EXECUTE_READ - attacker likely re-re-mapped\n", address);
+            Logger::logfw(Detection, L"Memory region at address %p is not PAGE_EXECUTE_READ - attacker likely re-re-mapped\n", address);
             return address;
         }
 
@@ -596,7 +596,7 @@ BOOL Detections::CheckOpenHandles()
                 }
             }
 
-            Logger::logfw("UltimateAnticheat.log", Detection, L"Process %s has open process handle to our process.", procName.c_str());
+            Logger::logfw(Detection, L"Process %s has open process handle to our process.", procName.c_str());
             foundHandle = TRUE;
 
         inner_break:
@@ -647,7 +647,7 @@ bool Detections::Flag(DetectionFlags flag)
     {
         if (_client->FlagCheater(flag) != Error::OK) //cheat engine attachment can be detected this way
         {
-            Logger::logf("UltimateAnticheat.log", Err, "Failed to notify server of cheating status.");
+            Logger::logf(Err, "Failed to notify server of cheating status.");
             return false;
         }
     }
@@ -713,14 +713,14 @@ BOOL Detections::IsBlacklistedWindowPresent()
                     {
                         Monitor->SetCheater(true);
                         Monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
-                        Logger::logf("UltimateAnticheat.log", Detection, "Detected a window named 'Cheat Engine' (includes open folder names)");
+                        Logger::logf(Detection, "Detected a window named 'Cheat Engine' (includes open folder names)");
                         return FALSE;
                     }
                     else if (strstr(windowTitle, (const char*)original_LUAScript))
                     {
                         Monitor->SetCheater(true);
                         Monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
-                        Logger::logf("UltimateAnticheat.log", Detection, "Detected cheat engine's lua script window");
+                        Logger::logf(Detection, "Detected cheat engine's lua script window");
                         return FALSE;
                     }
                 }
@@ -736,13 +736,13 @@ BOOL Detections::IsBlacklistedWindowPresent()
         }
         else
         {
-            Logger::logf("UltimateAnticheat.log", Err, "GetProcAddress failed @ Detections::IsBlacklistedWindowPresent: %d", GetLastError());
+            Logger::logf(Err, "GetProcAddress failed @ Detections::IsBlacklistedWindowPresent: %d", GetLastError());
             return FALSE;
         }
     }
     else
     {
-        Logger::logf("UltimateAnticheat.log", Err, "GetModuleHandle failed @ Detections::IsBlacklistedWindowPresent: %d", GetLastError());
+        Logger::logf(Err, "GetModuleHandle failed @ Detections::IsBlacklistedWindowPresent: %d", GetLastError());
         return FALSE;
     }
 
@@ -757,7 +757,7 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
 {
     if (thisPtr == nullptr)
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Monitor Ptr was NULL @ MonitorNewProcesses");
+        Logger::logf(Err, "Monitor Ptr was NULL @ MonitorNewProcesses");
         return;
     }
 
@@ -768,14 +768,14 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
     hres = CoInitializeEx(0, COINIT_MULTITHREADED);
     if (FAILED(hres))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to initialize COM library @ MonitorNewProcesses");
+        Logger::logf(Err, "Failed to initialize COM library @ MonitorNewProcesses");
         return;
     }
 
     hres = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_DEFAULT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE, NULL);
     if (FAILED(hres))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to initialize security @ MonitorNewProcesses");
+        Logger::logf(Err, "Failed to initialize security @ MonitorNewProcesses");
         CoUninitialize();
         return;
     }
@@ -784,7 +784,7 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
     hres = CoCreateInstance(CLSID_WbemLocator, 0, CLSCTX_INPROC_SERVER, IID_IWbemLocator, (LPVOID*)&pLoc);
     if (FAILED(hres))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Failed to create IWbemLocator object @ MonitorProcessCreation");
+        Logger::logf(Err, "Failed to create IWbemLocator object @ MonitorProcessCreation");
         CoUninitialize();
         return;
     }
@@ -793,7 +793,7 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
     hres = pLoc->ConnectServer(_bstr_t(L"ROOT\\CIMV2"), NULL, NULL, 0, NULL, 0, 0, &pSvc);
     if (FAILED(hres))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Could not connect to WMI namespace @ MonitorProcessCreation");
+        Logger::logf(Err, "Could not connect to WMI namespace @ MonitorProcessCreation");
         pLoc->Release();
         CoUninitialize();
         return;
@@ -803,7 +803,7 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
 
     if (FAILED(hres))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Could not set proxy blanket @ MonitorProcessCreation");
+        Logger::logf(Err, "Could not set proxy blanket @ MonitorProcessCreation");
         pSvc->Release();
         pLoc->Release();
         CoUninitialize();
@@ -815,7 +815,7 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
 
     if (FAILED(hres))
     {
-        Logger::logf("UltimateAnticheat.log", Err, "Query for process creation events failed @ MonitorProcessCreation");
+        Logger::logf(Err, "Query for process creation events failed @ MonitorProcessCreation");
         pSvc->Release();
         pLoc->Release();
         CoUninitialize();
@@ -862,20 +862,20 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
                 {
                     if (Utility::wcscmp_insensitive(blacklistedProcess.c_str(), vtName.bstrVal))
                     {
-                        Logger::logfw("UltimateAnticheat.log", Detection, L"Blacklisted process was spawned: %s", vtName.bstrVal);
+                        Logger::logfw(Detection, L"Blacklisted process was spawned: %s", vtName.bstrVal);
                     }
                 }
 
                 std::list<DWORD> pidList = Process::GetProcessIdsByName(wstring(vtName.bstrVal));
 
-                Logger::logfw("UltimateAnticheat.log", Info, L"Scanning process for blacklisted patterns: %s", vtName.bstrVal);
+                Logger::logfw(Info, L"Scanning process for blacklisted patterns: %s", vtName.bstrVal);
 
                 for (auto pid: pidList)
                 {
                     if (monitor->FindBlacklistedProgramsThroughByteScan(pid))
                     {
                         monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
-                        Logger::logfw("UltimateAnticheat.log", Detection, L"Blacklisted process was found through byte signature: %s", vtName.bstrVal);
+                        Logger::logfw(Detection, L"Blacklisted process was found through byte signature: %s", vtName.bstrVal);
                     }
                 }
 
@@ -947,14 +947,14 @@ bool Detections::FindBlacklistedProgramsThroughByteScan(DWORD pid)
                 if (found)
                 {
                     foundSignature = true;
-                    Logger::logfw("UltimateAnticheat.log", Detection, L"Found blacklisted byte pattern in process %d at offset %d", pid, i);
+                    Logger::logfw(Detection, L"Found blacklisted byte pattern in process %d at offset %d", pid, i);
                     break;
                 }
             }
         }
         else
         {
-            Logger::logfw("UltimateAnticheat.log", Warning, L"Failed to read .text section of process %d", pid);
+            Logger::logfw(Warning, L"Failed to read .text section of process %d", pid);
             continue;
         }
     }
@@ -970,7 +970,7 @@ void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
 {
     if (thisPtr == nullptr)
     {
-        Logger::logf("UltimateAnticheat.log", Warning, "Detections* was NULL @ MonitorImportantRegistryKeys");
+        Logger::logf(Warning, "Detections* was NULL @ MonitorImportantRegistryKeys");
         return;
     }
 
@@ -995,14 +995,14 @@ void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
 
         if (result != ERROR_SUCCESS) 
         {
-            Logger::logf("UltimateAnticheat.log", Warning, "Failed to open key %d. Error: %ld @ MonitorImportantRegistryKeys", i, result);
+            Logger::logf(Warning, "Failed to open key %d. Error: %ld @ MonitorImportantRegistryKeys", i, result);
             return;
         }
 
         hEvents[i] = CreateEvent(NULL, FALSE, FALSE, NULL);
         if (!hEvents[i]) 
         {
-            Logger::logf("UltimateAnticheat.log", Warning, "Failed to create event for key %d. Error: %ld\n", i, GetLastError());
+            Logger::logf(Warning, "Failed to create event for key %d. Error: %ld\n", i, GetLastError());
             RegCloseKey(hKeys[i]);
             return;
         }
@@ -1010,14 +1010,14 @@ void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
         result = RegNotifyChangeKeyValue(hKeys[i], TRUE, filter, hEvents[i], TRUE);
         if (result != ERROR_SUCCESS) 
         {
-            Logger::logf("UltimateAnticheat.log", Warning, "Failed to register notification for key %d. Error: %ld", i, result);
+            Logger::logf(Warning, "Failed to register notification for key %d. Error: %ld", i, result);
             CloseHandle(hEvents[i]);
             RegCloseKey(hKeys[i]);
             return;
         }
     }
 
-    Logger::logf("UltimateAnticheat.log", Info, "Monitoring multiple registry keys...");
+    Logger::logf(Info, "Monitoring multiple registry keys...");
 
     bool monitoringKeys = true;
 
@@ -1029,7 +1029,7 @@ void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
         {
             int index = waitResult - WAIT_OBJECT_0; //determine which event was signaled
 
-            Logger::logf("UltimateAnticheat.log", Detection, "Key %d value changed!", index);
+            Logger::logf(Detection, "Key %d value changed!", index);
 
             Monitor->Flag(DetectionFlags::REGISTRY_KEY_MODIFICATIONS);
 
@@ -1037,12 +1037,12 @@ void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
 
             if (result != ERROR_SUCCESS) 
             {
-                Logger::logf("UltimateAnticheat.log", Warning, "Failed to re-register notification for key %d. Error: %ld", index, result);
+                Logger::logf(Warning, "Failed to re-register notification for key %d. Error: %ld", index, result);
             }
         }
         else 
         {
-            Logger::logf("UltimateAnticheat.log", Warning, "Unexpected wait result: %ld", waitResult);
+            Logger::logf(Warning, "Unexpected wait result: %ld", waitResult);
             break;
         }
     }
@@ -1091,7 +1091,7 @@ bool Detections::DetectManualMapping(__in HANDLE hProcess)
 
             if (Integrity::IsPEHeader(buffer)) //if the PE header is deleted, this won't detect it
             {
-                Logger::logf("UltimateAnticheat.log", Detection, "Suspicious memory region found at %llX with PE header", mbi.BaseAddress);
+                Logger::logf(Detection, "Suspicious memory region found at %llX with PE header", mbi.BaseAddress);
                 return true;
             }
             //else //check for possible erased headers with manual mapping, this will be the tricky to do with 100% accuracy due to possible differing section alignment
@@ -1146,7 +1146,7 @@ bool Detections::DetectManualMapping(__in HANDLE hProcess)
             //				
             //				if (foundPossibleTextSection) //this will be the most likely spot which gives false positives, but its also the trickest to detect
             //				{
-            //					Logger::logf("UltimateAnticheat.log", Detection, " possible .text section of erased-header manual mapped module at %llX", possibleTextSectionAddress);
+            //					Logger::logf(Detection, " possible .text section of erased-header manual mapped module at %llX", possibleTextSectionAddress);
             //					DWORD dwOldProt = 0;
             //					VirtualProtect((LPVOID)possibleTextSectionAddress, 1024, PAGE_READONLY, &dwOldProt); //change this region to non-execute to possibly thwart injected executable code
             //					delete modules;
