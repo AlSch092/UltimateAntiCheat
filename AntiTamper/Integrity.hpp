@@ -98,6 +98,7 @@ public:
 
 	static vector<uint64_t> GetSectionHashFromDisc(wstring path, const char* sectionName);
 	bool CheckFileIntegrityFromDisc();
+
 private:
 	
 	unordered_map<string, vector<uint64_t>> SectionHashes; //section hashes for current/main module's sections

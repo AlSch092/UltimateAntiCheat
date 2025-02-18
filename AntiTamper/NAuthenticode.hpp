@@ -8,9 +8,6 @@
 #include "../Common/Logger.hpp"
 #include "../Environment/Services.hpp"
 
-#pragma comment (lib, "wintrust")
-#pragma comment (lib, "Crypt32")
-
 #define ENCODING (X509_ASN_ENCODING | PKCS_7_ASN_ENCODING)
 
 using namespace std;
