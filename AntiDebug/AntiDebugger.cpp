@@ -21,13 +21,7 @@ void Debugger::AntiDebug::StartAntiDebugThread()
 		Logger::logf(Warning, "Settings were NULL or failed to lock weak_ptr<Settings> @ Debugger::AntiDebug::StartAntiDebugThread");
 	}
 
-	this->DetectionThread = make_unique<Thread>((LPTHREAD_START_ROUTINE)Debugger::AntiDebug::CheckForDebugger, (LPVOID)this, true, true);
-
-	if (this->DetectionThread->GetHandle() == INVALID_HANDLE_VALUE || this->DetectionThread->GetHandle() == NULL)
-	{
-		Logger::logf(Err, "Couldn't start anti-debug thread @ Debugger::AntiDebug::StartAntiDebugThread");
-		//optionally shut down here if thread creation fails
-	}
+	this->DetectionThread = make_unique<Thread>((LPTHREAD_START_ROUTINE)Debugger::AntiDebug::CheckForDebugger, (LPVOID)this, true, false);
 
 	Logger::logf(Info, "Created Debugger detection thread with Id: %d", this->DetectionThread->GetId());
 }
