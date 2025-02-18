@@ -111,6 +111,9 @@
     <ClCompile Include="Network\HttpClient.cpp">
       <Filter>Network</Filter>
     </ClCompile>
+    <ClCompile Include="AntiCheat.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AntiCheat.hpp">

@@ -166,6 +166,7 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AntiCheat.cpp" />
     <ClCompile Include="AntiDebug\AntiDebugger.cpp" />
     <ClCompile Include="AntiDebug\DebuggerDetections.cpp" />
     <ClCompile Include="AntiTamper\Integrity.cpp" />

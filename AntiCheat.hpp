@@ -23,78 +23,9 @@ class AntiCheat final
 {
 public:
 
-	AntiCheat(shared_ptr<Settings> config, WindowsVersion WinVersion) : Config(config), WinVersion(WinVersion)
-	{		
-		if (config == nullptr)
-		{
-			throw AntiCheatInitFail(AntiCheatInitFailReason::NullSettings);
-		}
-		
-		try
-		{
-			this->NetworkClient = make_shared<NetClient>();
+	AntiCheat(shared_ptr<Settings> config, WindowsVersion WinVersion);
 
-			this->AntiDebugger = make_unique<DebuggerDetections>(config, NetworkClient); //any detection methods need the netclient for comms
-
-			this->Monitor = make_unique<Detections>(config, false, NetworkClient);
-
-			this->Barrier = make_unique<Preventions>(config, true, Monitor.get()->GetIntegrityChecker()); //true = prevent new threads from being made
-		}
-		catch (const std::bad_alloc& _)
-		{
-			throw AntiCheatInitFail(AntiCheatInitFailReason::BadAlloc);
-		}
-
-		if (config->bUsingDriver) //register + load the driver if it's correctly signed, unload it when the program is exiting
-		{
-			wchar_t absolutePath[MAX_PATH] = { 0 };
-			
-			if (!GetFullPathName(Config->GetKMDriverPath().c_str(), MAX_PATH, absolutePath, nullptr))
-			{
-				throw AntiCheatInitFail(AntiCheatInitFailReason::DriverNotFound);
-			}
-				
-			//additionally, we need to check the signature on our driver to make sure someone isn't spoofing it. this will be added soon after initial testing is done
-			wstring driverCertSubject = Authenticode::GetSignerFromFile(absolutePath);
-
-			if (driverCertSubject.size() == 0 || driverCertSubject != DriverSignerSubject) //check if driver cert has correct sign subject
-			{
-				throw AntiCheatInitFail(AntiCheatInitFailReason::DriverUnsigned);
-			}
-
-			if (!Services::LoadDriver(Config->GetKMDriverName().c_str(), absolutePath))
-			{
-				throw AntiCheatInitFail(AntiCheatInitFailReason::DriverLoadFail);
-			}
-
-			Logger::logfw(Info, L"Loaded driver: %s from path %s", Config->GetKMDriverName().c_str(), absolutePath);
-		}
-
-		if (API::Dispatch(this, API::DispatchCode::INITIALIZE) != Error::OK) //initialize AC , this will start all detections + preventions
-    	{
-			throw AntiCheatInitFail(AntiCheatInitFailReason::DispatchFail);
-    	}
-	}
-
-	~AntiCheat()
-	{
-		if (Config != nullptr && Config->bUsingDriver) //unload the KM driver
-		{
-			if (!Services::UnloadDriver(Config->GetKMDriverName()))
-			{
-				Logger::logf(Warning, "Failed to unload kernelmode driver!");
-			}
-		}
-
-		if (API::Dispatch(this, API::DispatchCode::CLIENT_EXIT) == Error::OK)
-	    {
-        	Logger::logf(Info, " Cleanup successful. Shutting down program");
-    	}
-	    else
-    	{
-        	Logger::logf(Warning, "Cleanup unsuccessful... Shutting down program");
-    	}
-	}
+	~AntiCheat();
 
 	AntiCheat& operator=(AntiCheat&& other) = delete; //delete move assignments
 
@@ -113,7 +44,9 @@ public:
 
 	Settings* GetConfig() const { return this->Config.get(); }
 
-	__forceinline bool IsAnyThreadSuspended();
+	bool IsAnyThreadSuspended();
+
+	bool DoPreInitializeChecks();
 
 private:
 
@@ -129,35 +62,5 @@ private:
 
 	WindowsVersion WinVersion;
 
-	const wstring DriverSignerSubject = L"AlSch092";  //this refers to the company/party who initiated the file signing, for example "Valve Corp.". If you have an EV certificate, you can change this to your own company
+	const wstring DriverSignerSubject = L"YourCoolCompany";  //this refers to the company/party who initiated the file signing, for example "Valve Corp.". If you have an EV certificate, you can change this to your own company
 };
-
-/*
-	IsAnyThreadSuspended - Checks the looping threads of class members to ensure the program is running as normal. An attacker may try to suspend threads to either remap or disable functionalities
-	returns true if any thread is found suspended
-*/
-__forceinline bool AntiCheat::IsAnyThreadSuspended()
-{
-	if (Monitor != nullptr && Monitor->GetMonitorThread()!= nullptr && Thread::IsThreadSuspended(Monitor->GetMonitorThread()->GetId()))
-	{
-		Logger::logf(Detection, "Monitor was found suspended! Abnormal program execution.");
-		return true;
-	}
-	else if (Monitor != nullptr && Monitor->GetProcessCreationMonitorThread() != nullptr && Thread::IsThreadSuspended(Monitor->GetProcessCreationMonitorThread()->GetId()))
-	{
-		Logger::logf(Detection, "Monitor's process creation thread was found suspended! Abnormal program execution.");
-		return true;
-	}
-	else if (Config->bUseAntiDebugging && AntiDebugger != nullptr && AntiDebugger->GetDetectionThread() != nullptr && Thread::IsThreadSuspended(AntiDebugger->GetDetectionThread()->GetId()))
-	{
-		Logger::logf(Detection, "Anti-debugger was found suspended! Abnormal program execution.");
-		return true;
-	}
-	else if (NetworkClient != nullptr && NetworkClient->GetRecvThread() != nullptr && Thread::IsThreadSuspended(NetworkClient->GetRecvThread()->GetId()))
-	{
-		Logger::logf(Detection, "Netclient comms thread was found suspended! Abnormal program execution.");
-		return true;
-	}
-
-	return false;
-}

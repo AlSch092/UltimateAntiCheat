@@ -94,8 +94,6 @@ int main(int argc, char** argv)
 
 #endif
 
-    const int MillisecondsBeforeShutdown = 200000;
-
     SetConsoleTitle(L"Ultimate Anti-Cheat");
 
     CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Splash::InitializeSplash, 0, 0, 0); //open splash window
@@ -110,58 +108,6 @@ int main(int argc, char** argv)
     cout << "------------------------------------------------------------------------------------------\n";
 
     shared_ptr<Settings> ConfigInstance = Settings::CreateInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator, bUsingDriver, allowedParents, bEnableLogging, logFileName);
-
-    if (ConfigInstance->bRequireRunAsAdministrator)
-    {
-        if (!Services::IsRunningAsAdmin()) //enforce secure boot to stop bootloader cheats
-        {
-            MessageBoxA(0, "Program must be running as administrator in order to proceed, or change `bRequireRunAsAdministrator` to false.", "UltimateAntiCheat", 0);
-            Logger::logf(Detection, "Program must be running as administrator in order to proceed, or change `bRequireRunAsAdministrator` to false.");
-            return 0;
-        }
-    }
-
-    if (ConfigInstance->bEnforceSecureBoot)
-    {
-        if (!Services::IsSecureBootEnabled()) //enforce secure boot to stop bootloader cheats
-        {
-            MessageBoxA(0, "Secure boot is not enabled, you cannot proceed. Please enable secure boot in your BIOS or change `bEnforceSecureBoot` to false.", "UltimateAntiCheat", 0);
-            Logger::logf(Detection, "Secure boot is not enabled, thus you cannot proceed. Please enable secure boot in your BIOS or change `bEnforceSecureBoot` to false.");
-            return 0;
-        }
-    }
-
-    if (ConfigInstance->bEnforceDSE)
-    {
-        if (Services::IsTestsigningEnabled()) //check test signing mode before startup
-        {
-            MessageBoxA(0, "Test signing was enabled, you cannot proceed. Please turn off test signing via `bcdedit.exe`, or change `bEnforceDSE` to false.", "UltimateAntiCheat", 0);
-            Logger::logf(Detection, "Test signing was enabled, thus you cannot proceed. Please turn off test signing via `bcdedit.exe`, or change `bEnforceDSE` to false.");
-            return 0;
-        }
-    }
-
-    if (ConfigInstance->bCheckHypervisor) 
-    {
-        if (Services::IsHypervisorPresent()) //we can either block all hypervisors to try and stop SLAT/EPT manipulation, or only allow certain vendors.
-        {       
-            string vendor = Services::GetHypervisorVendor(); //...however, many custom hypervisors will likely spoof their vendorId to be 'HyperV' or 'VMWare' 
-
-            if (vendor.size() == 0)
-            {
-                Logger::logf(Detection, "Hypervisor vendor was empty, some custom hypervisor may be hooking cpuid instruction");
-            }
-            else if (vendor == "Microsoft Hv" || vendor == "Micrt Hvosof" || vendor == "VMwareVMware" || vendor == "XenVMMXenVMM" || vendor == "VBoxVBoxVBox")
-            {
-                Logger::logf(Detection, "Hypervisor was present with vendor: %s", vendor.c_str());
-            }
-            else
-            {
-                Logger::logf(Detection, "Hypervisor was present with unknown/non-standard vendor: %s.", vendor.c_str());
-                return 0;
-            }
-        }
-    }
 
     unique_ptr<AntiCheat> Anti_Cheat = nullptr;
 
@@ -189,16 +135,28 @@ int main(int argc, char** argv)
         }
     }
 
-    UnmanagedGlobals::SupressingNewThreads = Anti_Cheat->GetBarrier()->IsPreventingThreads(); //if this is set to TRUE, we can stop the creation of any new threads via the TLS callback
+    UnmanagedGlobals::SupressingNewThreads = Anti_Cheat->GetBarrier()->IsPreventingThreads(); //if this is set to TRUE, we can stop the creation of any new unknown threads via the TLS callback
 
-    cout << "\n----------------------------------------------------------------------------------------------------------\n";
-    cout << "All protections have been deployed, the program will now loop using its detection methods. Thanks for your interest in the project!\n\n";
+    cout << "\n----------------------------------------------------------------------------------------------------------" << endl;
+    cout << "All protections have been deployed, the program will now loop using its detection methods. Thanks for your interest in the project!" << endl;
+    cout << "Please enter 'q' if you'd like to end the program." << endl;
+    
+    string userInput;
 
-    Sleep(MillisecondsBeforeShutdown); //let the other threads run for a bit to display monitoring, normally the game's main loop would be here but instead we will wait 60s
+    while (true)
+    {
+        cin >> userInput;
+
+        if (userInput == "q")
+        {
+            cout << "Exit key was pressed, shutting down program..." << endl;
+            break;
+        }     
+    }
 
     if (Anti_Cheat->GetMonitor()->IsUserCheater())
     {
-        Logger::logf(Info, "Detected a possible cheater in first %d milliseconds of runtime!", MillisecondsBeforeShutdown);
+        Logger::logf(Info, "Detected a possible cheater during program execution!");
     }
 
 #ifdef _DEBUG
@@ -221,7 +179,7 @@ int main(int argc, char** argv)
     };
     for (DetectionFlags flag : flags) 
     {
-            Logger::logf(Info, explanations[flag]);
+        Logger::logf(Info, explanations[flag]);
     }
 #endif
 
@@ -229,7 +187,7 @@ int main(int argc, char** argv)
 }
 
 /*
-    AddThread - adds a Thread* object to our global thread list
+    AddThread - adds a Thread* object to our global thread list -> this will likely be phased out soon
 */
 bool UnmanagedGlobals::AddThread(DWORD id)
 {
@@ -255,7 +213,7 @@ bool UnmanagedGlobals::AddThread(DWORD id)
 }
 
 /*
-    RemoveThread - Removes Thread* with threadid `tid` from our global thread list
+    RemoveThread - Removes Thread* with threadid `tid` from our global thread list  -> this will likely be phased out soon
 */
 void UnmanagedGlobals::RemoveThread(DWORD tid)
 {
