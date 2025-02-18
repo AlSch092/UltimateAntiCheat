@@ -78,7 +78,7 @@ public:
 	static bool IsThreadRunning(HANDLE threadHandle); //these could potentially go into Process.hpp/cpp, since we have one Thread class for each thread, thus a static function is not as well suited to be here
 	static bool IsThreadSuspended(DWORD tid);
 
-	void JoinThread() { t.join(); } //since the copy assignment is deleted in std::thread we can't do std::thread getThreadObject() 
+	void JoinThread() { if(t.joinable()) t.join(); } //since the copy assignment is deleted in std::thread we can't do std::thread getThreadObject() 
 
 	HANDLE GetHandle() const { return this->handle; }
 	DWORD GetId() const { return this->Id; }
