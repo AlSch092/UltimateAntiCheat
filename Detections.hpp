@@ -105,6 +105,7 @@ public:
 
 	Thread* GetMonitorThread() const { return this->MonitorThread; }
 	Thread* GetProcessCreationMonitorThread() const { return this->ProcessCreationMonitorThread; }
+	Thread* GetRegistryMonitorThread() const { return this->RegistryMonitorThread; }
 
 	Process* GetProcessObj() const { return this->_Proc.get(); }  //other classes should not be able to set the process object, it is created by default in the constructor
 
@@ -133,6 +134,8 @@ public:
 	static void MonitorImportantRegistryKeys(LPVOID thisPtr); //threaded func, pass this class ptr to it
 
 	static bool DetectManualMapping(__in HANDLE hProcess);
+
+	static bool WasProcessNotRemapped();
 
 private:
 

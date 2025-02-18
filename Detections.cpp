@@ -9,7 +9,7 @@ BOOL Detections::StartMonitor()
     if (this->MonitorThread != nullptr) //prevent accidental double calls to this function/double thread creation
         return FALSE;
 
-    this->MonitorThread = new Thread((LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, true, true);
+    this->MonitorThread = new Thread((LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, true, false);
 
     Logger::logf(Info, "Created monitoring thread with ID %d", this->MonitorThread->GetId());
     
@@ -19,9 +19,9 @@ BOOL Detections::StartMonitor()
         return FALSE;
     }
 
-    this->ProcessCreationMonitorThread = new Thread((LPTHREAD_START_ROUTINE)&Detections::MonitorProcessCreation, this, true, true);
+    this->ProcessCreationMonitorThread = new Thread((LPTHREAD_START_ROUTINE)&Detections::MonitorProcessCreation, this, true, false);
 
-    this->RegistryMonitorThread = new Thread((LPTHREAD_START_ROUTINE)&MonitorImportantRegistryKeys, (LPVOID)this, true, true);
+    this->RegistryMonitorThread = new Thread((LPTHREAD_START_ROUTINE)&MonitorImportantRegistryKeys, (LPVOID)this, true, false);
 
     return TRUE;
 }
@@ -828,23 +828,20 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
         return;
     }
 
-    if (monitor->GetMonitorThread() != nullptr)
-        monitor->GetMonitorThread()->UpdateTick();
-
     IWbemClassObject* pclsObj = NULL;
     ULONG uReturn = 0;
 
     while (pEnumerator && monitor->MonitoringProcessCreation) //keep looping while MonitoringProcessCreation is set to true
     {
-        if (monitor->GetProcessCreationMonitorThread() != nullptr)
+        if (monitor != nullptr && monitor->GetProcessCreationMonitorThread() != nullptr)
         {
-            if (monitor->GetProcessCreationMonitorThread()->IsShutdownSignalled())
+            if (monitor->GetProcessCreationMonitorThread()->IsShutdownSignalled()) //end execution if signalled
             {
                 break;
             }
         }
 
-        HRESULT hr = pEnumerator->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+        HRESULT hr = pEnumerator->Next(WBEM_NO_WAIT, 1, &pclsObj, &uReturn);
 
         if (0 == uReturn) 
             continue;
@@ -889,13 +886,14 @@ void Detections::MonitorProcessCreation(LPVOID thisPtr)
                 pClassObj->Release();
             }
         }
+
         VariantClear(&vtProp);
         pclsObj->Release();
         
         if(monitor->GetMonitorThread() != nullptr)
             monitor->GetMonitorThread()->UpdateTick(); //update tick on each loop, then we can check this value from a different thread to see if someone has suspended it
 
-        this_thread::sleep_for(std::chrono::milliseconds(100)); //ease the CPU a bit
+        //this_thread::sleep_for(std::chrono::milliseconds(100)); //ease the CPU a bit
     }
 
     pSvc->Release();
@@ -1029,7 +1027,10 @@ void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
 
     while (monitoringKeys)
     {        
-        DWORD waitResult = WaitForMultipleObjects(KEY_COUNT, hEvents, FALSE, INFINITE); //wait for any of the events to be signaled
+        if (Monitor != nullptr && Monitor->GetRegistryMonitorThread() != nullptr && Monitor->GetRegistryMonitorThread()->IsShutdownSignalled()) //end looping if signalled
+            break;
+        
+        DWORD waitResult = WaitForMultipleObjects(KEY_COUNT, hEvents, FALSE, 3000); //wait for any of the events to be signaled
 
         if (waitResult >= WAIT_OBJECT_0 && waitResult < WAIT_OBJECT_0 + KEY_COUNT) 
         {
@@ -1049,8 +1050,13 @@ void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
         else 
         {
             Logger::logf(Warning, "Unexpected wait result: %ld", waitResult);
-            break;
+            continue;
         }
+
+        if (Monitor != nullptr && Monitor->GetMonitorThread() != nullptr)
+            Monitor->GetMonitorThread()->UpdateTick();
+
+        this_thread::sleep_for(std::chrono::milliseconds(100)); //ease the CPU a bit
     }
 
     for (int i = 0; i < KEY_COUNT; i++) 
@@ -1168,4 +1174,13 @@ bool Detections::DetectManualMapping(__in HANDLE hProcess)
     }
 
     return false;
+}
+
+/*
+    WasProcessNotRemapped - checks if remapping -did not- occur
+    returns `true` if program was not remapped
+*/
+bool Detections::WasProcessNotRemapped()
+{
+    return false; //this will be finished soon...
 }

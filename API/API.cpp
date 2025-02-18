@@ -15,11 +15,13 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, bool isServerAvailable)
 		return Error::NULL_MEMORY_REFERENCE;
 
 	std::list<wstring> allowedParents = AC->GetConfig()->allowedParents;
-	auto it = std::find_if(allowedParents.begin(), allowedParents.end(), [](const wstring& parentName) {
+	auto it = std::find_if(allowedParents.begin(), allowedParents.end(), [](const wstring& parentName) 
+	{
 		return Process::CheckParentProcess(parentName);
 	});
 
-	if (it != allowedParents.end()) {
+	if (it != allowedParents.end()) 
+	{
 		AC->GetMonitor()->GetProcessObj()->SetParentName(*it);
 	}
 	else //bad parent process detected, or parent process mismatch, shut down the program (and optionally report the error to the server)
@@ -66,26 +68,38 @@ Error API::Cleanup(AntiCheat* AC)
 	if (AC == nullptr)
 		return Error::NULL_MEMORY_REFERENCE;
 
-	if (AC->GetAntiDebugger()->GetDetectionThread() != NULL) //stop anti-debugger thread
+	if (AC->GetConfig()->bUseAntiDebugging && AC->GetAntiDebugger() != nullptr && AC->GetAntiDebugger()->GetDetectionThread() != nullptr) //stop anti-debugger thread
 	{
 		AC->GetAntiDebugger()->GetDetectionThread()->SignalShutdown(true);
-		WaitForSingleObject(AC->GetAntiDebugger()->GetDetectionThread()->GetHandle(), 3000);
+		AC->GetAntiDebugger()->GetDetectionThread()->JoinThread();
 	}
 
-	if (AC->GetMonitor()->GetMonitorThread() != NULL) //stop anti-cheat monitor thread
+	if (AC->GetMonitor() != nullptr && AC->GetMonitor()->GetMonitorThread() != nullptr) //stop anti-cheat monitor thread
 	{
 		AC->GetMonitor()->GetMonitorThread()->SignalShutdown(true);
-		WaitForSingleObject(AC->GetMonitor()->GetMonitorThread()->GetHandle(), 6000);
+		AC->GetMonitor()->GetMonitorThread()->JoinThread();
+	}
+
+	if (AC->GetMonitor() != nullptr && AC->GetMonitor()->GetProcessCreationMonitorThread() != nullptr) //stop process creation monitor thread
+	{
+		AC->GetMonitor()->GetProcessCreationMonitorThread()->SignalShutdown(true);
+		AC->GetMonitor()->GetProcessCreationMonitorThread()->JoinThread();
+	}
+
+	if (AC->GetMonitor() != nullptr && AC->GetMonitor()->GetRegistryMonitorThread() != nullptr) //stop registry monitor
+	{
+		AC->GetMonitor()->GetRegistryMonitorThread()->SignalShutdown(true);
+		AC->GetMonitor()->GetRegistryMonitorThread()->JoinThread();
 	}
 
 	auto client = AC->GetNetworkClient().lock();
 
 	if (client)
 	{
-		if (client->GetRecvThread() != NULL) //stop anti-cheat monitor thread
+		if (client->GetRecvThread() != nullptr) //stop anti-cheat monitor thread
 		{
 			client->GetRecvThread()->SignalShutdown(true);
-			WaitForSingleObject(client->GetRecvThread()->GetHandle(), 5000);
+			client->GetRecvThread()->JoinThread();
 		}
 	}
 	else
