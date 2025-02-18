@@ -48,9 +48,9 @@ Error NetClient::Initialize(string ip, uint16_t port, string gameCode)
 		return Error::CANT_SEND;
 	}
 
-	RecvLoopThread = new Thread((LPTHREAD_START_ROUTINE)&NetClient::ProcessRequests, this, true, true);
+	RecvLoopThread = new Thread((LPTHREAD_START_ROUTINE)&NetClient::ProcessRequests, this, true, false);
 
-	if (RecvLoopThread->GetHandle() == INVALID_HANDLE_VALUE || RecvLoopThread->GetHandle() == NULL)
+	if (RecvLoopThread->GetId() == 0)
 	{
 		Logger::logf(Err, "RecvThread was NULL @ NetClient::Initialize");
 		closesocket(Socket);
@@ -136,6 +136,12 @@ Error NetClient::SendData(PacketWriter* outPacket)
 */
 void NetClient::ProcessRequests(LPVOID Param)
 {
+	if (Param == nullptr)
+	{
+		Logger::logf(Info, "NetClient class pointer was nullptr @ ProcessRequests");
+		return;
+	}
+
 	bool receiving = true;
 	const int ms_between_loops = 1000;
 	unsigned char recvBuf[DEFAULT_RECV_LENGTH] = { 0 };
