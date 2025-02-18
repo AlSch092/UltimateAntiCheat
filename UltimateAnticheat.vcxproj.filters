@@ -206,8 +206,8 @@
     <ClInclude Include="Network\HttpClient.hpp">
       <Filter>Network</Filter>
     </ClInclude>
-    <ClInclude Include="Common\AntiCheatInitFail.hpp">
-      <Filter>Common</Filter>
+    <ClInclude Include="AntiCheatInitFail.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

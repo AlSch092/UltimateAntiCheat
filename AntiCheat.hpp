@@ -23,7 +23,6 @@ class AntiCheat final
 {
 public:
 
-	//thows AntiCheatInitFail on error
 	AntiCheat(shared_ptr<Settings> config, WindowsVersion WinVersion) : Config(config), WinVersion(WinVersion)
 	{		
 		if (config == nullptr)
@@ -77,7 +76,7 @@ public:
     	}
 	}
 
-	~AntiCheat() //the destructor is now empty since all pointers of this class were recently switched to unique_ptrs
+	~AntiCheat()
 	{
 		if (Config != nullptr && Config->bUsingDriver) //unload the KM driver
 		{
@@ -86,13 +85,14 @@ public:
 				Logger::logf(Warning, "Failed to unload kernelmode driver!");
 			}
 		}
-		if (API::Dispatch(this, API::DispatchCode::CLIENT_EXIT) == Error::OK) //clean up memory & threads -> this will soon be removed once all threads and objects are changed to smart pointers
+
+		if (API::Dispatch(this, API::DispatchCode::CLIENT_EXIT) == Error::OK)
 	    {
         	Logger::logf(Info, " Cleanup successful. Shutting down program");
     	}
 	    else
     	{
-        	Logger::logf(Err, "Cleanup unsuccessful... Shutting down program");
+        	Logger::logf(Warning, "Cleanup unsuccessful... Shutting down program");
     	}
 	}
 
@@ -138,22 +138,22 @@ private:
 */
 __forceinline bool AntiCheat::IsAnyThreadSuspended()
 {
-	if (Monitor->GetMonitorThread()!= nullptr && Thread::IsThreadSuspended(Monitor->GetMonitorThread()->GetId()))
+	if (Monitor != nullptr && Monitor->GetMonitorThread()!= nullptr && Thread::IsThreadSuspended(Monitor->GetMonitorThread()->GetId()))
 	{
 		Logger::logf(Detection, "Monitor was found suspended! Abnormal program execution.");
 		return true;
 	}
-	else if (Monitor->GetProcessCreationMonitorThread() != nullptr && Thread::IsThreadSuspended(Monitor->GetProcessCreationMonitorThread()->GetId()))
+	else if (Monitor != nullptr && Monitor->GetProcessCreationMonitorThread() != nullptr && Thread::IsThreadSuspended(Monitor->GetProcessCreationMonitorThread()->GetId()))
 	{
 		Logger::logf(Detection, "Monitor's process creation thread was found suspended! Abnormal program execution.");
 		return true;
 	}
-	else if (Config->bUseAntiDebugging && AntiDebugger->GetDetectionThread() != nullptr && Thread::IsThreadSuspended(AntiDebugger->GetDetectionThread()->GetId()))
+	else if (Config->bUseAntiDebugging && AntiDebugger != nullptr && AntiDebugger->GetDetectionThread() != nullptr && Thread::IsThreadSuspended(AntiDebugger->GetDetectionThread()->GetId()))
 	{
 		Logger::logf(Detection, "Anti-debugger was found suspended! Abnormal program execution.");
 		return true;
 	}
-	else if (NetworkClient->GetRecvThread() != nullptr && Thread::IsThreadSuspended(NetworkClient->GetRecvThread()->GetId()))
+	else if (NetworkClient != nullptr && NetworkClient->GetRecvThread() != nullptr && Thread::IsThreadSuspended(NetworkClient->GetRecvThread()->GetId()))
 	{
 		Logger::logf(Detection, "Netclient comms thread was found suspended! Abnormal program execution.");
 		return true;

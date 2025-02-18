@@ -42,7 +42,7 @@ int main(int argc, char** argv)
     bool bEnforceSecureBoot = false;
     bool bEnforceDSE = true;
     bool bEnforceNoKDBG = true;
-    bool bUseAntiDebugging = false;
+    bool bUseAntiDebugging = true;
     bool bUseIntegrityChecking = true;
     bool bCheckThreadIntegrity = true;
     bool bCheckHypervisor = true;
@@ -94,7 +94,7 @@ int main(int argc, char** argv)
 
 #endif
 
-    const int MillisecondsBeforeShutdown = 120000;
+    const int MillisecondsBeforeShutdown = 200000;
 
     SetConsoleTitle(L"Ultimate Anti-Cheat");
 
@@ -205,19 +205,19 @@ int main(int argc, char** argv)
     list<DetectionFlags> flags = Anti_Cheat->GetMonitor()->GetDetectedFlags();
     map<DetectionFlags, const char*> explanations = 
     {
-        { DetectionFlags::DEBUGGER, "Debugger detected" },
-        { DetectionFlags::PAGE_PROTECTIONS, ".text section is writable, memory was re-mapped" },
-        { DetectionFlags::CODE_INTEGRITY, "process patched" },
-        { DetectionFlags::DLL_TAMPERING, "Networking WINAPI hooked" },
-        { DetectionFlags::BAD_IAT, "DLL hooking via Import Adress Table modification" },
-        { DetectionFlags::OPEN_PROCESS_HANDLES, "A process has handles on our process" },
-        { DetectionFlags::UNSIGNED_DRIVERS, "unsigned drivers on machine" },
-        { DetectionFlags::INJECTED_ILLEGAL_PROGRAM, "unsigned DLL injected on the process" },
-        { DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM, "blacklisted program name running on machine" },
-        { DetectionFlags::REGISTRY_KEY_MODIFICATIONS, "changes to registry keys related to secure boot, CI, testsigning mode, etc..." },
-        { DetectionFlags::MANUAL_MAPPING, "manually mapped module injected" },
-        { DetectionFlags::SUSPENDED_THREAD, "not implemented for now" },
-        { DetectionFlags::HYPERVISOR, "an hypervisor is running on the machine" }
+        { DetectionFlags::DEBUGGER, "Debugging method detected" },
+        { DetectionFlags::PAGE_PROTECTIONS, "Image's .text section is writable, memory was re-re-mapped" },
+        { DetectionFlags::CODE_INTEGRITY, "Image's memory in .text or .rdata modified" },
+        { DetectionFlags::DLL_TAMPERING, "Networking or certificate-related WINAPI hooked" },
+        { DetectionFlags::BAD_IAT, "Import Adress Table entry points to memory outside loaded modules" },
+        { DetectionFlags::OPEN_PROCESS_HANDLES, "A process has handles to our process" },
+        { DetectionFlags::UNSIGNED_DRIVERS, "Unsigned drivers running on the machine" },
+        { DetectionFlags::INJECTED_ILLEGAL_PROGRAM, "Unsigned DLL loaded into the process" },
+        { DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM, "Blacklisted program name running on machine" },
+        { DetectionFlags::REGISTRY_KEY_MODIFICATIONS, "Changes to registry keys related to secure boot, CI, testsigning mode, etc..." },
+        { DetectionFlags::MANUAL_MAPPING, "Manually mapped module written into memory" },
+        { DetectionFlags::SUSPENDED_THREAD, "One or more important threads were suspended" },
+        { DetectionFlags::HYPERVISOR, "A Hypervisor is running on the machine" }
     };
     for (DetectionFlags flag : flags) 
     {

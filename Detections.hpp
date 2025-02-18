@@ -72,11 +72,17 @@ public:
 
 	~Detections()
 	{
-		if (MonitorThread != NULL)
+		if (MonitorThread != nullptr)
 			delete MonitorThread;
 
-		if(RegistryMonitorThread != NULL)
+		if(RegistryMonitorThread != nullptr)
 			delete RegistryMonitorThread;
+
+		if (ProcessCreationMonitorThread != nullptr)
+			delete ProcessCreationMonitorThread;
+
+		if (CheaterWasDetected != nullptr)
+			delete CheaterWasDetected;
 	}
 
 	Detections(Detections&&) = delete;  //delete move constructr
@@ -98,6 +104,7 @@ public:
 
 	void SetCheater(BOOL cheating) { this->CheaterWasDetected->SetData((uint8_t)cheating); } //obfuscated bool/int variable. cast to uint8 to avoid getting stuck as 0/1 by compilers bool interpretation
 	BOOL IsUserCheater() const  { return this->CheaterWasDetected->GetData(); }
+
 	list<DetectionFlags> GetDetectedFlags() const { return this->DetectedFlags; }
 
 	BOOL SetSectionHash(const char* module, const char* sectionName);
@@ -135,7 +142,7 @@ public:
 
 	static bool DetectManualMapping(__in HANDLE hProcess);
 
-	static bool WasProcessNotRemapped();
+	static bool WasProcessNotRemapped(); //detect if someone prevented section remapping. could possibly go into Integrity class
 
 private:
 

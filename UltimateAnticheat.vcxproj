@@ -133,7 +133,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ntdll.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ntdll.lib;$(CoreLibraryDependencies);%(AdditionalDependencies); wintrust.lib; crypt32.lib;</AdditionalDependencies>
       <TreatLinkerWarningAsErrors>false</TreatLinkerWarningAsErrors>
     </Link>
     <PostBuildEvent>
@@ -158,7 +158,7 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ntdll.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ntdll.lib;$(CoreLibraryDependencies);%(AdditionalDependencies); wintrust.lib; Crypt32.lib;</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(ProjectDir)\splash.png" "$(ProjectDir)\x64\Release\splash.png" </Command>
@@ -191,13 +191,13 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AntiCheat.hpp" />
+    <ClInclude Include="AntiCheatInitFail.hpp" />
     <ClInclude Include="AntiDebug\AntiDebugger.hpp" />
     <ClInclude Include="AntiDebug\DebuggerDetections.hpp" />
     <ClInclude Include="AntiTamper\Integrity.hpp" />
     <ClInclude Include="AntiTamper\NAuthenticode.hpp" />
     <ClInclude Include="AntiTamper\remap.hpp" />
     <ClInclude Include="API\API.hpp" />
-    <ClInclude Include="Common\AntiCheatInitFail.hpp" />
     <ClInclude Include="Common\Error.hpp" />
     <ClInclude Include="Common\Globals.hpp" />
     <ClInclude Include="Common\Logger.hpp" />

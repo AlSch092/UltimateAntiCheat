@@ -13,7 +13,7 @@ BOOL Detections::StartMonitor()
 
     Logger::logf(Info, "Created monitoring thread with ID %d", this->MonitorThread->GetId());
     
-    if (this->MonitorThread->GetHandle() == NULL || this->MonitorThread->GetHandle() == INVALID_HANDLE_VALUE)
+    if (this->MonitorThread->GetId() == 0)
     {
         Logger::logf(Err, " Failed to create monitor thread  @ Detections::StartMonitor");
         return FALSE;
