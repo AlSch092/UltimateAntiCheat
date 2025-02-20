@@ -8,7 +8,6 @@
     Author: AlSch092 @ Github
 */
 #include <map>
-#include <conio.h>
 
 #include "API/API.hpp"
 #include "AntiCheat.hpp"
