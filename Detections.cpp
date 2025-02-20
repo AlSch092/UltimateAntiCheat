@@ -37,7 +37,7 @@ VOID CALLBACK Detections::OnDllNotification(ULONG NotificationReason, const PLDR
     {
         LPCWSTR FullDllName = NotificationData->Loaded.FullDllName->pBuffer;
 
-        if (FullDllName != nullptr)
+        if (Monitor != nullptr && FullDllName != nullptr)
         {
             Logger::logfw(Info, L"[LdrpDllNotification Callback] dll loaded: %s\n", FullDllName);
             std::lock_guard<std::mutex> lock(Monitor->DLLVerificationQueueMutex);
