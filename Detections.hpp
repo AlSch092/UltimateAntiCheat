@@ -1,5 +1,7 @@
 //By AlSch092 @github
 #pragma once
+#include <queue>
+
 #include "Network/NetClient.hpp" //Net Comms
 #include "Network/HttpClient.hpp"
 #include "AntiDebug/DebuggerDetections.hpp"
@@ -153,6 +155,10 @@ private:
 	static void MonitorProcessCreation(LPVOID thisPtr);
 
 	bool MonitoringProcessCreation = false;
+
+	void checkDLLSignature();
+	std::queue<LPCWSTR> DLLVerificationQueue;
+	std::mutex DLLVerificationQueueMutex;
 
 	ObfuscatedData<uint8_t>* CheaterWasDetected = nullptr; //using bool as the type does not work properly with obfuscation since the compiler uses true/false, so use uint8_t instead and cast to BOOL when needed
 
