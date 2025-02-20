@@ -64,6 +64,8 @@ public:
 	static vector<uint64_t> GetMemoryHash(__in uint64_t Address, __in int nBytes); //get hash list at `Address`
 	static vector<uint64_t> GetMemoryHash(LPBYTE memory, int nBytes);
 	
+	static uint64_t GetStackedHash(uint64_t Address, int nBytes);
+
 	void SetSectionHashList(__out vector<uint64_t> hList, __in const string section);
 
 	vector<uint64_t> GetSectionHashList(__in const string sectionName) const 

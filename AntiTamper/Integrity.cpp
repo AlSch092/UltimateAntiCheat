@@ -51,7 +51,6 @@ vector<uint64_t> Integrity::GetMemoryHash(__in uint64_t Address, __in int nBytes
 	return hashList;
 }
 
-
 /*
 	GetMemoryHash (overloaded) - returns a vector of sha256 hashes of memory of nBytes
 */
@@ -76,6 +75,31 @@ vector<uint64_t> Integrity::GetMemoryHash(LPBYTE memory, int nBytes)
 	}
 
 	return hashList;
+}
+
+
+/*
+	GetStackedHash - fetch single uint64_t hash reprsenting full bytes from `Address` to `Address + nBytes`
+	returns a uint64_t of the sum of all sha digests
+*/
+uint64_t Integrity::GetStackedHash(uint64_t Address, int nBytes)
+{
+	if (Address == 0 || nBytes == 0)
+		return 0;
+
+	SHA256 sha;
+	uint8_t* digest = 0;
+	UINT64 digestCache = 0;
+
+	for (int i = 0; i < nBytes - 32; i = i + 32)
+	{
+		sha.update((const uint8_t*)Address + i, 32);
+		digest = sha.digest();
+		digestCache += *(UINT64*)digest + i;
+		delete digest;
+	}
+
+	return digestCache;
 }
 
 void Integrity::SetSectionHashList(__out vector<uint64_t> hList, __in const string section)
