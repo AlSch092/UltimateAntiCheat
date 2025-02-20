@@ -157,8 +157,9 @@ private:
 	bool MonitoringProcessCreation = false;
 
 	void checkDLLSignature();
-	std::queue<LPCWSTR> DLLVerificationQueue;
-	std::mutex DLLVerificationQueueMutex;
+	
+        queue<wstring> DLLVerificationQueue;
+	mutex DLLVerificationQueueMutex;
 
 	ObfuscatedData<uint8_t>* CheaterWasDetected = nullptr; //using bool as the type does not work properly with obfuscation since the compiler uses true/false, so use uint8_t instead and cast to BOOL when needed
 
