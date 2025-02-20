@@ -29,42 +29,51 @@ BOOL Detections::StartMonitor()
 /*
     LdrpDllNotification - This function is called whenever a new module is loaded into the process space, called before TLS callbacks
 */
-
 VOID CALLBACK Detections::OnDllNotification(ULONG NotificationReason, const PLDR_DLL_NOTIFICATION_DATA NotificationData, PVOID Context)
 {
     Detections* Monitor = reinterpret_cast<Detections*>(Context);
-    
+
     if (NotificationReason == LDR_DLL_NOTIFICATION_REASON_LOADED)
     {
         LPCWSTR FullDllName = NotificationData->Loaded.FullDllName->pBuffer;
-        Monitor->DLLVerificationQueueMutex.lock();
-        Monitor->DLLVerificationQueue.push(FullDllName);
-        Monitor->DLLVerificationQueueMutex.unlock();
+
+        if (FullDllName != nullptr)
+        {
+            Logger::logfw(Info, L"[LdrpDllNotification Callback] dll loaded: %s\n", FullDllName);
+            std::lock_guard<std::mutex> lock(Monitor->DLLVerificationQueueMutex);
+            Monitor->DLLVerificationQueue.push(wstring(FullDllName));
+        }
     }
 }
 
-/*
-    Detections::Monitor(LPVOID thisPtr)
-     Routine which monitors aspects of the process for fragments of cheating, loops continuously until the thread is signalled to shut down
-*/
 
-void Detections::checkDLLSignature()
+/*
+    CheckDLLSignature - checks the signatures of any newly loaded modules
+*/
+void Detections::CheckDLLSignature()
 {
-    while (true) {
-        this->DLLVerificationQueueMutex.lock();
-        if (this->DLLVerificationQueue.size() == 0) {
-            this->DLLVerificationQueueMutex.unlock();
-            break;
-        }
-        LPCWSTR FullDllName = this->DLLVerificationQueue.front();
-        Logger::logfw(Info, L"[LdrpDllNotification Callback] dll loaded: %s, verifying signature...\n", FullDllName);
-        if (!Authenticode::HasSignature(FullDllName))
+    while (true) 
+    {
+        wstring FullDllName;
+     
+        {
+            std::lock_guard<std::mutex> lock(this->DLLVerificationQueueMutex); //lock only for queue access
+            
+            if (this->DLLVerificationQueue.empty()) 
+            {
+                break;
+            }
+
+            FullDllName = this->DLLVerificationQueue.front();
+            this->DLLVerificationQueue.pop();
+
+        }  //mutex is unlocked here automatically since lock_guard works as a RAII and we create scope with { and }
+ 
+        if (FullDllName.size() > 0 && !Authenticode::HasSignature(FullDllName.c_str())) //now do the expensive work without holding the lock
         {
             Logger::logfw(Detection, L"Failed to verify signature of %s\n", FullDllName);
             this->Flag(DetectionFlags::INJECTED_ILLEGAL_PROGRAM);
         }
-        this->DLLVerificationQueue.pop();
-        this->DLLVerificationQueueMutex.unlock();
     }
 }
 
@@ -158,7 +167,7 @@ void Detections::Monitor(LPVOID thisPtr)
             return;
         }
 
-        Monitor->checkDLLSignature();
+        Monitor->CheckDLLSignature();
 
         if (Monitor->Config->bCheckHypervisor)
         {
