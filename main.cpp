@@ -8,6 +8,7 @@
     Author: AlSch092 @ Github
 */
 #include <map>
+#include <conio.h>
 
 #include "API/API.hpp"
 #include "AntiCheat.hpp"
@@ -139,20 +140,16 @@ int main(int argc, char** argv)
 
     cout << "\n----------------------------------------------------------------------------------------------------------" << endl;
     cout << "All protections have been deployed, the program will now loop using its detection methods. Thanks for your interest in the project!" << endl;
-    cout << "Please enter 'q' if you'd like to end the program." << endl;
+    cout << "Press any key to end the program." << endl;
     
-    string userInput;
-
+    return 0;
     while (true)
     {
-        cin >> userInput;
-
-        if (userInput == "q")
-        {
-            cout << "Exit key was pressed, shutting down program..." << endl;
+        if (_kbhit())
             break;
-        }     
+        Sleep(100);
     }
+    cout << "Exit key was pressed, shutting down program..." << endl;
 
     if (Anti_Cheat->GetMonitor()->IsUserCheater())
     {
