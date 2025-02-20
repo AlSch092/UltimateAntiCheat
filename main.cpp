@@ -140,17 +140,21 @@ int main(int argc, char** argv)
 
     cout << "\n----------------------------------------------------------------------------------------------------------" << endl;
     cout << "All protections have been deployed, the program will now loop using its detection methods. Thanks for your interest in the project!" << endl;
-    cout << "Press any key to end the program." << endl;
+    cout << "Please enter 'q' if you'd like to end the program." << endl;
     
-    return 0;
+    string userInput;
+
     while (true)
     {
-        if (_kbhit())
-            break;
-        Sleep(100);
-    }
-    cout << "Exit key was pressed, shutting down program..." << endl;
+        cin >> userInput;
 
+        if (userInput == "q" || userInput == "Q")
+        {
+            cout << "Exit key was pressed, shutting down program..." << endl;
+            break;
+        }     
+    }
+    
     if (Anti_Cheat->GetMonitor()->IsUserCheater())
     {
         Logger::logf(Info, "Detected a possible cheater during program execution!");
