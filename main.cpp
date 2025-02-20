@@ -8,6 +8,7 @@
     Author: AlSch092 @ Github
 */
 #include <map>
+#include <conio.h>
 
 #include "API/API.hpp"
 #include "AntiCheat.hpp"
@@ -147,13 +148,13 @@ int main(int argc, char** argv)
     {
         cin >> userInput;
 
-        if (userInput == "q")
+        if (userInput == "q" || userInput == "Q")
         {
             cout << "Exit key was pressed, shutting down program..." << endl;
             break;
         }     
     }
-
+    
     if (Anti_Cheat->GetMonitor()->IsUserCheater())
     {
         Logger::logf(Info, "Detected a possible cheater during program execution!");
