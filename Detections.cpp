@@ -37,13 +37,9 @@ VOID CALLBACK Detections::OnDllNotification(ULONG NotificationReason, const PLDR
     if (NotificationReason == LDR_DLL_NOTIFICATION_REASON_LOADED)
     {
         LPCWSTR FullDllName = NotificationData->Loaded.FullDllName->pBuffer;
-        Logger::logfw(Info, L"[LdrpDllNotification Callback] dll loaded: %s, verifying signature...\n", FullDllName);
-
-        if (!Authenticode::HasSignature(FullDllName))
-        {
-			Logger::logfw(Detection, L"Failed to verify signature of %s\n", FullDllName);
-            Monitor->Flag(DetectionFlags::INJECTED_ILLEGAL_PROGRAM);
-        }
+        Monitor->DLLVerificationQueueMutex.lock();
+        Monitor->DLLVerificationQueue.push(FullDllName);
+        Monitor->DLLVerificationQueueMutex.unlock();
     }
 }
 
@@ -51,6 +47,27 @@ VOID CALLBACK Detections::OnDllNotification(ULONG NotificationReason, const PLDR
     Detections::Monitor(LPVOID thisPtr)
      Routine which monitors aspects of the process for fragments of cheating, loops continuously until the thread is signalled to shut down
 */
+
+void Detections::checkDLLSignature()
+{
+    while (true) {
+        this->DLLVerificationQueueMutex.lock();
+        if (this->DLLVerificationQueue.size() == 0) {
+            this->DLLVerificationQueueMutex.unlock();
+            break;
+        }
+        LPCWSTR FullDllName = this->DLLVerificationQueue.front();
+        Logger::logfw(Info, L"[LdrpDllNotification Callback] dll loaded: %s, verifying signature...\n", FullDllName);
+        if (!Authenticode::HasSignature(FullDllName))
+        {
+            Logger::logfw(Detection, L"Failed to verify signature of %s\n", FullDllName);
+            this->Flag(DetectionFlags::INJECTED_ILLEGAL_PROGRAM);
+        }
+        this->DLLVerificationQueue.pop();
+        this->DLLVerificationQueueMutex.unlock();
+    }
+}
+
 void Detections::Monitor(LPVOID thisPtr)
 {
     if (thisPtr == NULL)
@@ -140,6 +157,8 @@ void Detections::Monitor(LPVOID thisPtr)
             Logger::logf(Info, "STOPPING  Detections::Monitor , ending detections thread");
             return;
         }
+
+        Monitor->checkDLLSignature();
 
         if (Monitor->Config->bCheckHypervisor)
         {
