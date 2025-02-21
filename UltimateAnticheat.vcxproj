@@ -199,6 +199,7 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
     <ClInclude Include="AntiTamper\NAuthenticode.hpp" />
     <ClInclude Include="AntiTamper\remap.hpp" />
     <ClInclude Include="API\API.hpp" />
+    <ClInclude Include="Common\DetectionFlags.hpp" />
     <ClInclude Include="Common\Error.hpp" />
     <ClInclude Include="Common\Globals.hpp" />
     <ClInclude Include="Common\Logger.hpp" />
