@@ -9,15 +9,13 @@
     FetchBlacklistedDrivers - read internet page at `url`, parse each line of the response to add to our blacklisted driver list
     returns `false` on failure
 */
-bool Services::FetchBlacklistedDrivers(const char* url)
+bool Services::FetchBlacklistedDrivers(__in const char* url)
 {
     if (url == nullptr)
         return false;
 
-    HttpClient* h = new HttpClient();
     vector<string> responseHeaders;
-    string response = h->ReadWebPage(BlacklistedDriversRepository, {}, "", responseHeaders); //fetch blacklisted drivers
-    delete h;
+    string response = HttpClient::ReadWebPage(BlacklistedDriversRepository, {}, "", responseHeaders); //fetch blacklisted drivers
 
     if (response.size() == 0)
         return false;
@@ -781,7 +779,7 @@ string Services::GetHypervisorVendor()
     Services::LoadDriver - register a service and load a driver given a driverName and driverPath using SCM
     return `true` on success
 */
-bool Services::LoadDriver(const std::wstring& driverName, const std::wstring& driverPath)
+bool Services::LoadDriver(__in const std::wstring& driverName, __in const std::wstring& driverPath)
 {
     SC_HANDLE hSCManager = OpenSCManager(nullptr, nullptr, SC_MANAGER_CREATE_SERVICE);
 
@@ -839,7 +837,7 @@ bool Services::LoadDriver(const std::wstring& driverName, const std::wstring& dr
     Services::UnloadDriver - unregister the driver service and unload a driver given a driverName and driverPath using SCM
     return `true` on success
 */
-bool Services::UnloadDriver(const std::wstring& driverName)
+bool Services::UnloadDriver(__in const std::wstring& driverName)
 {
     SC_HANDLE hSCManager = OpenSCManager(nullptr, nullptr, SC_MANAGER_CONNECT);
 
@@ -914,7 +912,7 @@ list<DWORD> Services::EnumerateProcesses()
 /*
     GetProcessDirectoryW - return directory of process `pid`
 */
-std::string Services::GetProcessDirectory(DWORD pid)
+std::string Services::GetProcessDirectory(__in const DWORD pid)
 {
     if (pid <= 4)
         return "";
@@ -956,7 +954,7 @@ std::string Services::GetProcessDirectory(DWORD pid)
 /*
     GetProcessDirectoryW - return directory of process `pid`
 */
-wstring Services::GetProcessDirectoryW(DWORD pid)
+wstring Services::GetProcessDirectoryW(__in const DWORD pid)
 {
     if (pid <= 4)
         return L"";

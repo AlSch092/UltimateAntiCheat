@@ -60,7 +60,7 @@ class Services final
 {
 public:
 
-	Services(bool Initialize)
+	Services(__in const bool Initialize)
 	{
 		if (Initialize)
 		{
@@ -116,11 +116,11 @@ public:
 	static string GetHypervisorVendor();
 	static string GetCPUVendor();
 
-	static bool LoadDriver(const std::wstring& driverName, const std::wstring& driverPath);
-	static bool UnloadDriver(const std::wstring& driverName); 
+	static bool LoadDriver(__in const std::wstring& driverName, __in const std::wstring& driverPath);
+	static bool UnloadDriver(__in const std::wstring& driverName); 
 	
-	static string GetProcessDirectory(DWORD pid);
-	static wstring GetProcessDirectoryW(DWORD pid);
+	static string GetProcessDirectory(__in const DWORD pid);
+	static wstring GetProcessDirectoryW(__in const DWORD pid);
 
 	static list<DWORD> EnumerateProcesses();
 
@@ -136,6 +136,6 @@ private:
 
 	list<wstring> WhitelistedUnsignedDrivers; // dump_diskdump.sys, dump_storahci.sys, dump_dumpfve.sys
 
-	bool FetchBlacklistedDrivers(const char* url);
+	bool FetchBlacklistedDrivers(__in const char* url);
 	const char* BlacklistedDriversRepository = "https://raw.githubusercontent.com/AlSch092/UltimateAntiCheat/refs/heads/main/MiscFiles/BlacklistedDriverList.txt"; 
 };
