@@ -1,45 +1,41 @@
 //By AlSch092 @ github
 #include "Utility.hpp"
 
-char* Utility::GenerateRandomString(int length) //make sure to delete[] memory after
+string Utility::GenerateRandomString(__in const int length)
 {
     if (length == 0)
-        return NULL;
+        return "";
 
     const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
 
-    char* randomString = new char[(length + 1) * sizeof(char)];
+    string randomString;
 
     srand(time((time_t*)NULL));
 
     for (int i = 0; i < length; ++i)
-        randomString[i] = charset[rand() % (strlen(charset) - 1)];
-
-    randomString[length] = '\0';
+        randomString[i] = charset[rand() % (sizeof(charset) - 1)];
 
     return randomString;
 }
 
-wchar_t* Utility::GenerateRandomWString(int length) //make sure to delete[] memory after
+wstring Utility::GenerateRandomWString(__in const int length)
 {
     if (length == 0)
-        return NULL;
+        return L"";
 
     const wchar_t charset[] = L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
 
-    wchar_t* randomString = new wchar_t[(length + 1) * sizeof(wchar_t)];
+    wstring randomString;
 
     srand(time((time_t*)NULL));
 
     for (int i = 0; i < length; ++i)
-        randomString[i] = charset[rand() % (wcslen(charset) - 1)];
-
-    randomString[length] = '\0';
+        randomString[i] = charset[rand() % (sizeof(charset) - 1)];
 
     return randomString;
 }
 
-void Utility::str_to_lower(char* str)
+void Utility::str_to_lower(__inout char* str)
 {
     while (*str)
     {
@@ -48,7 +44,7 @@ void Utility::str_to_lower(char* str)
     }
 }
 
-char* Utility::strstr_case_insensitive(const char* haystack, const char* needle)
+char* Utility::strstr_case_insensitive(__in const char* haystack, __in const char* needle)
 {
     if (!haystack || !needle)
     {
@@ -88,7 +84,7 @@ char* Utility::strstr_case_insensitive(const char* haystack, const char* needle)
     return final_result;
 }
 
-bool Utility::strcmp_insensitive(const char* s1, const char* s2)
+bool Utility::strcmp_insensitive(__in const char* s1, __in const char* s2)
 {
     if (s1 == NULL || s2 == NULL)
         return false;
@@ -110,7 +106,7 @@ bool Utility::strcmp_insensitive(const char* s1, const char* s2)
     return true;
 }
 
-bool Utility::wcscmp_insensitive(const wchar_t* s1, const wchar_t* s2)
+bool Utility::wcscmp_insensitive(__in const wchar_t* s1, __in const wchar_t* s2)
 {
     if (s1 == NULL || s2 == NULL)
         return false;
@@ -132,20 +128,20 @@ bool Utility::wcscmp_insensitive(const wchar_t* s1, const wchar_t* s2)
     return true;
 }
 
-std::string Utility::ConvertWStringToString(const std::wstring& wstr)
+std::string Utility::ConvertWStringToString(__in const std::wstring& wstr)
 {
     std::locale loc("");
     std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
     return conv.to_bytes(wstr);
 }
 
-std::wstring Utility::ConvertStringToWString(const std::string& str)
+std::wstring Utility::ConvertStringToWString(__in const std::string& str)
 {
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     return converter.from_bytes(str);
 }
 
-std::vector<std::string> Utility::splitStringBySpace(char* str)
+std::vector<std::string> Utility::splitStringBySpace(__in char* str)
 {
     std::vector<std::string> result;
     char* token = strtok(str, " ");
@@ -157,7 +153,7 @@ std::vector<std::string> Utility::splitStringBySpace(char* str)
     return result;
 }
 
-void Utility::addUniqueString(std::list<std::string>& strList, const std::string& str)
+void Utility::addUniqueString(__inout std::list<std::string>& strList, __in const std::string& str)
 {
     if (find(strList.begin(), strList.end(), str) == strList.end())
     {
@@ -165,7 +161,7 @@ void Utility::addUniqueString(std::list<std::string>& strList, const std::string
     }
 }
 
-bool Utility::areAllElementsInList(const std::list<std::string>& list1, const std::list<std::string>& list2)
+bool Utility::areAllElementsInList(__in const std::list<std::string>& list1, __in const std::list<std::string>& list2)
 {
     for (const auto& str : list1)
     {
@@ -177,15 +173,14 @@ bool Utility::areAllElementsInList(const std::list<std::string>& list1, const st
     return true; //elements in list1 are in list2
 }
 
-std::wstring Utility::ToLower(const std::wstring& str) 
+std::wstring Utility::ToLower(__in const std::wstring& str) 
 {
     std::wstring lowerStr = str;
-    std::transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(),
-        [](wchar_t ch) { return std::towlower(ch); });
+    std::transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(), [](wchar_t ch) { return std::towlower(ch); });
     return lowerStr;
 }
 
-bool Utility::ContainsWStringInsensitive(const std::wstring& haystack, const std::wstring& needle) 
+bool Utility::ContainsWStringInsensitive(__in const std::wstring& haystack, __in const std::wstring& needle) 
 {
     std::wstring lowerHaystack = ToLower(haystack);
     std::wstring lowerNeedle = ToLower(needle); //convert both strings to lowercase, check if the needle is in the haystack
