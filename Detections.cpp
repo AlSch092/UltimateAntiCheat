@@ -4,10 +4,10 @@
 /*
     Detections::StartMonitor - use class member MonitorThread to start our main detections loop
 */
-BOOL Detections::StartMonitor()
+bool Detections::StartMonitor()
 {
     if (this->MonitorThread != nullptr) //prevent accidental double calls to this function/double thread creation
-        return FALSE;
+        return false;
 
     this->MonitorThread = new Thread((LPTHREAD_START_ROUTINE)&Monitor, (LPVOID)this, true, false);
 
@@ -16,14 +16,14 @@ BOOL Detections::StartMonitor()
     if (this->MonitorThread->GetId() == 0)
     {
         Logger::logf(Err, " Failed to create monitor thread  @ Detections::StartMonitor");
-        return FALSE;
+        return false;
     }
 
     this->ProcessCreationMonitorThread = new Thread((LPTHREAD_START_ROUTINE)&Detections::MonitorProcessCreation, this, true, false);
 
     this->RegistryMonitorThread = new Thread((LPTHREAD_START_ROUTINE)&MonitorImportantRegistryKeys, (LPVOID)this, true, false);
 
-    return TRUE;
+    return true;
 }
 
 /*
@@ -82,7 +82,7 @@ void Detections::CheckDLLSignature()
     Detections::Monitor(LPVOID thisPtr)
      Routine which monitors aspects of the process for fragments of cheating, loops continuously until the thread is signalled to shut down
 */
-void Detections::Monitor(LPVOID thisPtr)
+void Detections::Monitor(__in LPVOID thisPtr)
 {
     if (thisPtr == NULL)
     {
@@ -288,7 +288,7 @@ void Detections::Monitor(LPVOID thisPtr)
     Each line of the file located at `url` should be a space-seperated hex byte string, eg) 48 8D 05 12 33 CD
     returns `false` on failure
 */
-bool Detections::FetchBlacklistedBytePatterns(const char* url)
+bool Detections::FetchBlacklistedBytePatterns(__in const char* url)
 {
     if (url == nullptr)
         return false;
@@ -336,11 +336,11 @@ bool Detections::FetchBlacklistedBytePatterns(const char* url)
 SetSectionHash sets the member variable `_TextSectionHashes` or `_RDataSectionHashes` via SetSectionHashList() call after finding the `sectionName` named section (.text in our case)
  Returns a list<Section*>  which we can use in later hashing calls to compare sets of these hashes and detect memory tampering within the section
 */
-BOOL Detections::SetSectionHash(const char* moduleName, const char* sectionName)
+bool Detections::SetSectionHash(__in const char* moduleName, __in const char* sectionName)
 {
-    if (moduleName == NULL || sectionName == NULL)
+    if (moduleName == nullptr || sectionName == nullptr)
     {
-        return FALSE;
+        return false;
     }
 
     list<ProcessData::Section*> sections = Process::GetSections(moduleName);
@@ -350,13 +350,13 @@ BOOL Detections::SetSectionHash(const char* moduleName, const char* sectionName)
     if (ModuleAddr == 0)
     {
         Logger::logf(Err, "ModuleAddr was 0 @ SetSectionHash\n", sectionName);
-        return FALSE;
+        return false;
     }
 
     if (sections.size() == 0)
     {
         Logger::logf(Err, "sections.size() of section %s was 0 @ SetSectionHash\n", sectionName);
-        return FALSE;
+        return false;
     }
 
     for (auto section : sections) 
@@ -376,24 +376,24 @@ BOOL Detections::SetSectionHash(const char* moduleName, const char* sectionName)
             else
             {
                 Logger::logf(Err, "hashes.size() was 0 @ SetSectionHash", sectionName);
-                return FALSE;
+                return false;
             }
         }
     }
 
-    return TRUE;
+    return true;
 }
 
 /*
     IsSectionHashUnmatching  compares our collected hash list from ::SetSectionHash() , we use cached address + size to prevent spoofing (sections can be renamed at runtime by an attacker)
     Returns true if the two sets of hashes do not match, implying memory was modified
 */
-BOOL Detections::IsSectionHashUnmatching(UINT64 cachedAddress, DWORD cachedSize, const string section)
+bool Detections::IsSectionHashUnmatching(__in const UINT64 cachedAddress, __in const DWORD cachedSize, __in const string section)
 {
     if (cachedAddress == 0 || cachedSize == 0)
     {
         Logger::logf(Err, "Parameters were 0 @ Detections::CheckSectionHash");
-        return FALSE;
+        return false;
     }
 
     Logger::logf(Info, "Checking hashes of address: %llx (%d bytes) for memory integrity\n", cachedAddress, cachedSize);
@@ -403,12 +403,12 @@ BOOL Detections::IsSectionHashUnmatching(UINT64 cachedAddress, DWORD cachedSize,
         if (GetIntegrityChecker()->Check((uint64_t)cachedAddress, cachedSize, GetIntegrityChecker()->GetSectionHashList(".text"))) //compares hash to one gathered previously
         {
             Logger::logf(Info, "Hashes match: Program's .text section appears genuine.\n");
-            return FALSE;
+            return false;
         }
         else
         {
             Logger::logf(Detection, " .text section of program is modified!\n");
-            return TRUE;
+            return true;
         }
     }
     else if (section == ".rdata")
@@ -416,31 +416,31 @@ BOOL Detections::IsSectionHashUnmatching(UINT64 cachedAddress, DWORD cachedSize,
         if (GetIntegrityChecker()->Check((uint64_t)cachedAddress, cachedSize, GetIntegrityChecker()->GetSectionHashList(".rdata"))) //compares hash to one gathered previously
         {
             Logger::logf(Info, "Hashes match: Program's .rdata section appears genuine.\n");
-            return FALSE;
+            return false;
         }
         else
         {
             Logger::logf(Detection, " .rdata section of program is modified!\n");
-            return TRUE;
+            return true;
         }
     }
 
-    return FALSE;
+    return false;
 }
 
 /*
     IsBlacklistedProcessRunning 
     returns TRUE if a blacklisted program is running in the background, blacklisted processes can be found in the class constructor
 */
-BOOL __forceinline Detections::IsBlacklistedProcessRunning() const
+bool Detections::IsBlacklistedProcessRunning() const
 {
-    BOOL foundBlacklistedProcess = FALSE;
+    bool foundBlacklistedProcess = false;
 
     HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hSnapshot == INVALID_HANDLE_VALUE) 
     {
         Logger::logf(Err, "Failed to create snapshot of processes. Error code: %d @ Detections::IsBlacklistedProcessRunning\n", GetLastError());
-        return FALSE;
+        return false;
     }
 
     PROCESSENTRY32 pe32;
@@ -449,7 +449,7 @@ BOOL __forceinline Detections::IsBlacklistedProcessRunning() const
     {
         Logger::logf(Err, "Failed to get first process. Error code:  %d @ Detections::IsBlacklistedProcessRunning\n", GetLastError());
         CloseHandle(hSnapshot);
-        return FALSE;
+        return false;
     }
 
     do 
@@ -472,22 +472,22 @@ BOOL __forceinline Detections::IsBlacklistedProcessRunning() const
 *   DoesFunctionAppearHooked - Checks if first bytes of a routine are a jump or call. Please make sure the function you use with this doesnt normally start with a jump or call.
     Returns TRUE if the looked up function contains a jump or call as its first instruction
 */
-BOOL __forceinline Detections::DoesFunctionAppearHooked(const char* moduleName, const char* functionName)
+bool Detections::DoesFunctionAppearHooked(__in const char* moduleName, __in const char* functionName)
 {
     if (moduleName == nullptr || functionName == nullptr)
     {
         Logger::logf(Err, "moduleName or functionName was NULL @ Detections::DoesFunctionAppearHooked");
-        return FALSE;
+        return false;
     }
 
-    BOOL FunctionPreambleHooked = FALSE;
+    bool FunctionPreambleHooked = false;
 
     HMODULE hMod = GetModuleHandleA(moduleName);
 
     if (hMod == NULL)
     {
         Logger::logf(Err, " Couldn't fetch module @ Detections::DoesFunctionAppearHooked: %s\n", moduleName);
-        return FALSE;
+        return false;
     }
 
     UINT64 AddressFunction = (UINT64)GetProcAddress(hMod, functionName);
@@ -495,18 +495,18 @@ BOOL __forceinline Detections::DoesFunctionAppearHooked(const char* moduleName, 
     if (AddressFunction == NULL)
     {
         Logger::logf(Err, " Couldn't fetch address of function @ Detections::DoesFunctionAppearHooked: %s\n", functionName);
-        return FALSE;
+        return false;
     }
 
     __try
     {
         if (*(BYTE*)AddressFunction == 0xE8 || *(BYTE*)AddressFunction == 0xE9 || *(BYTE*)AddressFunction == 0xEA || *(BYTE*)AddressFunction == 0xEB) //0xEB = short jump, 0xE8 = call X, 0xE9 = long jump, 0xEA = "jmp oper2:oper1"
-            FunctionPreambleHooked = TRUE;
+            FunctionPreambleHooked = true;
     }
     __except(EXCEPTION_EXECUTE_HANDLER)
     {
         Logger::logf(Warning, " Couldn't read bytes @ Detections::DoesFunctionAppearHooked: %s\n", functionName);
-        return FALSE; //couldn't read memory at function
+        return false; //couldn't read memory at function
     }
 
     return FunctionPreambleHooked;
@@ -516,10 +516,10 @@ BOOL __forceinline Detections::DoesFunctionAppearHooked(const char* moduleName, 
     DoesIATContainHooked - Returns TRUE if any routines in the IAT lead to addresses outside their respective modules
     if the attacker writes their hooks in the dll's address space then they can get around this detection
 */
-BOOL __forceinline Detections::DoesIATContainHooked()
+bool Detections::DoesIATContainHooked()
 {
     list<ProcessData::ImportFunction*> IATFunctions = Process::GetIATEntries();
-    BOOL isIATHooked = FALSE;
+    bool isIATHooked = false;
 
     auto modules = Process::GetLoadedModules();
 
@@ -527,7 +527,7 @@ BOOL __forceinline Detections::DoesIATContainHooked()
     {
         DWORD moduleSize = Process::GetModuleSize(IATEntry->Module);
 
-        BOOL FoundIATEntryInModule = FALSE;
+        bool FoundIATEntryInModule = false;
 
         if (moduleSize != 0)
         {   //some IAT functions in k32 can point to ntdll (forwarding), thus we have to compare IAT to each other whitelisted DLL range
@@ -538,13 +538,13 @@ BOOL __forceinline Detections::DoesIATContainHooked()
 
                 if (IATEntry->AddressOfData > LowAddr && IATEntry->AddressOfData < HighAddr) //each IAT entry needs to be checked thru all loaded ranges
                 {
-                    FoundIATEntryInModule = TRUE;
+                    FoundIATEntryInModule = true;
                 }
             }
 
             if (!FoundIATEntryInModule)
             {
-                isIATHooked = TRUE;
+                isIATHooked = true;
                 break;
             }
                 
@@ -552,7 +552,7 @@ BOOL __forceinline Detections::DoesIATContainHooked()
         else //error, we shouldnt get here!
         {
             Logger::logf(Err, " Couldn't fetch  module size @ Detections::DoesIATContainHooked");
-            return FALSE;
+            return false;
         }
     }
 
@@ -602,10 +602,10 @@ UINT64 Detections::IsTextSectionWritable()
     CheckOpenHandles - Checks if any processes have open handles to our process, excluding whitelisted processes such as conhost.exe
     returns true if some other process has an open process handle to the current process
 */
-BOOL Detections::CheckOpenHandles()
+bool Detections::CheckOpenHandles()
 {
-    BOOL foundHandle = FALSE;
-    std::vector<Handles::_SYSTEM_HANDLE> handles = Handles::DetectOpenHandlesToProcess();
+    bool foundHandle = false;
+    vector<Handles::_SYSTEM_HANDLE> handles = Handles::DetectOpenHandlesToProcess();
 
     for (auto& handle : handles)
     {
@@ -623,7 +623,7 @@ BOOL Detections::CheckOpenHandles()
             }
 
             Logger::logfw(Detection, L"Process %s has open process handle to our process.", procName.c_str());
-            foundHandle = TRUE;
+            foundHandle = true;
 
         inner_break:
             continue;
@@ -636,7 +636,7 @@ BOOL Detections::CheckOpenHandles()
 /*
     AddDetectedFlags - adds DetectionFlags `flag` to the list of detected flags. Does not add if the flag is already in the list.
 */
-bool Detections::AddDetectedFlag(DetectionFlags flag)
+bool Detections::AddDetectedFlag(__in const DetectionFlags flag)
 {
     bool isDuplicate = false;
 
@@ -659,7 +659,7 @@ bool Detections::AddDetectedFlag(DetectionFlags flag)
     Flag - function adds flag to the detected list and sends a message to the server informing of the detection
 
 */
-bool Detections::Flag(DetectionFlags flag)
+bool Detections::Flag(__in const DetectionFlags flag)
 {
     bool wasDuplicate = AddDetectedFlag(flag);
     this->SetCheater(true);
@@ -689,7 +689,7 @@ bool Detections::Flag(DetectionFlags flag)
     IsBlacklistedWindowPresent - Checks if windows with specific title or class names are present.
     *Note* this function should not be used on its own to determine if someone is running a cheat tool, it should be combined with other methods. An opened folder with a blacklisted name will be caught but doesn't imply the actual program is opened, for example
 */
-BOOL Detections::IsBlacklistedWindowPresent()
+bool Detections::IsBlacklistedWindowPresent()
 {
     typedef BOOL(WINAPI* ENUMWINDOWS)(WNDENUMPROC, LPARAM);
     HMODULE hUser32 = GetModuleHandleA("USER32.dll");
@@ -740,19 +740,19 @@ BOOL Detections::IsBlacklistedWindowPresent()
                         Monitor->SetCheater(true);
                         Monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
                         Logger::logf(Detection, "Detected a window named 'Cheat Engine' (includes open folder names)");
-                        return FALSE;
+                        return false;
                     }
                     else if (strstr(windowTitle, (const char*)original_LUAScript))
                     {
                         Monitor->SetCheater(true);
                         Monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
                         Logger::logf(Detection, "Detected cheat engine's lua script window");
-                        return FALSE;
+                        return false;
                     }
                 }
             }
 
-            return TRUE;
+            return true;
         };
 
         ENUMWINDOWS pEnumWindows = (ENUMWINDOWS)GetProcAddress(hUser32, "EnumWindows");
@@ -763,23 +763,23 @@ BOOL Detections::IsBlacklistedWindowPresent()
         else
         {
             Logger::logf(Err, "GetProcAddress failed @ Detections::IsBlacklistedWindowPresent: %d", GetLastError());
-            return FALSE;
+            return false;
         }
     }
     else
     {
         Logger::logf(Err, "GetModuleHandle failed @ Detections::IsBlacklistedWindowPresent: %d", GetLastError());
-        return FALSE;
+        return false;
     }
 
-    return FALSE;
+    return false;
 }
 
 /*
     Detections::MonitorNewProcesses - Monitors process creation events via WMI
     Intended thread function, has no return value as it logs in real-time
 */
-void Detections::MonitorProcessCreation(LPVOID thisPtr)
+void Detections::MonitorProcessCreation(__in LPVOID thisPtr)
 {
     if (thisPtr == nullptr)
     {
@@ -941,7 +941,7 @@ void Detections::InitializeBlacklistedProcessesList()
     FindBlacklistedProgramsThroughByteScan(DWORD pid) - check process `pid` for specific byte patterns which implicate it of possibly being a bad actor process
     Used in combination with WMI process load callbacks (MonitorProcessCreation), and more checks on a process should be added to ensure its not a false positive
 */
-bool Detections::FindBlacklistedProgramsThroughByteScan(DWORD pid)
+bool Detections::FindBlacklistedProgramsThroughByteScan(__in const DWORD pid)
 {
     if (pid <= 4)
         return false;
@@ -990,7 +990,7 @@ bool Detections::FindBlacklistedProgramsThroughByteScan(DWORD pid)
     Monitors changes to important registry keys related to secure boot, CI, testsigning mode, etc
     Meant to be run in its own thread
 */
-void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
+void Detections::MonitorImportantRegistryKeys(__in LPVOID thisPtr)
 {
     if (thisPtr == nullptr)
     {
@@ -1092,7 +1092,7 @@ void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
     DetectManualMapping - detects if a manually mapped module is injected. also tries to detect PE header erased mapped modules, however this is tricky and possible to throw false positives!
     returns `true` if manual mapped was found  **NOTE - This routine is not yet finished, it works with basic PE header finding but throws false positives
 */
-bool Detections::DetectManualMapping(__in HANDLE hProcess)
+bool Detections::DetectManualMapping(__in const HANDLE hProcess)
 {
     auto modules = Process::GetLoadedModules();
 
@@ -1128,7 +1128,7 @@ bool Detections::DetectManualMapping(__in HANDLE hProcess)
             }
             //else //check for possible erased headers with manual mapping, this will be the tricky to do with 100% accuracy due to possible differing section alignment
             //{
-            //	PSAPI_WORKING_SET_EX_INFORMATION wsInfo;
+            //	PSAPI_WORKING_SET_EX_INFORMATION wsInfo; //TODO: finish this when I have a bit of time
             //	wsInfo.VirtualAddress = mbi.BaseAddress;
 
             //	bool foundPossibleErasedHeaderModule = true;

@@ -56,7 +56,7 @@ public:
 			Logger::logf(Warning, "Failed to fetch blacklisted byte patterns from web location!");
 		}
 
-		this->CheaterWasDetected = new ObfuscatedData<uint8_t>((bool)false);
+		this->CheaterWasDetected = make_unique<ObfuscatedData<uint8_t>>((bool)false);
 
 		HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
 
@@ -81,9 +81,6 @@ public:
 
 		if (ProcessCreationMonitorThread != nullptr)
 			delete ProcessCreationMonitorThread;
-
-		if (CheaterWasDetected != nullptr)
-			delete CheaterWasDetected;
 	}
 
 	Detections(Detections&&) = delete;  //delete move constructr
@@ -103,13 +100,13 @@ public:
 
 	shared_ptr<Integrity> GetIntegrityChecker() const { return this->integrityChecker; }
 
-	void SetCheater(BOOL cheating) { this->CheaterWasDetected->SetData((uint8_t)cheating); } //obfuscated bool/int variable. cast to uint8 to avoid getting stuck as 0/1 by compilers bool interpretation
-	BOOL IsUserCheater() const  { return this->CheaterWasDetected->GetData(); }
+	void SetCheater(__in const bool cheating) { this->CheaterWasDetected->SetData((uint8_t)cheating); } //obfuscated bool/int variable. cast to uint8 to avoid getting stuck as 0/1 by compilers bool interpretation
+	bool IsUserCheater() const  { return this->CheaterWasDetected->GetData(); }
 
 	list<DetectionFlags> GetDetectedFlags() const { return this->DetectedFlags; }
 
-	BOOL SetSectionHash(const char* module, const char* sectionName);
-	BOOL IsSectionHashUnmatching(UINT64 cachedAddress, DWORD cachedSize, const string section);
+	bool SetSectionHash(__in const char* module, __in const char* sectionName);
+	bool IsSectionHashUnmatching(__in const UINT64 cachedAddress, __in const DWORD cachedSize, __in const string section);
 
 	Thread* GetMonitorThread() const { return this->MonitorThread; }
 	Thread* GetProcessCreationMonitorThread() const { return this->ProcessCreationMonitorThread; }
@@ -117,31 +114,31 @@ public:
 
 	Process* GetProcessObj() const { return this->_Proc.get(); }  //other classes should not be able to set the process object, it is created by default in the constructor
 
-	BOOL IsBlacklistedProcessRunning() const;
+	bool IsBlacklistedProcessRunning() const;
 
-	static BOOL DoesFunctionAppearHooked(const char* moduleName, const char* functionName); //checks for jumps or calls as the first byte on a function
+	static bool DoesFunctionAppearHooked(__in const char* moduleName, __in const char* functionName); //checks for jumps or calls as the first byte on a function
 	
-	static BOOL DoesIATContainHooked(); //check IAT for hooks
+	static bool DoesIATContainHooked(); //check IAT for hooks
 	
 	static UINT64 IsTextSectionWritable(); //check all pages in .text section of image module for writable pages (after remapping, our .text section should only have RX protected pages)
 	
-	static BOOL CheckOpenHandles(); //detect any open handles to our process, very useful since this will detect most external cheats
+	static bool CheckOpenHandles(); //detect any open handles to our process, very useful since this will detect most external cheats
 	
-	BOOL IsBlacklistedWindowPresent();
+	bool IsBlacklistedWindowPresent();
 
-	bool AddDetectedFlag(DetectionFlags f); //add to DetectedFlags without duplicates
-	bool Flag(DetectionFlags flag); //sets `IsCheater` to true, notifies server component of detected flag
+	bool AddDetectedFlag(__in const DetectionFlags f); //add to DetectedFlags without duplicates
+	bool Flag(__in const DetectionFlags flag); //sets `IsCheater` to true, notifies server component of detected flag
 
 	static VOID OnDllNotification(ULONG NotificationReason, const PLDR_DLL_NOTIFICATION_DATA NotificationData, PVOID Context); //dll load callback
 
-	BOOL StartMonitor(); //begin threading
-	static void Monitor(LPVOID thisPtr); //loop detections/monitor -> thread function
+	bool StartMonitor(); //begin threading
+	static void Monitor(__in LPVOID thisPtr); //loop detections/monitor -> thread function
 
-	bool FindBlacklistedProgramsThroughByteScan(DWORD pid); //scan array of bytes in suspected bad actor processes
+	bool FindBlacklistedProgramsThroughByteScan(__in const DWORD pid); //scan array of bytes in suspected bad actor processes
 
-	static void MonitorImportantRegistryKeys(LPVOID thisPtr); //threaded func, pass this class ptr to it
+	static void MonitorImportantRegistryKeys(__in LPVOID thisPtr); //threaded func, pass this class ptr to it
 
-	static bool DetectManualMapping(__in HANDLE hProcess);
+	static bool DetectManualMapping(__in const HANDLE hProcess);
 
 	static bool WasProcessNotRemapped(); //detect if someone prevented section remapping. could possibly go into Integrity class
 
@@ -151,18 +148,18 @@ private:
 
 	void InitializeBlacklistedProcessesList();
 
-	static void MonitorProcessCreation(LPVOID thisPtr);
+	static void MonitorProcessCreation(__in LPVOID thisPtr);
 
 	bool MonitoringProcessCreation = false;
 
-	ObfuscatedData<uint8_t>* CheaterWasDetected = nullptr; //using bool as the type does not work properly with obfuscation since the compiler uses true/false, so use uint8_t instead and cast to BOOL when needed
+	unique_ptr<ObfuscatedData<uint8_t>> CheaterWasDetected = nullptr; //using bool as the type does not work properly with obfuscation since the compiler uses true/false, so use uint8_t instead and cast to BOOL when needed
 
 	unique_ptr<Services> _Services = nullptr;
 
 	shared_ptr<Integrity> integrityChecker = nullptr;
 	shared_ptr<NetClient> netClient; //send any detections to the server
 
-	Thread* MonitorThread = nullptr; //these should ideally be unique_ptrs which end the thread when the pointers go out of scope, will make these changes soon
+	Thread* MonitorThread = nullptr; //these should ideally be unique_ptrs which end the thread when the pointers go out of scope, will try to make these changes soon
 	Thread* ProcessCreationMonitorThread = nullptr;
 	Thread* RegistryMonitorThread = nullptr;
 
@@ -173,7 +170,7 @@ private:
 
 	list<DetectionFlags> DetectedFlags;
 
-	bool FetchBlacklistedBytePatterns(const char* url);
+	bool FetchBlacklistedBytePatterns(__in const char* url);
 	const char* BlacklisteBytePatternRepository = "https://raw.githubusercontent.com/AlSch092/UltimateAntiCheat/refs/heads/main/MiscFiles/BlacklistedBytePatternList.txt";
 
 	void CheckDLLSignature();
