@@ -108,18 +108,12 @@ void Detections::Monitor(LPVOID thisPtr)
 
     if (Monitor->Config->bCheckIntegrity) //integrity check setup if option is enabled
     {
-        list<ProcessData::Section*>* sections = Process::GetSections(_MAIN_MODULE_NAME);
+        list<ProcessData::Section*> sections = Process::GetSections(_MAIN_MODULE_NAME);
             
         Monitor->SetSectionHash(_MAIN_MODULE_NAME, ".text"); //set our memory hashes of .text
         Monitor->SetSectionHash(_MAIN_MODULE_NAME, ".rdata");
 
-        if (sections == nullptr)
-        {
-            Logger::logf(Err, "Sections was NULLPTR @ Detections::Monitor. Aborting execution!");
-            return;
-        }
-
-        if (sections->size() == 0)
+        if (sections.size() == 0)
         {
             Logger::logf(Err, "Sections size was 0 @ Detections::Monitor. Aborting execution!");
             return;
@@ -133,23 +127,20 @@ void Detections::Monitor(LPVOID thisPtr)
             return;
         }
 
-        std::list<ProcessData::Section*>::iterator it;
-        for (it = sections->begin(); it != sections->end(); ++it)
+        for (auto section : sections)
         {
-            ProcessData::Section* s = it._Ptr->_Myval;
-
-            if (s == nullptr)
+            if (section == nullptr)
                 continue;
 
-            if (strcmp(s->name, ".text") == 0) //cache our .text sections address and memory size, since an attacker could possibly spoof the section name or # of sections in ntheaders to prevent section traversing
+            if (strcmp(section->name, ".text") == 0) //cache our .text sections address and memory size, since an attacker could possibly spoof the section name or # of sections in ntheaders to prevent section traversing
             {
-                CachedTextSectionAddress = s->address + ModuleAddr; //any strings such as ".text" can be encrypted at compile time and decrypted at runtime to make reversing a bit more difficult
-                CachedTextSectionSize = s->size;
+                CachedTextSectionAddress = section->address + ModuleAddr; //any strings such as ".text" can be encrypted at compile time and decrypted at runtime to make reversing a bit more difficult
+                CachedTextSectionSize = section->size;
             }
-            else if (strcmp(s->name, ".rdata") == 0)
+            else if (strcmp(section->name, ".rdata") == 0)
             {
-                CachedRDataSectionAddress = s->address + ModuleAddr;
-                CachedRDataSectionSize = s->size;
+                CachedRDataSectionAddress = section->address + ModuleAddr;
+                CachedRDataSectionSize = section->size;
             }
         }
     }
@@ -352,7 +343,7 @@ BOOL Detections::SetSectionHash(const char* moduleName, const char* sectionName)
         return FALSE;
     }
 
-    list<ProcessData::Section*>* sections = Process::GetSections(moduleName);
+    list<ProcessData::Section*> sections = Process::GetSections(moduleName);
     
     UINT64 ModuleAddr = (UINT64)GetModuleHandleA(moduleName);
 
@@ -362,24 +353,20 @@ BOOL Detections::SetSectionHash(const char* moduleName, const char* sectionName)
         return FALSE;
     }
 
-    if (sections->size() == 0)
+    if (sections.size() == 0)
     {
         Logger::logf(Err, "sections.size() of section %s was 0 @ SetSectionHash\n", sectionName);
         return FALSE;
     }
 
-    std::list<ProcessData::Section*>::iterator it;
-
-    for (it = sections->begin(); it != sections->end(); ++it) 
+    for (auto section : sections) 
     {
-        ProcessData::Section* s = it._Ptr->_Myval;
-
-        if (s == nullptr)
+        if (section == nullptr)
             continue;
 
-        if (strcmp(s->name, sectionName) == 0)
+        if (strcmp(section->name, sectionName) == 0)
         {
-            vector<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)s->address + ModuleAddr, s->size);
+            vector<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)section->address + ModuleAddr, section->size);
 
             if (hashes.size() > 0)
             {
@@ -388,7 +375,7 @@ BOOL Detections::SetSectionHash(const char* moduleName, const char* sectionName)
             }
             else
             {
-                Logger::logf(Err, "hashes.size() was 0 @ SetSectionHash\n", sectionName);
+                Logger::logf(Err, "hashes.size() was 0 @ SetSectionHash", sectionName);
                 return FALSE;
             }
         }
