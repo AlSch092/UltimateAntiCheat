@@ -111,9 +111,9 @@ bool Process::HasExportedFunction(string dllName, string functionName)
     GetSections - gathers a list of ProcessData::Section* from the current process
     returns list<ProcessData::Section*>*, and an empty list if the routine fails
 */
-list<ProcessData::Section*>* Process::GetSections(string module)
+list<ProcessData::Section*> Process::GetSections(string module)
 {
-    list<ProcessData::Section*>* Sections = new list<ProcessData::Section*>();
+    list<ProcessData::Section*> Sections;
 
     PIMAGE_SECTION_HEADER sectionHeader;
     HINSTANCE hInst = NULL;  
@@ -148,7 +148,7 @@ list<ProcessData::Section*>* Process::GetSections(string module)
         s->NumberOfLinenumbers = sectionHeader[i].NumberOfLinenumbers;
         s->PointerToLinenumbers = sectionHeader[i].PointerToLinenumbers;
 
-        Sections->push_back(s);
+        Sections.push_back(s);
     }
 
     return Sections;

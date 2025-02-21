@@ -108,7 +108,7 @@ public:
 
 	uint32_t GetMemorySize();
 
-	static list<ProcessData::Section*>* GetSections(string module);
+	static list<ProcessData::Section*> GetSections(string module);
 
 #ifdef _M_IX86
 	static _MYPEB* GetPEB() { return (_MYPEB*)__readfsdword(0x30); }
