@@ -12,7 +12,7 @@ The project now supports CMake & using the LLVM/clang-cl compiler, which can be 
    If there is anything not working for you (throws unhandled exceptions, can't build, etc) please raise an issue and I will answer it ASAP. If you have code suggestions or techniques you'd like to see added, or want assistance with adding anti-cheat to your game, please send me an email. Anyone is welcome to contribute as long as your contribution is to the same standard and formatting as the existing codebase, and your code has been regression tested. More techniques and better design will be added to the project over time, and the file `changelog.md` contains a dated updates list. Visual Studio 2022 is used as the primary IDE, and it's recommended you use it for project viewing and compilation.  
 
 ## Current detections and preventions: 
-For a list of current detections and preventions, please view the Wiki page.  
+For a list of current detections and preventions, please view the Wiki page (or click [here](https://github.com/AlSch092/UltimateAntiCheat/wiki/Detections-&-Preventions)).  
 
 ## Enabling/Disabling Networking:
 Networking support is available in the project - the server can be found in the `Server` folder as its own solution. Using networking is optional, and can be turned on/off through the variable `bool bNetworkingAvailable` in the file `main.cpp` (as part of the `Settings` class). If you choose to use networking, please follow the instructions in the README.md file of the server.  
