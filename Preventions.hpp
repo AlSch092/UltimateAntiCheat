@@ -14,9 +14,11 @@ class Preventions final
 {
 public:
 
-	Preventions(shared_ptr<Settings> config, bool preventingThreads, shared_ptr<Integrity> integrityChecker) : IsPreventingThreadCreation(preventingThreads), integrityChecker(integrityChecker), Config(config)
+	Preventions(__in shared_ptr<Settings> config, __in bool preventingThreads, __in shared_ptr<Integrity> integrityChecker) : IsPreventingThreadCreation(preventingThreads), integrityChecker(integrityChecker), Config(config)
 	{
 	}
+
+	~Preventions() = default;
 
 	Preventions(Preventions&&) = delete;  //delete move constructr
 	Preventions& operator=(Preventions&&) noexcept = default; //delete move assignment operator
@@ -29,25 +31,25 @@ public:
 	Preventions operator*(Preventions& other) = delete;
 	Preventions operator/(Preventions& other) = delete;
 
-	void SetThreadCreationPrevention(bool onoff) { this->IsPreventingThreadCreation = onoff; }
+	void SetThreadCreationPrevention(__in const bool onoff) { this->IsPreventingThreadCreation = onoff; }
 	bool IsPreventingThreads() const { return this->IsPreventingThreadCreation; }
 
 	Error DeployBarrier(); //activate all protections
 
 	static bool RemapProgramSections();
 	static bool PreventDllInjection(); //experimental, gives warning messagebox
-	static bool PreventShellcodeThreads(); //experimental, gives warning messagebox
+
 	static bool StopAPCInjection(); //patch over ntdll.Ordinal8
 
 #if _WIN32_WINNT >= 0x0602
-	static void EnableProcessMitigations(bool useDEP, bool useASLR, bool useDynamicCode, bool useStrictHandles, bool useSystemCallDisable); //interesting technique which uses the loader & system to block certain types of attacks, such as unsigned modules being injected
+	static void EnableProcessMitigations(__in const bool useDEP, __in const bool useASLR, __in const bool useDynamicCode, __in const bool useStrictHandles, __in const  bool useSystemCallDisable); //interesting technique which uses the loader & system to block certain types of attacks, such as unsigned modules being injected
 #endif
-
-	static BYTE* SpoofPEB(); //not advisable to use this currently
 
 	static bool StopMultipleProcessInstances(); //stop multi-boxing via shared memory
 
 	bool RandomizeModuleName();
+
+	static void UnloadBlacklistedDrivers(__in const list<wstring> driverPaths);
 
 private:
 

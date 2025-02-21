@@ -16,7 +16,7 @@ bool Preventions::RandomizeModuleName()
         return false;
     }
 
-    wchar_t* newModuleName = Utility::GenerateRandomWString(moduleNameSize); //intentionally set to -2 to trip up external programs like CE from enumerating dlls & symbols
+    wstring newModuleName = Utility::GenerateRandomWString(moduleNameSize); //intentionally set to -2 to trip up external programs like CE from enumerating dlls & symbols
 
     if (Process::ChangeModuleName(_MAIN_MODULE_NAME_W, newModuleName)) //in addition to changing export function names, we can also modify the names of loaded modules/libraries.
     {
@@ -24,7 +24,7 @@ bool Preventions::RandomizeModuleName()
         UnmanagedGlobals::wCurrentModuleName = wstring(newModuleName);
         UnmanagedGlobals::CurrentModuleName = Utility::ConvertWStringToString(UnmanagedGlobals::wCurrentModuleName);
         
-        ProcessData::MODULE_DATA* mod = Process::GetModuleInfo(newModuleName);
+        ProcessData::MODULE_DATA* mod = Process::GetModuleInfo(newModuleName.c_str());
         
         if (mod != nullptr)
         {
@@ -35,7 +35,6 @@ bool Preventions::RandomizeModuleName()
         Logger::logfw(Info, L"Changed module name to: %s\n", UnmanagedGlobals::wCurrentModuleName.c_str());
     }
 
-    delete[] newModuleName;
     return success;
 }
 
@@ -46,10 +45,6 @@ bool Preventions::RandomizeModuleName()
 Error Preventions::DeployBarrier()
 {
     Error retError = Error::OK;
-
-#ifndef _DEBUG
-    IsPreventingThreadCreation = false; //TLS callback anti-dll injection switch var
-#endif
 
     if (!Process::ChangeNumberOfSections(_MAIN_MODULE_NAME, 1)) //change # of sections to 1
     {
@@ -106,23 +101,23 @@ bool Preventions::RemapProgramSections()
         {
             if (!RmpRemapImage(ImageBase)) //re-mapping of image to stop patching, and of course we can easily detect if someone bypasses this
             {
-                Logger::logf(Err, " RmpRemapImage failed.\n");
+                Logger::logf(Err, " RmpRemapImage failed @ RemapProgramSections");
             }
             else
             {
-                Logger::logf(Info, " Successfully remapped\n");
+                Logger::logf(Info, " Successfully remapped @ RemapProgramSections");
                 remap_succeeded = true;
             }
         }
         __except (EXCEPTION_EXECUTE_HANDLER)
         {
-            Logger::logf(Err, " Remapping image failed!");
+            Logger::logf(Err, " Remapping image failed @ RemapProgramSections");
             return false;
         }
     }
     else
     {
-        Logger::logf(Err, " Imagebase was NULL @ RemapAndCheckPages!\n");
+        Logger::logf(Err, " Imagebase was NULL @ RemapAndCheckPages!");
         return false;
     }
 
@@ -168,7 +163,7 @@ bool Preventions::StopMultipleProcessInstances()
 /*
     StopAPCInjection - prevents APC injection by patching over the first byte of ntdll.Ordinal8. More information about the APC payload can be fetched through hooking
     returns false on failure, true on successful patch
-    WARNING: if your program/game relies on APC for functionality then this technique won't be suitable for you
+    WARNING: if your program/game relies on usermode APC for functionality then this technique may not be suitable for you
 */
 bool Preventions::StopAPCInjection()
 {
@@ -220,7 +215,7 @@ bool Preventions::StopAPCInjection()
 /*
     EnableProcessMitigations - enforces policies which are actioned by the system & loader to prevent dynamic code generation & execution (unsigned code will be rejected by the loader)
 */
-void Preventions::EnableProcessMitigations(bool useDEP, bool useASLR, bool useDynamicCode, bool useStrictHandles, bool useSystemCallDisable)
+void Preventions::EnableProcessMitigations(__in const bool useDEP, __in const bool useASLR, __in const  bool useDynamicCode, __in const bool useStrictHandles, __in const bool useSystemCallDisable)
 {
     if (useDEP)
     {
@@ -291,13 +286,13 @@ void Preventions::EnableProcessMitigations(bool useDEP, bool useASLR, bool useDy
 */
 bool Preventions::PreventDllInjection()
 {
-    bool success = FALSE;
+    bool success = false;
 
-    //Anti-dll injection
-    char* RandString1 = Utility::GenerateRandomString(12);
-    char* RandString2 = Utility::GenerateRandomString(12);
-    char* RandString3 = Utility::GenerateRandomString(14);
-    char* RandString4 = Utility::GenerateRandomString(14);
+    //Anti-dll injection (creating remote thread on LoadLibrary)
+    string RandString1 = Utility::GenerateRandomString(12);
+    string RandString2 = Utility::GenerateRandomString(12);
+    string RandString3 = Utility::GenerateRandomString(14);
+    string RandString4 = Utility::GenerateRandomString(14);
 
     //prevents DLL injection from any host process relying on calling LoadLibrary in the target process (we are the target in this case) -> can possibly be disruptive to end user
     if (Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryA", RandString1) &&
@@ -305,50 +300,27 @@ bool Preventions::PreventDllInjection()
         Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExA", RandString3) &&
         Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExW", RandString4))
     {
-        success = TRUE;
+        return true;
     }
     else
     {
-        success = FALSE;
+        return false;
     }
-
-    delete[] RandString1; RandString1 = nullptr;
-    delete[] RandString2; RandString2 = nullptr;
-    delete[] RandString3; RandString3 = nullptr;
-    delete[] RandString4; RandString4 = nullptr;
-
-    return success;
 }
 
 /*
-    PreventShellcodeThreads - changes export routine name of K32's CreateThread such that external attackers cannot look up the functions address.
-     *Note* : Changing export names for certain important dll routines can result in popup errors for the end-user, thus its not recommended for a live product. Alternatively, routines can have their function preambles 'ret' patched for similar effects (if you know it wont impact program functionality).
+    UnloadBlacklistedDrivers - attempts to unload/stop blacklisted drivers in `driverPaths`
 */
-bool Preventions::PreventShellcodeThreads() //using this technique might pop up a warning about missing the function "CreateThread" (Entry Point Not Found)
+void Preventions::UnloadBlacklistedDrivers(__in const list<wstring> driverPaths)
 {
-    bool success = FALSE;
-    char* RandString1 = Utility::GenerateRandomString(12);
-
-    if (Exports::ChangeFunctionName("KERNEL32.DLL", "CreateThread", RandString1))
-        success = TRUE;
-
-    delete[] RandString1;
-    RandString1 = nullptr;
-    return success;
-}
-
-BYTE* Preventions::SpoofPEB() //experimental, don't use this right now as it causes some thread issues
-{
-    BYTE* newPEBBytes = CopyAndSetPEB();
-
-    if (newPEBBytes == NULL)
+    if (driverPaths.size() > 0)
     {
-        Logger::logf(Err, " Failed to copy PEB @ SpoofPEB!");
-        return NULL;
+        for (auto driverPath : driverPaths)
+        {
+            if (!Services::UnloadDriver(driverPath))
+            {
+                Logger::logfw(Warning, L"Failed to unload driver %s at UnloadBlacklistedDrivers", driverPath.c_str());
+            }
+        }
     }
-
-    _MYPEB* ourPEB = (_MYPEB*)&newPEBBytes[0];
-
-    Logger::logf(Info, " Being debugged (PEB Spoofing test): %d. Address of new PEB : %llx\n", ourPEB->BeingDebugged, (UINT64)&newPEBBytes[0]);
-    return newPEBBytes;
 }
