@@ -11,37 +11,8 @@ The project now supports CMake & using the LLVM/clang-cl compiler, which can be 
 
    If there is anything not working for you (throws unhandled exceptions, can't build, etc) please raise an issue and I will answer it ASAP. If you have code suggestions or techniques you'd like to see added, or want assistance with adding anti-cheat to your game, please send me an email. Anyone is welcome to contribute as long as your contribution is to the same standard and formatting as the existing codebase, and your code has been regression tested. More techniques and better design will be added to the project over time, and the file `changelog.md` contains a dated updates list. Visual Studio 2022 is used as the primary IDE, and it's recommended you use it for project viewing and compilation.  
 
-## Current Detections and protective features:
-- Monitors new process creation using WMI
-- New processes are scanned for blacklisted patterns (patterns are fetched at runtime from a web location)
-- Monitors modifications to specific registry keys   
-- Detects open process handles to our process (`OpenProcess` detection)
-- Blocks usermode APC injection (undocumented  `ntdll.Ordinal8` patching)
-- Debugger detections (hardware/DR, software, kernelmode)
-- Destroys common debugger processes by creating remote threads on their `ExitProcess` function
-- Hides threads from debuggers via `NtSetInformationThread`  
-- Blocks Cheat Engine VEH debugger (`initializeVEH` patching & loaded VEH module name renaming)
-- Integrity checks on program memory (`.text` & `.rdata` section checks, WINAPI hook checks, IAT hook checks)
-- Remapping sections & re-re-mapping checks (anti-tamper, thanks to user [changeofpace](https://github.com/changeofpace))
-- Dll load notifcations/callback & signature checks of loaded modules (thanks to user [discriminating](https://github.com/discriminating) for this contribution)
-- Spoofs `NumberOfSections`, `SizeOfImage`, & `AddressOfEntryPoint` to prevent runtime image info lookups (process manipulation)
-- Logs any unsigned drivers currently loaded (excluding manually mapped ones, which generally cannot be detected from UM)
-- Enumerates PCIe devices
-- Manually mapped image checks
-- Parent process check
-- Blacklisted running process checks & whitelisted loaded modules check
-- Main module name random renaming at runtime (process manipulation)
-- Export directory function names random renaming at runtime (process manipulation)
-- Data obfuscation class to help hide sensitive variables
-- Check for if Windows is in 'Test Signing mode' and 'debug mode'
-- Secure boot enforcement (anti-bootloader)
-- Hypervisor checks  
-- TLS Callback & new thread start routine address `ret` patching (anti-execution), along with checks to ensure the TLS callback pointer has not been modified
-- Optional networked heartbeat system to ensure client is running the AC module
-- Stops multiple instances of the process from being run by mapping shared memory
-- Return address checks in important routines such as heartbeat generation to prevent being called by other modules
-- Basic window title & class name checks for commonly used cheat tools such as Cheat Engine
-- Optional kernelmode + usermode hybrid approach (you must make/provide your own driver for this, and ideally it would be properly signed)
+## Current Detections and protective 
+For a list of current detections and preventions, please view the Wiki page.  
 
 ## Enabling/Disabling Networking:
 Networking support is available in the project - the server can be found in the `Server` folder as its own solution. Using networking is optional, and can be turned on/off through the variable `bool bNetworkingAvailable` in the file `main.cpp` (as part of the `Settings` class). If you choose to use networking, please follow the instructions in the README.md file of the server.  
