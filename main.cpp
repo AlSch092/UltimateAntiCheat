@@ -96,7 +96,7 @@ int main(int argc, char** argv)
 
     SetConsoleTitle(L"Ultimate Anti-Cheat");
 
-    CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Splash::InitializeSplash, 0, 0, 0); //open splash window
+    Thread* t = new Thread((LPTHREAD_START_ROUTINE)Splash::InitializeSplash, 0, false, true);
 
     cout << "------------------------------------------------------------------------------------------\n";
     cout << "|                            Welcome to Ultimate Anti-Cheat!                             |\n";
@@ -105,6 +105,7 @@ int main(int argc, char** argv)
     cout << "|         ...With special thanks to:                                                     |\n";
     cout << "|           changeofpace@github (remapping method)                                       |\n";
     cout << "|           discriminating@github (dll load notifcations, catalog verification)          |\n";
+    cout << "|           LucasParsy@github (testing, bug fixing)                                      |\n";
     cout << "------------------------------------------------------------------------------------------\n";
 
     shared_ptr<Settings> ConfigInstance = Settings::CreateInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator, bUsingDriver, allowedParents, bEnableLogging, logFileName);
@@ -153,7 +154,7 @@ int main(int argc, char** argv)
             break;
         }     
     }
-    
+
     if (Anti_Cheat->GetMonitor()->IsUserCheater())
     {
         Logger::logf(Info, "Detected a possible cheater during program execution!");
@@ -182,6 +183,8 @@ int main(int argc, char** argv)
         Logger::logf(Info, explanations[flag]);
     }
 #endif
+
+    delete t;
 
     return 0;
 }
@@ -318,8 +321,8 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
                     }
                 }
 
-                Logger::logf(Info, " Stopping unknown thread from being created  @ TLSCallback: thread id %d", GetCurrentThreadId());
-                Logger::logf(Info, " Thread id %d wants to execute function @ %llX. Patching over this address.", GetCurrentThreadId(), ThreadExecutionAddress);
+                Logger::logf(Detection, " Stopping unknown thread from being created  @ TLSCallback: thread id %d", GetCurrentThreadId());
+                Logger::logf(Detection, " Thread id %d wants to execute function @ %llX. Patching over this address.", GetCurrentThreadId(), ThreadExecutionAddress);
 
                 DWORD dwOldProt = 0;
 
@@ -332,7 +335,6 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
                     if (ThreadExecutionAddress != 0)
                     {
                         *(BYTE*)ThreadExecutionAddress = 0xC3; //write over any functions which are scheduled to execute next by this thread and not inside our whitelisted address range
-                        VirtualProtect((LPVOID)ThreadExecutionAddress, sizeof(byte), PAGE_READONLY, &dwOldProt); // (optional) take away executable protections for the rogue thread's start address
                     }
                 }
             }
@@ -353,10 +355,10 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 LONG WINAPI UnmanagedGlobals::ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo)  //handler that will be called whenever an unhandled exception occurs in any thread of the process
 {
     DWORD exceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
-    Logger::logf(Warning, "Program threw exception: %x at %llX\n", exceptionCode, ExceptionInfo->ExceptionRecord->ExceptionAddress);
-    
-    if (exceptionCode == EXCEPTION_BREAKPOINT) //one or two of our debug checks may throw this exception
+
+    if (exceptionCode != EXCEPTION_BREAKPOINT) //one or two of our debug checks may throw this exception
     {
+        Logger::logf(Warning, "Program threw exception: %x at %llX\n", exceptionCode, ExceptionInfo->ExceptionRecord->ExceptionAddress);
     } //optionally we may be able to view the exception address and compare it to whitelisted module address space, if it's not contained then we assume it's attacker-run code
 
     return EXCEPTION_CONTINUE_SEARCH;
