@@ -37,8 +37,6 @@ public:
 
 	Integrity(__in vector<ProcessData::MODULE_DATA> startupModuleList) //modules gathered at program startup
 	{
-		ModuleHashes = new vector< ModuleHashData*>();
-
 		for (const ProcessData::MODULE_DATA& mod : startupModuleList)
 		{
 			WhitelistedModules.push_back(mod);
@@ -49,13 +47,10 @@ public:
 
 	~Integrity()
 	{
-
-		if (ModuleHashes != nullptr)
+		for (vector<ModuleHashData*>::const_iterator it = ModuleHashes.begin(); it != ModuleHashes.end(); ++it)
 		{
-			for (std::vector<ModuleHashData*>::const_iterator it = ModuleHashes->begin(); it != ModuleHashes->end(); ++it)
-			{
-				delete* it;
-			}
+			if(*it != nullptr)
+			    delete* it;
 		}
 	}
 
@@ -63,7 +58,6 @@ public:
 	
 	static vector<uint64_t> GetMemoryHash(__in uint64_t Address, __in int nBytes); //get hash list at `Address`
 	static vector<uint64_t> GetMemoryHash(LPBYTE memory, int nBytes);
-	
 	static uint64_t GetStackedHash(uint64_t Address, int nBytes);
 
 	void SetSectionHashList(__out vector<uint64_t> hList, __in const string section);
@@ -86,10 +80,10 @@ public:
 	
 	void AddToWhitelist(__in ProcessData::MODULE_DATA mod) { WhitelistedModules.push_back(mod); }
 
-	void AddModuleHash(__in vector<ModuleHashData*>* moduleHashList, __in wchar_t* moduleName);
+	void AddModuleHash(__in vector<ModuleHashData*> moduleHashList, __in wchar_t* moduleName);
 	ModuleHashData* GetModuleHash(__in const wchar_t* moduleName);
 
-	vector<ModuleHashData*>* GetModuleHashes();
+	vector<ModuleHashData*> GetModuleHashes();
 
 	bool IsModuleModified(__in const wchar_t* moduleName); //pinpoint any specific modules that have had their .text sections changed
 
@@ -106,5 +100,5 @@ private:
 	unordered_map<string, vector<uint64_t>> SectionHashes; //section hashes for current/main module's sections
 
 	vector<ProcessData::MODULE_DATA> WhitelistedModules;
-	vector<ModuleHashData*>* ModuleHashes = nullptr;	
+	vector<ModuleHashData*> ModuleHashes;	
 };

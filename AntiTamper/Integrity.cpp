@@ -185,16 +185,16 @@ ModuleHashData* Integrity::GetModuleHash(__in const wchar_t* moduleName)
 	GetModuleHashes  - fill member `ModuleHashes` with hashes of each whitelisted module's .text section
 	returns a vector* of `ModuleHashData*` objects
 */
-vector<ModuleHashData*>* Integrity::GetModuleHashes()
+vector<ModuleHashData*> Integrity::GetModuleHashes()
 {
-	vector<ModuleHashData*>* moduleHashes = new vector<ModuleHashData*>();
+	vector<ModuleHashData*> moduleHashes;
 
-	for (auto it = this->WhitelistedModules.begin(); it != this->WhitelistedModules.end(); ++it) //traverse whitelisted modules
+	for (auto module : WhitelistedModules) //traverse whitelisted modules
 	{
-		if (it->dllInfo.lpBaseOfDll == GetModuleHandleA(NULL)) //skip main executable module, we're tracking that with another member. they could probably be merged into one list to optimize
+		if (module.dllInfo.lpBaseOfDll == GetModuleHandleA(NULL)) //skip main executable module, we're tracking that with another member. they could probably be merged into one list to optimize
 			continue;
 
-		AddModuleHash(moduleHashes, it->baseName);
+		AddModuleHash(moduleHashes, module.baseName);
 	}
 
 	return moduleHashes;
@@ -210,7 +210,7 @@ bool Integrity::IsModuleModified(__in const wchar_t* moduleName)
 
 	ModuleHashData* currentModuleHash = GetModuleHash(moduleName);
 
-	for (ModuleHashData* modHash : *this->ModuleHashes)
+	for (ModuleHashData* modHash : this->ModuleHashes)
 	{
 		if (modHash->Name == currentModuleHash->Name) //moduleName matches module in list
 		{
@@ -246,9 +246,9 @@ bool Integrity::IsModuleModified(__in const wchar_t* moduleName)
 /*
 	AddModuleHash - fetches hash list for `moduleName` and adds to `moduleHashList`
 */
-void Integrity::AddModuleHash(__in vector<ModuleHashData*>* moduleHashList, __in wchar_t* moduleName)
+void Integrity::AddModuleHash(__in vector<ModuleHashData*> moduleHashList, __in wchar_t* moduleName)
 {
-	if (moduleHashList == nullptr || moduleName == nullptr)
+	if (moduleName == nullptr)
 		return;
 
 	string modName = Utility::ConvertWStringToString(moduleName);
@@ -265,7 +265,7 @@ void Integrity::AddModuleHash(__in vector<ModuleHashData*>* moduleHashList, __in
 			moduleHashData->Name = moduleName;
 			moduleHashData->Hashes = hashes;
 
-			moduleHashList->push_back(moduleHashData);
+			moduleHashList.push_back(moduleHashData);
 			break;
 		}
 	}
