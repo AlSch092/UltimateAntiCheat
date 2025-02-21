@@ -124,7 +124,7 @@ bool Integrity::IsUnknownModulePresent()
 
 		for (auto it2 = this->WhitelistedModules.begin(); it2 != this->WhitelistedModules.end(); ++it2) //our whitelisted module list is initially populated inside the constructor with modules gathered at program startup
 		{
-			if (wcscmp(it->baseName, it2->baseName) == 0)
+			if (it->baseName == it2->baseName)
 			{
 				found_whitelisted = true;
 				break;
@@ -133,9 +133,9 @@ bool Integrity::IsUnknownModulePresent()
 
 		if (!found_whitelisted)
 		{
-			if (Authenticode::HasSignature(it->name)) //if file is signed and not yet on our whitelist, we can add it
+			if (Authenticode::HasSignature(it->name.c_str())) //if file is signed and not yet on our whitelist, we can add it
 			{
-				ProcessData::MODULE_DATA mod = *Process::GetModuleInfo(it->baseName);
+				ProcessData::MODULE_DATA mod = *Process::GetModuleInfo(it->baseName.c_str());
 				modulesToAdd.push_back(mod);		
 			}
 			else
@@ -194,7 +194,7 @@ vector<ModuleHashData*> Integrity::GetModuleHashes()
 		if (module.dllInfo.lpBaseOfDll == GetModuleHandleA(NULL)) //skip main executable module, we're tracking that with another member. they could probably be merged into one list to optimize
 			continue;
 
-		AddModuleHash(moduleHashes, module.baseName);
+		AddModuleHash(moduleHashes, module.baseName.c_str());
 	}
 
 	return moduleHashes;
@@ -246,7 +246,7 @@ bool Integrity::IsModuleModified(__in const wchar_t* moduleName)
 /*
 	AddModuleHash - fetches hash list for `moduleName` and adds to `moduleHashList`
 */
-void Integrity::AddModuleHash(__in vector<ModuleHashData*> moduleHashList, __in wchar_t* moduleName)
+void Integrity::AddModuleHash(__in vector<ModuleHashData*> moduleHashList, __in const wchar_t* moduleName)
 {
 	if (moduleName == nullptr)
 		return;
