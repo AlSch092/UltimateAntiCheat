@@ -770,7 +770,7 @@ bool Process::FillModuleList()
 
             if (GetModuleFileNameEx(GetCurrentProcess(), hModules[i], szModuleName, sizeof(szModuleName) / sizeof(TCHAR))) 
             {
-                wcscpy_s(module->name, szModuleName);
+                module->name = wstring(szModuleName);
 
                 module->hModule = hModules[i];
 
@@ -1003,8 +1003,8 @@ std::vector<ProcessData::MODULE_DATA> Process::GetLoadedModules()
         MY_LDR_DATA_TABLE_ENTRY* module_entry = (MY_LDR_DATA_TABLE_ENTRY*)CONTAINING_RECORD(current_record, MY_LDR_DATA_TABLE_ENTRY, InLoadOrderLinks);
         ProcessData::MODULE_DATA module;
 
-        wcscpy_s(module.name, module_entry->FullDllName.Buffer);
-        wcscpy_s(module.baseName, module_entry->BaseDllName.Buffer);
+        module.name =  wstring(module_entry->FullDllName.Buffer);
+        module.baseName = wstring(module_entry->BaseDllName.Buffer);
 
         module.hModule = (HMODULE)module_entry->DllBase;
         module.dllInfo.lpBaseOfDll = module_entry->DllBase;
@@ -1048,8 +1048,9 @@ ProcessData::MODULE_DATA* Process::GetModuleInfo(const wchar_t* name)
         if (wcscmp(module_entry->BaseDllName.Buffer, name) == 0)
         {
             ProcessData::MODULE_DATA* module = new ProcessData::MODULE_DATA();
-            wcscpy_s(module->name, module_entry->FullDllName.Buffer);
-            wcscpy_s(module->baseName, module_entry->BaseDllName.Buffer);
+
+            module->name = wstring(module_entry->FullDllName.Buffer);
+            module->baseName =  wstring(module_entry->BaseDllName.Buffer);
             module->hModule = (HMODULE)module_entry->DllBase;
             module->dllInfo.lpBaseOfDll = module_entry->DllBase;
             module->dllInfo.SizeOfImage = module_entry->SizeOfImage;
@@ -1245,7 +1246,7 @@ std::vector<BYTE> Process::ReadRemoteTextSection(DWORD pid)
         return {};
     }
 
-    buffer.resize(bytesRead); // Resize to actual bytes read
+    buffer.resize(bytesRead); //resize to actual bytes read
     CloseHandle(hProcess);
 
     return buffer;

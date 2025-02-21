@@ -42,8 +42,8 @@ namespace ProcessData
 
 	struct MODULE_DATA
 	{
-		wchar_t baseName[MAX_FILE_PATH_LENGTH/2];
-		wchar_t name[MAX_FILE_PATH_LENGTH];
+		wstring baseName;
+		wstring name;
 		MODULEINFO dllInfo;
 		HMODULE hModule;
 	};
@@ -172,7 +172,7 @@ public:
 	static HMODULE GetRemoteModuleBaseAddress(DWORD processId, const wchar_t* moduleName);
 
 	static bool GetRemoteTextSection(HANDLE hProcess, uintptr_t& baseAddress, SIZE_T& sectionSize);
-	static std::vector<BYTE> ReadRemoteTextSection(DWORD pid);
+	static std::vector<BYTE> ReadRemoteTextSection(DWORD pid); //fetch .text of a running process (can improve this by making it any section instead of just .text)
 
 private:
 
