@@ -161,9 +161,9 @@ bool Integrity::IsUnknownModulePresent()
 ModuleHashData* Integrity::GetModuleHash(__in const wchar_t* moduleName)
 {
 	string modName = Utility::ConvertWStringToString(moduleName);
-	list<ProcessData::Section*>* sections = Process::GetSections(modName);
+	list<ProcessData::Section*> sections = Process::GetSections(modName);
 
-	for (auto s : *sections)
+	for (auto s : sections)
 	{
 		if (strcmp(s->name, ".text") == 0)
 		{
@@ -252,9 +252,9 @@ void Integrity::AddModuleHash(__in vector<ModuleHashData*> moduleHashList, __in 
 		return;
 
 	string modName = Utility::ConvertWStringToString(moduleName);
-	list<ProcessData::Section*>* sections = Process::GetSections(modName);
+	list<ProcessData::Section*> sections = Process::GetSections(modName);
 
-	for (auto s : *sections)
+	for (auto s : sections)
 	{
 		if (strcmp(s->name, ".text") == 0)
 		{
