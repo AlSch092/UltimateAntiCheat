@@ -3,34 +3,50 @@
 
 string Utility::GenerateRandomString(__in const int length)
 {
-    if (length == 0)
-        return "";
+    if (length <= 0) return "";
 
     const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
+    const size_t charsetSize = strlen(charset);
 
     string randomString;
+    randomString.reserve(length);
 
-    srand(time((time_t*)NULL));
+    static bool seedInitialized = false;
+    if (!seedInitialized) 
+    {
+        srand(static_cast<unsigned int>(time(nullptr)));
+        seedInitialized = true;
+    }
 
-    for (int i = 0; i < length; ++i)
-        randomString[i] = charset[rand() % (sizeof(charset) - 1)];
+    for (int i = 0; i < length; ++i) 
+    {
+        randomString.push_back(charset[rand() % charsetSize]);
+    }
 
     return randomString;
 }
 
 wstring Utility::GenerateRandomWString(__in const int length)
 {
-    if (length == 0)
-        return L"";
+    if (length <= 0) return L"";
 
     const wchar_t charset[] = L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
+    const size_t charsetSize = wcslen(charset);
 
     wstring randomString;
+    randomString.reserve(length);
 
-    srand(time((time_t*)NULL));
+    static bool seedInitialized = false;
+    if (!seedInitialized) 
+    {
+        srand(static_cast<unsigned int>(time(nullptr)));
+        seedInitialized = true;
+    }
 
-    for (int i = 0; i < length; ++i)
-        randomString[i] = charset[rand() % (sizeof(charset) - 1)];
+    for (int i = 0; i < length; ++i) 
+    {
+        randomString.push_back(charset[rand() % charsetSize]);
+    }
 
     return randomString;
 }
