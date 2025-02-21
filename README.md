@@ -11,7 +11,7 @@ The project now supports CMake & using the LLVM/clang-cl compiler, which can be 
 
    If there is anything not working for you (throws unhandled exceptions, can't build, etc) please raise an issue and I will answer it ASAP. If you have code suggestions or techniques you'd like to see added, or want assistance with adding anti-cheat to your game, please send me an email. Anyone is welcome to contribute as long as your contribution is to the same standard and formatting as the existing codebase, and your code has been regression tested. More techniques and better design will be added to the project over time, and the file `changelog.md` contains a dated updates list. Visual Studio 2022 is used as the primary IDE, and it's recommended you use it for project viewing and compilation.  
 
-## Current Detections and protective 
+## Current detections and preventions: 
 For a list of current detections and preventions, please view the Wiki page.  
 
 ## Enabling/Disabling Networking:
