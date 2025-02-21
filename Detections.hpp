@@ -1,7 +1,5 @@
 //By AlSch092 @github
 #pragma once
-#include <queue>
-
 #include "Network/NetClient.hpp" //Net Comms
 #include "Network/HttpClient.hpp"
 #include "AntiDebug/DebuggerDetections.hpp"
@@ -13,6 +11,7 @@
 #include "Obscure/ntldr.hpp" //dll notification structures
 #include <Wbemidl.h> //for process event creation (WMI)
 #include <comdef.h>  //for process event creation (WMI)
+#include <queue>
 
 #pragma comment(lib, "wbemuuid.lib")  //for process event creation (WMI)
 
@@ -156,11 +155,6 @@ private:
 
 	bool MonitoringProcessCreation = false;
 
-	void CheckDLLSignature();
-	
-    queue<wstring> DLLVerificationQueue;
-	mutex DLLVerificationQueueMutex;
-
 	ObfuscatedData<uint8_t>* CheaterWasDetected = nullptr; //using bool as the type does not work properly with obfuscation since the compiler uses true/false, so use uint8_t instead and cast to BOOL when needed
 
 	unique_ptr<Services> _Services = nullptr;
@@ -181,4 +175,11 @@ private:
 
 	bool FetchBlacklistedBytePatterns(const char* url);
 	const char* BlacklisteBytePatternRepository = "https://raw.githubusercontent.com/AlSch092/UltimateAntiCheat/refs/heads/main/MiscFiles/BlacklistedBytePatternList.txt";
+
+	void CheckDLLSignature();
+
+	queue<wstring> DLLVerificationQueue;
+	mutex DLLVerificationQueueMutex;
+
+	vector<wstring> UnsignedModulesFound; //keep track of any unsigned modules
 };

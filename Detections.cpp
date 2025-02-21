@@ -29,6 +29,7 @@ BOOL Detections::StartMonitor()
 /*
     LdrpDllNotification - This function is called whenever a new module is loaded into the process space, called before TLS callbacks
 */
+
 VOID CALLBACK Detections::OnDllNotification(ULONG NotificationReason, const PLDR_DLL_NOTIFICATION_DATA NotificationData, PVOID Context)
 {
     Detections* Monitor = reinterpret_cast<Detections*>(Context);
@@ -45,7 +46,6 @@ VOID CALLBACK Detections::OnDllNotification(ULONG NotificationReason, const PLDR
         }
     }
 }
-
 
 /*
     CheckDLLSignature - checks the signatures of any newly loaded modules
@@ -73,10 +73,15 @@ void Detections::CheckDLLSignature()
         {
             Logger::logfw(Detection, L"Failed to verify signature of %s\n", FullDllName);
             this->Flag(DetectionFlags::INJECTED_ILLEGAL_PROGRAM);
+            this->UnsignedModulesFound.push_back(FullDllName);
         }
     }
 }
 
+/*
+    Detections::Monitor(LPVOID thisPtr)
+     Routine which monitors aspects of the process for fragments of cheating, loops continuously until the thread is signalled to shut down
+*/
 void Detections::Monitor(LPVOID thisPtr)
 {
     if (thisPtr == NULL)
@@ -167,7 +172,7 @@ void Detections::Monitor(LPVOID thisPtr)
             return;
         }
 
-        Monitor->CheckDLLSignature();
+        Monitor->CheckDLLSignature(); //check signatures of any newly loaded modules
 
         if (Monitor->Config->bCheckHypervisor)
         {
@@ -1077,7 +1082,7 @@ void Detections::MonitorImportantRegistryKeys(LPVOID thisPtr)
         }
         else 
         {
-            Logger::logf(Warning, "Unexpected wait result: %ld", waitResult);
+            //Logger::logf(Warning, "Unexpected wait result: %ld", waitResult); //this message will display often, commented out to suppress it
             continue;
         }
 
