@@ -196,7 +196,7 @@ namespace UACServer.Network
         private void Cipher(byte[] buffer, int length)
         {
             const byte xorKey = 0x90;
-            const byte operationKey = 0x90;
+            const byte operationKey = 0x14;
 
             for(int i = 0; i < length; i++)
             {
