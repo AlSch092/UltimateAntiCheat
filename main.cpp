@@ -38,34 +38,34 @@ int main(int argc, char** argv)
 {
     // Set default options
 #ifdef _DEBUG //in debug compilation, we are more lax with our protections for easier testing purposes
-    bool bEnableNetworking = false;  //change this to false if you don't want to use the server
-    bool bEnforceSecureBoot = false;
-    bool bEnforceDSE = true;
-    bool bEnforceNoKDBG = true;
-    bool bUseAntiDebugging = true;
-    bool bUseIntegrityChecking = true;
-    bool bCheckThreadIntegrity = true;
-    bool bCheckHypervisor = true;
-    bool bRequireRunAsAdministrator = true;
-    bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
-    bool bEnableLogging = true;
+    const bool bEnableNetworking = false;  //change this to false if you don't want to use the server
+    const bool bEnforceSecureBoot = false;
+    const bool bEnforceDSE = true;
+    const bool bEnforceNoKDBG = true;
+    const bool bUseAntiDebugging = true;
+    const bool bUseIntegrityChecking = true;
+    const bool bCheckThreadIntegrity = true;
+    const bool bCheckHypervisor = true;
+    const bool bRequireRunAsAdministrator = true;
+    const bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option  
+    const bool bEnableLogging = true;
 
     const list<wstring> allowedParents = {L"VsDebugConsole.exe", L"vsdbg.exe", L"powershell.exe", L"bash.exe", L"zsh.exe", L"explorer.exe"};
     const string logFileName = "UltimateAnticheat.log";
 
 #else
-    bool bEnableNetworking = false; //change this to false if you don't want to use the server
-    bool bEnforceSecureBoot = false; //secure boot is recommended in distribution builds
-    bool bEnforceDSE = true;
-    bool bEnforceNoKDBG = true;
-    bool bUseAntiDebugging = true;
-    bool bUseIntegrityChecking = true;
-    bool bCheckThreadIntegrity = true;
-    bool bCheckHypervisor = true;
-    bool bRequireRunAsAdministrator = true;
-    bool bEnableLogging = true; // set to false to not create a detailed AntiCheat log file on the user's system
-    bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
-    
+    const bool bEnableNetworking = false; //change this to false if you don't want to use the server
+    const bool bEnforceSecureBoot = false; //secure boot is recommended in distribution builds
+    const bool bEnforceDSE = true;
+    const bool bEnforceNoKDBG = true;
+    const bool bUseAntiDebugging = true;
+    const bool bUseIntegrityChecking = true;
+    const bool bCheckThreadIntegrity = true;
+    const bool bCheckHypervisor = true;
+    const bool bRequireRunAsAdministrator = true;
+    const bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
+    const bool bEnableLogging = true; // set to false to not create a detailed AntiCheat log file on the user's system
+
     const list<wstring> allowedParents = {L"explorer.exe", L"steam.exe"}; //add your launcher here
     const string logFileName = ""; //empty : does not log to file
 #endif
