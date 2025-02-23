@@ -4,16 +4,16 @@
     HasSignature - check if `filePath` has a valid embedded signature or a valid catalog sig file
     returns `TRUE` if the `filePath` is properly signed
 */
-BOOL Authenticode::HasSignature(LPCWSTR filePath)
+BOOL Authenticode::HasSignature(LPCWSTR filePath, BOOL checkEndCertRevoked)
 {
-    return (Authenticode::VerifyEmbeddedSignature(filePath) || Authenticode::VerifyCatalogSignature(filePath));
+    return (Authenticode::VerifyEmbeddedSignature(filePath, checkEndCertRevoked) || Authenticode::VerifyCatalogSignature(filePath, checkEndCertRevoked));
 }
 
 /*
     VerifyEmbeddedSignature - checks embedded signature in `filePath`
     returns `TRUE` if the file has a properly signed embedded signature
 */
-BOOL Authenticode::VerifyEmbeddedSignature(LPCWSTR filePath)
+BOOL Authenticode::VerifyEmbeddedSignature(LPCWSTR filePath, BOOL checkRevoked)
 {
     WINTRUST_FILE_INFO fileData;
     WINTRUST_DATA winTrustData;
@@ -26,10 +26,16 @@ BOOL Authenticode::VerifyEmbeddedSignature(LPCWSTR filePath)
     memset(&winTrustData, 0, sizeof(winTrustData));
     winTrustData.cbStruct = sizeof(WINTRUST_DATA);
     winTrustData.dwUIChoice = WTD_UI_NONE;
-    winTrustData.fdwRevocationChecks = WTD_REVOKE_NONE;
+
+    if (!checkRevoked)
+        winTrustData.fdwRevocationChecks = WTD_REVOKE_NONE; //speed up execution, but decrease security
+    else
+        winTrustData.fdwRevocationChecks = WTD_REVOCATION_CHECK_END_CERT; //checking the whole chain for all modules is likely too much, tradeoff between speed and security
+
     winTrustData.dwUnionChoice = WTD_CHOICE_FILE;
     winTrustData.pFile = &fileData;
     winTrustData.dwStateAction = WTD_STATEACTION_VERIFY;
+    //winTrustData.dwProvFlags = WTD_CACHE_ONLY_URL_RETRIEVAL; //only use cached CRL -> if no network access on the machine, this is helpful
 
     LONG status = 0;
 
@@ -58,7 +64,7 @@ BOOL Authenticode::VerifyEmbeddedSignature(LPCWSTR filePath)
     VerifyCatalogSignature - checks the OS's database for any known catalogs for `filePath`
     returns `TRUE` if the file has a verified signature
 */
-BOOL Authenticode::VerifyCatalogSignature(LPCWSTR filePath) 
+BOOL Authenticode::VerifyCatalogSignature(LPCWSTR filePath, BOOL checkRevoked) 
 {
     HANDLE hFile = CreateFileW(filePath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE) 
@@ -121,12 +127,17 @@ BOOL Authenticode::VerifyCatalogSignature(LPCWSTR filePath)
     WinTrustData.pPolicyCallbackData = NULL;
     WinTrustData.pSIPClientData = NULL;
     WinTrustData.dwUIChoice = WTD_UI_NONE;
-    WinTrustData.fdwRevocationChecks = WTD_REVOKE_NONE;
+
+    if (!checkRevoked)
+        WinTrustData.fdwRevocationChecks = WTD_REVOKE_NONE; //speed up execution, but decrease security
+    else
+        WinTrustData.fdwRevocationChecks = WTD_REVOCATION_CHECK_END_CERT; //checking the whole chain for all modules is likely too much, tradeoff between speed and security
+
     WinTrustData.dwUnionChoice = WTD_CHOICE_CATALOG;
     WinTrustData.dwStateAction = WTD_STATEACTION_VERIFY;
     WinTrustData.hWVTStateData = NULL;
     WinTrustData.pwszURLReference = NULL;
-    WinTrustData.dwProvFlags = WTD_REVOCATION_CHECK_NONE;
+    //WinTrustData.dwProvFlags = WTD_REVOCATION_CHECK_NONE;
     WinTrustData.dwUIContext = 0;
     WinTrustData.pCatalog = &WinTrustCatalogInfo;
 

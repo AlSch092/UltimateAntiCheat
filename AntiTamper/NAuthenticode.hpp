@@ -21,9 +21,10 @@ typedef struct
 
 namespace Authenticode
 {
-	BOOL VerifyEmbeddedSignature(LPCWSTR pwszSourceFile);
-	BOOL VerifyCatalogSignature(LPCWSTR filePath);
-	BOOL HasSignature(LPCWSTR filePath);
+	BOOL VerifyEmbeddedSignature(LPCWSTR pwszSourceFile, BOOL checkRevoked);
+	BOOL VerifyCatalogSignature(LPCWSTR filePath, BOOL checkRevoked);
+	BOOL HasSignature(LPCWSTR filePath, BOOL checkEndCertRevoked);
+
 	wstring GetSignerFromFile(const wstring& filePath); //get the 'subject' field of the certifcate (often the company which published the software file)
 
 	//https://learn.microsoft.com/en-us/previous-versions/troubleshoot/windows/win32/get-information-authenticode-signed-executables
