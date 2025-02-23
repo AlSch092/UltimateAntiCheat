@@ -117,7 +117,7 @@ Error API::Cleanup(AntiCheat* AC)
 */
 Error API::LaunchDefenses(AntiCheat* AC) //currently in the process to split these tests into Detections or Preventions
 {
-	if (AC == NULL)
+	if (AC == nullptr || AC->GetMonitor() == nullptr || AC->GetAntiDebugger() == nullptr || AC->GetBarrier() == nullptr)
 		return Error::NULL_MEMORY_REFERENCE;
 
 	Error errorCode = Error::OK;
@@ -140,16 +140,11 @@ Error API::LaunchDefenses(AntiCheat* AC) //currently in the process to split the
 
 	AC->GetAntiDebugger()->StartAntiDebugThread(); //start debugger checks in a seperate thread
 
-	AC->GetMonitor()->GetServiceManager()->GetServiceModules(); //enumerate services
-
-	if (AC->GetMonitor()->GetServiceManager()->GetLoadedDrivers()) //enumerate drivers, will be re-added soon
-	{
-		list<wstring> unsigned_drivers = AC->GetMonitor()->GetServiceManager()->GetUnsignedDrivers(); //unsigned drivers, take further action if needed
-	}
+	//AC->GetMonitor()->GetServiceManager()->GetServiceModules(); //enumerate services -> currently not in use
 
 	if (!Process::CheckParentProcess(AC->GetMonitor()->GetProcessObj()->GetParentName())) //parent process check, the parent process would normally be set using our API methods
 	{
-		Logger::logf(Detection, "Parent process was not in whitelist! cheater detected!\n");
+		Logger::logf(Detection, "Parent process was not in whitelist!");
 		errorCode = Error::PARENT_PROCESS_MISMATCH;
 	}
 

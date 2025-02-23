@@ -30,58 +30,8 @@ class Detections final
 {
 public:
 
-	Detections(shared_ptr<Settings> s, BOOL StartMonitor, shared_ptr<NetClient> client) : Config(s), netClient(client)
-	{
-		this->InitializeBlacklistedProcessesList();
-
-		MonitoringProcessCreation = false; //gets set to true inside `MonitorProcessCreation`
-
-		auto ModuleList = Process::GetLoadedModules();
-
-		try 
-		{
-			_Proc = make_unique<Process>(EXPECTED_SECTIONS);
-			_Services = make_unique<Services>(true);
-
-			integrityChecker = make_shared<Integrity>(ModuleList);
-		}
-		catch (const std::bad_alloc& e) 
-		{
-			Logger::logf(Err, "One or more pointers could not be allocated @ Detections::Detections: %s", e.what());
-			std::terminate();
-		}
-	
-		if (!FetchBlacklistedBytePatterns(BlacklisteBytePatternRepository))
-		{
-			Logger::logf(Warning, "Failed to fetch blacklisted byte patterns from web location!");
-		}
-
-		this->CheaterWasDetected = make_unique<ObfuscatedData<uint8_t>>((bool)false);
-
-		HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
-
-		if (hNtdll != 0) //register DLL notifications callback 
-		{
-			_LdrRegisterDllNotification pLdrRegisterDllNotification = (_LdrRegisterDllNotification)GetProcAddress(hNtdll, "LdrRegisterDllNotification");
-			PVOID cookie;
-			NTSTATUS status = pLdrRegisterDllNotification(0, (PLDR_DLL_NOTIFICATION_FUNCTION)OnDllNotification, this, &cookie);
-		}
-
-		if (StartMonitor)
-			this->StartMonitor();
-	}
-
-	~Detections()
-	{
-		if (MonitorThread != nullptr)
-			delete MonitorThread;
-
-		if(RegistryMonitorThread != nullptr)
-			delete RegistryMonitorThread;
-
-		if (ProcessCreationMonitorThread != nullptr)
-			delete ProcessCreationMonitorThread;
-	}
+	Detections(shared_ptr<Settings> s, BOOL StartMonitor, shared_ptr<NetClient> client);
+	~Detections();
 
 	Detections(Detections&&) = delete;  //delete move constructr
 	Detections& operator=(Detections&&) noexcept = default; //delete move assignment operator
@@ -142,6 +92,11 @@ public:
 
 	static bool WasProcessNotRemapped(); //detect if someone prevented section remapping. could possibly go into Integrity class
 
+	void SetUnsignedLoadedDriversList(list<wstring> unsignedDrivers) { this->UnsignedDriversLoaded = unsignedDrivers; }
+	list<wstring> GetUnsignedLoadedDriversList() const { return this->UnsignedDriversLoaded; }
+
+	Settings* GetConfig() const { return this->Config.get(); }
+
 private:
 
 	shared_ptr<Settings> Config = nullptr; //non-owning pointer to the original unique_ptr<Settings> in main.cpp
@@ -173,10 +128,14 @@ private:
 	bool FetchBlacklistedBytePatterns(__in const char* url);
 	const char* BlacklisteBytePatternRepository = "https://raw.githubusercontent.com/AlSch092/UltimateAntiCheat/refs/heads/main/MiscFiles/BlacklistedBytePatternList.txt";
 
-	void CheckDLLSignature();
+	void CheckDLLSignature(); //process cert check queue for any newly loaded dlls
 
 	queue<wstring> DLLVerificationQueue;
 	mutex DLLVerificationQueueMutex;
 
-	vector<wstring> UnsignedModulesFound; //keep track of any unsigned modules
+	list<wstring> UnsignedModulesLoaded; //keep track of any unsigned modules
+	list<wstring> UnsignedDriversLoaded; //...and any unsigned drivers
+
+	list<wstring> PassedCertCheckDrivers; //already checked, keep track so we don't have to re-verify them each time
+	list<wstring> PassedCertCheckModules;
 };

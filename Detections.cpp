@@ -1,6 +1,59 @@
 //By AlSch092 @github
 #include "Detections.hpp"
 
+Detections::Detections(shared_ptr<Settings> s, BOOL StartMonitor, shared_ptr<NetClient> client) : Config(s), netClient(client)
+{
+    this->InitializeBlacklistedProcessesList();
+
+    MonitoringProcessCreation = false; //gets set to true inside `MonitorProcessCreation`
+
+    auto ModuleList = Process::GetLoadedModules();
+
+    try
+    {
+        _Proc = make_unique<Process>(EXPECTED_SECTIONS);
+        _Services = make_unique<Services>(true);
+
+        integrityChecker = make_shared<Integrity>(ModuleList);
+    }
+    catch (const std::bad_alloc& e)
+    {
+        Logger::logf(Err, "One or more pointers could not be allocated @ Detections::Detections: %s", e.what());
+        std::terminate();
+    }
+
+    if (!FetchBlacklistedBytePatterns(BlacklisteBytePatternRepository))
+    {
+        Logger::logf(Warning, "Failed to fetch blacklisted byte patterns from web location!");
+    }
+
+    this->CheaterWasDetected = make_unique<ObfuscatedData<uint8_t>>((bool)false);
+
+    HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
+
+    if (hNtdll != 0) //register DLL notifications callback 
+    {
+        _LdrRegisterDllNotification pLdrRegisterDllNotification = (_LdrRegisterDllNotification)GetProcAddress(hNtdll, "LdrRegisterDllNotification");
+        PVOID cookie;
+        NTSTATUS status = pLdrRegisterDllNotification(0, (PLDR_DLL_NOTIFICATION_FUNCTION)OnDllNotification, this, &cookie);
+    }
+
+    if (StartMonitor)
+        this->StartMonitor();
+}
+
+Detections::~Detections()
+{
+    if (MonitorThread != nullptr)
+        delete MonitorThread;
+
+    if (RegistryMonitorThread != nullptr)
+        delete RegistryMonitorThread;
+
+    if (ProcessCreationMonitorThread != nullptr)
+        delete ProcessCreationMonitorThread;
+}
+
 /*
     Detections::StartMonitor - use class member MonitorThread to start our main detections loop
 */
@@ -69,11 +122,18 @@ void Detections::CheckDLLSignature()
 
         }  //mutex is unlocked here automatically since lock_guard works as a RAII and we create scope with { and }
  
-        if (FullDllName.size() > 0 && !Authenticode::HasSignature(FullDllName.c_str())) //now do the expensive work without holding the lock
+        if (FullDllName.size() > 0) //now do the expensive work without holding the lock
         {
-            Logger::logfw(Detection, L"Failed to verify signature of %s\n", FullDllName);
-            this->Flag(DetectionFlags::INJECTED_ILLEGAL_PROGRAM);
-            this->UnsignedModulesFound.push_back(FullDllName);
+            if (!Authenticode::HasSignature(FullDllName.c_str(), TRUE))
+            {
+                Logger::logfw(Detection, L"Failed to verify signature of %s\n", FullDllName);
+                this->Flag(DetectionFlags::INJECTED_ILLEGAL_PROGRAM);
+                this->UnsignedModulesLoaded.push_back(FullDllName);
+            }
+            else
+            {
+                this->PassedCertCheckModules.push_back(FullDllName);
+            }
         }
     }
 }
@@ -227,6 +287,19 @@ void Detections::Monitor(__in LPVOID thisPtr)
             Monitor->Flag(DetectionFlags::MANUAL_MAPPING);
         }
 
+        if (Monitor->GetConfig() != nullptr && Monitor->GetConfig()->bEnforceDSE) //check for unsigned drivers loaded
+        {
+            Monitor->SetUnsignedLoadedDriversList(Monitor->GetServiceManager()->GetUnsignedDrivers(Monitor->PassedCertCheckDrivers));
+
+            if (Monitor->GetUnsignedLoadedDriversList().size() > 0) //found one or more unsigned, non-whitelisted drivers loaded
+            {
+                for (wstring driver : Monitor->GetUnsignedLoadedDriversList())
+                {
+                    Logger::logfw(Warning, L"Unsigned driver was loaded: %s", driver.c_str());
+                }
+            }
+        }
+
         if (Monitor->IsBlacklistedProcessRunning()) //external applications running on machine
         {
             Logger::logf(Detection, "Found blacklisted process!");
@@ -252,7 +325,7 @@ void Detections::Monitor(__in LPVOID thisPtr)
             Monitor->Flag(DetectionFlags::UNSIGNED_DRIVERS);
         }
 
-        if (Detections::DoesIATContainHooked()) //iat hook check
+        if (Monitor->Detections::DoesIATContainHooked()) //iat hook check
         {
             Logger::logf(Detection, "IAT was hooked! One or more functions lead to addresses outside their respective modules!\n");
             Monitor->Flag(DetectionFlags::BAD_IAT);

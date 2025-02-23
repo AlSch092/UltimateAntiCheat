@@ -69,9 +69,9 @@ public:
 			GetServiceModules();
 
 			//these 3 drivers are unsigned, and have no file on disk but cant still run in memory while secure boot & DSE is on - crash-dump related drivers windows uses
-			WhitelistedUnsignedDrivers.emplace_back(L"\\SystemRoot\\System32\\Drivers\\dump_diskdump.sys");
-			WhitelistedUnsignedDrivers.emplace_back(L"\\SystemRoot\\System32\\Drivers\\dump_storahci.sys");
-			WhitelistedUnsignedDrivers.emplace_back(L"\\SystemRoot\\System32\\Drivers\\dump_dumpfve.sys");
+			WhitelistedUnsignedDrivers.emplace_back(wstring(L"\\SystemRoot\\System32\\Drivers\\dump_diskdump.sys"));
+			WhitelistedUnsignedDrivers.emplace_back(wstring(L"\\SystemRoot\\System32\\Drivers\\dump_storahci.sys"));
+			WhitelistedUnsignedDrivers.emplace_back(wstring(L"\\SystemRoot\\System32\\Drivers\\dump_dumpfve.sys"));
 
 			FetchBlacklistedDrivers(BlacklistedDriversRepository);
 		}
@@ -95,6 +95,7 @@ public:
 	BOOL GetServiceModules(); //adds to `ServiceList`
 
 	list<wstring> GetUnsignedDrivers();
+	list<wstring> GetUnsignedDrivers(__in list<wstring>& cachedVerifiedDriverList);
 
 	static BOOL IsTestsigningEnabled();
 	static BOOL IsDebugModeEnabled();
@@ -127,7 +128,8 @@ public:
 private:
 
 	list<Service*> ServiceList;
-	list <wstring> DriverPaths;
+
+	list <wstring> DriverPaths; //list of all loaded drivers
 
 	list<DeviceW> HardwareDevices;
 

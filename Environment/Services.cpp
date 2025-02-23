@@ -141,7 +141,7 @@ BOOL Services::GetLoadedDrivers()
 
         if (GetDeviceDriverBaseName(drivers[i], driverName, MAX_PATH) && GetDeviceDriverFileName(drivers[i], driverPath, MAX_PATH))
         {
-            DriverPaths.push_back(driverPath);
+            this->DriverPaths.push_back(driverPath);
 
             for (wstring blacklisted : this->BlacklistedDrivers) //enumerate blacklisted drivers, check if driverPath contains a blacklisted driver
             {
@@ -185,7 +185,7 @@ list<wstring> Services::GetUnsignedDrivers()
         wstring fixedDriverPath;
         bool foundWhitelisted = false;
 
-        if (driverPath.find(L"\\SystemRoot\\", 0) != wstring::npos)
+        if (driverPath.find(L"\\SystemRoot\\", 0) != wstring::npos) /* replace "\\SystemRoot\\" with "\\??\\<windowsVolume>\\WINDOWS" */
         {
             fixedDriverPath = L"\\??\\" + windowsDrive + L"WINDOWS\\" + driverPath.substr(12);
         }
@@ -194,7 +194,63 @@ list<wstring> Services::GetUnsignedDrivers()
             fixedDriverPath = driverPath;
         }
 
-        for (const wstring& whitelisted : WhitelistedUnsignedDrivers) //std::find won't work well here because of possible case sensitivity differences
+        for (const wstring& whitelisted : WhitelistedUnsignedDrivers)
+        {
+            if (Utility::wcscmp_insensitive(whitelisted.c_str(), driverPath.c_str()) )
+            {
+                foundWhitelisted = true;
+                break;
+            }
+        }
+
+        if (!foundWhitelisted && !Authenticode::HasSignature(fixedDriverPath.c_str(), TRUE))
+        {
+            Logger::logfw(Warning, L"Found unsigned or outdated certificate on driver: %s\n", fixedDriverPath.c_str());
+            unsignedDrivers.push_back(fixedDriverPath);
+        }
+        //else
+        //{
+        //    Logger::logfw(Info, L"Driver is signed: %s\n", fixedDriverPath.c_str()); //commented out to prevent flooding the console & log file
+        //}
+    }
+
+    return unsignedDrivers;
+}
+
+/*
+    GetUnsignedDrivers - returns a list of unsigned driver names (wstring) loaded on the machine
+*/
+list<wstring> Services::GetUnsignedDrivers(__in list<wstring>& cachedVerifiedDriverList)
+{
+    list<wstring> unsignedDrivers;
+
+    if (DriverPaths.size() == 0)
+    {
+        if (!GetLoadedDrivers())
+        {
+            Logger::logf(Err, "Failed to get driver list @ GetUnsignedDrivers : error %d\n", GetLastError());
+            return unsignedDrivers;
+        }
+    }
+
+    const wstring windowsDrive = Services::GetWindowsDriveW();
+
+    for (const std::wstring& driverPath : DriverPaths) //enumerate all loaded drivers
+    {
+        wstring fixedDriverPath;
+
+        bool foundWhitelisted = false;
+
+        if (driverPath.find(L"\\SystemRoot\\", 0) != wstring::npos) /* replace "\\SystemRoot\\" with "\\??\\<windowsVolume>\\WINDOWS" */
+        {
+            fixedDriverPath = L"\\??\\" + windowsDrive + L"WINDOWS\\" + driverPath.substr(12);
+        }
+        else
+        {
+            fixedDriverPath = driverPath;
+        }
+
+        for (const wstring& whitelisted : WhitelistedUnsignedDrivers) //check against whitelisted unsigned list, if so we can skip the cert check
         {
             if (Utility::wcscmp_insensitive(whitelisted.c_str(), driverPath.c_str()))
             {
@@ -203,15 +259,29 @@ list<wstring> Services::GetUnsignedDrivers()
             }
         }
 
-        if (!foundWhitelisted && !Authenticode::HasSignature(fixedDriverPath.c_str()))
+        for (const wstring& cached : cachedVerifiedDriverList) //check against cached/already verified list, if so we can skip the cert check
+        {
+            if (Utility::wcscmp_insensitive(cached.c_str(), driverPath.c_str()))
+            {
+                foundWhitelisted = true;
+                break;
+            }
+        }
+
+        if (!foundWhitelisted && !Authenticode::HasSignature(fixedDriverPath.c_str(), TRUE))
         {
             Logger::logfw(Warning, L"Found unsigned or outdated certificate on driver: %s\n", fixedDriverPath.c_str());
             unsignedDrivers.push_back(fixedDriverPath);
         }
-        //else
-        //{
-        //    Logger::logfw(Info, L"Driver is signed: %s\n", fixedDriverPath.c_str()); //commented out to prevent flooding the console
-        //}
+        else
+        {
+            //Logger::logfw(Info, L"Driver is signed: %s\n", fixedDriverPath.c_str()); //commented out to prevent flooding the console & log file
+
+            if (find(cachedVerifiedDriverList.begin(), cachedVerifiedDriverList.end(), fixedDriverPath) == cachedVerifiedDriverList.end()) //signed driver not found in cache, so add it
+            {
+                cachedVerifiedDriverList.push_back(fixedDriverPath); //add to list if not already on it
+            }
+        }
     }
 
     return unsignedDrivers;
