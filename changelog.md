@@ -1,4 +1,6 @@
 ## Updates
+- Feb 22, '25: Added caching for cert checks of loaded drivers & modules, added revoke checks in `VerifyEmbeddedSignature` and `VerifyCatalogSignature`, removed cache-only for cert checking, added `BOOL checkRevoked` for `HasSignature`. Cleaned up `API::LaunchDefenses`.  
+  
 - Feb 16, '25: Added extra integrity check which checks file on disc's .text section versus the runtime image's.
   
 - Feb 15, '25: Started Wiki page for documentation, fixed some bugs, and several QoL improvements (thanks LucasParsy for your contributions)
