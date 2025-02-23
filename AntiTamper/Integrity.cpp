@@ -133,7 +133,7 @@ bool Integrity::IsUnknownModulePresent()
 
 		if (!found_whitelisted)
 		{
-			if (Authenticode::HasSignature(it->name.c_str())) //if file is signed and not yet on our whitelist, we can add it
+			if (Authenticode::HasSignature(it->name.c_str(), TRUE)) //if file is signed and not yet on our whitelist, we can add it
 			{
 				ProcessData::MODULE_DATA mod = *Process::GetModuleInfo(it->baseName.c_str());
 				modulesToAdd.push_back(mod);		
@@ -259,7 +259,7 @@ void Integrity::AddModuleHash(__in vector<ModuleHashData*> moduleHashList, __in 
 		if (strcmp(s->name, ".text") == 0)
 		{
 			uint64_t sec_addr = (uint64_t)(s->address) + (uint64_t)GetModuleHandleA(modName.c_str());
-			vector<uint64_t> hashes = GetMemoryHash(sec_addr, s->size); //make hashes of .text of module
+			vector<uint64_t> hashes = GetMemoryHash(sec_addr, s->size); //get hashes of .text of module
 
 			ModuleHashData* moduleHashData = new ModuleHashData();
 			moduleHashData->Name = moduleName;
