@@ -17,7 +17,7 @@ Error API::Initialize(AntiCheat* AC, string licenseKey, bool isServerAvailable)
 	std::list<wstring> allowedParents = AC->GetConfig()->allowedParents;
 	auto it = std::find_if(allowedParents.begin(), allowedParents.end(), [](const wstring& parentName) 
 	{
-		return Process::CheckParentProcess(parentName);
+		return Process::CheckParentProcess(parentName, true);
 	});
 
 	if (it != allowedParents.end()) 
@@ -142,7 +142,7 @@ Error API::LaunchDefenses(AntiCheat* AC) //currently in the process to split the
 
 	//AC->GetMonitor()->GetServiceManager()->GetServiceModules(); //enumerate services -> currently not in use
 
-	if (!Process::CheckParentProcess(AC->GetMonitor()->GetProcessObj()->GetParentName())) //parent process check, the parent process would normally be set using our API methods
+	if (!Process::CheckParentProcess(AC->GetMonitor()->GetProcessObj()->GetParentName(), true)) //parent process check, the parent process would normally be set using our API methods
 	{
 		Logger::logf(Detection, "Parent process was not in whitelist!");
 		errorCode = Error::PARENT_PROCESS_MISMATCH;
