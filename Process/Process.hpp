@@ -3,17 +3,20 @@
 #include "PEB.hpp"
 #include "Thread.hpp"
 #include "Handles.hpp"
-#include <string>
+#include "../AntiTamper/NAuthenticode.hpp"
+
 #include <Psapi.h>
 #include <tchar.h>
 #include <TlHelp32.h>
 #include <list>
 #include <ImageHlp.h>
+
 #pragma comment(lib, "ImageHlp")
 
 using namespace std;
 
-#define EXPECTED_SECTIONS 6 //change this to however many sections your program has by default. if your program adds/removes sections, you'll need to do further tracking
+//not the most cross-game-friendly option, possibly this could go in as a setting whether or not to use this technique or possibly as a preprocessor def in project options
+#define EXPECTED_SECTIONS 6 //change this to however many sections your program has -> we are modifying the NumberOfSections in PE header at runtime to 1 or 0 to demonstrate a technique
 
 #define MAX_DLLS_LOADED 128
 #define MAX_FILE_PATH_LENGTH 512
@@ -83,7 +86,7 @@ class Process final
 {
 public:
 
-	Process(int nProgramSections) //we manually set number of program sections in order to spoof it at runtime to 0 or 1, and not have the program be confused
+	Process(__in const int nProgramSections) //we manually set number of program sections in order to spoof it at runtime to 0 or 1, and not have the program be confused
 	{
 		_PEB = new _MYPEB();
 		
@@ -93,7 +96,6 @@ public:
 		}
 
 		SetParentName(GetProcessName(GetParentProcessId()));
-		SetElevated(IsProcessElevated());
 
 		NumberOfSections = nProgramSections; //save original # of program sections so that we can modify NumberOfSections in the NT headers and still achieve program functionality
 	}
@@ -101,14 +103,13 @@ public:
 	~Process()
 	{
 		for (ProcessData::MODULE_DATA* s : ModuleList)
-			delete s;
+			if(s != nullptr)
+			    delete s;
 	}
 
 	bool FillModuleList();
 
-	uint32_t GetMemorySize();
-
-	static list<ProcessData::Section*> GetSections(string module);
+	static list<ProcessData::Section*> GetSections(__in const string module);
 
 #ifdef _M_IX86
 	static _MYPEB* GetPEB() { return (_MYPEB*)__readfsdword(0x30); }
@@ -116,63 +117,62 @@ public:
 	static _MYPEB* GetPEB() { return (_MYPEB*)__readgsqword(0x60); }
 #endif
 
-	static wstring GetProcessName(DWORD pid);
-	static DWORD GetProcessIdByName(wstring procName);
-	static list<DWORD> GetProcessIdsByName(wstring procName);
+	static wstring GetProcessName(__in const DWORD pid);
+	static DWORD GetProcessIdByName(__in const wstring procName);
+	static list<DWORD> GetProcessIdsByName(__in const wstring procName);
 
 	static DWORD GetParentProcessId();
-	static BOOL CheckParentProcess(wstring desiredParent);
+	static BOOL CheckParentProcess(__in const wstring desiredParent, __in const bool bShouldCheckSignature);
 
-	static BOOL IsProcessElevated();
-
-	void SetElevated(BOOL bElevated) { this->_Elevated = bElevated; }
+	void SetElevated(__in const BOOL bElevated) { this->_Elevated = bElevated; }
 	BOOL GetElevated() { return this->_Elevated; }
 
-	wstring GetParentName() { return this->_ParentProcessName; }
-	uint32_t GetParentId() { return this->_ParentProcessId; }
+	wstring GetParentName() const { return this->_ParentProcessName; }
+	uint32_t GetParentId() const { return this->_ParentProcessId; }
 
-	void SetParentName(wstring parentName) { this->_ParentProcessName = parentName; }
-	void SetParentId(uint32_t id) { this->_ParentProcessId = id; }
+	void SetParentName(__in const wstring parentName) { this->_ParentProcessName = parentName; }
+	void SetParentId(__in const uint32_t id) { this->_ParentProcessId = id; }
 
-	static bool ChangeModuleName(const wstring szModule, const wstring newName); //these `ChangeXYZ` routines all modify aspects of the PEB
-	static bool ChangeModuleBase(const wchar_t* szModule, uint64_t moduleBaseAddress);
-	static bool ChangeModulesChecksum(const wchar_t* szModule, DWORD checksum);
-	static bool ChangePEEntryPoint(DWORD newEntry);
-	static bool ChangeImageSize(DWORD newImageSize);
-	static bool ChangeSizeOfCode(DWORD newSizeOfCode);
-	static bool ChangeImageBase(UINT64 newImageBase);
-	static bool ChangeNumberOfSections(string module, DWORD newSectionsCount);
-	static bool ModifyTLSCallbackPtr(UINT64 NewTLSFunction);
-	static void RemovePEHeader(HANDLE moduleBase);
+	static bool ChangeModuleName(__in const  wstring szModule, __in const  wstring newName); //these `ChangeXYZ` routines all modify aspects of the PEB
+	static bool ChangeModuleBase(__in const  wchar_t* szModule, __in const  uint64_t moduleBaseAddress);
+	static bool ChangeModulesChecksum(__in const  wchar_t* szModule, __in const DWORD checksum);
+	static bool ChangePEEntryPoint(__in const DWORD newEntry);
+	static bool ChangeImageSize(__in const DWORD newImageSize);
+	static bool ChangeSizeOfCode(__in const DWORD newSizeOfCode);
+	static bool ChangeImageBase(__in const UINT64 newImageBase);
+	static bool ChangeNumberOfSections(__in const string module, __in const DWORD newSectionsCount);
+	
+	static bool ModifyTLSCallbackPtr(__in const UINT64 NewTLSFunction);
 
-	static bool HasExportedFunction(string dllName, string functionName);
 
-	static FARPROC _GetProcAddress(PCSTR Module, LPCSTR lpProcName); //GetProcAddress without winAPI call
+	static bool HasExportedFunction(__in const string dllName, __in const string functionName);
 
-	static UINT64 GetSectionAddress(const char* moduleName, const char* sectionName);
+	static FARPROC _GetProcAddress(__in const PCSTR Module, __in const  LPCSTR lpProcName); //GetProcAddress without winAPI call
 
-	static BYTE* GetBytesAtAddress(UINT64 address, UINT size);
+	static UINT64 GetSectionAddress(__in const  char* moduleName, __in const  char* sectionName);
 
-	static DWORD GetModuleSize(HMODULE module);
+	static BYTE* GetBytesAtAddress(__in const UINT64 address, __in const UINT size);
+
+	static DWORD GetModuleSize(__in const HMODULE module);
 
 	static list<ProcessData::ImportFunction*> GetIATEntries(); //start of IAT hook checks
 
-	static bool IsReturnAddressInModule(UINT64 RetAddr, const wchar_t* module);
+	static bool IsReturnAddressInModule(__in const UINT64 RetAddr, __in const  wchar_t* module);
 
 	static std::vector<ProcessData::MODULE_DATA> GetLoadedModules();
-	static ProcessData::MODULE_DATA* GetModuleInfo(const wchar_t* name);
+	static ProcessData::MODULE_DATA* GetModuleInfo(__in const  wchar_t* name);
 	
-	static HMODULE GetModuleHandle_Ldr(const wchar_t* moduleName);
+	static HMODULE GetModuleHandle_Ldr(__in const  wchar_t* moduleName);
 
-	int SetNumberOfSections(int nSections) { this->NumberOfSections = nSections; }
-	int GetNumberOfSections() { return this->NumberOfSections; }
+	int SetNumberOfSections(__in const int nSections) { this->NumberOfSections = nSections; }
+	int GetNumberOfSections() const { return this->NumberOfSections; }
 
-	static DWORD GetTextSectionSize(HMODULE hModule);
+	static DWORD GetTextSectionSize(__in const HMODULE hModule);
 
-	static HMODULE GetRemoteModuleBaseAddress(DWORD processId, const wchar_t* moduleName);
+	static HMODULE GetRemoteModuleBaseAddress(__in const DWORD processId, __in const  wchar_t* moduleName);
 
-	static bool GetRemoteTextSection(HANDLE hProcess, uintptr_t& baseAddress, SIZE_T& sectionSize);
-	static std::vector<BYTE> ReadRemoteTextSection(DWORD pid); //fetch .text of a running process (can improve this by making it any section instead of just .text)
+	static bool GetRemoteTextSection(__in const HANDLE hProcess, __out uintptr_t& baseAddress, __out SIZE_T& sectionSize);
+	static std::vector<BYTE> ReadRemoteTextSection(__in const DWORD pid); //fetch .text of a running process (can improve this by making it any section instead of just .text)
 
 private:
 
