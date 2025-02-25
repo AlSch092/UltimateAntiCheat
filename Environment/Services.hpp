@@ -4,6 +4,7 @@
 #include "../AntiTamper/NAuthenticode.hpp"
 #include "../Common/Utility.hpp"
 #include "../Network/HttpClient.hpp"
+
 #include <Psapi.h>
 #include <TlHelp32.h>
 #include <setupapi.h>

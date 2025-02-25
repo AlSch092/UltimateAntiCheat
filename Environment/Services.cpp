@@ -293,79 +293,48 @@ list<wstring> Services::GetUnsignedDrivers(__in list<wstring>& cachedVerifiedDri
 */
 BOOL Services::IsTestsigningEnabled()
 {
-    HANDLE hReadPipe, hWritePipe;
-    SECURITY_ATTRIBUTES sa;
-    STARTUPINFOA si;
-    PROCESS_INFORMATION pi;
-    char szOutput[1024];
-    DWORD bytesRead;
-    BOOL foundTestsigning = FALSE;
-
-    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-    sa.bInheritHandle = TRUE;
-    sa.lpSecurityDescriptor = NULL;
-
-    string volumeName = GetWindowsDrive();
-
-    if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0)) //use a pipe to read output of bcdedit command
+    typedef enum _SYSTEM_INFORMATION_CLASS
     {
-        Logger::logf(Err, "CreatePipe failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
-        return foundTestsigning;
+        SystemCodeIntegrity = 103
+    } SYSTEM_INFORMATION_CLASS;
+
+    typedef NTSTATUS(NTAPI* NtQuerySystemInformationFunc)(SYSTEM_INFORMATION_CLASS SystemInformationClass, PVOID SystemInformation, ULONG SystemInformationLength, PULONG ReturnLength);
+
+    typedef struct _SYSTEM_CODEINTEGRITY_INFORMATION
+    {
+        ULONG Length;
+        ULONG CodeIntegrityOptions;
+    } SYSTEM_CODEINTEGRITY_INFORMATION;
+
+    HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+
+	if (ntdll == NULL)
+	{
+		Logger::logf(Err, "Failed to fetch ntdll module address @ IsMachineAllowingSelfSignedDrivers. Error code : % lu\n", GetLastError());
+		return FALSE;
+	}
+
+    NtQuerySystemInformationFunc NtQuerySystemInformation = (NtQuerySystemInformationFunc)GetProcAddress(ntdll, "NtQuerySystemInformation");
+
+    if (!NtQuerySystemInformation)
+    {
+        Logger::logf(Err, "Could not get NtQuerySystemInformation function address @ Handles::GetHandles");
+        return {};
     }
 
-    memset(&si, 0, sizeof(si));
-    si.cb = sizeof(si);
-    si.dwFlags = STARTF_USESTDHANDLES;
-    si.hStdOutput = hWritePipe;
+    SYSTEM_CODEINTEGRITY_INFORMATION sci = { sizeof(sci), 0 };
 
-    string bcdedit_location = "Windows\\System32\\bcdedit.exe";
-    string fullpath_bcdedit = (volumeName.c_str() + bcdedit_location);
+    ULONG flags = 0;
+    NTSTATUS status = NtQuerySystemInformation((SYSTEM_INFORMATION_CLASS)SystemCodeIntegrity, &sci, sizeof(sci), NULL);
 
-    if (!CreateProcessA(fullpath_bcdedit.c_str(), NULL, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+    if (status == 0)
     {
-        Logger::logf(Err, "CreateProcess failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
-        CloseHandle(hReadPipe);
-        CloseHandle(hWritePipe);
-        return FALSE;
+        return (sci.CodeIntegrityOptions & 0x02); //CODEINTEGRITY_OPTION_TESTSIGN
     }
 
-    //..wait for the process to finish
-    WaitForSingleObject(pi.hProcess, INFINITE);
-
-    CloseHandle(hWritePipe);
-    CloseHandle(pi.hThread);
-
-    if (!ReadFile(hReadPipe, szOutput, 1024 - 1, &bytesRead, NULL)) //now read our pipe
-    {
-        Logger::logf(Err, "ReadFile failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
-        CloseHandle(hReadPipe);
-        return FALSE;
-    }
-
-    CloseHandle(hReadPipe);
-
-    szOutput[bytesRead] = '\0';
-
-    if (strstr(szOutput, "The boot configuration data store could not be opened") != NULL)
-    {
-        Logger::logf(Err, "Failed to run bcdedit @ IsMachineAllowingSelfSignedDrivers. Please make sure program is run as administrator\n");
-        foundTestsigning = FALSE;
-    }
-
-    char* token = strtok(szOutput, "\r\n");
-
-    while (token != NULL)      //Iterate through tokens
-    {
-        if (strstr(token, "testsigning") != NULL && strstr(token, "Yes") != NULL)
-        {
-            foundTestsigning = TRUE;
-        }
-
-        token = strtok(NULL, "\r\n");
-    }
-
-    return foundTestsigning;
+    return FALSE; // Query failed or test signing not enabled
 }
+
 
 
 /*
@@ -449,13 +418,15 @@ BOOL Services::IsDebugModeEnabled()
 }
 
 /*
-    IsSecureBootEnabled - checks if secure bool is enabled on machine
+    IsSecureBootEnabled - checks if secure bool is enabled on machine through a powershell cmdlet (`Confirm-SecureBootUEFI`)
+    returns `true` if secure boot is enabled
+    ** note ** this routine doesn't really need to be called multiple times, boot state cannot be changed without a reboot
 */
 BOOL Services::IsSecureBootEnabled()
 {
     HANDLE hReadPipe, hWritePipe;
     SECURITY_ATTRIBUTES sa;
-    STARTUPINFOA si;
+    STARTUPINFOW si;
     PROCESS_INFORMATION pi;
     char szOutput[1024];
     DWORD bytesRead;
@@ -465,7 +436,7 @@ BOOL Services::IsSecureBootEnabled()
     sa.bInheritHandle = TRUE;
     sa.lpSecurityDescriptor = NULL;
 
-    if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0)) //use a pipe to read output of bcdedit command
+    if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0))
     {
         Logger::logf(Err, "CreatePipe failed @ Services::IsSecureBootEnabled: %d\n", GetLastError());
         return FALSE;
@@ -476,7 +447,13 @@ BOOL Services::IsSecureBootEnabled()
     si.dwFlags = STARTF_USESTDHANDLES;
     si.hStdOutput = hWritePipe;
 
-    if (!CreateProcessA(NULL, (LPSTR)"powershell -c \"Confirm-SecureBootUEFI\"", NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+    wstring windowsDrive = Services::GetWindowsDriveW();
+
+    wstring command = L"Confirm-SecureBootUEFI"; //powershell cmdlet
+
+    std::wstring fullCommand = windowsDrive + L"WINDOWS\\System32\\WindowsPowershell\\v1.0\\powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"" + command + L"\"";
+
+    if (!CreateProcessW(NULL, (LPWSTR)fullCommand.c_str(), NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
     {
         Logger::logf(Err, "CreateProcess failed @ Services::IsSecureBootEnabled: %d\n", GetLastError());
         CloseHandle(hReadPipe);
