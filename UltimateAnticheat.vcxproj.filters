@@ -179,9 +179,6 @@
     <ClInclude Include="Process\Thread.hpp">
       <Filter>Process</Filter>
     </ClInclude>
-    <ClInclude Include="Common\Globals.hpp">
-      <Filter>Common</Filter>
-    </ClInclude>
     <ClInclude Include="Network\Packets\PacketReader.hpp">
       <Filter>Network\Packets</Filter>
     </ClInclude>
@@ -211,6 +208,12 @@
     </ClInclude>
     <ClInclude Include="AntiCheatInitFail.hpp">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\DetectionFlags.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="AntiTamper\MapProtectedClass.hpp">
+      <Filter>AntiTamper</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

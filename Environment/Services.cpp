@@ -308,11 +308,11 @@ BOOL Services::IsTestsigningEnabled()
 
     HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
 
-	if (ntdll == NULL)
-	{
-		Logger::logf(Err, "Failed to fetch ntdll module address @ IsMachineAllowingSelfSignedDrivers. Error code : % lu\n", GetLastError());
-		return FALSE;
-	}
+    if (ntdll == NULL)
+    {
+        Logger::logf(Err, "Failed to fetch ntdll module address @ IsMachineAllowingSelfSignedDrivers. Error code : % lu\n", GetLastError());
+        return FALSE;
+    }
 
     NtQuerySystemInformationFunc NtQuerySystemInformation = (NtQuerySystemInformationFunc)GetProcAddress(ntdll, "NtQuerySystemInformation");
 
@@ -332,7 +332,7 @@ BOOL Services::IsTestsigningEnabled()
         return (sci.CodeIntegrityOptions & 0x02); //CODEINTEGRITY_OPTION_TESTSIGN
     }
 
-    return FALSE; // Query failed or test signing not enabled
+    return FALSE;
 }
 
 
@@ -555,6 +555,7 @@ BOOL Services::IsRunningAsAdmin()
     PSID adminGroup = NULL;
 
     SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+
     if (AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID,DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &adminGroup)) 
     {
         CheckTokenMembership(NULL, adminGroup, &isAdmin);

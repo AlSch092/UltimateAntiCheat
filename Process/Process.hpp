@@ -15,9 +15,6 @@
 
 using namespace std;
 
-//not the most cross-game-friendly option, possibly this could go in as a setting whether or not to use this technique or possibly as a preprocessor def in project options
-#define EXPECTED_SECTIONS 6 //change this to however many sections your program has -> we are modifying the NumberOfSections in PE header at runtime to 1 or 0 to demonstrate a technique
-
 #define MAX_DLLS_LOADED 128
 #define MAX_FILE_PATH_LENGTH 512
 
@@ -53,7 +50,7 @@ namespace ProcessData
 
 	struct Section
 	{
-		char name[256];
+		string name = "";
 		unsigned int size;
 		UINT64 address;
 
@@ -97,7 +94,7 @@ public:
 
 		SetParentName(GetProcessName(GetParentProcessId()));
 
-		NumberOfSections = nProgramSections; //save original # of program sections so that we can modify NumberOfSections in the NT headers and still achieve program functionality
+		Process::SetNumSections(nProgramSections); //save original # of program sections so that we can modify NumberOfSections in the NT headers and still achieve program functionality
 	}
 
 	~Process()
@@ -164,15 +161,18 @@ public:
 	
 	static HMODULE GetModuleHandle_Ldr(__in const  wchar_t* moduleName);
 
-	int SetNumberOfSections(__in const int nSections) { this->NumberOfSections = nSections; }
-	int GetNumberOfSections() const { return this->NumberOfSections; }
-
 	static DWORD GetTextSectionSize(__in const HMODULE hModule);
 
 	static HMODULE GetRemoteModuleBaseAddress(__in const DWORD processId, __in const  wchar_t* moduleName);
 
 	static bool GetRemoteTextSection(__in const HANDLE hProcess, __out uintptr_t& baseAddress, __out SIZE_T& sectionSize);
 	static std::vector<BYTE> ReadRemoteTextSection(__in const DWORD pid); //fetch .text of a running process (can improve this by making it any section instead of just .text)
+
+	static int GetNumSections() { return NumSections; }
+	static void SetNumSections(int nSections) { NumSections = nSections; }
+
+	static wstring GetExecutableModuleName() { return ExecutableModuleNameW; }
+	static void SetExecutableModuleName(wstring name) { ExecutableModuleNameW = name; }
 
 private:
 
@@ -191,7 +191,8 @@ private:
 
 	list<ProcessData::MODULE_DATA*> ModuleList; //todo: make routine to fill this member
 
-	bool _Elevated;
+	bool _Elevated = false;
 
-	int NumberOfSections = 0;
+	static int NumSections;
+	static wstring ExecutableModuleNameW;
 };

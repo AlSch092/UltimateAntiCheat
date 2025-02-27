@@ -5,8 +5,7 @@
 
 #include <Windows.h>
 #include "../Common/Logger.hpp"
-
-#define EXPECTED_SECTIONS 6 //for spoofing number of sections at runtime, which can prevent attackers from traversing sections
+#include "../Process/Process.hpp"
 
 //=============================================================================
 // Public Interface

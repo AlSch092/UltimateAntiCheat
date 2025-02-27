@@ -4,7 +4,7 @@
     HasSignature - check if `filePath` has a valid embedded signature or a valid catalog sig file
     returns `TRUE` if the `filePath` is properly signed
 */
-BOOL Authenticode::HasSignature(LPCWSTR filePath, BOOL checkEndCertRevoked)
+BOOL Authenticode::HasSignature(__in const LPCWSTR filePath, __in const  BOOL checkEndCertRevoked)
 {
     return (Authenticode::VerifyEmbeddedSignature(filePath, checkEndCertRevoked) || Authenticode::VerifyCatalogSignature(filePath, checkEndCertRevoked));
 }
@@ -13,7 +13,7 @@ BOOL Authenticode::HasSignature(LPCWSTR filePath, BOOL checkEndCertRevoked)
     VerifyEmbeddedSignature - checks embedded signature in `filePath`
     returns `TRUE` if the file has a properly signed embedded signature
 */
-BOOL Authenticode::VerifyEmbeddedSignature(LPCWSTR filePath, BOOL checkRevoked)
+BOOL Authenticode::VerifyEmbeddedSignature(__in const LPCWSTR filePath, __in const  BOOL checkRevoked)
 {
     WINTRUST_FILE_INFO fileData;
     WINTRUST_DATA winTrustData;
@@ -64,7 +64,7 @@ BOOL Authenticode::VerifyEmbeddedSignature(LPCWSTR filePath, BOOL checkRevoked)
     VerifyCatalogSignature - checks the OS's database for any known catalogs for `filePath`
     returns `TRUE` if the file has a verified signature
 */
-BOOL Authenticode::VerifyCatalogSignature(LPCWSTR filePath, BOOL checkRevoked) 
+BOOL Authenticode::VerifyCatalogSignature(__in const LPCWSTR filePath, __in const BOOL checkRevoked)
 {
     HANDLE hFile = CreateFileW(filePath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE) 

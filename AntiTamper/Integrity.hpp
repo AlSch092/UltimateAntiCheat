@@ -2,9 +2,9 @@
 #pragma once
 #include "../Common/Utility.hpp"
 #include "../Common/SHA256.hpp"
-#include "../Common/Globals.hpp"
 #include "../Common/Settings.hpp"
 #include "../Network/HttpClient.hpp"
+#include "../Process/Process.hpp"
 #include "NAuthenticode.hpp"
 
 #include <Psapi.h>

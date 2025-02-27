@@ -6,19 +6,10 @@
 */
 void Debugger::AntiDebug::StartAntiDebugThread()
 {
-	auto settings = this->GetSettings().lock();
-
-	if (settings)
+	if (this->GetSettings() != nullptr && !this->GetSettings()->bUseAntiDebugging)
 	{
-		if (!settings->bUseAntiDebugging)
-		{
-			Logger::logf(Info, "Anti-Debugger was disabled in settings, debugging will be allowed");
-			return;
-		}
-	}
-	else
-	{
-		Logger::logf(Warning, "Settings were NULL or failed to lock weak_ptr<Settings> @ Debugger::AntiDebug::StartAntiDebugThread");
+		Logger::logf(Info, "Anti-Debugger was disabled in settings, debugging will be allowed");
+		return;
 	}
 
 	this->DetectionThread = make_unique<Thread>((LPTHREAD_START_ROUTINE)Debugger::AntiDebug::CheckForDebugger, (LPVOID)this, true, false);

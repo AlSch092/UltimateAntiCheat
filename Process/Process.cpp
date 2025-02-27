@@ -1,5 +1,8 @@
 #include "Process.hpp"
 
+int Process::NumSections = 0; //we need to store the real number of sections, since we're spoofing it at runtime
+wstring Process::ExecutableModuleNameW = wstring(_MAIN_MODULE_NAME_W); //store the name of the executable module, since we're modifying the module name at runtime
+
 /*
     CheckParentProcess - checks if the parent process is the process name `desiredParent`
     returns TRUE if our parameter desiredParent is the same process name as our parent process ID
@@ -8,7 +11,7 @@ BOOL Process::CheckParentProcess(__in const wstring desiredParent, __in const bo
 {
     std::list<DWORD> pids = GetProcessIdsByName(desiredParent);
     DWORD parentPid = GetParentProcessId();
-
+    
     if (bShouldCheckSignature)
     {
         BOOL bFoundValidSignature = FALSE;
@@ -107,14 +110,22 @@ list<ProcessData::Section*> Process::GetSections(__in const string module)
     pNtH = (PIMAGE_NT_HEADERS64)((PIMAGE_NT_HEADERS64)((PBYTE)hInst + (DWORD)pDoH->e_lfanew));
     sectionHeader = IMAGE_FIRST_SECTION(pNtH);
 
-    for (int i = 0; i < EXPECTED_SECTIONS; i++)
+    int nSections = Process::GetNumSections();
+
+    if (nSections == 0)
+        nSections = pNtH->FileHeader.NumberOfSections;
+
+    for (int i = 0; i < nSections; i++)
     {
         ProcessData::Section* s = new ProcessData::Section();
 
         s->address = sectionHeader[i].VirtualAddress;
 
-        strcpy_s(s->name, (const char*)sectionHeader[i].Name);
- 
+        s->name = std::string(reinterpret_cast<const char*>(sectionHeader[i].Name));
+      
+        if (s->name.size() > 8)
+            s->name.resize(9);
+
         s->Misc.VirtualSize = sectionHeader[i].Misc.VirtualSize;
         s->size = s->Misc.VirtualSize;
         s->PointerToRawData = sectionHeader[i].PointerToRawData;
@@ -131,10 +142,10 @@ list<ProcessData::Section*> Process::GetSections(__in const string module)
 /*
     ChangeModuleName - Modifies the module name of a loaded module at runtime, which might trip up attackers and make certain parts of their code fail. Please see my project "ChangeModuleName" for more details
     requirements: ensure the new module name is the same or less length of the one you are changing or else you need to shift memory properly where all module names are being stored, and requires additions to this code.
-    
-    returns `true` on success.
+    Originally taken from my other project at: https://github.com/AlSch092/changemodulename
+    returns `true` on successfully renaming `szModule` to `newName`.
 */
-bool Process::ChangeModuleName(__in const  wstring szModule, __in const  wstring newName)
+bool Process::ChangeModuleName(__in const wstring moduleName, __in const  wstring newName)
 {
 #ifdef _M_IX86
     MYPEB* PEB = (MYPEB*)__readfsdword(0x30);
@@ -143,16 +154,17 @@ bool Process::ChangeModuleName(__in const  wstring szModule, __in const  wstring
 #endif
 
     _LIST_ENTRY* f = PEB->Ldr->InMemoryOrderModuleList.Flink;
+
     bool Found = FALSE;
     int count = 0;
 
-    while (!Found && count < 256) //traverse module list , stops at 256 loops to prevent infinite looping incase szModule isn't found
+    while (!Found && count < 1024) //traverse module list , stops at 1024 loops to prevent any possible infinite looping
     {
         MY_PLDR_DATA_TABLE_ENTRY dataEntry = CONTAINING_RECORD(f, MY_LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);
 
-        if (wcsstr(dataEntry->FullDllName.Buffer, szModule.c_str()))
+        if (wcsstr(dataEntry->FullDllName.Buffer, moduleName.c_str()))
         {
-            wcscpy_s(dataEntry->FullDllName.Buffer, szModule.size() + 1, newName.c_str()); //..then modify the string modulename to newName
+            wcscpy_s(dataEntry->FullDllName.Buffer, moduleName.size() + 1, newName.c_str()); //..then modify the string modulename to newName
             dataEntry->FullDllName.Length = (newName.length() * 2) + 1;
             dataEntry->FullDllName.MaximumLength = (newName.length() * 2) + 1;
             Found = TRUE;
@@ -587,7 +599,7 @@ UINT64 Process::GetSectionAddress(__in const  char* moduleName, __in const  char
 
     PIMAGE_SECTION_HEADER pSectionHeader = IMAGE_FIRST_SECTION(pNtHeaders);
 
-    for (int i = 0; i < EXPECTED_SECTIONS; i++)  //we are modifying # of sections at runtime to throw attackers off
+    for (int i = 0; i < Process::GetNumSections(); i++)  //we are modifying # of sections at runtime to throw attackers off
     {
         if ((const char*)pSectionHeader->Name != nullptr)
         {

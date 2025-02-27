@@ -12,19 +12,19 @@
 #include "API/API.hpp"
 #include "AntiCheat.hpp"
 #include "SplashScreen.hpp"
+#include "AntiTamper/MapProtectedClass.hpp" //to make Settings class object write-protected (see https://github.com/AlSch092/RemapProtectedClass)
 
 #pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper) - each section gets its own region, align with system allocation granularity
+#pragma comment (linker, "/INCLUDE:_tls_used")
+#pragma comment (linker, "/INCLUDE:_tls_callback")
 
 using namespace std;
 
 void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
 
-#pragma comment (linker, "/INCLUDE:_tls_used")
-#pragma comment (linker, "/INCLUDE:_tls_callback")
-
 EXTERN_C
 #ifdef _M_X64
-#pragma const_seg (".CRT$XLB")
+#pragma const_seg (".CRT$XLB") //store tls callback inside the correct section
 const
 #endif
 
@@ -32,14 +32,23 @@ PIMAGE_TLS_CALLBACK _tls_callback = TLSCallback;
 #pragma data_seg ()
 #pragma const_seg ()
 
-shared_ptr<Settings> Settings::Instance = nullptr; //we only want a single instance of this object throughout the program (some classes might use raw pointers to this object)
+Settings* Settings::Instance = nullptr; //singleton-style instance of Settings class, which will be made write-protected via ProtectedMemory class
+
+bool SupressingNewThreads = true; //we need some variables in both our TLS callback and main()
+
+LONG WINAPI g_ExceptionHandler(__in EXCEPTION_POINTERS* ExceptionInfo);
 
 int main(int argc, char** argv)
 {
+	string userKeyboardInput; //for looping until user wants to exit
+
+    map<DetectionFlags, const char*> explanations;
+    list<DetectionFlags> flags; //for explanation output after the program is finished running
+
     // Set default options
 #ifdef _DEBUG //in debug compilation, we are more lax with our protections for easier testing purposes
     const bool bEnableNetworking = false;  //change this to false if you don't want to use the server
-    const bool bEnforceSecureBoot = false;
+    const bool bEnforceSecureBoot = true;
     const bool bEnforceDSE = true;
     const bool bEnforceNoKDBG = true;
     const bool bUseAntiDebugging = true;
@@ -71,19 +80,20 @@ int main(int argc, char** argv)
 #endif
 
 #ifdef _DEBUG
-    cout << "\tEnable logging :\t\t" << boolalpha << bEnableLogging << endl;
+
     cout << "Settings for this instance:\n";
-    cout << "\tEnable Networking:\t" << boolalpha << bEnableNetworking << endl;
-    cout << "\tEnforce Secure Boot: \t" << boolalpha << bEnforceSecureBoot << endl;
-    cout << "\tEnforce DSE:\t\t" << boolalpha << bEnforceDSE << endl;
-    cout << "\tEnforce No KDBG:\t" << boolalpha << bEnforceNoKDBG << endl;
-    cout << "\tUse Anti-Debugging:\t" << boolalpha << bUseAntiDebugging << endl;
-    cout << "\tUse Integrity Checking:\t" << boolalpha << bUseIntegrityChecking << endl;
-    cout << "\tCheck Thread Integrity:\t" << boolalpha << bCheckThreadIntegrity << endl;
-    cout << "\tCheck Hypervisor:\t" << boolalpha << bCheckHypervisor << endl;
-    cout << "\tRequire Admin:\t\t" << boolalpha << bRequireRunAsAdministrator << endl;
-    
-    cout << "\tAllowed parent processes: \t\t" << endl;
+    cout << "\t Enable Networking:\t" << boolalpha << bEnableNetworking << endl;
+    cout << "\t Enforce Secure Boot: \t" << boolalpha << bEnforceSecureBoot << endl;
+    cout << "\t Enforce DSE:\t\t" << boolalpha << bEnforceDSE << endl;
+    cout << "\t Enforce No KDBG:\t" << boolalpha << bEnforceNoKDBG << endl;
+    cout << "\t Use Anti-Debugging:\t" << boolalpha << bUseAntiDebugging << endl;
+    cout << "\t Use Integrity Checking:\t" << boolalpha << bUseIntegrityChecking << endl;
+    cout << "\t Check Thread Integrity:\t" << boolalpha << bCheckThreadIntegrity << endl;
+    cout << "\t Check Hypervisor:\t" << boolalpha << bCheckHypervisor << endl;
+    cout << "\t Require Admin:\t\t" << boolalpha << bRequireRunAsAdministrator << endl;
+    cout << "\t Using Kernelmode Driver:\t\t" << boolalpha << bUsingDriver << endl;
+    cout << "\t Enable logging :\t\t" << boolalpha << bEnableLogging << endl;
+    cout << "\t Allowed parent processes: \t\t" << endl;
 
     for (auto parent: allowedParents) 
     {
@@ -98,57 +108,80 @@ int main(int argc, char** argv)
 
     Thread* t = new Thread((LPTHREAD_START_ROUTINE)Splash::InitializeSplash, 0, false, true);
 
-    cout << "------------------------------------------------------------------------------------------\n";
-    cout << "|                            Welcome to Ultimate Anti-Cheat!                             |\n";
-    cout << "|  An in-development, non-commercial AC made to help teach concepts in game security     |\n";
+    cout << "*----------------------------------------------------------------------------------------*\n";
+    cout << "|                           Welcome to Ultimate Anti-Cheat (UAC)!                        |\n";
+    cout << "|    An in-development, non-commercial AC made to help teach concepts in game security   |\n";
     cout << "|                              Made by AlSch092 @Github                                  |\n";
     cout << "|         ...With special thanks to:                                                     |\n";
-    cout << "|           changeofpace@github (remapping method)                                       |\n";
-    cout << "|           discriminating@github (dll load notifcations, catalog verification)          |\n";
-    cout << "|           LucasParsy@github (testing, bug fixing)                                      |\n";
-    cout << "------------------------------------------------------------------------------------------\n";
-
-    shared_ptr<Settings> ConfigInstance = Settings::CreateInstance(bEnableNetworking, bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, bRequireRunAsAdministrator, bUsingDriver, allowedParents, bEnableLogging, logFileName);
+    cout << "|           changeofpace (remapping method)                                              |\n";
+    cout << "|           discriminating (dll load notifcations, catalog verification)                 |\n";
+    cout << "|           LucasParsy (testing, bug fixing)                                             |\n";
+    cout << "*----------------------------------------------------------------------------------------*\n";
 
     unique_ptr<AntiCheat> Anti_Cheat = nullptr;
 
+    ProtectedMemory ProtectedSettingsMemory(sizeof(Settings));
+
+    Settings::Instance = ProtectedSettingsMemory.Construct<Settings>(
+        bEnableNetworking, 
+        bEnforceSecureBoot, 
+        bEnforceDSE, 
+        bEnforceNoKDBG, 
+        bUseAntiDebugging, 
+        bUseIntegrityChecking, 
+        bCheckThreadIntegrity, 
+        bCheckHypervisor, 
+        bRequireRunAsAdministrator, 
+        bUsingDriver, 
+        allowedParents, 
+        bEnableLogging, 
+        logFileName);
+
     try
     {
-        Anti_Cheat = make_unique<AntiCheat>(ConfigInstance, Services::GetWindowsVersion());   //after all environmental checks (secure boot, DSE, adminmode) are performed, create the AntiCheat object
+        ProtectedSettingsMemory.Protect(); //make the Settings object write-protect and resistant to page security changes
+    }
+    catch (const std::runtime_error& ex)
+    {
+        Logger::logf(Err, "Settings could not be initialized. Closing application...");
+        goto Cleanup;
+    }
+
+    try
+    {
+        Anti_Cheat = make_unique<AntiCheat>(Settings::Instance, Services::GetWindowsVersion());   //after all environmental checks (secure boot, DSE, adminmode) are performed, create the AntiCheat object
     }
     catch (const bad_alloc& e)
     {
         Logger::logf(Err, "Anticheat pointer could not be allocated @ main(): %s", e.what());
-        return 1;
+        goto Cleanup;
     }
     catch (const AntiCheatInitFail& e)
     {
         Logger::logf(Err, "Anticheat init error: %d %s", e.reasonEnum, e.what());
-        return 1;
+        goto Cleanup;
     }
 
-    if (ConfigInstance->bCheckThreads)
+    if (Settings::Instance->bCheckThreads)
     {   //typically thread should cross-check eachother to ensure nothing is suspended, in this version of the program we only check thread suspends once at the start
         if (Anti_Cheat->IsAnyThreadSuspended()) //make sure that all our necessary threads aren't suspended by an attacker
         {
             Logger::logf(Detection, "Atleast one of our threads was found suspended! All threads must be running for proper module functionality.");
-            return 1;
+            goto Cleanup;
         }
     }
 
-    UnmanagedGlobals::SupressingNewThreads = Anti_Cheat->GetBarrier()->IsPreventingThreads(); //if this is set to TRUE, we can stop the creation of any new unknown threads via the TLS callback
+    SupressingNewThreads = Anti_Cheat->GetBarrier()->IsPreventingThreads(); //if this is set to TRUE, we can stop the creation of any new unknown threads via the TLS callback
 
     cout << "\n----------------------------------------------------------------------------------------------------------" << endl;
     cout << "All protections have been deployed, the program will now loop using its detection methods. Thanks for your interest in the project!" << endl;
     cout << "Please enter 'q' if you'd like to end the program." << endl;
     
-    string userInput;
-
     while (true)
     {
-        cin >> userInput;
+        cin >> userKeyboardInput;
 
-        if (userInput == "q" || userInput == "Q")
+        if (userKeyboardInput == "q" || userKeyboardInput == "Q")
         {
             cout << "Exit key was pressed, shutting down program..." << endl;
             break;
@@ -161,8 +194,9 @@ int main(int argc, char** argv)
     }
 
 #ifdef _DEBUG
-    list<DetectionFlags> flags = Anti_Cheat->GetMonitor()->GetDetectedFlags();
-    map<DetectionFlags, const char*> explanations = 
+
+    flags = Anti_Cheat->GetMonitor()->GetDetectedFlags();
+    explanations = 
     {
         { DetectionFlags::DEBUGGER, "Debugging method detected" },
         { DetectionFlags::PAGE_PROTECTIONS, "Image's .text section is writable, memory was re-re-mapped" },
@@ -184,55 +218,15 @@ int main(int argc, char** argv)
     }
 #endif
 
-    delete t;
+Cleanup:
+    if(t != nullptr)
+        delete t;
+
+	Anti_Cheat.reset(); //we need to call AntiCheat's destructor before ~ProtectedMemory, since AntiCheat destructor will reference the Settings object
+
+    ProtectedSettingsMemory.~ProtectedMemory(); //we need to unmap the memory before 
 
     return 0;
-}
-
-/*
-    AddThread - adds a Thread* object to our global thread list -> this will likely be phased out soon
-*/
-bool UnmanagedGlobals::AddThread(DWORD id)
-{
-    DWORD tid = GetCurrentThreadId();
-    Logger::logf(Info, " New thread spawned: %d", tid);
-
-    CONTEXT context;
-    context.ContextFlags = CONTEXT_ALL;
-
-    HANDLE threadHandle = OpenThread(THREAD_ALL_ACCESS, FALSE, tid);
-
-    if (threadHandle == NULL)
-    {
-        Logger::logf(Warning, " Couldn't open thread handle @ TLS Callback: Thread %d", tid);
-        return false;
-    }
-    else
-    {
-        Thread* t = new Thread(tid); //memory must be free'd after done using, this function does not free mem
-        UnmanagedGlobals::ThreadList->push_back(t);
-        return true;
-    }
-}
-
-/*
-    RemoveThread - Removes Thread* with threadid `tid` from our global thread list  -> this will likely be phased out soon
-*/
-void UnmanagedGlobals::RemoveThread(DWORD tid)
-{
-    Thread* ToRemove = NULL;
-
-    list<Thread*>::iterator it;
-
-    for (it = ThreadList->begin(); it != ThreadList->end(); ++it)
-    {
-        Thread* t = it._Ptr->_Myval;
-        if (t->GetId() == tid)
-            ToRemove = t;
-    }
-
-    if (ToRemove != NULL) //remove thread from our list on thread_detach
-        ThreadList->remove(ToRemove);
 }
 
 /*
@@ -243,6 +237,10 @@ We can end attacker threads using ExitThread(), and let in our threads which are
 void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 {
     const UINT ThreadExecutionAddressStackOffset = 0x378; //** this might change on different version of window, Windows 10 is all I have access to currently
+
+    static bool FirstProcessAttach = true;
+    static bool SetExceptionHandler = false;
+	static WindowsVersion WinVersion = WindowsVersion::ErrorUnknown;
 
     switch (dwReason)
     {
@@ -256,21 +254,23 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 
             Logger::logf(Info, " New process attached, current thread %d\n", GetCurrentThreadId());
 
-            if (UnmanagedGlobals::FirstProcessAttach) //process creation will trigger PROCESS_ATTACH, so we can put some initialize stuff in here incase main() is hooked or statically modified by the attacker
+            if (FirstProcessAttach) //process creation will trigger PROCESS_ATTACH, so we can put some initialize stuff in here incase main() is hooked or statically modified by the attacker
             {
-                if (!UnmanagedGlobals::SetExceptionHandler)
-                {
-                    SetUnhandledExceptionFilter(UnmanagedGlobals::ExceptionHandler);
+                WinVersion = Services::GetWindowsVersion();
 
-                    if (!AddVectoredExceptionHandler(1, UnmanagedGlobals::ExceptionHandler))
+                if (!SetExceptionHandler)
+                {
+                    SetUnhandledExceptionFilter(g_ExceptionHandler);
+
+                    if (!AddVectoredExceptionHandler(1, g_ExceptionHandler))
                     {
                         Logger::logf(Err, " Failed to register Vectored Exception Handler @ TLSCallback: %d\n", GetLastError());
                     }
 
-                    UnmanagedGlobals::SetExceptionHandler = true;
+                    SetExceptionHandler = true;
                 }
 
-                UnmanagedGlobals::FirstProcessAttach = false;
+                FirstProcessAttach = false;
             }
             else
             {
@@ -278,10 +278,8 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
             }
         }break;
 
-        case DLL_PROCESS_DETACH: //program exit, clean up any memory allocated
+        case DLL_PROCESS_DETACH: //program exit, clean up any memory allocated if required
         {
-            UnmanagedGlobals::ThreadList->clear();
-            delete UnmanagedGlobals::ThreadList;
         }break;
 
         case DLL_THREAD_ATTACH: //add to our thread list, or if thread is not executing valid address range, patch over execution address
@@ -292,14 +290,10 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
                 Logger::logf(Warning, " Failed to hide thread from debugger @ TLSCallback: thread id %d\n", GetCurrentThreadId());
             }
 #endif
-            if (!UnmanagedGlobals::AddThread(GetCurrentThreadId()))
-            {
-                Logger::logf(Err, " Failed to add thread to ThreadList @ TLSCallback: thread id %d\n", GetCurrentThreadId());
-            }
 
-            if (UnmanagedGlobals::SupressingNewThreads)
+            if (SupressingNewThreads)
             {
-                if (Services::GetWindowsVersion() == Windows11) //Windows 11 no longer has the thread's start address on the its stack, bummer
+                if (WinVersion == Windows11) //Windows 11 no longer has the thread's start address on the its stack, bummer. don't have a W11 machine either at home
                     return;
 
                 UINT64 ThreadExecutionAddress = *(UINT64*)((UINT64)_AddressOfReturnAddress() + ThreadExecutionAddressStackOffset); //check down the stack for the thread execution address, compare it to good module range, and if not in range then we've detected a rogue thread
@@ -343,7 +337,6 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 
         case DLL_THREAD_DETACH:
         {
-            UnmanagedGlobals::RemoveThread(GetCurrentThreadId());
         }break;
     };
 }
@@ -352,7 +345,7 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
     ExceptionHandler - User defined exception handler which catches program-wide exceptions
     ...Currently we are not doing anything special with this, but we'll leave it here incase we need it later
 */
-LONG WINAPI UnmanagedGlobals::ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo)  //handler that will be called whenever an unhandled exception occurs in any thread of the process
+LONG WINAPI g_ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo)  //handler that will be called whenever an unhandled exception occurs in any thread of the process
 {
     DWORD exceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
 

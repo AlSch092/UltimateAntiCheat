@@ -163,7 +163,7 @@ Error API::Dispatch(AntiCheat* AC, DispatchCode code)
 	{
 		case INITIALIZE:
 		{			
-			errorCode = Initialize(AC, "GAMECODE-XyIlqRmRj", AC->GetConfig()->bNetworkingEnabled); //if explorer.exe isn't our parent process, shut 'er down!
+			errorCode = Initialize(AC, "GAMECODE-XyIlqRmRj", AC->GetConfig()->bNetworkingEnabled); //if our parent process isn't whitelisted, shut 'er down!
 
 			if (errorCode == Error::OK)
 			{

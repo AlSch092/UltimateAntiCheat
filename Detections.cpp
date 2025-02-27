@@ -1,7 +1,7 @@
 //By AlSch092 @github
 #include "Detections.hpp"
 
-Detections::Detections(shared_ptr<Settings> s, BOOL StartMonitor, shared_ptr<NetClient> client) : Config(s), netClient(client)
+Detections::Detections(Settings* s, BOOL StartMonitor, shared_ptr<NetClient> client) : Config(s), netClient(client)
 {
     this->InitializeBlacklistedProcessesList();
 
@@ -11,8 +11,22 @@ Detections::Detections(shared_ptr<Settings> s, BOOL StartMonitor, shared_ptr<Net
 
     try
     {
-        _Proc = make_unique<Process>(EXPECTED_SECTIONS);
-        _Services = make_unique<Services>(true);
+		auto sections = Process::GetSections(_MAIN_MODULE_NAME);
+
+        if(sections.size() > 0)
+            _Proc = make_unique<Process>(sections.size());
+        else
+            _Proc = make_unique<Process>(6); //.text , .rdata, .data, .pdata, .rsrc, .reloc, .tls, 
+
+        Process::SetNumSections(sections.size());
+
+        for (ProcessData::Section* section : sections)
+        {
+            if (section != nullptr)
+                delete section;
+        }
+
+        _Services = make_unique<Services>();
 
         integrityChecker = make_shared<Integrity>(ModuleList);
     }
@@ -132,7 +146,8 @@ void Detections::CheckDLLSignature()
             }
             else
             {
-                this->PassedCertCheckModules.push_back(FullDllName);
+                if(find(this->PassedCertCheckModules.begin(), this->PassedCertCheckModules.end(), FullDllName) == this->PassedCertCheckModules.end())
+                    this->PassedCertCheckModules.push_back(FullDllName); //add proper signed module to cache
             }
         }
     }
@@ -192,12 +207,12 @@ void Detections::Monitor(__in LPVOID thisPtr)
             if (section == nullptr)
                 continue;
 
-            if (strcmp(section->name, ".text") == 0) //cache our .text sections address and memory size, since an attacker could possibly spoof the section name or # of sections in ntheaders to prevent section traversing
+            if(section->name == ".text")          
             {
-                CachedTextSectionAddress = section->address + ModuleAddr; //any strings such as ".text" can be encrypted at compile time and decrypted at runtime to make reversing a bit more difficult
+                CachedTextSectionAddress = section->address + ModuleAddr;  //cache our .text sections address and memory size, since an attacker could possibly spoof the section name or # of sections in ntheaders to prevent section traversing
                 CachedTextSectionSize = section->size;
             }
-            else if (strcmp(section->name, ".rdata") == 0)
+            else if (section->name == ".rdata")
             {
                 CachedRDataSectionAddress = section->address + ModuleAddr;
                 CachedRDataSectionSize = section->size;
@@ -413,23 +428,33 @@ bool Detections::SetSectionHash(__in const char* moduleName, __in const char* se
 {
     if (moduleName == nullptr || sectionName == nullptr)
     {
+        Logger::logf(Err, "one or more parameters were nullptr @ SetSectionHash");
+        return false;
+    }
+
+    if (GetIntegrityChecker() == nullptr)
+    {
+		Logger::logf(Err, "IntegrityChecker was nullptr @ SetSectionHash");
+		return false;
+    }
+
+    bool funcFailed = false;
+
+    UINT64 ModuleAddr = (UINT64)GetModuleHandleA(moduleName);
+
+    if (ModuleAddr == 0)
+    {
+        Logger::logf(Err, "ModuleAddr was 0 @ SetSectionHash");
         return false;
     }
 
     list<ProcessData::Section*> sections = Process::GetSections(moduleName);
     
-    UINT64 ModuleAddr = (UINT64)GetModuleHandleA(moduleName);
-
-    if (ModuleAddr == 0)
-    {
-        Logger::logf(Err, "ModuleAddr was 0 @ SetSectionHash\n", sectionName);
-        return false;
-    }
-
     if (sections.size() == 0)
     {
-        Logger::logf(Err, "sections.size() of section %s was 0 @ SetSectionHash\n", sectionName);
-        return false;
+        Logger::logf(Err, "sections.size() of section %s was 0 @ SetSectionHash", sectionName);
+        funcFailed = true;
+        goto cleanup;
     }
 
     for (auto section : sections) 
@@ -437,7 +462,7 @@ bool Detections::SetSectionHash(__in const char* moduleName, __in const char* se
         if (section == nullptr)
             continue;
 
-        if (strcmp(section->name, sectionName) == 0)
+		if (section->name == sectionName)
         {
             vector<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)section->address + ModuleAddr, section->size);
 
@@ -449,12 +474,20 @@ bool Detections::SetSectionHash(__in const char* moduleName, __in const char* se
             else
             {
                 Logger::logf(Err, "hashes.size() was 0 @ SetSectionHash", sectionName);
-                return false;
+                funcFailed = true;
+                goto cleanup;
             }
         }
     }
 
-    return true;
+cleanup:
+    for (auto section : sections)
+    {
+        if (section != nullptr)
+            delete section;
+    }
+
+    return !funcFailed;
 }
 
 /*
@@ -465,7 +498,7 @@ bool Detections::IsSectionHashUnmatching(__in const UINT64 cachedAddress, __in c
 {
     if (cachedAddress == 0 || cachedSize == 0)
     {
-        Logger::logf(Err, "Parameters were 0 @ Detections::CheckSectionHash");
+        Logger::logf(Err, "Parameters were 0 @ Detections::IsSectionHashUnmatching");
         return false;
     }
 

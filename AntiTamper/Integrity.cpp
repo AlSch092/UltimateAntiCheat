@@ -165,7 +165,7 @@ ModuleHashData* Integrity::GetModuleHash(__in const wchar_t* moduleName)
 
 	for (auto s : sections)
 	{
-		if (strcmp(s->name, ".text") == 0)
+		if (s->name == ".text")
 		{
 			uint64_t sec_addr = (uint64_t)(s->address) + (uint64_t)GetModuleHandleA(modName.c_str());
 			vector<uint64_t> hashes = GetMemoryHash(sec_addr, s->size); //make hashes of .text of module
@@ -256,7 +256,7 @@ void Integrity::AddModuleHash(__in vector<ModuleHashData*> moduleHashList, __in 
 
 	for (auto s : sections)
 	{
-		if (strcmp(s->name, ".text") == 0)
+		if (s->name == ".text")
 		{
 			uint64_t sec_addr = (uint64_t)(s->address) + (uint64_t)GetModuleHandleA(modName.c_str());
 			vector<uint64_t> hashes = GetMemoryHash(sec_addr, s->size); //get hashes of .text of module
@@ -372,6 +372,7 @@ vector<uint64_t> Integrity::GetSectionHashFromDisc(wstring path, const char* sec
 
 	IMAGE_DOS_HEADER dosHeader;
 	file.read(reinterpret_cast<char*>(&dosHeader), sizeof(IMAGE_DOS_HEADER));
+	
 	if (dosHeader.e_magic != IMAGE_DOS_SIGNATURE)
 	{
 		Logger::logfw(Detection, L"Lacking MZ signature in file: %s @ GetSectionHashFromDisc", path.c_str());
@@ -389,6 +390,7 @@ vector<uint64_t> Integrity::GetSectionHashFromDisc(wstring path, const char* sec
 
 	IMAGE_SECTION_HEADER sectionHeader;
 	bool found = false;
+	
 	for (int i = 0; i < ntHeaders.FileHeader.NumberOfSections; i++)
 	{
 		file.read(reinterpret_cast<char*>(&sectionHeader), sizeof(IMAGE_SECTION_HEADER));

@@ -2,19 +2,13 @@
 #pragma once
 #include <Windows.h>
 #include "../Common/Logger.hpp"
+#include "Memory/ntdll.h"
 
 #ifdef _WIN64
 #define IS_64_BIT 1
 #else
 #define IS_64_BIT 0
 #endif
-
-typedef struct _UNICODE_STRING
-{
-	USHORT Length;
-	USHORT MaximumLength;
-	PWSTR Buffer;
-} UNICODE_STRING, * PUNICODE_STRING;
 
 typedef struct _RTL_USER_PROCESS_PARAMETERS
 {

@@ -41,11 +41,15 @@ public:
         return logColors.at(type);
     }
 
-    static void logToFile(std::string& message) {
-        if (logFileName.empty()) {
+    static void logToFile(std::string& message) 
+    {
+        if (logFileName.empty()) 
+        {
             return;
         }
+        
         std::ofstream logFile(logFileName, std::ios::out | std::ios::app);
+
         if (!logFile.is_open())
         {
             std::cerr << "Error: Could not open log file: " << logFileName << std::endl;
@@ -69,14 +73,17 @@ public:
 
     static void log(LogType type, const std::string& message)
     {
-        if (!enableLogging) {
+        if (!enableLogging) 
+        {
             return;
         }
+
         std::lock_guard<std::mutex> lock(consoleMutex);
 
         std::string msg_with_errorcode;
 
-        const std::map<LogType, const std::string> msgsTypes = {
+        const std::map<LogType, const std::string> msgsTypes = 
+        {
             { LogType::Detection,  "[DETECTION] "},
             { LogType::Info, "[INFO] " },
             { LogType::Err, "[ERROR] " },
@@ -93,11 +100,15 @@ public:
         ResetColor();
     }
 
-    static void logToWFile(std::wstring& message) {
-        if (logFileName.empty()) {
+    static void logToWFile(std::wstring& message) 
+    {
+        if (logFileName.empty()) 
+        {
             return;
         }
+        
         std::wofstream logFile(logFileName, std::ios::out | std::ios::app);
+        
         if (!logFile.is_open())
         {
             std::cerr << "Error: Could not open log file: " << logFileName << std::endl;
@@ -124,13 +135,15 @@ public:
 
     static void logw(LogType type, const std::wstring& message)
     {
-        if (!enableLogging) {
+        if (!enableLogging) 
+        {
             return;
         }
 
         std::wstring msg_with_errorcode;
 
-        const std::map<LogType, const std::wstring> msgsTypes = {
+        const std::map<LogType, const std::wstring> msgsTypes =
+        {
             { LogType::Detection,  L"[DETECTION] "},
             { LogType::Info, L"[INFO] " },
             { LogType::Err, L"[ERROR] " },
@@ -156,6 +169,7 @@ public:
         char buffer[buffSize] {0};
 
         int ret = std::snprintf(buffer, buffSize, format, args...);
+
         if (ret >= 0 && ret < buffSize)
         {
             log(type, std::string(buffer));

@@ -1,6 +1,6 @@
 #include "AntiCheat.hpp"
 
-AntiCheat::AntiCheat(shared_ptr<Settings> config, WindowsVersion WinVersion) : Config(config), WinVersion(WinVersion)
+AntiCheat::AntiCheat(Settings* config, WindowsVersion WinVersion) : Config(config), WinVersion(WinVersion)
 {
 	if (config == nullptr)
 	{
@@ -129,8 +129,9 @@ bool AntiCheat::DoPreInitializeChecks()
 			else
 			{
 				Logger::logf(Detection, "Hypervisor was present with unknown/non-standard vendor: %s.", vendor.c_str());
-				return false;
 			}
+
+			return false;
 		}
 	}
 

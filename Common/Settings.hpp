@@ -1,31 +1,33 @@
 //By AlSch092 @ Github, part of UltimateAntiCheat project
 #pragma once
 #include <memory>
+#include "Logger.hpp" //to access static variables `Logger::enableLogging `, `Logger::logFileName`
 
-#include "Logger.hpp"
+using namespace std;
+
 //Settings don't come in a .ini or .cfg file as we don't want end-users modifying program flow on compiled releases
 class Settings final
 {
 public:
 
-	static shared_ptr<Settings> CreateInstance(
-		bool bNetworkingEnabled, 
-		bool bEnforceSecureBoot,
-		bool bEnforceDSE,
-		bool bEnforceNoKDbg,
-		bool bUseAntiDebugging,
-		bool bCheckIntegrity,
-		bool bCheckThreads,
-		bool bCheckHypervisor, 
-		bool bRequireRunAsAdministrator,
-		bool bUsingDriver,
-		const std::list<std::wstring> allowedParents,
-		bool enableLogging,
-		const std::string logFileName)
+	static Settings* CreateInstance(
+		const bool bNetworkingEnabled,
+		const bool bEnforceSecureBoot,
+		const bool bEnforceDSE,
+		const bool bEnforceNoKDbg,
+		const bool bUseAntiDebugging,
+		const bool bCheckIntegrity,
+		const bool bCheckThreads,
+		const bool bCheckHypervisor,
+		const bool bRequireRunAsAdministrator,
+		const bool bUsingDriver,
+		const list<wstring> allowedParents,
+		const bool enableLogging,
+		const string logFileName)
 	{
 		if (!Instance)
 		{
-			Instance = std::shared_ptr<Settings>(new Settings(
+			Instance = new Settings(
 				bNetworkingEnabled, 
 				bEnforceSecureBoot, 
 				bEnforceDSE, 
@@ -38,7 +40,8 @@ public:
 				bUsingDriver,
 				allowedParents,
 				enableLogging,
-				logFileName));
+				logFileName
+			);
 		}
 
 		return Instance;
@@ -57,38 +60,47 @@ public:
 	bool bRequireRunAsAdministrator;
 
 	bool bNetworkingEnabled; //previously in API.hpp
-	bool bUsingDriver; //signed kernelmode driver for hybrid approach
-	const std::list<std::wstring> allowedParents;
+	bool bUsingDriver; //signed + msft approved kernelmode driver for hybrid approach
+	list<wstring> allowedParents;
+	
 	bool enableLogging;
-	const std::string logFileName;
+	string logFileName;
 
 	wstring GetKMDriverName() const { return this->KMDriverName; }
 	wstring GetKMDriverPath() const { return this->KMDriverPath; }
-
-private:
+	wstring GetKMDriverSignee() const { return this->KMDriverSignee; }
 
 	Settings(
-		bool bNetworkingEnabled, 
-		bool bEnforceSecureBoot, 
-		bool bEnforceDSE, 
-		bool bEnforceNoKDbg, 
-		bool bUseAntiDebugging,
-		bool bCheckIntegrity,
-		bool bCheckThreads,
-		bool bCheckHypervisor, 
-		bool bRequireRunAsAdministrator,
-		bool bUsingDriver,
-		const std::list<std::wstring> allowedParents,
-		bool enableLogging,
-		const std::string logFileName)
+		const bool bNetworkingEnabled,
+		const bool bEnforceSecureBoot,
+		const bool bEnforceDSE,
+		const bool bEnforceNoKDbg,
+		const bool bUseAntiDebugging,
+		const bool bCheckIntegrity,
+		const bool bCheckThreads,
+		const bool bCheckHypervisor,
+		const bool bRequireRunAsAdministrator,
+		const bool bUsingDriver,
+		const list<wstring> allowedParents,
+		const bool enableLogging,
+		const string logFileName)
 		: bNetworkingEnabled(bNetworkingEnabled), bEnforceSecureBoot(bEnforceSecureBoot), bEnforceDSE(bEnforceDSE), bEnforceNoKDbg(bEnforceNoKDbg), bUseAntiDebugging(bUseAntiDebugging), bCheckIntegrity(bCheckIntegrity), bCheckThreads(bCheckThreads), bCheckHypervisor(bCheckHypervisor), bRequireRunAsAdministrator(bRequireRunAsAdministrator), bUsingDriver(bUsingDriver), allowedParents(allowedParents), enableLogging(enableLogging), logFileName(logFileName)
 	{
+		if (Instance != nullptr) //since we can't use a private constructor with ProtectedMemory class, we need to check if the instance is already created
+		{
+			throw runtime_error("The Settings object instance already exists!");
+		}
+
 		Logger::enableLogging = enableLogging; //put this line here to be as early as possible.
 		Logger::logFileName = logFileName;
 	}
 	 
+	static Settings* Instance; //singleton-style instance
+
+private:
 	const wstring KMDriverName = L"UltimateKernelAnticheat"; //optional hybrid approach
 	const wstring KMDriverPath = L".\\UltimateKernelAnticheat.sys"; 
+	const wstring KMDriverSignee = L"YourCoolCompany Ltd.";
 
-	static std::shared_ptr<Settings> Instance; //singleton-style, one unique instance (but still shared between classes, thus shared_ptr)
+
 }; 

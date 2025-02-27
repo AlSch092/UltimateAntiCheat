@@ -42,8 +42,8 @@ struct DeviceW
 enum WindowsVersion
 {									//Major,Minor :
 	Windows2000 = 50,				//5,0
-	WindowsXP = 51,			    //5,1
-	WindowsXPProfessionalx64 = 52,	//5,2
+	WindowsXP = 51,			                //5,1
+	WindowsXPProfessionalx64 = 52,	                //5,2
 	WindowsVista = 60,				//6,0
 	Windows7 = 61,					//6,1
 	Windows8 = 62,					//6,2
@@ -61,21 +61,19 @@ class Services final
 {
 public:
 
-	Services(__in const bool Initialize)
+	Services()
 	{
-		if (Initialize)
-		{
-			HardwareDevices = GetHardwareDevicesW(); //fetch PCI devices
-			GetLoadedDrivers();
-			GetServiceModules();
 
-			//these 3 drivers are unsigned, and have no file on disk but cant still run in memory while secure boot & DSE is on - crash-dump related drivers windows uses
-			WhitelistedUnsignedDrivers.emplace_back(wstring(L"\\SystemRoot\\System32\\Drivers\\dump_diskdump.sys"));
-			WhitelistedUnsignedDrivers.emplace_back(wstring(L"\\SystemRoot\\System32\\Drivers\\dump_storahci.sys"));
-			WhitelistedUnsignedDrivers.emplace_back(wstring(L"\\SystemRoot\\System32\\Drivers\\dump_dumpfve.sys"));
+		HardwareDevices = GetHardwareDevicesW(); //fetch PCI devices
+		GetLoadedDrivers();
+		GetServiceModules();
 
-			FetchBlacklistedDrivers(BlacklistedDriversRepository);
-		}
+		//these 3 drivers are unsigned, and have no file on disk but cant still run in memory while secure boot & DSE is on - crash-dump related drivers windows uses
+		WhitelistedUnsignedDrivers.emplace_back(wstring(L"\\SystemRoot\\System32\\Drivers\\dump_diskdump.sys"));
+		WhitelistedUnsignedDrivers.emplace_back(wstring(L"\\SystemRoot\\System32\\Drivers\\dump_storahci.sys"));
+		WhitelistedUnsignedDrivers.emplace_back(wstring(L"\\SystemRoot\\System32\\Drivers\\dump_dumpfve.sys"));
+
+		FetchBlacklistedDrivers(BlacklistedDriversRepository);		
 	}
 
 	~Services()

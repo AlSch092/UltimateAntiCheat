@@ -23,7 +23,7 @@ class AntiCheat final
 {
 public:
 
-	AntiCheat(shared_ptr<Settings> config, WindowsVersion WinVersion);
+	AntiCheat(__in Settings* config, __in const WindowsVersion WinVersion);
 
 	~AntiCheat();
 
@@ -42,7 +42,7 @@ public:
 	
 	Detections* GetMonitor() const { return this->Monitor.get(); }
 
-	Settings* GetConfig() const { return this->Config.get(); }
+	Settings* GetConfig() const { return this->Config; }
 
 	bool IsAnyThreadSuspended();
 
@@ -58,7 +58,7 @@ private:
 
 	shared_ptr <NetClient> NetworkClient; //for client-server comms, our other classes need access to this to send detected flags to the server
 	
-	shared_ptr<Settings> Config; //the unique_ptr for this is made in main.cpp
+	Settings* Config = nullptr; //the unique_ptr for this is made in main.cpp
 
 	WindowsVersion WinVersion;
 

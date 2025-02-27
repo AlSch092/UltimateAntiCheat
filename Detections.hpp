@@ -6,7 +6,6 @@
 #include "AntiTamper/Integrity.hpp" //Code Integrity
 #include "Environment/Services.hpp" //`Services` class
 #include "Obscure/Obfuscation.hpp" //`ObfuscatedData` class
-#include "Common/Globals.hpp" //`UnmanagedGlobals` namespace
 #include "Common/DetectionFlags.hpp"
 #include "Obscure/ntldr.hpp" //dll notification structures
 #include <Wbemidl.h> //for process event creation (WMI)
@@ -30,7 +29,7 @@ class Detections final
 {
 public:
 
-	Detections(shared_ptr<Settings> s, BOOL StartMonitor, shared_ptr<NetClient> client);
+	Detections(Settings* s, BOOL StartMonitor, shared_ptr<NetClient> client);
 	~Detections();
 
 	Detections(Detections&&) = delete;  //delete move constructr
@@ -95,11 +94,11 @@ public:
 	void SetUnsignedLoadedDriversList(list<wstring> unsignedDrivers) { this->UnsignedDriversLoaded = unsignedDrivers; }
 	list<wstring> GetUnsignedLoadedDriversList() const { return this->UnsignedDriversLoaded; }
 
-	Settings* GetConfig() const { return this->Config.get(); }
+	Settings* GetConfig() const { return this->Config; }
 
 private:
 
-	shared_ptr<Settings> Config = nullptr; //non-owning pointer to the original unique_ptr<Settings> in main.cpp
+	Settings* Config = nullptr; //non-owning pointer to the original unique_ptr<Settings> in main.cpp
 
 	void InitializeBlacklistedProcessesList();
 

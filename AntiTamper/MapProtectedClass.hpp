@@ -72,7 +72,7 @@ public:
         }
     }
 
-    ~ProtectedMemory() //RAII destructor - unmap view of section
+    ~ProtectedMemory() // unmap view of section
     {
         if (hSection && hSection != INVALID_HANDLE_VALUE)
         {
@@ -85,8 +85,6 @@ public:
             NtUnmapViewOfSection(NtCurrentProcess(), pViewBase);
         }
     }
-
-    PVOID GetBaseAddress() const { return pViewBase; }
 
     template<typename T, typename... Args>      //"placement new" concept using variadic template
     T* Construct(Args&&... args)

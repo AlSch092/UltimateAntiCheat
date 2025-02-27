@@ -1,3 +1,4 @@
+//This file originally taken from the self-remapping code github project by author changeofpace https://github.com/changeofpace/self-remapping-code
 #pragma once
 #include <Windows.h>
 

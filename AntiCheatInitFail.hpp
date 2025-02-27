@@ -42,7 +42,6 @@ class AntiCheatInitFail : public std::exception
 			{ DriverLoadFail, "" },
 			{ DispatchFail, "" },
 			{ PreInitializeChecksDidNotPass, ""}
-
     };
 	#endif
 };

@@ -6,7 +6,6 @@
 #include "Obscure/Obfuscation.hpp"
 #include "Common/Error.hpp"
 #include "Common/Utility.hpp"
-#include "Common/Globals.hpp"
 #include "Common/Settings.hpp"
 #include "AntiTamper/Integrity.hpp"
 
@@ -14,7 +13,7 @@ class Preventions final
 {
 public:
 
-	Preventions(__in shared_ptr<Settings> config, __in bool preventingThreads, __in shared_ptr<Integrity> integrityChecker) : IsPreventingThreadCreation(preventingThreads), integrityChecker(integrityChecker), Config(config)
+	Preventions(__in Settings* config, __in bool preventingThreads, __in shared_ptr<Integrity> integrityChecker) : IsPreventingThreadCreation(preventingThreads), integrityChecker(integrityChecker), Config(config)
 	{
 	}
 
@@ -53,9 +52,9 @@ public:
 
 private:
 
-	bool IsPreventingThreadCreation; //used in TLS callback if we want to supress or track new threads
+	bool IsPreventingThreadCreation = false; //used in TLS callback if we want to supress or track new threads
 
 	shared_ptr<Integrity> integrityChecker = nullptr;
 
-	shared_ptr<Settings> Config = nullptr;
+	Settings* Config = nullptr;
 };

@@ -4,7 +4,7 @@
 class DebuggerDetections final  : public Debugger::AntiDebug
 {
 public:
-    DebuggerDetections(shared_ptr<Settings> s, shared_ptr<NetClient> netClient) : Debugger::AntiDebug(s, netClient) 
+    DebuggerDetections(Settings* s, shared_ptr<NetClient> netClient) : Debugger::AntiDebug(s, netClient) 
     {
         AddDetectionFunction([this]() -> bool { return _IsDebuggerPresent(); });
         AddDetectionFunction([this]() -> bool { return _IsDebuggerPresent_HeapFlags(); });

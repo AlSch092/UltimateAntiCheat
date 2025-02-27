@@ -11,8 +11,9 @@ bool Preventions::RandomizeModuleName()
 
     int moduleNameSize = (int)wcslen(_MAIN_MODULE_NAME_W);
 
-    if (moduleNameSize == 0)
+    if (moduleNameSize == 0) //this will only hit if _MAIN_MODULE_NAME_W  definition is set to an empty string
     {
+        Logger::logf(Err, "string length of definition _MAIN_MODULE_NAME_W was 0 @ Preventions::RandomizeModuleName");
         return false;
     }
 
@@ -21,9 +22,9 @@ bool Preventions::RandomizeModuleName()
     if (Process::ChangeModuleName(_MAIN_MODULE_NAME_W, newModuleName)) //in addition to changing export function names, we can also modify the names of loaded modules/libraries.
     {
         success = true;
-        UnmanagedGlobals::wCurrentModuleName = wstring(newModuleName);
-        UnmanagedGlobals::CurrentModuleName = Utility::ConvertWStringToString(UnmanagedGlobals::wCurrentModuleName);
-        
+
+        Process::SetExecutableModuleName(newModuleName);
+      
         ProcessData::MODULE_DATA* mod = Process::GetModuleInfo(newModuleName.c_str());
         
         if (mod != nullptr)
@@ -32,7 +33,7 @@ bool Preventions::RandomizeModuleName()
             delete mod;
         }
 
-        Logger::logfw(Info, L"Changed module name to: %s\n", UnmanagedGlobals::wCurrentModuleName.c_str());
+        Logger::logfw(Info, L"Changed module name to: %s\n", newModuleName.c_str());
     }
 
     return success;
@@ -131,7 +132,7 @@ bool Preventions::RemapProgramSections()
 */
 bool Preventions::StopMultipleProcessInstances()
 {
-    HANDLE hSharedMemory = CreateFileMappingA(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(int), " "); //shared memory with blank name
+    HANDLE hSharedMemory = CreateFileMappingA(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(int), "UAC");
 
     if (hSharedMemory == NULL)
     {
