@@ -1,4 +1,6 @@
 ## Updates
+- Feb 28, '25: Fix manually mapped image detection, now properly detecting erased PE headers. Further development of any new detection & prevention methods will be ending due to lack of funding; I can no longer give out free work since I can't find any for myself. Any further development of the project will likely switch to being related to design and code cleanliness.  
+
 - Feb 26, '25: Add `ProtectedMemory` class (write protected and resistant to page security modifications via `SEC_NO_CHANGE`) in `AntiTamper/MapProtectedClass.hpp`, make `Settings` class object `ProtectedMemory` to prevent modification of config at runtime, remove `UnmanagedGlobals` namespace, remove `EXPECTED_SECTIONS` define and instead make it fetch at runtime (makes it compatible with any game/number of sections).  
   
 - Feb 22, '25: Added caching for cert checks of loaded drivers & modules, added revoke checks in `VerifyEmbeddedSignature` and `VerifyCatalogSignature`, removed cache-only for cert checking, added `BOOL checkRevoked` for `HasSignature`. Cleaned up `API::LaunchDefenses`.  
