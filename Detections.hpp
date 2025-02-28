@@ -87,7 +87,7 @@ public:
 
 	static void MonitorImportantRegistryKeys(__in LPVOID thisPtr); //threaded func, pass this class ptr to it
 
-	static bool DetectManualMapping(__in const HANDLE hProcess);
+	static vector<uint64_t> DetectManualMapping();
 
 	static bool WasProcessNotRemapped(); //detect if someone prevented section remapping. could possibly go into Integrity class
 

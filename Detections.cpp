@@ -296,9 +296,14 @@ void Detections::Monitor(__in LPVOID thisPtr)
             Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
         }
 
-        if (Monitor->DetectManualMapping(GetCurrentProcess()))
+        vector<uint64_t> mappedRegions = Monitor->DetectManualMapping();
+        if (mappedRegions.size() > 0)
         {
-            Logger::logf(Detection, "Found potentially manually mapped region!");
+            for (uint64_t mappedRegionAddress : mappedRegions)
+            {
+                Logger::logf(Detection, "Found potentially manually mapped region at: %llX", mappedRegionAddress);
+            }
+
             Monitor->Flag(DetectionFlags::MANUAL_MAPPING);
         }
 
@@ -1196,22 +1201,29 @@ void Detections::MonitorImportantRegistryKeys(__in LPVOID thisPtr)
 
 /*
     DetectManualMapping - detects if a manually mapped module is injected. also tries to detect PE header erased mapped modules, however this is tricky and possible to throw false positives!
-    returns `true` if manual mapped was found  **NOTE - This routine is not yet finished, it works with basic PE header finding but throws false positives
+    returns a vector of memory addresses (uint64_t), representing suspicious memory regions not belonging to a loaded module
 */
-bool Detections::DetectManualMapping(__in const HANDLE hProcess)
+vector<uint64_t> Detections::DetectManualMapping()
 {
     auto modules = Process::GetLoadedModules();
 
+    if (modules.size() == 0)
+    {
+        Logger::logf(Err, "Failed to fetch list of loaded modules @ DetectManualMapping");
+        return {};
+    }
+
+    vector<uint64_t> SuspiciousRegions;
+
     MEMORY_BASIC_INFORMATION mbi;
+    uint64_t CurrentRegionAddr = 0;  //starting address to scan from
+    uintptr_t userModeLimit = 0x00007FFFFFFFFFFF; 	// 64-bit user-mode memory typically ends around 0x00007FFFFFFFFFFF
 
-    uint64_t addr = 0;  //scan start address
-    uintptr_t userModeLimit = 0x00007FFFFFFFFFFF; //end scan at va
-
-    while ((uintptr_t)addr < userModeLimit && VirtualQuery((LPCVOID)addr, &mbi, sizeof(mbi)) == sizeof(mbi)) //loop through all memory regions in the process
+    while ((uintptr_t)CurrentRegionAddr < userModeLimit && VirtualQuery((LPCVOID)CurrentRegionAddr, &mbi, sizeof(mbi)) == sizeof(mbi)) //loop through all memory regions in the process
     {
         if (mbi.State != MEM_COMMIT) //skip memory regions that are reserved or free
         {
-            addr += mbi.RegionSize;
+            CurrentRegionAddr += mbi.RegionSize;
             continue;
         }
 
@@ -1219,87 +1231,67 @@ bool Detections::DetectManualMapping(__in const HANDLE hProcess)
         {
             if (Integrity::IsAddressInModule(modules, (uintptr_t)mbi.BaseAddress)) //check if the memory region is part of a known module
             {
-                addr += mbi.RegionSize; //skip modules which have been loaded properly
+                CurrentRegionAddr += mbi.RegionSize; //skip modules which have been loaded properly
                 continue;
             }
 
-            unsigned char buffer[512];
+            unsigned char buffer[512]{ 0 };
 
             memcpy_s(buffer, sizeof(buffer), (const void*)mbi.BaseAddress, sizeof(buffer));
 
-            if (Integrity::IsPEHeader(buffer)) //if the PE header is deleted, this won't detect it
+            if (Integrity::IsPEHeader(buffer)) //if the PE header is deleted, this won't detect it, so tackle that in the "else" block below
             {
-                Logger::logf(Detection, "Suspicious memory region found at %llX with PE header", mbi.BaseAddress);
-                return true;
+                Logger::logf(Detection, "Suspicious PE header found at address %llX", mbi.BaseAddress);
+                SuspiciousRegions.push_back((uint64_t)mbi.BaseAddress);
             }
-            //else //check for possible erased headers with manual mapping, this will be the tricky to do with 100% accuracy due to possible differing section alignment
-            //{
-            //	PSAPI_WORKING_SET_EX_INFORMATION wsInfo; //TODO: finish this when I have a bit of time
-            //	wsInfo.VirtualAddress = mbi.BaseAddress;
+            else //check for erased PE headers. * confirmed working against some manual mappers found on github *
+            {
+                PSAPI_WORKING_SET_EX_INFORMATION wsInfo;
+                wsInfo.VirtualAddress = mbi.BaseAddress;
 
-            //	bool foundPossibleErasedHeaderModule = true;
-            //	if (QueryWorkingSetEx(hProcess, &wsInfo, sizeof(wsInfo)))
-            //	{
-            //		if (wsInfo.VirtualAttributes.Valid)
-            //		{
-            //			if (!wsInfo.VirtualAttributes.Shared)
-            //			{
-            //				for (int i = 0; i < sizeof(buffer); i++) //check for erased header manually mapped module
-            //				{
-            //					if (buffer[i] != 0)
-            //					{
-            //						foundPossibleErasedHeaderModule = false;
-            //						break; //possibly not an erased header if 00 isn't found, however 'erasing' a header could also mean replacing with something else than 00's 
-            //					}
-            //				}
+                bool foundPossibleErasedHeaderModule = true;
 
-            //				if (!foundPossibleErasedHeaderModule)
-            //				{
-            //					addr += mbi.RegionSize;
-            //					continue;
-            //				}
+                if (QueryWorkingSetEx(GetCurrentProcess(), &wsInfo, sizeof(wsInfo)))
+                {
+                    if (wsInfo.VirtualAttributes.Valid)
+                    {
+                        if (!wsInfo.VirtualAttributes.Shared)  // If not shared, it's likely private
+                        {
+                            bool foundPossibleSection = false; // I may end up introducing capstone in the project, parsing possible instructions would be great for this routine to have
+                            unsigned char bufferPossibleMappedSection[128] { 0 };
 
-            //				bool foundPossibleTextSection = false;
-            //				unsigned char buffer_possibleTextSection[128];
-            //				const UINT64 defaultTextSectionOffset = 0x1000; //this could easily change with a more advanced manual mapper or different section alignment.. bleh
-            //				UINT64 possibleTextSectionAddress = (UINT64)(mbi.BaseAddress) + defaultTextSectionOffset;
+                            //todo: make some better way than just using a hardcoded offset , since this can be changed via section alignment in compilation
 
-            //				MEMORY_BASIC_INFORMATION mbi_2;
-            //				if (VirtualQuery((LPCVOID)possibleTextSectionAddress, &mbi_2, sizeof(mbi_2)) != sizeof(mbi_2))
-            //					continue;
+                            uint64_t possibleTextSectionAddress = (uint64_t)(mbi.BaseAddress);
 
-            //				if (mbi_2.State == MEM_COMMIT && (mbi_2.Protect & PAGE_EXECUTE))
-            //					memcpy_s(buffer_possibleTextSection, sizeof(buffer_possibleTextSection), (const void*)possibleTextSectionAddress, sizeof(buffer_possibleTextSection));
-            //				else
-            //					continue;
+                            //maybe i'll change this to memcpy_s() afterwards - this works fine currently and it's late at night, so maybe next time.
+                            if (ReadProcessMemory(GetCurrentProcess(), (LPCVOID)possibleTextSectionAddress, bufferPossibleMappedSection, sizeof(bufferPossibleMappedSection), NULL))
+                            {
+                                for (int i = 0; i < sizeof(bufferPossibleMappedSection) - 4; i++) // many manual mappers erase headers by replacing them with all 00's
+                                {
+                                    if (bufferPossibleMappedSection[i] != 0 && bufferPossibleMappedSection[i + 1] != 0 && bufferPossibleMappedSection[i + 2] != 0 && bufferPossibleMappedSection[i + 3] != 0)
+                                    {
+                                        foundPossibleSection = true;
+                                        break;
+                                    }
+                                }
+                            }
 
-            //				for (int i = 0; i < sizeof(buffer_possibleTextSection); i++)
-            //				{
-            //					if (buffer_possibleTextSection[i] != 0)
-            //					{
-            //						foundPossibleTextSection = true; //check for non 0x00's
-            //						break;
-            //					}
-            //				}
-            //				
-            //				if (foundPossibleTextSection) //this will be the most likely spot which gives false positives, but its also the trickest to detect
-            //				{
-            //					Logger::logf(Detection, " possible .text section of erased-header manual mapped module at %llX", possibleTextSectionAddress);
-            //					DWORD dwOldProt = 0;
-            //					VirtualProtect((LPVOID)possibleTextSectionAddress, 1024, PAGE_READONLY, &dwOldProt); //change this region to non-execute to possibly thwart injected executable code
-            //					delete modules;
-            //					return true;
-            //				}
-            //			}
-            //		}
-            //	}
-            //}		
+                            if (foundPossibleSection) //this will be the most likely spot which gives false positives, but its also the trickest to detect
+                            {
+                                SuspiciousRegions.push_back(possibleTextSectionAddress);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
-        addr += mbi.RegionSize;
+        CurrentRegionAddr += mbi.RegionSize;
     }
 
-    return false;
+
+    return SuspiciousRegions;
 }
 
 /*
