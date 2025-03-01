@@ -827,7 +827,7 @@ string Services::GetHypervisorVendor()
     Services::LoadDriver - register a service and load a driver given a driverName and driverPath using SCM
     return `true` on success
 */
-bool Services::LoadDriver(__in const std::wstring& driverName, __in const std::wstring& driverPath)
+bool Services::LoadDriver(__in const std::wstring& serviceName, __in const std::wstring& driverPath)
 {
     SC_HANDLE hSCManager = OpenSCManager(nullptr, nullptr, SC_MANAGER_CREATE_SERVICE);
 
@@ -841,8 +841,8 @@ bool Services::LoadDriver(__in const std::wstring& driverName, __in const std::w
 
     SC_HANDLE hService = CreateService(      //create driver service
         hSCManager,
-        driverName.c_str(),
-        driverName.c_str(),
+        serviceName.c_str(),
+        serviceName.c_str(),
         SERVICE_START | DELETE | SERVICE_STOP,
         SERVICE_KERNEL_DRIVER,
         SERVICE_DEMAND_START,
@@ -854,7 +854,7 @@ bool Services::LoadDriver(__in const std::wstring& driverName, __in const std::w
     {
         if (GetLastError() == ERROR_SERVICE_EXISTS)
         {
-            hService = OpenService(hSCManager, driverName.c_str(), SERVICE_START);
+            hService = OpenService(hSCManager, serviceName.c_str(), SERVICE_START);
         }
         else
         {
@@ -874,7 +874,7 @@ bool Services::LoadDriver(__in const std::wstring& driverName, __in const std::w
     }
 
     if(loadSuccess)
-        Logger::logfw(Info, L"Driver %s loaded successfully.", driverName.c_str());
+        Logger::logfw(Info, L"Driver %s loaded successfully.", serviceName.c_str());
 
     CloseServiceHandle(hService);
     CloseServiceHandle(hSCManager);
@@ -885,7 +885,7 @@ bool Services::LoadDriver(__in const std::wstring& driverName, __in const std::w
     Services::UnloadDriver - unregister the driver service and unload a driver given a driverName and driverPath using SCM
     return `true` on success
 */
-bool Services::UnloadDriver(__in const std::wstring& driverName)
+bool Services::UnloadDriver(__in const std::wstring& serviceName)
 {
     SC_HANDLE hSCManager = OpenSCManager(nullptr, nullptr, SC_MANAGER_CONNECT);
 
@@ -897,7 +897,7 @@ bool Services::UnloadDriver(__in const std::wstring& driverName)
         return false;
     }
 
-    SC_HANDLE hService = OpenService(hSCManager, driverName.c_str(), SERVICE_STOP | DELETE);
+    SC_HANDLE hService = OpenService(hSCManager, serviceName.c_str(), SERVICE_STOP | DELETE);
 
     if (!hService)
     {
@@ -925,7 +925,7 @@ bool Services::UnloadDriver(__in const std::wstring& driverName)
     }
 
     if(unloadSuccess)
-        Logger::logfw(Info, L"Driver %s unloaded successfully.", driverName.c_str());
+        Logger::logfw(Info, L"Driver %s unloaded successfully.", serviceName.c_str());
 
     CloseServiceHandle(hService);
     CloseServiceHandle(hSCManager);
@@ -1043,4 +1043,43 @@ wstring Services::GetProcessDirectoryW(__in const DWORD pid)
 
     CloseHandle(hProcess);
     return L"";
+}
+
+bool Services::IsDriverRunning(__in const std::wstring& serviceName)
+{
+    if (serviceName.size() == 0)
+        return false;
+
+    SC_HANDLE hSCManager = OpenSCManager(nullptr, nullptr, SC_MANAGER_ENUMERATE_SERVICE);
+
+    if (!hSCManager)
+    {
+        Logger::logfw(Warning, L"Failed to open SCM: %d", GetLastError());
+        return false;
+    }
+
+    //open driver service
+    SC_HANDLE hService = OpenService(hSCManager, serviceName.c_str(), SERVICE_QUERY_STATUS);
+
+    if (!hService)
+    {
+        Logger::logfw(Warning, L"Failed to open service: %d", GetLastError());
+        CloseServiceHandle(hSCManager);
+        return false;
+    }
+
+    SERVICE_STATUS status;
+
+    if (!QueryServiceStatus(hService, &status))     //query the service status
+    {
+        Logger::logfw(Warning, L"Failed to query service status: %d", GetLastError());
+        CloseServiceHandle(hService);
+        CloseServiceHandle(hSCManager);
+        return false;
+    }
+
+    CloseServiceHandle(hService);
+    CloseServiceHandle(hSCManager);
+
+    return (status.dwCurrentState == SERVICE_RUNNING);
 }

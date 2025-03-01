@@ -115,14 +115,15 @@ public:
 	static bool IsHypervisorPresent();
 	static string GetHypervisorVendor();
 	static string GetCPUVendor();
-
-	static bool LoadDriver(__in const std::wstring& driverName, __in const std::wstring& driverPath);
-	static bool UnloadDriver(__in const std::wstring& driverName); 
 	
-	static string GetProcessDirectory(__in const DWORD pid);
-	static wstring GetProcessDirectoryW(__in const DWORD pid);
+	static string GetProcessDirectory(__in const DWORD pid); //fetch the directory of `pid`
+	static wstring GetProcessDirectoryW(__in const DWORD pid); //fetch the directory of `pid`
 
-	static list<DWORD> EnumerateProcesses();
+	static list<DWORD> EnumerateProcesses(); //fetch process list
+
+	static bool LoadDriver(__in const std::wstring& serviceName, __in const std::wstring& driverPath); //load `driverPath` with service name `driverName`
+	static bool UnloadDriver(__in const std::wstring& serviceName);
+	static bool IsDriverRunning(__in const std::wstring& serviceName); //check if a driver is loaded & in a running state
 
 private:
 
