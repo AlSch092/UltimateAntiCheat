@@ -322,19 +322,13 @@ bool DebuggerDetections::_IsDebuggerPresent_ProcessDebugFlags()
 */
 bool DebuggerDetections::_ExitCommonDebuggers()
 {
-	list<wstring> commonDebuggers;
-	commonDebuggers.push_back(L"x64dbg.exe"); //obviously this is a very basic check, it would be ideal to combine this with process creation callbacks in the `Detections` class, that way we can use byte/sig scanning on the newly created process
-	commonDebuggers.push_back(L"CheatEngine.exe");
-	commonDebuggers.push_back(L"idaq64.exe");
-	commonDebuggers.push_back(L"cheatengine-x86_64.exe");
-	commonDebuggers.push_back(L"cheatengine-x86_64-SSE4-AVX2.exe");
-
 	bool triedEndDebugger = false;
 
-	for (wstring debugger : commonDebuggers)
+	for (wstring debugger : this->CommonDebuggerProcesses)
 	{
 		std::list<DWORD> pids = Process::GetProcessIdsByName(debugger);
-		for (auto foundPid: pids)
+		
+		for (auto pid: pids)
 		{
 			UINT64 K32Base = (UINT64)GetModuleHandleW(L"kernel32.dll");
 
@@ -354,13 +348,20 @@ bool DebuggerDetections::_ExitCommonDebuggers()
 
 			UINT64 ExitProcessOffset = ExitProcessAddr - K32Base;
 
-			HANDLE remoteProcHandle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, foundPid);
+			HANDLE remoteProcHandle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
 
 			if (remoteProcHandle)
 			{
-				HANDLE RemoteThread = CreateRemoteThread(remoteProcHandle, 0, 0, (LPTHREAD_START_ROUTINE)(Process::GetRemoteModuleBaseAddress(foundPid, L"kernel32.dll") + ExitProcessOffset), 0, 0, 0);
-				Logger::logf(Info, "Created remote thread at %llX address", (Process::GetRemoteModuleBaseAddress(foundPid, L"kernel32.dll") + ExitProcessOffset));
+				uint64_t FunctionAddr_ExitProcess = (uint64_t)Process::GetRemoteModuleBaseAddress(pid, L"kernel32.dll") + ExitProcessOffset;
+				HANDLE RemoteThread = CreateRemoteThread(remoteProcHandle, 0, 0, (LPTHREAD_START_ROUTINE)FunctionAddr_ExitProcess, 0, 0, 0);
 				triedEndDebugger = true;
+				CloseHandle(remoteProcHandle);
+
+				Logger::logf(Info, "Created remote thread at %llX address", FunctionAddr_ExitProcess);
+			}
+			else
+			{
+				Logger::logf(Warning, "Failed to open process handle for pid %d @ _ExitCommonDebuggers", pid);
 			}
 		}
 	}

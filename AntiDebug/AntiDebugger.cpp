@@ -63,7 +63,12 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 
 		if (AntiDbg->RunDetectionFunctions())
 		{
-			Logger::logf(Info, "Atleast one debugger detection function caught a debugger!"); //optionally, iterate over DetectedMethods list
+			Logger::logf(Info, "Atleast one debugger detection function caught a debugger!"); //optionally, iterate over DetectedMethods list if you want a more granular logging 
+		}
+
+		if (AntiDbg->IsDBK64DriverLoaded())
+		{
+			AntiDbg->Flag(Debugger::Detections::DBK64_DRIVER);
 		}
 
 		Sleep(MonitorLoopDelayMS);
@@ -254,12 +259,11 @@ bool Debugger::AntiDebug::PreventWindowsDebuggers()
 				return false;
 			}
 
-			VirtualProtect((LPVOID)DbgUiRemoteBreakin_Address, 1, dwOldProt, &dwOldProt);
+			VirtualProtect((LPVOID)DbgUiRemoteBreakin_Address, 1, dwOldProt, &dwOldProt); //set back original protections
 		}
 	}
 
 	return true;
-
 }
 
 /*
@@ -281,5 +285,10 @@ bool Debugger::AntiDebug::HideThreadFromDebugger(HANDLE hThread)
 	else
 		Status = NtSetInformationThread(hThread, 0x11, 0, 0);
 
-	return Status != 0 ? false : true;
+	return (Status == 0);
+}
+
+bool Debugger::AntiDebug::IsDBK64DriverLoaded()
+{
+	return Services::IsDriverRunning(this->DBK64Driver);
 }
