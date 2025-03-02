@@ -817,8 +817,8 @@ string Services::GetHypervisorVendor()
     char vendor[13] = { 0 };
 
     memcpy(vendor, &cpuInfo[1], 4);
-    memcpy(vendor + 4, &cpuInfo[3], 4);
-    memcpy(vendor + 8, &cpuInfo[2], 4);
+    memcpy(vendor + 4, &cpuInfo[2], 4);
+    memcpy(vendor + 8, &cpuInfo[3], 4);
 
     return string(vendor);
 }

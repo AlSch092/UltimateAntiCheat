@@ -250,7 +250,7 @@ void Detections::Monitor(__in LPVOID thisPtr)
                 {
                     Logger::logf(Detection, "Hypervisor vendor was empty, some custom hypervisor might be hooking cpuid instruction");
                 }
-                else if (vendor == "Microsoft Hv" || vendor == "Micrt Hvosof" || vendor == "VMwareVMware" || vendor == "XenVMMXenVMM" || vendor == "VBoxVBoxVBox")
+                else if (vendor == "Microsoft Hv" || vendor == "VMwareVMware" || vendor == "XenVMMXenVMM" || vendor == "VBoxVBoxVBox")
                 {
                     Logger::logf(Detection, "Hypervisor was present with vendor: %s", vendor.c_str());
                 }
