@@ -15,7 +15,7 @@ bool Services::FetchBlacklistedDrivers(__in const char* url)
         return false;
 
     vector<string> responseHeaders;
-    string response = HttpClient::ReadWebPage(BlacklistedDriversRepository, {}, "", responseHeaders); //fetch blacklisted drivers
+    string response = HttpClient::ReadWebPage(string(url), {}, "", responseHeaders); //fetch blacklisted drivers
 
     if (response.size() == 0)
         return false;
