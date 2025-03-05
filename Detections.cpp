@@ -387,7 +387,7 @@ bool Detections::FetchBlacklistedBytePatterns(__in const char* url)
         return false;
 
     vector<string> responseHeaders;
-    string response = HttpClient::ReadWebPage(BlacklisteBytePatternRepository, {}, "", responseHeaders); 
+    string response = HttpClient::ReadWebPage(url, {}, "", responseHeaders); 
 
     if (response.size() == 0)
         return false;
