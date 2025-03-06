@@ -48,8 +48,7 @@ Detections::Detections(Settings* s, BOOL StartMonitor, shared_ptr<NetClient> cli
     if (hNtdll != 0) //register DLL notifications callback 
     {
         _LdrRegisterDllNotification pLdrRegisterDllNotification = (_LdrRegisterDllNotification)GetProcAddress(hNtdll, "LdrRegisterDllNotification");
-        PVOID cookie;
-        NTSTATUS status = pLdrRegisterDllNotification(0, (PLDR_DLL_NOTIFICATION_FUNCTION)OnDllNotification, this, &cookie);
+        NTSTATUS status = pLdrRegisterDllNotification(0, (PLDR_DLL_NOTIFICATION_FUNCTION)OnDllNotification, this, &DllCallbackRegistrationCookie);
     }
 
     if (StartMonitor)
@@ -58,6 +57,27 @@ Detections::Detections(Settings* s, BOOL StartMonitor, shared_ptr<NetClient> cli
 
 Detections::~Detections()
 {
+    if (DllCallbackRegistrationCookie) //unregister DLL notifications
+    {
+        typedef NTSTATUS(NTAPI* pfnLdrUnregisterDllNotification)(PVOID Cookie);
+
+        HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
+
+        if (hNtdll == 0)
+            hNtdll = LoadLibraryA("ntdll.dll");
+
+        pfnLdrUnregisterDllNotification pLdrRegisterDllNotification = (pfnLdrUnregisterDllNotification)GetProcAddress(hNtdll, "LdrUnregisterDllNotification");
+
+        NTSTATUS status = pLdrRegisterDllNotification(DllCallbackRegistrationCookie);
+
+        if (!NT_SUCCESS(status))
+        {
+            Logger::logf(Err, "Failed to unregister DLL notifications: %d", GetLastError());
+        }
+
+        DllCallbackRegistrationCookie = nullptr;
+    }
+
     if (MonitorThread != nullptr)
         delete MonitorThread;
 

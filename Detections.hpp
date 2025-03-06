@@ -100,6 +100,8 @@ private:
 
 	Settings* Config = nullptr; //non-owning pointer to the original unique_ptr<Settings> in main.cpp
 
+	PVOID DllCallbackRegistrationCookie = nullptr; //for dll notifications
+
 	void InitializeBlacklistedProcessesList();
 
 	static void MonitorProcessCreation(__in LPVOID thisPtr);
