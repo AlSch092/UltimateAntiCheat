@@ -387,7 +387,7 @@ bool Detections::FetchBlacklistedBytePatterns(__in const char* url)
         return false;
 
     vector<string> responseHeaders;
-    string response = HttpClient::ReadWebPage(url, {}, "", responseHeaders); 
+    string response = HttpClient::ReadWebPage(url, {}, "", responseHeaders);
 
     if (response.size() == 0)
         return false;
@@ -989,8 +989,10 @@ void Detections::MonitorProcessCreation(__in LPVOID thisPtr)
 
             if (pClassObj)
             {
+                VARIANT vtProcId{};
                 VARIANT vtName {};
                 pClassObj->Get(L"Name", 0, &vtName, 0, 0);
+                pClassObj->Get(L"ProcessId", 0, &vtProcId, 0, 0);
 
                 for (wstring blacklistedProcess : monitor->BlacklistedProcesses)
                 {
@@ -1000,19 +1002,14 @@ void Detections::MonitorProcessCreation(__in LPVOID thisPtr)
                     }
                 }
 
-                std::list<DWORD> pidList = Process::GetProcessIdsByName(wstring(vtName.bstrVal));
-
                 Logger::logfw(Info, L"Scanning process for blacklisted patterns: %s", vtName.bstrVal);
-
-                for (auto pid: pidList)
+          
+                if (monitor->FindBlacklistedProgramsThroughByteScan(vtProcId.uintVal))
                 {
-                    if (monitor->FindBlacklistedProgramsThroughByteScan(pid))
-                    {
-                        monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
-                        Logger::logfw(Detection, L"Blacklisted process was found through byte signature: %s", vtName.bstrVal);
-                    }
+                    monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
+                    Logger::logfw(Detection, L"Blacklisted process was found through byte signature: %s", vtName.bstrVal);
                 }
-
+                
                 VariantClear(&vtName);
                 pClassObj->Release();
             }
