@@ -198,7 +198,6 @@ int main(int argc, char** argv)
     flags = Anti_Cheat->GetMonitor()->GetDetectedFlags();
     explanations = 
     {
-        { DetectionFlags::DEBUGGER, "Debugging method detected" },
         { DetectionFlags::PAGE_PROTECTIONS, "Image's .text section is writable, memory was re-re-mapped" },
         { DetectionFlags::CODE_INTEGRITY, "Image's memory in .text or .rdata modified" },
         { DetectionFlags::DLL_TAMPERING, "Networking or certificate-related WINAPI hooked" },
@@ -210,7 +209,19 @@ int main(int argc, char** argv)
         { DetectionFlags::REGISTRY_KEY_MODIFICATIONS, "Changes to registry keys related to secure boot, CI, testsigning mode, etc..." },
         { DetectionFlags::MANUAL_MAPPING, "Manually mapped module written into memory" },
         { DetectionFlags::SUSPENDED_THREAD, "One or more important threads were suspended" },
-        { DetectionFlags::HYPERVISOR, "A Hypervisor is running on the machine" }
+        { DetectionFlags::HYPERVISOR, "A Hypervisor is running on the machine" },
+        { DetectionFlags::DEBUG_WINAPI_DEBUGGER, "A debugging method was detected via `IsDebuggerPresent()`" },
+        { DetectionFlags::DEBUG_PEB, "A debugging method was detected via `BeingDebugged` flag in the PEB" },
+        { DetectionFlags::DEBUG_DBK64_DRIVER, "A debugging method was detected via DBK64.sys being loaded" },
+        { DetectionFlags::DEBUG_CLOSEHANDLE, "A debugging method was detected via `CloseHandle(NULL)`" },
+        { DetectionFlags::DEBUG_DEBUG_OBJECT, "A debugging method was detected via debug object" },
+        { DetectionFlags::DEBUG_DEBUG_PORT, "A debugging method was detected via debug port" },
+        { DetectionFlags::DEBUG_HEAP_FLAG, "A debugging method was detected via heap flags" },
+        { DetectionFlags::DEBUG_KERNEL_DEBUGGER, "A debugging method was detected via OS-managed kernelmode debugging option" },
+        { DetectionFlags::DEBUG_HARDWARE_REGISTERS, "A debugging method was detected via hardware debug registers" },
+        { DetectionFlags::DEBUG_INT2C, "A debugging method was detected via INT 2C instruction" },
+        { DetectionFlags::DEBUG_TRAP_FLAG, "A debugging method was detected via trap flag enabled" },
+        { DetectionFlags::DEBUG_INT3, "A debugging method was detected via INT3 instruction" },
     };
     for (DetectionFlags flag : flags) 
     {

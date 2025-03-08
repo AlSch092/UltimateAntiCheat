@@ -30,7 +30,7 @@ bool DebuggerDetections::_IsKernelDebuggerPresent()
 	{
 		if (Info.DebuggerEnabled && !Info.DebuggerNotPresent)
 		{
-			if (!Flag(Detections::KERNEL_DEBUGGER))
+			if (!Flag(DetectionFlags::DEBUG_KERNEL_DEBUGGER))
 			{
 				Logger::logf(Warning, "Failed to notify server of debugging method (server may be offline or duplicate entry)");
 			}
@@ -53,7 +53,7 @@ bool DebuggerDetections::_IsKernelDebuggerPresent_SharedKData()
 	{
 		bDebuggerEnabled = true;
 
-		if (!Flag(Detections::KERNEL_DEBUGGER))
+		if (!Flag(DetectionFlags::DEBUG_KERNEL_DEBUGGER))
 		{
 			Logger::logf(Warning, "Failed to notify server of debugging method (server may be offline or duplicate entry)");
 		}
@@ -82,7 +82,7 @@ bool DebuggerDetections::_IsDebuggerPresent_HeapFlags()
 		{
 			if (*heapForceFlagsPtr >= 0x40000060)
 			{
-				if (!Flag(Detections::HEAP_FLAG))
+				if (!Flag(DetectionFlags::DEBUG_HEAP_FLAG))
 				{ //optionally take further action, `Flag` will already log a warning
 				}
 
@@ -129,7 +129,7 @@ bool DebuggerDetections::_IsDebuggerPresent_RemoteDebugger()
 	{
 		if (bDebugged)
 		{
-			if (!Flag(Detections::REMOTE_DEBUGGER))
+			if (!Flag(DetectionFlags::DEBUG_REMOTE_DEBUGGER))
 			{ //optionally take further action, `Flag` will already log a warning
 			}
 
@@ -183,7 +183,7 @@ bool DebuggerDetections::_IsDebuggerPresent_VEH()
 		{
 			bFound = true;
 
-			if (!Flag(Detections::VEH_DEBUGGER))
+			if (!Flag(DetectionFlags::DEBUG_VEH_DEBUGGER))
 			{//optionally take further action, `Flag` will already log a warning
 			}
 
@@ -228,7 +228,7 @@ bool DebuggerDetections::_IsDebuggerPresent_PEB()
 
 	if (_PEB != nullptr &&_PEB->BeingDebugged)
 	{
-		if (!Flag(Detections::VEH_DEBUGGER))
+		if (!Flag(DetectionFlags::DEBUG_PEB))
 		{//optionally take further action, `Flag` will already log a warning
 		}
 
@@ -259,7 +259,7 @@ bool DebuggerDetections::_IsDebuggerPresent_DebugPort()
 
 			if (NT_SUCCESS(status) && (dwProcessDebugPort == -1))
 			{
-				if (!Flag(Detections::DEBUG_PORT))
+				if (!Flag(DetectionFlags::DEBUG_DEBUG_PORT))
 				{//optionally take further action, `Flag` will already log a warning
 				}
 
@@ -300,7 +300,7 @@ bool DebuggerDetections::_IsDebuggerPresent_ProcessDebugFlags()
 
 			if (NT_SUCCESS(status) && (dwProcessDebugFlags == 0))
 			{
-				if (!Flag(Detections::PROCESS_DEBUG_FLAGS))
+				if (!Flag(DetectionFlags::DEBUG_PROCESS_DEBUG_FLAGS))
 				{//optionally take further action, `Flag` will already log a warning
 				}
 

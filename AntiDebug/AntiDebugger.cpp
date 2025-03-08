@@ -68,7 +68,7 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 
 		if (AntiDbg->IsDBK64DriverLoaded())
 		{
-			AntiDbg->Flag(Debugger::Detections::DBK64_DRIVER);
+			AntiDbg->Flag(DetectionFlags::DEBUG_DBK64_DRIVER);
 		}
 
 		Sleep(MonitorLoopDelayMS);
@@ -127,7 +127,7 @@ void Debugger::AntiDebug::_IsHardwareDebuggerPresent(LPVOID AD)
 						Logger::logf(Detection, "Found at least one debug register enabled (hardware debugging)");
 						ResumeThread(hThread);
 
-						if (!AntiDbg->Flag(Detections::HARDWARE_REGISTERS))
+						if (!AntiDbg->Flag(DetectionFlags::DEBUG_HARDWARE_REGISTERS))
 						{ //optionally take further action, `Flag` will already log a warning
 						}
 
@@ -163,11 +163,11 @@ void Debugger::AntiDebug::_IsHardwareDebuggerPresent(LPVOID AD)
 	AddDetectedFlag - adds `flag` to DebuggerMethodsDetected after checking for duplicate entry
 	returns FALSE if `flag` is duplicate entry
 */
-inline bool Debugger::AntiDebug::AddDetectedFlag(Detections flag)
+inline bool Debugger::AntiDebug::AddDetectedFlag(DetectionFlags flag)
 {
 	bool isDuplicate = false;
 
-	for (Detections f : this->DebuggerMethodsDetected)
+	for (DetectionFlags f : this->DebuggerMethodsDetected)
 	{
 		if (f == flag)
 		{
@@ -185,7 +185,7 @@ inline bool Debugger::AntiDebug::AddDetectedFlag(Detections flag)
 	Flag - adds `flag` to detected methods list and tells server we've caught a debugger
 	returns false on error, true on success
 */
-bool Debugger::AntiDebug::Flag(Debugger::Detections flag)
+bool Debugger::AntiDebug::Flag(DetectionFlags flag)
 {
 	bool wasDuplicate = AddDetectedFlag(flag);
 
@@ -194,7 +194,7 @@ bool Debugger::AntiDebug::Flag(Debugger::Detections flag)
 
 	if (this->GetNetClient() != nullptr)
 	{
-		if (this->GetNetClient()->FlagCheater(DetectionFlags::DEBUGGER) != Error::OK) //the type of debugger doesn't really matter at the server-side, we can optionally modify the outbound packet to make debugger detections more granular
+		if (this->GetNetClient()->FlagCheater(flag) != Error::OK) //the type of debugger doesn't really matter at the server-side, we can optionally modify the outbound packet to make debugger detections more granular
 		{
 			Logger::logf(Err, "Failed to notify server of caught debugger status");
 			return false;

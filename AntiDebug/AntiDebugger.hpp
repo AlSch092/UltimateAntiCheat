@@ -2,33 +2,13 @@
 #pragma once
 #include "../Network/NetClient.hpp" //to flag users to server
 #include "../Common/Settings.hpp"
+#include "../Common/DetectionFlags.hpp"
 #include <functional>
 
 #define USER_SHARED_DATA ((KUSER_SHARED_DATA * const)0x7FFE0000)
 
 namespace Debugger
 {
-    enum Detections
-    {
-        WINAPI_DEBUGGER = 1,
-        PEB,
-        HARDWARE_REGISTERS,
-        HEAP_FLAG,
-        INT3,
-        INT2C,
-        INT2D,
-        CLOSEHANDLE,
-        DEBUG_OBJECT,
-        VEH_DEBUGGER,
-        DBK64_DRIVER,
-        KERNEL_DEBUGGER,
-        TRAP_FLAG,
-        DEBUG_PORT,
-        PROCESS_DEBUG_FLAGS,
-        REMOTE_DEBUGGER,
-        DBG_BREAK,
-    };
-
     /*
         AntiDebug - The AntiDebug class provides Anti-debugging methods, and should be inherited by a "detections" class which implements a set of monitoring routines.
         In this case, we're using the `DebuggerDetections` class to store our detection routines. The routines are stored in `DetectionFunctionList`, where each of them is called on each monitor iteration in `CheckForDebugger()`
@@ -64,7 +44,7 @@ namespace Debugger
         AntiDebug operator*(AntiDebug& other) = delete;
         AntiDebug operator/(AntiDebug& other) = delete;
         
-		list<Detections> GetDebuggerMethodsDetected() const { return DebuggerMethodsDetected; } //we could always turn this into an integer that uses powers of 2
+		list<DetectionFlags> GetDebuggerMethodsDetected() const { return DebuggerMethodsDetected; } //we could always turn this into an integer that uses powers of 2
     
         Thread* GetDetectionThread() const  { return this->DetectionThread.get(); }
         NetClient* GetNetClient() const { return this->netClient.get(); }
@@ -78,8 +58,8 @@ namespace Debugger
 
         static bool HideThreadFromDebugger(HANDLE hThread);
 
-        bool AddDetectedFlag(Detections f);
-        bool Flag(Detections flag); //notify server 
+        bool AddDetectedFlag(DetectionFlags f);
+        bool Flag(DetectionFlags flag); //notify server 
 
         template<typename Func>
         void AddDetectionFunction(Func func) //define detection functions in the subclass, `DebuggerDetections`, then add them to the list using this func
@@ -111,7 +91,7 @@ namespace Debugger
         list<wstring> CommonDebuggerProcesses;
 
     private:       
-        list<Detections> DebuggerMethodsDetected;
+        list<DetectionFlags> DebuggerMethodsDetected;
 
         unique_ptr<Thread> DetectionThread = nullptr; //set in `StartAntiDebugThread`
 
