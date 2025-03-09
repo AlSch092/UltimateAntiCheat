@@ -114,6 +114,9 @@
     <ClCompile Include="AntiCheat.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="EvidenceLocker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AntiCheat.hpp">
@@ -214,6 +217,9 @@
     </ClInclude>
     <ClInclude Include="AntiTamper\MapProtectedClass.hpp">
       <Filter>AntiTamper</Filter>
+    </ClInclude>
+    <ClInclude Include="EvidenceLocker.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

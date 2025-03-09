@@ -178,6 +178,7 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
     <ClCompile Include="Common\Utility.cpp" />
     <ClCompile Include="Detections.cpp" />
     <ClCompile Include="Environment\Services.cpp" />
+    <ClCompile Include="EvidenceLocker.cpp" />
     <ClCompile Include="Network\HttpClient.cpp" />
     <ClCompile Include="Network\NetClient.cpp" />
     <ClCompile Include="Network\Packets\Packets.cpp" />
@@ -208,6 +209,7 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
     <ClInclude Include="Common\Utility.hpp" />
     <ClInclude Include="Detections.hpp" />
     <ClInclude Include="Environment\Services.hpp" />
+    <ClInclude Include="EvidenceLocker.hpp" />
     <ClInclude Include="Network\HttpClient.hpp" />
     <ClInclude Include="Network\NetClient.hpp" />
     <ClInclude Include="Network\Packets\PacketReader.hpp" />
