@@ -97,7 +97,7 @@ bool EvidenceLocker::FlagWithData(__in const DetectionFlags flag, __in const str
 	{
 		std::lock_guard<std::mutex> lock(this->SendFlagMutex);
 
-		if (this->NetworkClient->FlagCheater(flag, data) != Error::OK) //cheat engine attachment can be detected this way
+		if (this->NetworkClient->FlagCheater(flag, data) != Error::OK)
 		{
 
 			Logger::logf(Err, "Failed to notify server of cheating status.");
