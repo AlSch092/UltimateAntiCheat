@@ -68,7 +68,7 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 
 		if (AntiDbg->IsDBK64DriverLoaded())
 		{
-			AntiDbg->Flag(DetectionFlags::DEBUG_DBK64_DRIVER);
+			AntiDbg->EvidenceManager->AddFlagged(DetectionFlags::DEBUG_DBK64_DRIVER);
 		}
 
 		Sleep(MonitorLoopDelayMS);
@@ -127,7 +127,7 @@ void Debugger::AntiDebug::_IsHardwareDebuggerPresent(LPVOID AD)
 						Logger::logf(Detection, "Found at least one debug register enabled (hardware debugging)");
 						ResumeThread(hThread);
 
-						if (!AntiDbg->Flag(DetectionFlags::DEBUG_HARDWARE_REGISTERS))
+						if (!AntiDbg->EvidenceManager->AddFlagged(DetectionFlags::DEBUG_HARDWARE_REGISTERS))
 						{ //optionally take further action, `Flag` will already log a warning
 						}
 
@@ -157,56 +157,6 @@ void Debugger::AntiDebug::_IsHardwareDebuggerPresent(LPVOID AD)
 
 	CloseHandle(hThreadSnap);
 	return;
-}
-
-/*
-	AddDetectedFlag - adds `flag` to DebuggerMethodsDetected after checking for duplicate entry
-	returns FALSE if `flag` is duplicate entry
-*/
-inline bool Debugger::AntiDebug::AddDetectedFlag(DetectionFlags flag)
-{
-	bool isDuplicate = false;
-
-	for (DetectionFlags f : this->DebuggerMethodsDetected)
-	{
-		if (f == flag)
-		{
-			isDuplicate = true;
-		}
-	}
-
-	if (!isDuplicate)
-		this->DebuggerMethodsDetected.push_back(flag);
-
-	return isDuplicate;
-}
-
-/*
-	Flag - adds `flag` to detected methods list and tells server we've caught a debugger
-	returns false on error, true on success
-*/
-bool Debugger::AntiDebug::Flag(DetectionFlags flag)
-{
-	bool wasDuplicate = AddDetectedFlag(flag);
-
-	if (wasDuplicate)
-		return true; //function still succeeds even though it was duplicate (no error)
-
-	if (this->GetNetClient() != nullptr)
-	{
-		if (this->GetNetClient()->FlagCheater(flag) != Error::OK) //the type of debugger doesn't really matter at the server-side, we can optionally modify the outbound packet to make debugger detections more granular
-		{
-			Logger::logf(Err, "Failed to notify server of caught debugger status");
-			return false;
-		}
-	}
-	else
-	{
-		Logger::logf(Err, "NetClient was NULL @ AntiDebug::Flag");
-		return false;
-	}
-
-	return true;
 }
 
 /*

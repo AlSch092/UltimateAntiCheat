@@ -2,7 +2,7 @@
 #pragma once
 #include "../Network/NetClient.hpp" //to flag users to server
 #include "../Common/Settings.hpp"
-#include "../Common/DetectionFlags.hpp"
+#include "../EvidenceLocker.hpp"
 #include <functional>
 
 #define USER_SHARED_DATA ((KUSER_SHARED_DATA * const)0x7FFE0000)
@@ -17,7 +17,7 @@ namespace Debugger
     {
     public:
         
-        AntiDebug(Settings* s, shared_ptr<NetClient> netClient) : netClient(netClient), Config(s)
+        AntiDebug(Settings* s, EvidenceLocker* evidence, shared_ptr<NetClient> netClient) : netClient(netClient), Config(s), EvidenceManager(evidence)
         {
             if (s == nullptr)
             {
@@ -44,8 +44,6 @@ namespace Debugger
         AntiDebug operator*(AntiDebug& other) = delete;
         AntiDebug operator/(AntiDebug& other) = delete;
         
-		list<DetectionFlags> GetDebuggerMethodsDetected() const { return DebuggerMethodsDetected; } //we could always turn this into an integer that uses powers of 2
-    
         Thread* GetDetectionThread() const  { return this->DetectionThread.get(); }
         NetClient* GetNetClient() const { return this->netClient.get(); }
         Settings* GetSettings() const { return this->Config; }
@@ -57,9 +55,6 @@ namespace Debugger
         static bool PreventWindowsDebuggers(); //experimental method, patch DbgBreakpoint + DbgUiRemoteBreakin
 
         static bool HideThreadFromDebugger(HANDLE hThread);
-
-        bool AddDetectedFlag(DetectionFlags f);
-        bool Flag(DetectionFlags flag); //notify server 
 
         template<typename Func>
         void AddDetectionFunction(Func func) //define detection functions in the subclass, `DebuggerDetections`, then add them to the list using this func
@@ -86,12 +81,11 @@ namespace Debugger
         bool IsDBK64DriverLoaded();
 
     protected:
-        vector<function<bool()>> DetectionFunctionList; //list of debugger detection methods, which are contained in the subclass `DebuggerDetections`
-        
+        vector<function<bool()>> DetectionFunctionList; //list of debugger detection methods, which are contained in the subclass `DebuggerDetections`      
         list<wstring> CommonDebuggerProcesses;
+        EvidenceLocker* EvidenceManager = nullptr;
 
-    private:       
-        list<DetectionFlags> DebuggerMethodsDetected;
+    private:      
 
         unique_ptr<Thread> DetectionThread = nullptr; //set in `StartAntiDebugThread`
 
