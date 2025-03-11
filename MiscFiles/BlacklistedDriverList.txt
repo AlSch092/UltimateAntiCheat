@@ -13,7 +13,6 @@ EIO64.sys
 IOMap64.sys
 ATSZIO64.sys
 atillk64.sys
-aswVmm.sys
 BS_Flash64.sys
 Capcom.sys
 cpuz141.sys
