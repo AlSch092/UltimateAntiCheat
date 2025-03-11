@@ -14,6 +14,7 @@
 #include "Common/Logger.hpp"
 #include "Common/Settings.hpp"
 #include "AntiCheatInitFail.hpp"
+#include "AntiDebug/DebuggerDetections.hpp"
 #include "API/API.hpp"
 
 /*
@@ -63,4 +64,6 @@ private:
 	WindowsVersion WinVersion;
 
 	const wstring DriverSignerSubject = L"YourCoolCompany";  //this refers to the company/party who initiated the file signing, for example "Valve Corp.". If you have an EV certificate, you can change this to your own company
+
+	EvidenceLocker* Evidence = nullptr;
 };

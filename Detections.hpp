@@ -1,13 +1,14 @@
 //By AlSch092 @github
 #pragma once
 #include "Network/NetClient.hpp" //Net Comms
-#include "Network/HttpClient.hpp"
-#include "AntiDebug/DebuggerDetections.hpp"
+#include "Network/HttpClient.hpp" //web requests
 #include "AntiTamper/Integrity.hpp" //Code Integrity
 #include "Environment/Services.hpp" //`Services` class
 #include "Obscure/Obfuscation.hpp" //`ObfuscatedData` class
-#include "Common/DetectionFlags.hpp"
+#include "EvidenceLocker.hpp" //evidence locker/flags manager
 #include "Obscure/ntldr.hpp" //dll notification structures
+
+#include <future>
 #include <Wbemidl.h> //for process event creation (WMI)
 #include <comdef.h>  //for process event creation (WMI)
 #include <queue>
@@ -29,7 +30,7 @@ class Detections final
 {
 public:
 
-	Detections(Settings* s, BOOL StartMonitor, shared_ptr<NetClient> client);
+	Detections(Settings* s, EvidenceLocker* evidence, BOOL StartMonitor, shared_ptr<NetClient> client);
 	~Detections();
 
 	Detections(Detections&&) = delete;  //delete move constructr
@@ -49,8 +50,7 @@ public:
 
 	shared_ptr<Integrity> GetIntegrityChecker() const { return this->integrityChecker; }
 
-	void SetCheater(__in const bool cheating) { this->CheaterWasDetected->SetData((uint8_t)cheating); } //obfuscated bool/int variable. cast to uint8 to avoid getting stuck as 0/1 by compilers bool interpretation
-	bool IsUserCheater() const  { return this->CheaterWasDetected->GetData(); }
+	bool IsUserCheater() const  { return (this->EvidenceManager->GetFlagListSize() > 0); }
 
 	list<DetectionFlags> GetDetectedFlags() const { return this->DetectedFlags; }
 
@@ -75,9 +75,6 @@ public:
 	
 	bool IsBlacklistedWindowPresent();
 
-	bool AddDetectedFlag(__in const DetectionFlags f); //add to DetectedFlags without duplicates
-	bool Flag(__in const DetectionFlags flag); //sets `IsCheater` to true, notifies server component of detected flag
-
 	static VOID OnDllNotification(ULONG NotificationReason, const PLDR_DLL_NOTIFICATION_DATA NotificationData, PVOID Context); //dll load callback
 
 	bool StartMonitor(); //begin threading
@@ -96,6 +93,8 @@ public:
 
 	Settings* GetConfig() const { return this->Config; }
 
+	EvidenceLocker* GetEvidenceLog() const { return this->EvidenceManager; }
+
 private:
 
 	Settings* Config = nullptr; //non-owning pointer to the original unique_ptr<Settings> in main.cpp
@@ -107,8 +106,6 @@ private:
 	static void MonitorProcessCreation(__in LPVOID thisPtr);
 
 	bool MonitoringProcessCreation = false;
-
-	unique_ptr<ObfuscatedData<uint8_t>> CheaterWasDetected = nullptr; //using bool as the type does not work properly with obfuscation since the compiler uses true/false, so use uint8_t instead and cast to BOOL when needed
 
 	unique_ptr<Services> _Services = nullptr;
 
@@ -139,4 +136,6 @@ private:
 
 	list<wstring> PassedCertCheckDrivers; //already checked, keep track so we don't have to re-verify them each time
 	list<wstring> PassedCertCheckModules;
+
+	EvidenceLocker* EvidenceManager = nullptr;
 };

@@ -65,14 +65,12 @@ bool EvidenceLocker::SendFlag(__in const DetectionFlags flag)
 
 		if (this->NetworkClient->FlagCheater(flag) != Error::OK)
 		{
-
 			Logger::logf(Err, "Failed to notify server of cheating status.");
 			return false;
 		}
 	}
 	else
 	{
-
 		Logger::logf(Err, "NetClient was NULL @ EvidenceLog::SendFlag");
 		return false;
 	}
@@ -99,14 +97,12 @@ bool EvidenceLocker::FlagWithData(__in const DetectionFlags flag, __in const str
 
 		if (this->NetworkClient->FlagCheater(flag, data) != Error::OK)
 		{
-
 			Logger::logf(Err, "Failed to notify server of cheating status.");
 			return false;
 		}
 	}
 	else
 	{
-
 	    Logger::logf(Err, "NetClient was NULL @ Detections::Flag");
 		return false;
 	}

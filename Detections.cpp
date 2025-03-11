@@ -1,7 +1,7 @@
 //By AlSch092 @github
 #include "Detections.hpp"
 
-Detections::Detections(Settings* s, BOOL StartMonitor, shared_ptr<NetClient> client) : Config(s), netClient(client)
+Detections::Detections(Settings* s, EvidenceLocker* evidence, BOOL StartMonitor, shared_ptr<NetClient> client) : Config(s), EvidenceManager(evidence), netClient(client)
 {
     this->InitializeBlacklistedProcessesList();
 
@@ -40,8 +40,6 @@ Detections::Detections(Settings* s, BOOL StartMonitor, shared_ptr<NetClient> cli
     {
         Logger::logf(Warning, "Failed to fetch blacklisted byte patterns from web location!");
     }
-
-    this->CheaterWasDetected = make_unique<ObfuscatedData<uint8_t>>((bool)false);
 
     HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
 
@@ -161,7 +159,7 @@ void Detections::CheckDLLSignature()
             if (!Authenticode::HasSignature(FullDllName.c_str(), TRUE))
             {
                 Logger::logfw(Detection, L"Failed to verify signature of %s\n", FullDllName);
-                this->Flag(DetectionFlags::INJECTED_ILLEGAL_PROGRAM);
+                this->EvidenceManager->AddFlagged(DetectionFlags::INJECTED_ILLEGAL_PROGRAM, Utility::ConvertWStringToString(FullDllName));
                 this->UnsignedModulesLoaded.push_back(FullDllName);
             }
             else
@@ -279,7 +277,7 @@ void Detections::Monitor(__in LPVOID thisPtr)
                     Logger::logf(Detection, "Hypervisor was present with unknown/non-standard vendor: %s.", vendor.c_str());
                 }
 
-                Monitor->Flag(DetectionFlags::HYPERVISOR);
+                Monitor->EvidenceManager->AddFlagged(DetectionFlags::HYPERVISOR);
             }
         }
 
@@ -288,43 +286,43 @@ void Detections::Monitor(__in LPVOID thisPtr)
             if (Monitor->GetIntegrityChecker()->IsTLSCallbackStructureModified()) //check various aspects of the TLS callback structure for modifications
             {
                 Logger::logf(Detection, "Found modified TLS callback structure section (atleast one aspect of the TLS data directory structure was modified)");
-                Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
+                Monitor->EvidenceManager->AddFlagged(DetectionFlags::CODE_INTEGRITY);
             }
 
             if (Monitor->IsSectionHashUnmatching(CachedTextSectionAddress, CachedTextSectionSize, ".text")) //compare hashes of .text for modifications
             {
                 Logger::logf(Detection, "Found modified .text section (or you're debugging with software breakpoints)!\n");
-                Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
+                Monitor->EvidenceManager->AddFlagged(DetectionFlags::CODE_INTEGRITY);
             }
 
             if (Monitor->IsSectionHashUnmatching(CachedRDataSectionAddress, CachedRDataSectionSize, ".rdata")) //compare hashes of .text for modifications
             {
                 Logger::logf(Detection, "Found modified .rdata section!\n");
-                Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
+                Monitor->EvidenceManager->AddFlagged(DetectionFlags::CODE_INTEGRITY);
             }
 
             if (!Monitor->GetIntegrityChecker()->CheckFileIntegrityFromDisc()) //check .text of file on disc versus runtime process - this fills the gap of gathering .text hashes at program startup and comparing to that
             {
                 Logger::logf(Detection, ".text section of file on disc differs from runtime process!");
-                Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
+                Monitor->EvidenceManager->AddFlagged(DetectionFlags::CODE_INTEGRITY);
             }
         }
 
         if (Monitor->GetIntegrityChecker()->IsModuleModified(L"WINTRUST.dll")) //check hashes of wintrust.dll for signing-related hooks
         {
             Logger::logf(Detection, "Found modified .text section in WINTRUST.dll!"); //checking .rdata would be helpful too
-            Monitor->Flag(DetectionFlags::CODE_INTEGRITY);
+            Monitor->EvidenceManager->AddFlagged(DetectionFlags::CODE_INTEGRITY);
         }
 
         vector<uint64_t> mappedRegions = Monitor->DetectManualMapping();
+
         if (mappedRegions.size() > 0)
         {
             for (uint64_t mappedRegionAddress : mappedRegions)
             {
                 Logger::logf(Detection, "Found potentially manually mapped region at: %llX", mappedRegionAddress);
-            }
-
-            Monitor->Flag(DetectionFlags::MANUAL_MAPPING);
+                Monitor->EvidenceManager->AddFlagged(DetectionFlags::MANUAL_MAPPING, std::to_string(mappedRegionAddress));
+            }        
         }
 
         if (Monitor->GetConfig() != nullptr && Monitor->GetConfig()->bEnforceDSE) //check for unsigned drivers loaded
@@ -343,32 +341,32 @@ void Detections::Monitor(__in LPVOID thisPtr)
         if (Monitor->IsBlacklistedProcessRunning()) //external applications running on machine
         {
             Logger::logf(Detection, "Found blacklisted process!");
-            Monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
+            Monitor->EvidenceManager->AddFlagged(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
         }
 
         //make sure ws2_32.dll is actually loaded if this gives an error, on my build the dll is not loaded but we'll pretend it is
         if (Monitor->DoesFunctionAppearHooked("ws2_32.dll", "send") || Monitor->DoesFunctionAppearHooked("ws2_32.dll", "recv"))   //ensure you use this routine on functions that don't have jumps or calls as their first byte
         {
             Logger::logf(Detection, "Networking WINAPI (send | recv) was hooked!\n"); //WINAPI hooks doesn't always determine someone is cheating since AV and other software can write the hooks
-            Monitor->Flag(DetectionFlags::DLL_TAMPERING);
+            Monitor->EvidenceManager->AddFlagged(DetectionFlags::DLL_TAMPERING);
         }
 
         if (Monitor->GetIntegrityChecker()->IsUnknownModulePresent()) //authenticode call and check against whitelisted module list
         {
             Logger::logf(Detection, "Found at least one unsigned dll loaded : We ideally only want verified, signed dlls in our application!");
-            Monitor->Flag(DetectionFlags::INJECTED_ILLEGAL_PROGRAM);
+            Monitor->EvidenceManager->AddFlagged(DetectionFlags::INJECTED_ILLEGAL_PROGRAM);
         }
 
         if (Services::IsTestsigningEnabled() || Services::IsDebugModeEnabled()) //test signing enabled, self-signed drivers
         {
             Logger::logf(Detection, "Testsigning or debugging mode is enabled! In most cases we don't allow the game/process to continue if testsigning is enabled.");
-            Monitor->Flag(DetectionFlags::UNSIGNED_DRIVERS);
+            Monitor->EvidenceManager->AddFlagged(DetectionFlags::UNSIGNED_DRIVERS);
         }
 
         if (Monitor->Detections::DoesIATContainHooked()) //iat hook check
         {
             Logger::logf(Detection, "IAT was hooked! One or more functions lead to addresses outside their respective modules!\n");
-            Monitor->Flag(DetectionFlags::BAD_IAT);
+            Monitor->EvidenceManager->AddFlagged(DetectionFlags::BAD_IAT);
         }
 
         if (Detections::IsTextSectionWritable()) //page protections check, can be made more granular or loop over all mem pages
@@ -376,22 +374,23 @@ void Detections::Monitor(__in LPVOID thisPtr)
             Logger::logf(Detection, ".text section was writable, which means someone re-re-mapped our memory regions! (or you ran this in DEBUG build)");
             
 #ifndef _DEBUG           //in debug build we are not remapping, and software breakpoints in VS may cause page protections to be writable
-            Monitor->Flag(DetectionFlags::PAGE_PROTECTIONS);
+            Monitor->EvidenceManager->AddFlagged(DetectionFlags::PAGE_PROTECTIONS);
 #endif
         }
 
         if (Detections::CheckOpenHandles()) //open handles to our process check
         {
             Logger::logf(Detection, "Found open process handles to our process from other processes");
-            Monitor->Flag(DetectionFlags::OPEN_PROCESS_HANDLES);
+            Monitor->EvidenceManager->AddFlagged(DetectionFlags::OPEN_PROCESS_HANDLES);
         }
 
         if (Monitor->IsBlacklistedWindowPresent())
         {
             Logger::logf(Detection, "Found blacklisted window text!");
-            Monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
+            Monitor->EvidenceManager->AddFlagged(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
         }
 
+        auto _future = std::async(std::launch::async, &EvidenceLocker::PushAllEvidence, Monitor->EvidenceManager); //push any newly found flags to server
         Sleep(MonitorLoopMilliseconds);
     }
 }
@@ -765,58 +764,6 @@ bool Detections::CheckOpenHandles()
 }
 
 /*
-    AddDetectedFlags - adds DetectionFlags `flag` to the list of detected flags. Does not add if the flag is already in the list.
-*/
-bool Detections::AddDetectedFlag(__in const DetectionFlags flag)
-{
-    bool isDuplicate = false;
-
-    for (DetectionFlags f : this->DetectedFlags)
-    {
-        if (f == flag)
-        {
-            isDuplicate = true;
-            break;
-        }
-    }
-
-    if (!isDuplicate)
-        this->DetectedFlags.push_back(flag);
-
-    return isDuplicate;
-}
-
-/*
-    Flag - function adds flag to the detected list and sends a message to the server informing of the detection
-
-*/
-bool Detections::Flag(__in const DetectionFlags flag)
-{
-    bool wasDuplicate = AddDetectedFlag(flag);
-    this->SetCheater(true);
-
-    if (wasDuplicate) //prevent duplicate server comms
-        return true;
-
-    weak_ptr<NetClient> client = this->GetNetClient();  //report back to server that someone's cheating
-
-    if (auto _client = client.lock())
-    {
-        if (_client->FlagCheater(flag) != Error::OK) //cheat engine attachment can be detected this way
-        {
-            Logger::logf(Err, "Failed to notify server of cheating status.");
-            return false;
-        }
-    }
-    else
-    {
-        return Logger::LogErrorAndReturn("NetClient was NULL @ Detections::Flag");
-    }
-
-    return true;
-}
-
-/*
     IsBlacklistedWindowPresent - Checks if windows with specific title or class names are present.
     *Note* this function should not be used on its own to determine if someone is running a cheat tool, it should be combined with other methods. An opened folder with a blacklisted name will be caught but doesn't imply the actual program is opened, for example
 */
@@ -868,15 +815,13 @@ bool Detections::IsBlacklistedWindowPresent()
                 {
                     if (strcmp(windowTitle, (const char*)original_CheatEngine) == 0  || strstr(windowTitle, (const char*)original_CheatEngine) != NULL) //*note* this will detect open folders named "Cheat Engine" also, which doesn't imply the actual program is opened.
                     {
-                        Monitor->SetCheater(true);
-                        Monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
+                        Monitor->EvidenceManager->AddFlagged(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
                         Logger::logf(Detection, "Detected a window named 'Cheat Engine' (includes open folder names)");
                         return false;
                     }
                     else if (strstr(windowTitle, (const char*)original_LUAScript))
                     {
-                        Monitor->SetCheater(true);
-                        Monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
+                        Monitor->EvidenceManager->AddFlagged(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
                         Logger::logf(Detection, "Detected cheat engine's lua script window");
                         return false;
                     }
@@ -1026,7 +971,7 @@ void Detections::MonitorProcessCreation(__in LPVOID thisPtr)
           
                 if (monitor->FindBlacklistedProgramsThroughByteScan(vtProcId.uintVal))
                 {
-                    monitor->Flag(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
+                    monitor->EvidenceManager->AddFlagged(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM, Utility::ConvertWStringToString(vtName.bstrVal));
                     Logger::logfw(Detection, L"Blacklisted process was found through byte signature: %s", vtName.bstrVal);
                 }
                 
@@ -1186,7 +1131,7 @@ void Detections::MonitorImportantRegistryKeys(__in LPVOID thisPtr)
 
             Logger::logf(Detection, "Key %d value changed!", index);
 
-            Monitor->Flag(DetectionFlags::REGISTRY_KEY_MODIFICATIONS);
+            Monitor->EvidenceManager->AddFlagged(DetectionFlags::REGISTRY_KEY_MODIFICATIONS);
 
             result = RegNotifyChangeKeyValue(hKeys[index], TRUE, filter, hEvents[index], TRUE);   //re register the notification for the key
 

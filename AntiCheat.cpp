@@ -15,11 +15,13 @@ AntiCheat::AntiCheat(Settings* config, WindowsVersion WinVersion) : Config(confi
 
 	try
 	{
+		this->Evidence = new EvidenceLocker(this->NetworkClient.get()); //make shared evidence log (change this to shared_ptr later)
+
 		this->NetworkClient = make_shared<NetClient>();
 
-		this->AntiDebugger = make_unique<DebuggerDetections>(config, NetworkClient); //any detection methods need the netclient for comms
+		this->AntiDebugger = make_unique<DebuggerDetections>(config, this->Evidence, NetworkClient); //any detection methods need the netclient for comms
 
-		this->Monitor = make_unique<Detections>(config, false, NetworkClient);
+		this->Monitor = make_unique<Detections>(config, this->Evidence, false, NetworkClient);
 
 		this->Barrier = make_unique<Preventions>(config, true, Monitor.get()->GetIntegrityChecker()); //true = prevent new threads from being made
 	}
