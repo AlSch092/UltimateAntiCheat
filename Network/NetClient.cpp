@@ -118,13 +118,17 @@ Error NetClient::SendData(PacketWriter* outPacket)
 
 	Error err = Error::OK;
 
-	int BytesSent = send(Socket, (const char*)encryptedBuffer, outPacket->GetSize(), 0); //if this ever fragments i'll add a check
-
-	int nRecvDataLength = 0;
-
-	if (BytesSent != outPacket->GetSize()) //make sure we sent the hwid
 	{
-		err = Error::INCOMPLETE_SEND;
+		std::lock_guard<std::mutex>(this->SendPacketMutex);
+
+		int BytesSent = send(Socket, (const char*)encryptedBuffer, outPacket->GetSize(), 0); //if this ever fragments i'll add a check
+
+		int nRecvDataLength = 0;
+
+		if (BytesSent != outPacket->GetSize()) //make sure we sent the hwid
+		{
+			err = Error::INCOMPLETE_SEND;
+		}
 	}
 
 	delete outPacket;
@@ -336,6 +340,12 @@ Error NetClient::HandleInboundPacket(PacketReader* p)
 Error NetClient::FlagCheater(DetectionFlags flag)
 {
 	PacketWriter* outBytes = Packets::Builder::DetectedCheater(flag);
+	return SendData(outBytes);
+}
+
+Error NetClient::FlagCheater(DetectionFlags flag, string data)
+{
+	PacketWriter* outBytes = Packets::Builder::DetectedCheater(flag, data);
 	return SendData(outBytes);
 }
 

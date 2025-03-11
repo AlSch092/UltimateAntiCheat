@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <string>
 #include <intrin.h>
+#include <mutex>
 
 #include "../Common/Error.hpp"
 #include "../Common/DetectionFlags.hpp"
@@ -80,6 +81,7 @@ public:
 	Error SendData(PacketWriter* outPacket); //all data sent to the server should go through this
 
 	Error FlagCheater(DetectionFlags flag);
+	Error FlagCheater(DetectionFlags flag, string data);
 	Error QueryMemory(uint64_t address, uint32_t size); //query specific memory address, send its bytes values back to server
 	__forceinline const char*  MakeHeartbeat(string cookie);
 
@@ -121,5 +123,8 @@ private:
 
 	Thread* RecvLoopThread = NULL;
 	DWORD recvThreadId = 0;
+
+	mutex SendPacketMutex;
+	mutex RecvPacketMutex;
 };
 

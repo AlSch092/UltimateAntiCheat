@@ -35,7 +35,8 @@ namespace Packets
 		PacketWriter* ClientHello(string gameCode, string HWID, string Ipv4, string MACAddress);
 		PacketWriter* ClientGoodbye(int reason);
 		PacketWriter* Heartbeat(const char* cookie_str);
-		PacketWriter* DetectedCheater(int flags); //we can pack our detected things into an int on each bit
+		PacketWriter* DetectedCheater(int flags);
+		PacketWriter* DetectedCheater(__in const uint32_t flags, __in const const std::string detectedModule);
 		PacketWriter* QueryMemory(byte* bytestring, int size);
 	}
 }

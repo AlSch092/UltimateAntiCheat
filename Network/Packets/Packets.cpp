@@ -24,6 +24,17 @@ PacketWriter* Packets::Builder::DetectedCheater(int flags) //todo: finish these
 	return p;
 }
 
+/*
+	DetectedCheater - flag a user as cheating, with some string data about what it found
+*/
+PacketWriter* Packets::Builder::DetectedCheater(__in const uint32_t flags, __in const  const std::string detectedModule)
+{
+	PacketWriter* p = new PacketWriter(Packets::Opcodes::CS_FLAGGED_CHEATER);
+	p->Write<uint32_t>(flags);
+	p->WriteString(detectedModule);
+	return p;
+}
+
 PacketWriter* Packets::Builder::Heartbeat(const char* cookie_str) //todo: add more into this packet, such as integrity checking or detected flags.
 {
 	PacketWriter* p = new PacketWriter(Packets::Opcodes::CS_HEARTBEAT);
