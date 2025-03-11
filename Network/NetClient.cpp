@@ -119,7 +119,7 @@ Error NetClient::SendData(PacketWriter* outPacket)
 	Error err = Error::OK;
 
 	{
-		std::lock_guard<std::mutex>(this->SendPacketMutex);
+		std::lock_guard<std::mutex> lock(SendPacketMutex);
 
 		int BytesSent = send(Socket, (const char*)encryptedBuffer, outPacket->GetSize(), 0); //if this ever fragments i'll add a check
 
@@ -172,7 +172,15 @@ void NetClient::ProcessRequests(LPVOID Param)
 
 		if (s)
 		{
-			int bytesIn = recv(s, (char*)recvBuf, DEFAULT_RECV_LENGTH, 0);
+			int bytesIn = 0;
+
+			{
+				std::lock_guard<std::mutex> lock(Client->RecvPacketMutex);
+				bytesIn = recv(s, (char*)recvBuf, DEFAULT_RECV_LENGTH, 0);
+			}
+
+			if (bytesIn == 0)
+				continue;
 
 			if (bytesIn != SOCKET_ERROR)
 			{
@@ -201,9 +209,9 @@ end:
 }
 
 /*
-	GetHostname - returns local ip of host
+	GetHostname - returns local ip of host (ex, 192.168.2.1)
 */
-string NetClient::GetHostname()
+std::string NetClient::GetHostname()
 {
 	struct IPv4
 	{
@@ -211,7 +219,7 @@ string NetClient::GetHostname()
 	};
 
 	IPv4 myIP;
-	string sIpv4;
+	std::string sIpv4;
 
 	char szBuffer[1024];
 
@@ -343,6 +351,10 @@ Error NetClient::FlagCheater(DetectionFlags flag)
 	return SendData(outBytes);
 }
 
+/*
+	FlagCheater - tells server the client has detected cheating, along with some additional supporting data
+	returns Error::OK on success
+*/
 Error NetClient::FlagCheater(DetectionFlags flag, string data)
 {
 	PacketWriter* outBytes = Packets::Builder::DetectedCheater(flag, data);
@@ -377,11 +389,11 @@ Error NetClient::QueryMemory(uint64_t address, uint32_t size)
 
 /*
 	MakeHeartbeat - Generates a response to server heartbeat requests
-	returns a char* array containing the auth cookie
+	returns a char* array containing the auth cookie. Very simple example, non-public versions of the project use something more complicated
 */
-__forceinline const char* NetClient::MakeHeartbeat(string cookie)
+__forceinline const char* NetClient::MakeHeartbeat(std::string cookie)
 {
-	if (!Process::IsReturnAddressInModule(*(UINT64*)_AddressOfReturnAddress(), NULL)) //return address check
+	if (!Process::IsReturnAddressInModule(*(UINT64*)_AddressOfReturnAddress(), NULL)) //return address check, NULL refers to the current module
 	{
 		Logger::logf(Detection, "Return address was outside of module @ NetClient::MakeHeartbeat : some attacker might be trying to spoof heartbeats");
 		return nullptr;
@@ -390,7 +402,6 @@ __forceinline const char* NetClient::MakeHeartbeat(string cookie)
 	byte* b = (byte*)cookie.c_str();
 
 	byte Transformer = 0x18; //the heartbeat response is the request xor'd with Transformer, transformer is added to by each value of the request
-							 //once this is confirmed working properly we can try to implement something more complex
 
 	char* HeartbeatResponse = new char[128] {0};
 
@@ -406,6 +417,7 @@ __forceinline const char* NetClient::MakeHeartbeat(string cookie)
 
 /*
 	EncryptData - encrypts `buffer` using xor /w sub/add operation
+	Of course a much better encryption routine can be replaced with this, everyone will have their own preference (AES, RSA, Salsa, etc) so you can implement one yourself if desired
 */
 void __forceinline NetClient::CipherData(LPBYTE buffer, int length)
 {
