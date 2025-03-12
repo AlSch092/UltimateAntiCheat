@@ -15,9 +15,9 @@ AntiCheat::AntiCheat(Settings* config, WindowsVersion WinVersion) : Config(confi
 
 	try
 	{
-		this->Evidence = new EvidenceLocker(this->NetworkClient.get()); //make shared evidence log (change this to shared_ptr later)
-
 		this->NetworkClient = make_shared<NetClient>();
+
+		this->Evidence = new EvidenceLocker(this->NetworkClient.get()); //make shared evidence log (change this to shared_ptr later)
 
 		this->AntiDebugger = make_unique<DebuggerDetections>(config, this->Evidence, NetworkClient); //any detection methods need the netclient for comms
 

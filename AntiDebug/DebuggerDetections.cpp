@@ -112,7 +112,7 @@ bool DebuggerDetections::_IsDebuggerPresent_CloseHandle()
 	}
 	__except (EXCEPTION_INVALID_HANDLE == GetExceptionCode() ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
 	{
-		if (!Flag(Detections::CLOSEHANDLE))
+		if (!EvidenceManager->AddFlagged(DetectionFlags::DEBUG_CLOSEHANDLE))
 		{ //optionally take further action, `Flag` will already log a warning
 		}
 
@@ -156,7 +156,7 @@ bool DebuggerDetections::_IsDebuggerPresent_DbgBreak()
 
 	Logger::logf(Info, "Calling __fastfail() to prevent further execution since a debugger was found running.");
 
-	if (!Flag(Detections::DBG_BREAK))
+	if (!EvidenceManager->AddFlagged(DetectionFlags::DEBUG_DBG_BREAK))
 	{//optionally take further action, `Flag` will already log a warning
 	}
 
