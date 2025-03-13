@@ -32,10 +32,6 @@ namespace UACServer.Network
             return true;
         }
 
-        public static void HandleClientGoodbye(AntiCheatClient c) //todo: finish this
-        {
-        }
-
         public static bool HandleClientHeartbeat(AntiCheatClient c, string heartbeat)
         {
             byte Transformer = 0x18;
@@ -66,57 +62,14 @@ namespace UACServer.Network
             return true;
         }
 
-        public static bool HandleClientQueryMemory(AntiCheatClient c, string heartbeat) //todo: finish this
-        {
-            return true;
-        }
-
         public static void HandleClientFlaggedCheater(AntiCheatClient c, DetectionFlags flag) //todo: finish this
         {
-            
-            switch(flag)
-            {
-                case DetectionFlags.CODE_INTEGRITY:                     //write flags to database or some other further actions if you desire
-                {
-                        Logger.Log("UACServer.log", "Client #" + Convert.ToString(c.id) + " was flagged for bad code integrity (patching over bytes)");
-                }break;
+            string reason = AnticheatServer.Detections[flag];
 
-                case DetectionFlags.PAGE_PROTECTIONS:
-                {
-                        Logger.Log("UACServer.log", "Client #" + Convert.ToString(c.id) + " was flagged for bad page protections (re-remapped client)");
-                } break;
-
-
-                case DetectionFlags.OPEN_PROCESS_HANDLES:
-                {
-                        Logger.Log("UACServer.log", "Client #" + Convert.ToString(c.id) + " was flagged for having open process handles to the client");
-                }break;
-
-                case DetectionFlags.DEBUGGER:
-                {
-                        Logger.Log("UACServer.log", "Client #" + Convert.ToString(c.id) + " was flagged for trying to debug the client process");
-                }break;
-
-                case DetectionFlags.EXTERNAL_ILLEGAL_PROGRAM:
-                {
-                        Logger.Log("UACServer.log", "Client #" + Convert.ToString(c.id) + " was flagged for having a blacklisted external program running");
-                }break;
-
-                case DetectionFlags.INJECTED_ILLEGAL_PROGRAM:
-                {
-                        Logger.Log("UACServer.log", "Client #" + Convert.ToString(c.id) + " was flagged for injecting a non-whitelisted module");
-                }break;
-
-                case DetectionFlags.UNSIGNED_DRIVERS:
-                {
-                        Logger.Log("UACServer.log", "Client #" + Convert.ToString(c.id) + " was flagged for trying to use unsigned drivers on their machine");
-                }break;
-
-                default:
-                    Logger.Log("UACServer.log", "Client #" + Convert.ToString(c.id) + "sent an unknown flag, data may have been modified in-transit");
-                    break;
-            };
-
+            if (reason != null)
+                Logger.Log("UACServer.log", $"[DETECTION] Client #{Convert.ToString(c.id)} was flagged for {reason}");
+            else
+                Logger.Log("UACServer.log", $"[DETECTION] Client #{Convert.ToString(c.id)} was flagged for unknown/not added reason");
         }
     }
 }

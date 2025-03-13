@@ -18,6 +18,8 @@ namespace UACServer.Network
         private List<AntiCheatClient> clients = new List<AntiCheatClient>();
         private bool isRunning = false;
 
+        public static Dictionary<DetectionFlags, string> Detections = new Dictionary<DetectionFlags, string>();
+
         public void Start(string ipAddress, int port)
         {
             listener = new TcpListener(IPAddress.Parse(ipAddress), port);
@@ -26,6 +28,38 @@ namespace UACServer.Network
 
             Logger.Log("UACServer.log", "Server started. Listening for connections...");  
             listener.BeginAcceptTcpClient(HandleClientConnected, null); //listen for client connections asynchronously
+        }
+
+        private void AddDetectionDictionary()
+        {
+            //general Detections
+            Detections.Add(DetectionFlags.PAGE_PROTECTIONS, "Page protections are not as expected");
+            Detections.Add(DetectionFlags.CODE_INTEGRITY, "Code integrity check failed");
+            Detections.Add(DetectionFlags.DLL_TAMPERING, "DLL tampering detected");
+            Detections.Add(DetectionFlags.BAD_IAT, "Invalid IAT detected");
+            Detections.Add(DetectionFlags.OPEN_PROCESS_HANDLES, "Unexpected open process handles detected");
+            Detections.Add(DetectionFlags.UNSIGNED_DRIVERS, "Unsigned drivers detected");
+            Detections.Add(DetectionFlags.INJECTED_ILLEGAL_PROGRAM, "Injected illegal program detected");
+            Detections.Add(DetectionFlags.EXTERNAL_ILLEGAL_PROGRAM, "External illegal program detected");
+            Detections.Add(DetectionFlags.HYPERVISOR, "Hypervisor detected");
+            Detections.Add(DetectionFlags.REGISTRY_KEY_MODIFICATIONS, "Registry key modifications detected");
+
+            //debug-related Detections
+            Detections.Add(DetectionFlags.DEBUG_WINAPI_DEBUGGER, "WinAPI debugger detected");
+            Detections.Add(DetectionFlags.DEBUG_PEB, "PEB (Process Environment Block) debugger detected");
+            Detections.Add(DetectionFlags.DEBUG_HARDWARE_REGISTERS, "Hardware register debugger detected");
+            Detections.Add(DetectionFlags.DEBUG_HEAP_FLAG, "Heap flag debugger detected");
+            Detections.Add(DetectionFlags.DEBUG_INT3, "INT3 breakpoint detected");
+            Detections.Add(DetectionFlags.DEBUG_INT2C, "INT2C breakpoint detected");
+            Detections.Add(DetectionFlags.DEBUG_CLOSEHANDLE, "CloseHandle debugger detected");
+            Detections.Add(DetectionFlags.DEBUG_DEBUG_OBJECT, "Debug object detected");
+            Detections.Add(DetectionFlags.DEBUG_VEH_DEBUGGER, "VEH (Vector Exception Handler) debugger detected");
+            Detections.Add(DetectionFlags.DEBUG_KERNEL_DEBUGGER, "Kernel debugger detected");
+            Detections.Add(DetectionFlags.DEBUG_TRAP_FLAG, "Trap flag debugger detected");
+            Detections.Add(DetectionFlags.DEBUG_DEBUG_PORT, "Debug port detected");
+            Detections.Add(DetectionFlags.DEBUG_PROCESS_DEBUG_FLAGS, "Process debug flags detected");
+            Detections.Add(DetectionFlags.DEBUG_REMOTE_DEBUGGER, "Remote debugger detected");
+            Detections.Add(DetectionFlags.DEBUG_DBG_BREAK, "Debug break detected");
         }
 
         private void HandleClientConnected(IAsyncResult result)
@@ -239,10 +273,6 @@ namespace UACServer.Network
                     }
                 }
                 break;
-
-                case Opcodes.CS.CS_GOODBYE: //client disconnect
-                    Handlers.HandleClientGoodbye(c);
-                    break;
 
                 case Opcodes.CS.CS_HEARTBEAT: //heartbeat
                 {
