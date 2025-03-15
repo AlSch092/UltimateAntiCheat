@@ -158,14 +158,14 @@ bool Integrity::IsUnknownModulePresent()
 	GetModuleHash - fetches .text section hashes for a specific module,
      returns a `ModuleHashData` object, returns nullptr if module or section not found
 */
-ModuleHashData* Integrity::GetModuleHash(__in const wchar_t* moduleName)
+ModuleHashData* Integrity::GetModuleHash(__in const wchar_t* moduleName, __in const char* sectionName)
 {
 	string modName = Utility::ConvertWStringToString(moduleName);
 	list<ProcessData::Section*> sections = Process::GetSections(modName);
 
 	for (auto s : sections)
 	{
-		if (s->name == ".text")
+		if (s->name == sectionName)
 		{
 			uint64_t sec_addr = (uint64_t)(s->address) + (uint64_t)GetModuleHandleA(modName.c_str());
 			vector<uint64_t> hashes = GetMemoryHash(sec_addr, s->size); //make hashes of .text of module
@@ -194,7 +194,7 @@ vector<ModuleHashData*> Integrity::GetModuleHashes()
 		if (module.dllInfo.lpBaseOfDll == GetModuleHandleA(NULL)) //skip main executable module, we're tracking that with another member. they could probably be merged into one list to optimize
 			continue;
 
-		AddModuleHash(moduleHashes, module.baseName.c_str());
+		AddModuleHash(moduleHashes, module.baseName.c_str(), ".text");
 	}
 
 	return moduleHashes;
@@ -208,7 +208,7 @@ bool Integrity::IsModuleModified(__in const wchar_t* moduleName)
 {
 	bool foundModified = false;
 
-	ModuleHashData* currentModuleHash = GetModuleHash(moduleName);
+	ModuleHashData* currentModuleHash = GetModuleHash(moduleName, ".text"); //todo: add in .rdata, etc 
 
 	for (ModuleHashData* modHash : this->ModuleHashes)
 	{
@@ -221,9 +221,9 @@ bool Integrity::IsModuleModified(__in const wchar_t* moduleName)
 			}
 
 			uint64_t* arr1 = modHash->Hashes.data();
-			size_t size = modHash->Hashes.size();
-
 			uint64_t* arr2 = currentModuleHash->Hashes.data();
+
+			size_t size = modHash->Hashes.size();
 
 			for (int i = 0; i < size - 1; i++)
 			{
@@ -246,7 +246,7 @@ bool Integrity::IsModuleModified(__in const wchar_t* moduleName)
 /*
 	AddModuleHash - fetches hash list for `moduleName` and adds to `moduleHashList`
 */
-void Integrity::AddModuleHash(__in vector<ModuleHashData*> moduleHashList, __in const wchar_t* moduleName)
+void Integrity::AddModuleHash(__in vector<ModuleHashData*>& moduleHashList, __in const wchar_t* moduleName, __in const char* sectionName)
 {
 	if (moduleName == nullptr)
 		return;
@@ -256,7 +256,7 @@ void Integrity::AddModuleHash(__in vector<ModuleHashData*> moduleHashList, __in 
 
 	for (auto s : sections)
 	{
-		if (s->name == ".text")
+		if (s->name == string(sectionName))
 		{
 			uint64_t sec_addr = (uint64_t)(s->address) + (uint64_t)GetModuleHandleA(modName.c_str());
 			vector<uint64_t> hashes = GetMemoryHash(sec_addr, s->size); //get hashes of .text of module

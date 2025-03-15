@@ -80,8 +80,8 @@ public:
 	
 	void AddToWhitelist(__in ProcessData::MODULE_DATA mod) { WhitelistedModules.push_back(mod); }
 
-	void AddModuleHash(__in vector<ModuleHashData*> moduleHashList, __in const wchar_t* moduleName);
-	ModuleHashData* GetModuleHash(__in const wchar_t* moduleName);
+	void AddModuleHash(__in vector<ModuleHashData*>& moduleHashList, __in const wchar_t* moduleName, __in const char* sectionName);
+	ModuleHashData* GetModuleHash(__in const wchar_t* moduleName, __in const char* sectionName);
 
 	vector<ModuleHashData*> GetModuleHashes();
 
