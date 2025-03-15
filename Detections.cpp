@@ -159,7 +159,7 @@ void Detections::CheckDLLSignature()
             if (!Authenticode::HasSignature(FullDllName.c_str(), TRUE))
             {
                 Logger::logfw(Detection, L"Failed to verify signature of %s\n", FullDllName);
-                this->EvidenceManager->AddFlagged(DetectionFlags::INJECTED_ILLEGAL_PROGRAM, Utility::ConvertWStringToString(FullDllName));
+                this->EvidenceManager->AddFlagged(DetectionFlags::INJECTED_ILLEGAL_PROGRAM, Utility::ConvertWStringToString(FullDllName), GetCurrentProcessId());
                 this->UnsignedModulesLoaded.push_back(FullDllName);
             }
             else
@@ -321,7 +321,7 @@ void Detections::Monitor(__in LPVOID thisPtr)
             for (uint64_t mappedRegionAddress : mappedRegions)
             {
                 Logger::logf(Detection, "Found potentially manually mapped region at: %llX", mappedRegionAddress);
-                Monitor->EvidenceManager->AddFlagged(DetectionFlags::MANUAL_MAPPING, std::to_string(mappedRegionAddress));
+                Monitor->EvidenceManager->AddFlagged(DetectionFlags::MANUAL_MAPPING, std::to_string(mappedRegionAddress), GetCurrentProcessId());
             }        
         }
 
@@ -971,7 +971,7 @@ void Detections::MonitorProcessCreation(__in LPVOID thisPtr)
           
                 if (monitor->FindBlacklistedProgramsThroughByteScan(vtProcId.uintVal))
                 {
-                    monitor->EvidenceManager->AddFlagged(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM, Utility::ConvertWStringToString(vtName.bstrVal));
+                    monitor->EvidenceManager->AddFlagged(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM, Utility::ConvertWStringToString(vtName.bstrVal), GetCurrentProcessId());
                     Logger::logfw(Detection, L"Blacklisted process was found through byte signature: %s", vtName.bstrVal);
                 }
                 

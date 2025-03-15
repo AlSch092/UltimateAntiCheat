@@ -2,7 +2,6 @@
 #include "Network/NetClient.hpp"
 #include "Common/DetectionFlags.hpp"
 #include "Common/Error.hpp"
-#include "Common/Logger.hpp"
 
 #include <unordered_map>
 #include <list>
@@ -13,35 +12,29 @@ struct Evidence
 {
 	DetectionFlags type;
 	std::string data;
+	DWORD pid;
 };
 
-/*
-	EvidenceLocker is a class for managing detection flags and any evidence fragments (modules, addresses, script names, etc)
-	Flags + evidence can be queued up or sent immediately to the server
-*/
 class EvidenceLocker final
 {
 public:
 
 	EvidenceLocker(NetClient* netclient) : NetworkClient(netclient)
 	{
-		if (netclient == nullptr)
-		{
-			Logger::logf(Err, "NetClient was nullptr @ EvidenceLocker::EvidenceLocker");
-		}
+
 	}
 
-	bool PushAllEvidence(); //send all flags which haven't been sent already
+	bool PushAllEvidence();
 
 	bool AddFlagged(__in const DetectionFlags flag);
-	bool AddFlagged(__in const DetectionFlags flag, __in const std::string data); //flag with string evidence
+	bool AddFlagged(__in const DetectionFlags flag, __in const std::string data, __in const DWORD pid);
 
-	void AddEvidence(__in const DetectionFlags type, __in const std::string data); //add to evidence list
+	void AddEvidence(__in const DetectionFlags type, __in const std::string data, __in const DWORD pid); //add to evidence list
 
 	bool HasSentFlag(__in const DetectionFlags flag) { return SentFlags[flag]; }
 
-	bool SendFlag(__in const DetectionFlags flag); //send single flag to server
-	bool FlagWithData(__in const DetectionFlags flag, __in const string data); //send flag + evidence to server
+	bool SendFlag(__in const DetectionFlags flag);
+	bool FlagWithData(__in const DetectionFlags flag, __in const string data, __in const DWORD pid, __in const bool ShouldMarkAsSent);
 
 	int GetFlagListSize() const { return this->FlaggedList.size(); }
 
@@ -52,10 +45,13 @@ private:
 
 	std::list<DetectionFlags> FlaggedList;
 
-	std::unordered_map<DetectionFlags, bool> SentFlags; //to avoid duplicate flagging (or the same detection being sent every single monitor loop), map a boolean to each detection flag
-	std::unordered_map<DetectionFlags, bool> HasEvidenceData; //specific flag has additional data to send (ex. an address, a string, etc). Always expressed as a string, such that no type is needed
+	std::unordered_map<DetectionFlags, bool> SentFlags;
+	std::unordered_map<DetectionFlags, bool> HasEvidenceData; //specific flag has additional data to send (ex. an address, a string, etc)
 
-	std::list<Evidence> EvidenceData; //any evidence associated with a specific detection flag
+	std::list<Evidence> EvidenceData;
+
+	std::list<std::string> AlreadySentEvidence; //keep track of evidence which has been sent already
 
 	NetClient* NetworkClient = nullptr;
+
 };
