@@ -5,7 +5,7 @@
 	Initialize - Initializes the network client
 	returns Error::OK on success
 */
-Error NetClient::Initialize(string ip, uint16_t port, string gameCode)
+Error NetClient::Initialize(__in const std::string ip, __in const uint16_t port, __in const std::string gameCode)
 {
 	WSADATA wsaData;
 	SOCKET Socket = INVALID_SOCKET;
@@ -72,7 +72,7 @@ Error NetClient::Initialize(string ip, uint16_t port, string gameCode)
 	EndConnection - Ends the net connection with the server
 	returns Error::OK on success
 */
-Error NetClient::EndConnection(int reason)
+Error NetClient::EndConnection(__in const int reason)
 {
 	PacketWriter* p = Packets::Builder::ClientGoodbye(reason);
 	Error err = Error::OK;
@@ -104,7 +104,7 @@ Error NetClient::EndConnection(int reason)
 	returns Error::OK on success
 	Function deletes memory of outPacket on success 
 */
-Error NetClient::SendData(PacketWriter* outPacket)
+Error NetClient::SendData(__in PacketWriter* outPacket)
 {
 	if (outPacket->GetBuffer() == nullptr || outPacket == nullptr)
 		return Error::NULL_MEMORY_REFERENCE;
@@ -138,7 +138,7 @@ Error NetClient::SendData(PacketWriter* outPacket)
 /*
 	ProcessRequests - reads packet sent from the server in a loop
 */
-void NetClient::ProcessRequests(LPVOID Param)
+void NetClient::ProcessRequests(__in LPVOID Param)
 {
 	if (Param == nullptr)
 	{
@@ -272,7 +272,7 @@ std::string NetClient::GetHostname()
 /*
 	HandleInboundPacket - read packet `p`  and take action based on its opcode
 */
-Error NetClient::HandleInboundPacket(PacketReader* p)
+Error NetClient::HandleInboundPacket(__in PacketReader* p)
 {
 	if (p == nullptr)
 		return Error::NULL_MEMORY_REFERENCE;
@@ -345,7 +345,7 @@ Error NetClient::HandleInboundPacket(PacketReader* p)
 	FlagCheater - tells server the client has detected cheating
 	returns Error::OK on success
 */
-Error NetClient::FlagCheater(DetectionFlags flag)
+Error NetClient::FlagCheater(__in const DetectionFlags flag)
 {
 	PacketWriter* outBytes = Packets::Builder::DetectedCheater(flag);
 	return SendData(outBytes);
@@ -355,9 +355,9 @@ Error NetClient::FlagCheater(DetectionFlags flag)
 	FlagCheater - tells server the client has detected cheating, along with some additional supporting data
 	returns Error::OK on success
 */
-Error NetClient::FlagCheater(DetectionFlags flag, string data)
+Error NetClient::FlagCheater(__in const DetectionFlags flag, __in const std::string data, __in const DWORD pid)
 {
-	PacketWriter* outBytes = Packets::Builder::DetectedCheater(flag, data);
+	PacketWriter* outBytes = Packets::Builder::DetectedCheater(flag, data, pid);
 	return SendData(outBytes);
 }
 
@@ -365,7 +365,7 @@ Error NetClient::FlagCheater(DetectionFlags flag, string data)
 	QueryMemory - Server requested client to read bytes @ some memory address
 	returns Error::OK on success
 */
-Error NetClient::QueryMemory(uint64_t address, uint32_t size)
+Error NetClient::QueryMemory(__in const uint64_t address, __in const uint32_t size)
 {
 	if (size == 0 || address == 0)
 	{
@@ -391,7 +391,7 @@ Error NetClient::QueryMemory(uint64_t address, uint32_t size)
 	MakeHeartbeat - Generates a response to server heartbeat requests
 	returns a char* array containing the auth cookie. Very simple example, non-public versions of the project use something more complicated
 */
-__forceinline const char* NetClient::MakeHeartbeat(std::string cookie)
+__forceinline const char* NetClient::MakeHeartbeat(__in const std::string cookie)
 {
 	if (!Process::IsReturnAddressInModule(*(UINT64*)_AddressOfReturnAddress(), NULL)) //return address check, NULL refers to the current module
 	{
@@ -419,7 +419,7 @@ __forceinline const char* NetClient::MakeHeartbeat(std::string cookie)
 	EncryptData - encrypts `buffer` using xor /w sub/add operation
 	Of course a much better encryption routine can be replaced with this, everyone will have their own preference (AES, RSA, Salsa, etc) so you can implement one yourself if desired
 */
-void __forceinline NetClient::CipherData(LPBYTE buffer, int length)
+void __forceinline NetClient::CipherData(__inout LPBYTE buffer, __in const int length)
 {
 	const byte XorKey = 0x90;
 	const byte OperationKey = 0x14;

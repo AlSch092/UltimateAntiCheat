@@ -36,7 +36,7 @@ namespace Packets
 		PacketWriter* ClientGoodbye(int reason);
 		PacketWriter* Heartbeat(const char* cookie_str);
 		PacketWriter* DetectedCheater(int flags);
-		PacketWriter* DetectedCheater(__in const uint32_t flags, __in const const std::string detectedModule);
+		PacketWriter* DetectedCheater(__in const uint32_t flags, __in const const std::string detectedModule, __in const DWORD pid);
 		PacketWriter* QueryMemory(byte* bytestring, int size);
 	}
 }
