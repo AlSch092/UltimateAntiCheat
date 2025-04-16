@@ -16,18 +16,18 @@
 #endif
 
 #ifdef _M_X64  
-#define UINT uint64_t
+#define _UINT uint64_t
 
 extern "C"
 {
-    void VM_Call(UINT callAddress, UINT numParameters, UINT* parameters); //asm stub for VM_CALL opcode since we can't inline - we pass any parameters as an array 
+    void VM_Call(_UINT callAddress, _UINT numParameters, _UINT* parameters); //asm stub for VM_CALL opcode since we can't inline - we pass any parameters as an array 
 }
 
 #else
-#define UINT uint32_t
+#define _UINT uint32_t
 #endif
 
-enum class VM_Opcode : UINT //these can be randomized at runtime on each instance of the program , we'll implement this soon
+enum class VM_Opcode : _UINT //these can be randomized at runtime on each instance of the program , we'll implement this soon
 {
     VM_PUSH,
     VM_POP,
@@ -75,7 +75,7 @@ public:
     VirtualMachine(int stackSize) : stackSize(stackSize)
     {
         if (stack == nullptr)
-            stack = new UINT[stackSize];
+            stack = new _UINT[stackSize];
     }
 
     ~VirtualMachine()
@@ -84,7 +84,7 @@ public:
             delete[] stack;
     }
 
-    void SetStackSize(UINT newSize)
+    void SetStackSize(_UINT newSize)
     {
         if (newSize == 0)
         {
@@ -94,8 +94,7 @@ public:
             return;
         }
 
-        UINT* newStack = new (std::nothrow) UINT[newSize];
-
+        _UINT* newStack = new (std::nothrow) _UINT[newSize];
         if (newStack == nullptr)
         {
             std::cerr << "Memory allocation failed for stack resizing!" << std::endl;
@@ -104,7 +103,10 @@ public:
 
         if (this->stack != nullptr)
         {
-            for (UINT i = 0; i < std::min(this->stackSize, newSize); i++)
+            // Manually compute the smaller of the two sizes
+            _UINT copySize = (this->stackSize < newSize) ? this->stackSize : newSize;
+
+            for (_UINT i = 0; i < copySize; i++)
             {
                 newStack[i] = this->stack[i];
             }
@@ -154,33 +156,33 @@ public:
 
             case VM_Opcode::VM_ADD: //arithmetic operations (+,-,*,/) pop two values from the stack and place the result in the into stack's sp index
             {
-                UINT b = stack[--sp];
-                UINT a = stack[--sp];
+                _UINT b = stack[--sp];
+                _UINT a = stack[--sp];
                 stack[sp] = a + b;
             } break;
 
             case VM_Opcode::VM_SUB:
             {
-                UINT b = stack[--sp];
-                UINT a = stack[--sp];
+                _UINT b = stack[--sp];
+                _UINT a = stack[--sp];
                 stack[sp] = a - b;
             } break;
 
             case VM_Opcode::VM_MUL:
             {
-                UINT b = stack[--sp];
-                UINT a = stack[--sp];
+                _UINT b = stack[--sp];
+                _UINT a = stack[--sp];
                 stack[sp] = a * b;
             } break;
 
             case VM_Opcode::VM_DIV:
             {
-                UINT b = stack[--sp];
-                UINT a = stack[--sp];
+                _UINT b = stack[--sp];
+                _UINT a = stack[--sp];
                 stack[sp] = a / b;
             } break;
 
-            case VM_Opcode::VM_FL_ADD: //we need to use memcpy for floats to avoid losing precision since our stack is UINT 
+            case VM_Opcode::VM_FL_ADD: //we need to use memcpy for floats to avoid losing precision since our stack is _UINT 
             {
                 float b = 0;
                 memcpy((void*)&b, (const void*)&stack[--sp], sizeof(float));
@@ -236,10 +238,10 @@ public:
 
             case VM_Opcode::VM_MOV_REGISTER_TO_REGISTER: // ex. mov 0, 1   (move register 1 into register 0, similar to mov ax,bx)
             {
-                UINT lhs_index = *(UINT*)ip;
+                _UINT lhs_index = *(UINT*)ip;
                 ip += sizeof(UINT);
 
-                UINT rhs_index = *(UINT*)ip;
+                _UINT rhs_index = *(UINT*)ip;
                 ip += sizeof(UINT);
 
                 if (lhs_index < MAX_REGISTERS && rhs_index < MAX_REGISTERS)
@@ -250,10 +252,10 @@ public:
 
             case VM_Opcode::VM_MOV_IMMEDIATE_TO_REGISTER: //ex. mov ax, 12345678
             {
-                UINT register_index = *(UINT*)ip; //should be 0 through MAX_REGISTERS-1 (0-indexed)
+                _UINT register_index = *(UINT*)ip; //should be 0 through MAX_REGISTERS-1 (0-indexed)
                 ip += sizeof(UINT);
 
-                UINT value = *(UINT*)ip;
+                _UINT value = *(UINT*)ip;
                 ip += sizeof(UINT);
 
                 if (register_index < MAX_REGISTERS)
@@ -264,7 +266,7 @@ public:
 
             case VM_Opcode::VM_GET_TOP_STACK: // mov myVar, [sp]
             {
-                UINT varAddress = *(UINT*)ip;
+                _UINT varAddress = *(UINT*)ip;
                 ip += sizeof(UINT);
                 memcpy((void*)varAddress, (const void*)&stack[sp], sizeof(UINT));
                 //*(UINT*)varAddress = stack[sp];
@@ -272,8 +274,8 @@ public:
 
             case VM_Opcode::VM_CMP: //how do we best implement this, given that someone could pass in two class objects with overloaded comparison operators?
             {
-                UINT b = stack[--sp];
-                UINT a = stack[--sp];
+                _UINT b = stack[--sp];
+                _UINT a = stack[--sp];
 
                 if (a == b)
                 {
@@ -298,12 +300,12 @@ public:
 
             case VM_Opcode::VM_CALL: //x86 works okay, however in x64, functions with parameters are not supported yet, this will be added shortly
             {
-                UINT numParameters = *(UINT*)ip;
+                _UINT numParameters = *(UINT*)ip;
                 ip += sizeof(UINT);
-                UINT callAddress = *(UINT*)ip;
+                _UINT callAddress = *(UINT*)ip;
 
 #ifdef _M_X64  
-                UINT* parameters = new UINT[numParameters];
+                _UINT* parameters = new _UINT[numParameters];
 
                 for (int i = 0; i < numParameters; i++)
                 {
@@ -315,7 +317,7 @@ public:
 #else
                 for (int i = 0; i < numParameters; i++) //x86 cdecl calling convention, push parameters onto stack then call
                 {
-                    UINT parameter = stack[sp - numParameters + i];
+                    _UINT parameter = stack[sp - numParameters + i];
 
                     __asm { push parameter }
                 }
@@ -334,7 +336,7 @@ public:
 
             case VM_Opcode::VM_STDOUT:
             {
-                UINT textAddress = *(UINT*)ip;
+                _UINT textAddress = *(UINT*)ip;
                 ip += sizeof(UINT);
                 std::cout << (const char*)textAddress << std::endl;
             }break;
@@ -366,13 +368,13 @@ public:
 private:
     const static int MAX_REGISTERS = 8; //can be increased if needed
 
-    UINT registers[MAX_REGISTERS]{ 0 };  //general purpose
+    _UINT registers[MAX_REGISTERS]{ 0 };  //general purpose
 
-    UINT ip = 0;
-    UINT sp = 0;
+    _UINT ip = 0;
+    _UINT sp = 0;
 
-    UINT* stack = nullptr;
-    UINT stackSize = 0;
+    _UINT* stack = nullptr;
+    _UINT stackSize = 0;
 
     std::mutex execution_mtx;
 

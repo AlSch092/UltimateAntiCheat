@@ -1,7 +1,7 @@
 #pragma once
 #include <cstddef>
 
-constexpr char XOR_KEY = 0x55;
+constexpr char XorKey = 0x55;
 
 constexpr char encrypt_char(char c, char key, int index) 
 {
@@ -35,7 +35,7 @@ public:
     {
         for (std::size_t i = 0; i < N; ++i) 
         {
-            encrypted[i] = encrypt_char(str[i], XOR_KEY, i);
+            encrypted[i] = encrypt_char(str[i], XorKey, i);
         }
     }
 
@@ -44,7 +44,7 @@ public:
     {
         for (std::size_t i = 0; i < N; ++i) 
         {
-            output[i] = decrypt_char(encrypted[i], XOR_KEY, i);
+            output[i] = decrypt_char(encrypted[i], XorKey, i);
         }
     }
 
@@ -69,7 +69,7 @@ public:
     {
         for (std::size_t i = 0; i < N; ++i)
         {
-            encrypted[i] = encrypt_wchar(str[i], XOR_KEY, i);
+            encrypted[i] = encrypt_wchar(str[i], XorKey, i);
         }
     }
 
@@ -77,7 +77,7 @@ public:
     {
         for (std::size_t i = 0; i < N; ++i)
         {
-            output[i] = decrypt_wchar(encrypted[i], XOR_KEY, i);
+            output[i] = decrypt_wchar(encrypted[i], XorKey, i);
         }
     }
 
