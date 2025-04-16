@@ -13,6 +13,7 @@
 #include "AntiCheat.hpp"
 #include "SplashScreen.hpp"
 #include "AntiTamper/MapProtectedClass.hpp" //to make Settings class object write-protected (see https://github.com/AlSch092/RemapProtectedClass)
+#include "Obscure/XorStr.hpp"
 
 #pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper) - each section gets its own region, align with system allocation granularity
 #pragma comment (linker, "/INCLUDE:_tls_used")
@@ -63,7 +64,7 @@ int main(int argc, char** argv)
     const string logFileName = "UltimateAnticheat.log";
 
 #else
-    const bool bEnableNetworking = false; //change this to false if you don't want to use the server
+    const bool bEnableNetworking = true; //change this to false if you don't want to use the server
     const bool bEnforceSecureBoot = false; //secure boot is recommended in distribution builds
     const bool bEnforceDSE = true;
     const bool bEnforceNoKDBG = true;
@@ -75,7 +76,15 @@ int main(int argc, char** argv)
     const bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
     const bool bEnableLogging = true; // set to false to not create a detailed AntiCheat log file on the user's system
 
-    const list<wstring> allowedParents = {L"explorer.exe", L"steam.exe"}; //add your launcher here
+    constexpr auto parent_1 = make_encrypted(L"explorer.exe"); //in release build we can encrypt any compiled strings and decrypt them at runtime
+    wchar_t decrypted_1[parent_1.getSize()] = {};
+    parent_1.decrypt(decrypted_1);
+
+    constexpr auto parent_2 = make_encrypted(L"steam.exe");
+    wchar_t decrypted_2[parent_2.getSize()] = {};
+    parent_2.decrypt(decrypted_2);
+
+    const list<wstring> allowedParents = { decrypted_1, decrypted_2 }; //add your launcher here
     const string logFileName = ""; //empty : does not log to file
 #endif
 
