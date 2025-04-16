@@ -54,6 +54,9 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+  </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -217,6 +220,8 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
     <ClInclude Include="Network\Packets\PacketWriter.hpp" />
     <ClInclude Include="Obscure\ntldr.hpp" />
     <ClInclude Include="Obscure\Obfuscation.hpp" />
+    <ClInclude Include="Obscure\VirtualMachine.hpp" />
+    <ClInclude Include="Obscure\XorStr.hpp" />
     <ClInclude Include="Preventions.hpp" />
     <ClInclude Include="Process\Exports.hpp" />
     <ClInclude Include="Process\Handles.hpp" />
@@ -230,5 +235,11 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
   <ItemGroup>
     <ResourceCompile Include="UltimateAnticheat.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <MASM Include="Obscure\ASMStubs.asm" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
 </Project>

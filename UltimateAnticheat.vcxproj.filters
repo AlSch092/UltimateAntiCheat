@@ -221,10 +221,21 @@
     <ClInclude Include="EvidenceLocker.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Obscure\XorStr.hpp">
+      <Filter>Obscure</Filter>
+    </ClInclude>
+    <ClInclude Include="Obscure\VirtualMachine.hpp">
+      <Filter>Obscure</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="UltimateAnticheat.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="Obscure\ASMStubs.asm">
+      <Filter>Obscure</Filter>
+    </MASM>
   </ItemGroup>
 </Project>
