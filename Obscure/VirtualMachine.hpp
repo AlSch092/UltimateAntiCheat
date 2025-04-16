@@ -20,7 +20,7 @@
 
 extern "C"
 {
-    void VM_Call(_UINT callAddress, _UINT numParameters, _UINT* parameters); //asm stub for VM_CALL opcode since we can't inline - we pass any parameters as an array 
+    _UINT VM_Call(_UINT callAddress, _UINT numParameters, _UINT* parameters); //asm stub for VM_CALL opcode since we can't inline - we pass any parameters as an array 
 }
 
 #else
@@ -119,15 +119,18 @@ public:
     }
 
     /*
-        bool Execute(UINT* virtualizedCode, uint32_t executeSize) - executes bytecode
+        bool Execute(_UINT* virtualizedCode, uint32_t executeSize) - executes bytecode
         returns `true` on success, `false` on failure
     */
-    bool Execute(UINT* bytecode, uint32_t executeSize)
+    template<typename T>
+    T Execute(_UINT* bytecode, uint32_t executeSize)
     {
         if (bytecode == nullptr || executeSize == 0)
             return false;
 
-        ip = (UINT)&bytecode[0];
+        T retVal = 0;
+
+        ip = (_UINT)&bytecode[0];
 
         //adding a RAII lock means __try/__except won't compile without errors - it's up to the caller to ensure we don't dereference unallocated memory or execute past the buffer
         std::lock_guard<std::mutex> lock(execution_mtx); //multi threading could potentially lead to sp/ip corruption, so use a mutex
@@ -135,18 +138,18 @@ public:
         for (uint32_t i = 0; i < executeSize; i++)
         {
             VM_Opcode vm_opcode = *(VM_Opcode*)ip;
-            ip += sizeof(UINT);
+            ip += sizeof(_UINT);
 
 #ifdef USING_OBFUSCATE
-            vm_opcode = (VM_Opcode)((UINT)vm_opcode DEOBFUSCATE);
+            vm_opcode = (VM_Opcode)((_UINT)vm_opcode DEOBFUSCATE);
 #endif
 
             switch (vm_opcode)
             {
             case VM_Opcode::VM_PUSH: //push = write to stack, increment sp
             {
-                memcpy((void*)&stack[sp++], (const void*)ip, sizeof(UINT)); //using memcpy allows us to work with both float and int without losing precision
-                ip += sizeof(UINT);
+                memcpy((void*)&stack[sp++], (const void*)ip, sizeof(_UINT)); //using memcpy allows us to work with both float and int without losing precision
+                ip += sizeof(_UINT);
             }  break;
 
 
@@ -238,11 +241,11 @@ public:
 
             case VM_Opcode::VM_MOV_REGISTER_TO_REGISTER: // ex. mov 0, 1   (move register 1 into register 0, similar to mov ax,bx)
             {
-                _UINT lhs_index = *(UINT*)ip;
-                ip += sizeof(UINT);
+                _UINT lhs_index = *(_UINT*)ip;
+                ip += sizeof(_UINT);
 
-                _UINT rhs_index = *(UINT*)ip;
-                ip += sizeof(UINT);
+                _UINT rhs_index = *(_UINT*)ip;
+                ip += sizeof(_UINT);
 
                 if (lhs_index < MAX_REGISTERS && rhs_index < MAX_REGISTERS)
                     registers[lhs_index] = registers[rhs_index];
@@ -252,11 +255,11 @@ public:
 
             case VM_Opcode::VM_MOV_IMMEDIATE_TO_REGISTER: //ex. mov ax, 12345678
             {
-                _UINT register_index = *(UINT*)ip; //should be 0 through MAX_REGISTERS-1 (0-indexed)
-                ip += sizeof(UINT);
+                _UINT register_index = *(_UINT*)ip; //should be 0 through MAX_REGISTERS-1 (0-indexed)
+                ip += sizeof(_UINT);
 
-                _UINT value = *(UINT*)ip;
-                ip += sizeof(UINT);
+                _UINT value = *(_UINT*)ip;
+                ip += sizeof(_UINT);
 
                 if (register_index < MAX_REGISTERS)
                     registers[register_index] = value;
@@ -266,10 +269,10 @@ public:
 
             case VM_Opcode::VM_GET_TOP_STACK: // mov myVar, [sp]
             {
-                _UINT varAddress = *(UINT*)ip;
-                ip += sizeof(UINT);
-                memcpy((void*)varAddress, (const void*)&stack[sp], sizeof(UINT));
-                //*(UINT*)varAddress = stack[sp];
+                _UINT varAddress = *(_UINT*)ip;
+                ip += sizeof(_UINT);
+                memcpy((void*)varAddress, (const void*)&stack[sp], sizeof(_UINT));
+                //*(_UINT*)varAddress = stack[sp];
             }break;
 
             case VM_Opcode::VM_CMP: //how do we best implement this, given that someone could pass in two class objects with overloaded comparison operators?
@@ -295,24 +298,24 @@ public:
             case VM_Opcode::VM_JMP_OFFSET:
             {
                 int offset = *(int*)ip;
-                ip += (sizeof(UINT) + offset);
+                ip += (sizeof(_UINT) + offset);
             }break;
 
             case VM_Opcode::VM_CALL: //x86 works okay, however in x64, functions with parameters are not supported yet, this will be added shortly
             {
-                _UINT numParameters = *(UINT*)ip;
-                ip += sizeof(UINT);
-                _UINT callAddress = *(UINT*)ip;
+                _UINT numParameters = *(_UINT*)ip;
+                ip += sizeof(_UINT);
+                _UINT callAddress = *(_UINT*)ip;
 
 #ifdef _M_X64  
                 _UINT* parameters = new _UINT[numParameters];
 
                 for (int i = 0; i < numParameters; i++)
                 {
-                    memcpy((void*)&parameters[i], (const void*)&(stack[sp - numParameters + i]), sizeof(UINT));
+                    memcpy((void*)&parameters[i], (const void*)&(stack[sp - numParameters + i]), sizeof(_UINT));
                 }
 
-                VM_Call(callAddress, numParameters, parameters); //parameters need to correctly go into rcx, rdx, r8, r9, [rsp+...]
+                retVal = VM_Call(callAddress, numParameters, parameters); //parameters need to correctly go into rcx, rdx, r8, r9, [rsp+...]
                 delete[] parameters;
 #else
                 for (int i = 0; i < numParameters; i++) //x86 cdecl calling convention, push parameters onto stack then call
@@ -336,8 +339,8 @@ public:
 
             case VM_Opcode::VM_STDOUT:
             {
-                _UINT textAddress = *(UINT*)ip;
-                ip += sizeof(UINT);
+                _UINT textAddress = *(_UINT*)ip;
+                ip += sizeof(_UINT);
                 std::cout << (const char*)textAddress << std::endl;
             }break;
 
@@ -362,7 +365,7 @@ public:
         for (int i = 0; i < MAX_REGISTERS; i++)
             registers[i] = 0;
 
-        return true;
+        return retVal;
     }
 
 private:

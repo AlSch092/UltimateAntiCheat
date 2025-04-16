@@ -19,6 +19,7 @@ VM_Call PROC
     push r11
     push r12
     push r13
+
     mov r11, rcx ; move callAddress into rax, shift all parameters into correct registers
     mov eax, edx ; move num parameters into ax
     mov r13, [rsp+20h]
@@ -65,13 +66,15 @@ p_above4:
     pop r14
     dec ax
     jmp p_loop
-to_call:
-    call r11
 
+to_call:
+    sub rsp, 28h
+    call r11
+    add rsp, 28h
 
     pop r12
     pop r11
-    pop rax
+    add rsp,08h  ; instead of pop rax, just add 8 to rsp to avoid muddying return value
     mov [rsp+08h], r13
     pop r13
     ret
