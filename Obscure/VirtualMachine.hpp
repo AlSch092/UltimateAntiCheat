@@ -6,6 +6,7 @@
 #include <random>
 #include <intrin.h>
 #include <iostream>
+#include "../Common/Logger.hpp"
 
 #define USING_OBFUSCATE //comment this out to disable opcode obfuscation
 
@@ -95,15 +96,15 @@ public:
         }
 
         _UINT* newStack = new (std::nothrow) _UINT[newSize];
+
         if (newStack == nullptr)
         {
-            std::cerr << "Memory allocation failed for stack resizing!" << std::endl;
+			Logger::logf(Err, "Memory allocation failed for stack resizing @ VirtualMachine::SetStackSize");
             return;
         }
 
         if (this->stack != nullptr)
         {
-            // Manually compute the smaller of the two sizes
             _UINT copySize = (this->stackSize < newSize) ? this->stackSize : newSize;
 
             for (_UINT i = 0; i < copySize; i++)
@@ -142,6 +143,8 @@ public:
 
 #ifdef USING_OBFUSCATE
             vm_opcode = (VM_Opcode)((_UINT)vm_opcode DEOBFUSCATE);
+#else
+            vm_opcode = (VM_Opcode)((_UINT)vm_opcode);
 #endif
 
             switch (vm_opcode)
@@ -231,7 +234,7 @@ public:
 
                 if (b == 0)
                 {
-                    std::cerr << "Division by zero error in bytecode!" << std::endl;
+                    Logger::logf(Err, "Division by zero error in bytecode @ VirtualMachine::Execute");
                     return false;
                 }
 
@@ -301,23 +304,34 @@ public:
                 ip += (sizeof(_UINT) + offset);
             }break;
 
-            case VM_Opcode::VM_CALL: //x86 works okay, however in x64, functions with parameters are not supported yet, this will be added shortly
+            case VM_Opcode::VM_CALL:
             {
+#ifdef USING_OBFUSCATE
+                _UINT numParameters = *(_UINT*)ip DEOBFUSCATE;
+                ip += sizeof(_UINT);
+                _UINT callAddress = *(_UINT*)ip DEOBFUSCATE;
+#else
                 _UINT numParameters = *(_UINT*)ip;
                 ip += sizeof(_UINT);
                 _UINT callAddress = *(_UINT*)ip;
+#endif
 
 #ifdef _M_X64  
                 _UINT* parameters = new _UINT[numParameters];
 
                 for (int i = 0; i < numParameters; i++)
                 {
-                    memcpy((void*)&parameters[i], (const void*)&(stack[sp - numParameters + i]), sizeof(_UINT));
+#ifdef USING_OBFUSCATE
+                    _UINT parameter = (_UINT)stack[sp - numParameters + i] DEOBFUSCATE;
+#else
+                    _UINT parameter = (_UINT)stack[sp - numParameters + i];
+#endif
+                    memcpy((void*)&parameters[i], (const void*)&parameter, sizeof(_UINT));
                 }
 
-                retVal = VM_Call(callAddress, numParameters, parameters); //parameters need to correctly go into rcx, rdx, r8, r9, [rsp+...]
+                retVal = VM_Call(callAddress, numParameters, parameters);
                 delete[] parameters;
-#else
+#else //x86
                 for (int i = 0; i < numParameters; i++) //x86 cdecl calling convention, push parameters onto stack then call
                 {
                     _UINT parameter = stack[sp - numParameters + i];
@@ -381,7 +395,7 @@ private:
 
     std::mutex execution_mtx;
 
-    std::unordered_map<UINT, UINT> opcodeMappings; //for randomizing opcodes, will be implemented soon
+    //std::unordered_map<UINT, UINT> opcodeMappings; //for randomizing opcodes, will be implemented later
 
     enum ComparisonFlag
     {
@@ -391,4 +405,40 @@ private:
     };
 
     ComparisonFlag cmp_flag = Equal;
+};
+
+// VMException class
+class VirtualMachineException : public std::exception
+{
+public:
+
+    enum VMException
+    {
+        DivisionByZero,
+        FragmentedFunction,
+        StackOutOfSpace,
+        UnknownOpcode,
+    };
+
+    VMException type;
+
+    VirtualMachineException(VMException exception) : type(exception)
+    {
+
+    }
+
+    const char* what() const noexcept override
+    {
+        return exceptionMessages.at(type).c_str();
+    }
+
+private:
+
+	std::unordered_map<VMException, std::string> exceptionMessages =
+	{
+		{ DivisionByZero, "Division by zero error in bytecode arithmetic" },
+		{ FragmentedFunction, "Fragmented function error, no end opcode in bytecode" },
+		{ StackOutOfSpace, "Stack out of space error" },
+        { UnknownOpcode, "Unknown opcode in VM bytecode" },
+	};
 };

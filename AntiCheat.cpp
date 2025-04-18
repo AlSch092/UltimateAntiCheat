@@ -10,14 +10,14 @@ AntiCheat::AntiCheat(__in Settings* config, __in const WindowsVersion WinVersion
 	{   //call `DoPreInitializeChecks()` through VM as a concept proof 
 		std::unique_ptr<VirtualMachine> VM = std::make_unique<VirtualMachine>(128);
 
-		bool (AntiCheat:: * callAddr)() = &AntiCheat::DoPreInitializeChecks; //check various things such as secure boot, DSE, kdebugging, if they are enabled in settings
+		bool (AntiCheat::*callAddr)() = &AntiCheat::DoPreInitializeChecks; //check various things such as secure boot, DSE, kdebugging, if they are enabled in settings
 		_UINT address = (_UINT)&callAddr; //get address to non-static function
 
 #ifdef USING_OBFUSCATE
 		_UINT bytecode[]
 		{
-			(_UINT)VM_Opcode::VM_PUSH OBFUSCATE, (_UINT)(this),
-			(_UINT)VM_Opcode::VM_CALL OBFUSCATE, 1, *(_UINT*)address, //1 parameter (this ptr since DoPreInitializeChecks() has an implicit class pointer passed into RCX )
+			(_UINT)VM_Opcode::VM_PUSH OBFUSCATE, (_UINT)(this) OBFUSCATE,
+			(_UINT)VM_Opcode::VM_CALL OBFUSCATE, 1 OBFUSCATE, *(_UINT*)address OBFUSCATE, //1 parameter (this ptr since DoPreInitializeChecks() has an implicit class pointer passed into RCX )
 			(_UINT)VM_Opcode::VM_END_FUNC OBFUSCATE
 		};
 #else
