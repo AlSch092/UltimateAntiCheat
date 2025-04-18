@@ -1,16 +1,38 @@
 #include "AntiCheat.hpp"
 
-AntiCheat::AntiCheat(Settings* config, WindowsVersion WinVersion) : Config(config), WinVersion(WinVersion)
+AntiCheat::AntiCheat(__in Settings* config, __in const WindowsVersion WinVersion) : Config(config), WinVersion(WinVersion)
 {
 	if (config == nullptr)
 	{
 		throw AntiCheatInitFail(AntiCheatInitFailReason::NullSettings);
 	}
 
-	if (!DoPreInitializeChecks()) //check various things such as secure boot, DSE, kdebugging, if they are enabled in settings
-	{
-		Logger::logfw(Err, L"One or more pre-initialize checks did not pass @ AntiCheat::AntiCheat.");
-		throw AntiCheatInitFail(AntiCheatInitFailReason::PreInitializeChecksDidNotPass);
+	{   //call `DoPreInitializeChecks()` through VM as a concept proof 
+		std::unique_ptr<VirtualMachine> VM = std::make_unique<VirtualMachine>(128);
+
+		bool (AntiCheat:: * callAddr)() = &AntiCheat::DoPreInitializeChecks; //check various things such as secure boot, DSE, kdebugging, if they are enabled in settings
+		_UINT address = (_UINT)&callAddr; //get address to non-static function
+
+#ifdef USING_OBFUSCATE
+		_UINT bytecode[]
+		{
+			(_UINT)VM_Opcode::VM_PUSH OBFUSCATE, (_UINT)(this),
+			(_UINT)VM_Opcode::VM_CALL OBFUSCATE, 1, *(_UINT*)address, //1 parameter (this ptr since DoPreInitializeChecks() has an implicit class pointer passed into RCX )
+			(_UINT)VM_Opcode::VM_END_FUNC OBFUSCATE
+		};
+#else
+		_UINT bytecode[] 
+		{
+			(_UINT)VM_Opcode::VM_PUSH, (_UINT)(this),
+			(_UINT)VM_Opcode::VM_CALL, 1, *(_UINT*)address, //1 parameter (this ptr)
+			(_UINT)VM_Opcode::VM_END_FUNC
+		};
+#endif
+		if (!VM->Execute<bool>(bytecode, sizeof(bytecode) / sizeof(_UINT)))  //execute bytecode in VM
+		{
+			Logger::logfw(Err, L"One or more pre-initialize checks did not pass @ AntiCheat::AntiCheat.");
+			throw AntiCheatInitFail(AntiCheatInitFailReason::PreInitializeChecksDidNotPass);
+		}
 	}
 
 	try

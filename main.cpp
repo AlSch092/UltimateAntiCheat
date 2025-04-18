@@ -7,7 +7,6 @@
 
     Author: AlSch092 @ Github
 */
-#include <map>
 
 #include "API/API.hpp"
 #include "AntiCheat.hpp"
@@ -41,10 +40,10 @@ LONG WINAPI g_ExceptionHandler(__in EXCEPTION_POINTERS* ExceptionInfo);
 
 int main(int argc, char** argv)
 {
-	string userKeyboardInput; //for looping until user wants to exit
+	std::string userKeyboardInput; //for looping until user wants to exit
 
-    map<DetectionFlags, const char*> explanations;
-    list<DetectionFlags> flags; //for explanation output after the program is finished running
+    std::unordered_map<DetectionFlags, const char*> explanations;
+    std::list<DetectionFlags> flags; //for explanation output after the program is finished running
 
     // Set default options
 #ifdef _DEBUG //in debug compilation, we are more lax with our protections for easier testing purposes
@@ -55,13 +54,13 @@ int main(int argc, char** argv)
     const bool bUseAntiDebugging = true;
     const bool bUseIntegrityChecking = true;
     const bool bCheckThreadIntegrity = true;
-    const bool bCheckHypervisor = true;
+    const bool bCheckHypervisor = false;
     const bool bRequireRunAsAdministrator = true;
     const bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option  
     const bool bEnableLogging = true;
 
-    const list<wstring> allowedParents = {L"VsDebugConsole.exe", L"vsdbg.exe", L"powershell.exe", L"bash.exe", L"zsh.exe", L"explorer.exe"};
-    const string logFileName = "UltimateAnticheat.log";
+    const std::list<std::wstring> allowedParents = {L"VsDebugConsole.exe", L"vsdbg.exe", L"powershell.exe", L"bash.exe", L"zsh.exe", L"explorer.exe"};
+    const std::string logFileName = "UltimateAnticheat.log";
 
 #else
     const bool bEnableNetworking = true; //change this to false if you don't want to use the server
@@ -84,8 +83,8 @@ int main(int argc, char** argv)
     wchar_t decrypted_2[parent_2.getSize()] = {};
     parent_2.decrypt(decrypted_2);
 
-    const list<wstring> allowedParents = { decrypted_1, decrypted_2 }; //add your launcher here
-    const string logFileName = ""; //empty : does not log to file
+    const std::list<std::wstring> allowedParents = { decrypted_1, decrypted_2 }; //add your launcher here
+    const std::string logFileName = ""; //empty : does not log to file
 #endif
 
 #ifdef _DEBUG
@@ -127,7 +126,7 @@ int main(int argc, char** argv)
     cout << "|           LucasParsy (testing, bug fixing)                                             |\n";
     cout << "*----------------------------------------------------------------------------------------*\n";
 
-    unique_ptr<AntiCheat> Anti_Cheat = nullptr;
+    std::unique_ptr<AntiCheat> Anti_Cheat = nullptr;
 
     ProtectedMemory ProtectedSettingsMemory(sizeof(Settings));
 
@@ -158,9 +157,9 @@ int main(int argc, char** argv)
 
     try
     {
-        Anti_Cheat = make_unique<AntiCheat>(Settings::Instance, Services::GetWindowsVersion());   //after all environmental checks (secure boot, DSE, adminmode) are performed, create the AntiCheat object
+        Anti_Cheat = std::make_unique<AntiCheat>(Settings::Instance, Services::GetWindowsVersion());   //after all environmental checks (secure boot, DSE, adminmode) are performed, create the AntiCheat object
     }
-    catch (const bad_alloc& e)
+    catch (const std::bad_alloc& e)
     {
         Logger::logf(Err, "Anticheat pointer could not be allocated @ main(): %s", e.what());
         goto Cleanup;

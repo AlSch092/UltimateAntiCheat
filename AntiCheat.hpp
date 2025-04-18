@@ -25,7 +25,6 @@ class AntiCheat final
 public:
 
 	AntiCheat(__in Settings* config, __in const WindowsVersion WinVersion);
-
 	~AntiCheat();
 
 	AntiCheat& operator=(AntiCheat&& other) = delete; //delete move assignments
