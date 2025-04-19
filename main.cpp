@@ -63,14 +63,14 @@ int main(int argc, char** argv)
     const std::string logFileName = "UltimateAnticheat.log";
 
 #else
-    const bool bEnableNetworking = true; //change this to false if you don't want to use the server
+    const bool bEnableNetworking = false; //change this to false if you don't want to use the server
     const bool bEnforceSecureBoot = false; //secure boot is recommended in distribution builds
     const bool bEnforceDSE = true;
     const bool bEnforceNoKDBG = true;
     const bool bUseAntiDebugging = true;
     const bool bUseIntegrityChecking = true;
     const bool bCheckThreadIntegrity = true;
-    const bool bCheckHypervisor = true;
+    const bool bCheckHypervisor = false;
     const bool bRequireRunAsAdministrator = true;
     const bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
     const bool bEnableLogging = true; // set to false to not create a detailed AntiCheat log file on the user's system
