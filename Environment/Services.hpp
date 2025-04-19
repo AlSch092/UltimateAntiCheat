@@ -98,9 +98,7 @@ public:
 
 	static BOOL IsTestsigningEnabled();
 	static BOOL IsDebugModeEnabled();
-	
 	static BOOL IsSecureBootEnabled();
-	static BOOL IsSecureBootEnabled_RegKey(); //check by reg key
 
 	static string GetWindowsDrive();
 	static wstring GetWindowsDriveW();

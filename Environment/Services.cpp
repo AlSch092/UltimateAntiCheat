@@ -288,7 +288,7 @@ list<wstring> Services::GetUnsignedDrivers(__in list<wstring>& cachedVerifiedDri
 }
 
 /*
-    IsMachineAllowingSelfSignedDrivers - Opens BCDEdit.exe and pipes output to check if testsigning is enabled. May require running program as administrator.
+    IsMachineAllowingSelfSignedDrivers - uses NtQuerySystemInformationFunc to check if bit in CodeIntegrityOptions is set (CODEINTEGRITY_OPTION_TESTSIGN structure)
     returns TRUE if test signing mode was found.
 */
 BOOL Services::IsTestsigningEnabled()
@@ -335,10 +335,8 @@ BOOL Services::IsTestsigningEnabled()
     return FALSE;
 }
 
-
-
 /*
-    IsDebugModeEnabled - Opens BCDEdit.exe and pipes output to check if debug mode is enabled. May require running program as administrator.
+    IsDebugModeEnabled - checks registry for system start option to check if debug mode is enabled
     returns TRUE if debug  mode is enabled.
 */
 BOOL Services::IsDebugModeEnabled()
@@ -487,7 +485,7 @@ list<DeviceW> Services::GetHardwareDevicesW()
 
     if (deviceInfoSet == INVALID_HANDLE_VALUE) 
     {
-        Logger::logf(Warning, "SetupDiGetClassDevs failed with error: %d @ Services::GetHardwareDevicesW\n", GetLastError());
+        Logger::logf(Warning, "SetupDiGetClassDevs failed with error: %d @ Services::GetHardwareDevicesW", GetLastError());
         return {};
     }
 
@@ -524,52 +522,12 @@ list<DeviceW> Services::GetHardwareDevicesW()
 
     if (GetLastError() != ERROR_NO_MORE_ITEMS)
     {
-        Logger::logf(Warning, "SetupDiEnumDeviceInfo failed with error: %d @ Services::GetHardwareDevicesW\n", GetLastError());
+        Logger::logf(Warning, "SetupDiEnumDeviceInfo failed with error: %d @ Services::GetHardwareDevicesW", GetLastError());
     }
 
     SetupDiDestroyDeviceInfoList(deviceInfoSet); 
 
     return deviceList;
-}
-
-/*
-    Services::IsSecureBootEnabled_RegKey - another method for checking secure boot without using a powershell process
-*/
-BOOL Services::IsSecureBootEnabled_RegKey()
-{
-    HKEY hKey;
-    LONG lResult;
-    DWORD dwSize = sizeof(DWORD);
-    DWORD dwValue = 0;
-    const char* registryPath = "SYSTEM\\CurrentControlSet\\Control\\SecureBoot\\State"; //optionally xor this
-    const char* valueName = "UEFISecureBootEnabled";
-
-    lResult = RegOpenKeyExA(HKEY_LOCAL_MACHINE, registryPath, 0, KEY_READ, &hKey);
-
-    if (lResult != ERROR_SUCCESS) 
-    {
-        return FALSE;
-    }
-
-    lResult = RegQueryValueExA(hKey, valueName, NULL, NULL, (LPBYTE)&dwValue, &dwSize);
-
-    if (lResult != ERROR_SUCCESS) 
-    {
-        Logger::logf(Warning, "RegCloseKey failed with error: %d @ Services::IsSecureBootEnabled_RegKey\n", lResult);
-        RegCloseKey(hKey);
-        return FALSE;
-    }
-
-    if (dwValue == 1) 
-    {
-        RegCloseKey(hKey);
-        return TRUE;
-    }
-    else 
-    {
-        RegCloseKey(hKey);
-        return FALSE;
-    }
 }
 
 /*
@@ -633,7 +591,7 @@ WindowsVersion Services::GetWindowsVersion()
 
     if (status != 0)
     {
-        Logger::logf(Warning, "Services::GetWindowsMajorVersion failed with error: %x", status);
+        Logger::logf(Warning, "Services::GetWindowsMajorVersion failed with error: %x");
         return ErrorUnknown;
     }
 
@@ -663,7 +621,7 @@ WindowsVersion Services::GetWindowsVersion()
     }
     else if (osVersionInfo.dwMajorVersion == 10 && osVersionInfo.dwMinorVersion == 0)
     {
-        if (osVersionInfo.dwBuildNumber < 22000)
+        if (osVersionInfo.dwBuildNumber < 21996)
         {
             return Windows10;
         }
