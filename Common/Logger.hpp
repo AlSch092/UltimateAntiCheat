@@ -60,7 +60,7 @@ public:
         char timestamp[20];
         std::strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
 
-        logFile << L"[" << timestamp << L"] " << message << std::endl;
+        logFile << "[" << timestamp << "] " << message << std::endl;
 
         if (logFile.fail())
         {
@@ -139,6 +139,8 @@ public:
         {
             return;
         }
+
+        std::lock_guard<std::mutex> lock(consoleMutex);
 
         std::wstring msg_with_errorcode;
 
