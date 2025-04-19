@@ -140,7 +140,7 @@ bool Integrity::IsUnknownModulePresent()
 			}
 			else
 			{
-				Logger::logfw(Detection, L"Unsigned module was found loaded in the process: %s", it->name);
+				Logger::logfw(Detection, L"Unsigned module was found loaded in the process: %s", it->name.c_str());
 				foundUnknown = true;
 			}
 		}
