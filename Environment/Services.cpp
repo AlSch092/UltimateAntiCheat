@@ -424,76 +424,31 @@ BOOL Services::IsDebugModeEnabled()
 */
 BOOL Services::IsSecureBootEnabled()
 {
-    HANDLE hReadPipe, hWritePipe;
-    SECURITY_ATTRIBUTES sa;
-    STARTUPINFOW si;
-    PROCESS_INFORMATION pi;
-    char szOutput[1024];
-    DWORD bytesRead;
-    BOOL secureBootEnabled = FALSE;
+    HKEY hKey;
+    LONG lResult;
+    DWORD dwSize = sizeof(DWORD);
+    DWORD dwValue = 0;
+    const char* registryPath = "SYSTEM\\CurrentControlSet\\Control\\SecureBoot\\State";
+    const char* valueName = "UEFISecureBootEnabled";
 
-    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-    sa.bInheritHandle = TRUE;
-    sa.lpSecurityDescriptor = NULL;
-
-    if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0))
+    lResult = RegOpenKeyExA(HKEY_LOCAL_MACHINE, registryPath, 0, KEY_READ, &hKey);
+    if (lResult != ERROR_SUCCESS)
     {
-        Logger::logf(Err, "CreatePipe failed @ Services::IsSecureBootEnabled: %d\n", GetLastError());
+        Logger::logf(Err, "Error opening registry key:  (%d) @ Services::IsSecureBootEnabled_RegKey", GetLastError());
         return FALSE;
     }
 
-    memset(&si, 0, sizeof(si));
-    si.cb = sizeof(si);
-    si.dwFlags = STARTF_USESTDHANDLES;
-    si.hStdOutput = hWritePipe;
+    lResult = RegQueryValueExA(hKey, valueName, NULL, NULL, (LPBYTE)&dwValue, &dwSize);
 
-    wstring windowsDrive = Services::GetWindowsDriveW();
-
-    wstring command = L"Confirm-SecureBootUEFI"; //powershell cmdlet
-
-    std::wstring fullCommand = windowsDrive + L"WINDOWS\\System32\\WindowsPowershell\\v1.0\\powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"" + command + L"\"";
-
-    if (!CreateProcessW(NULL, (LPWSTR)fullCommand.c_str(), NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+    if (lResult != ERROR_SUCCESS)
     {
-        Logger::logf(Err, "CreateProcess failed @ Services::IsSecureBootEnabled: %d\n", GetLastError());
-        CloseHandle(hReadPipe);
-        CloseHandle(hWritePipe);
+        Logger::logf(Err, "Error querying registry value: %d @ Services::IsSecureBootEnabled_RegKey", GetLastError());
+        RegCloseKey(hKey);
         return FALSE;
     }
 
-    //..wait for the process to finish
-    WaitForSingleObject(pi.hProcess, INFINITE);
-
-    CloseHandle(hWritePipe);
-    CloseHandle(pi.hThread);
-
-    if (!ReadFile(hReadPipe, szOutput, 1024 - 1, &bytesRead, NULL)) //now read our pipe
-    {
-        Logger::logf(Err, "ReadFile failed @ Services::IsSecureBootEnabled: %d\n", GetLastError());
-        CloseHandle(hReadPipe);
-        return FALSE;
-    }
-
-    CloseHandle(hReadPipe);
-
-    szOutput[bytesRead] = '\0';
-
-    if (strstr(szOutput, "Cmdlet not supported on this platform") != NULL) //
-    {
-        Logger::logf(Err, "Failed to run bcdedit @ IsMachineAllowingSelfSignedDrivers. Please make sure program is run as administrator\n");
-        secureBootEnabled = FALSE;
-    }
-
-    if (strstr(szOutput, "False") != NULL)
-    {
-        secureBootEnabled = FALSE;
-    }
-    else if (strcmp(szOutput, "True") != NULL)
-    {
-        secureBootEnabled = TRUE;
-    }
-
-    return secureBootEnabled;
+    RegCloseKey(hKey);
+    return dwValue;
 }
 
 /*
@@ -1063,7 +1018,7 @@ bool Services::IsDriverRunning(__in const std::wstring& serviceName)
 
     if (!hService)
     {
-        Logger::logfw(Warning, L"Failed to open service: %d", GetLastError());
+        Logger::logfw(Warning, L"Failed to open service %s: %d", serviceName.c_str(), GetLastError());
         CloseServiceHandle(hSCManager);
         return false;
     }
