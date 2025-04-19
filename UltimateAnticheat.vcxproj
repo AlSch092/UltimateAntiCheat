@@ -221,6 +221,7 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
     <ClInclude Include="Obscure\ntldr.hpp" />
     <ClInclude Include="Obscure\Obfuscation.hpp" />
     <ClInclude Include="Obscure\VirtualMachine.hpp" />
+    <ClInclude Include="Obscure\VirtualMachineException.hpp" />
     <ClInclude Include="Obscure\XorStr.hpp" />
     <ClInclude Include="Preventions.hpp" />
     <ClInclude Include="Process\Exports.hpp" />

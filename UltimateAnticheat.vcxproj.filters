@@ -227,6 +227,9 @@
     <ClInclude Include="Obscure\VirtualMachine.hpp">
       <Filter>Obscure</Filter>
     </ClInclude>
+    <ClInclude Include="Obscure\VirtualMachineException.hpp">
+      <Filter>Obscure</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="UltimateAnticheat.rc">

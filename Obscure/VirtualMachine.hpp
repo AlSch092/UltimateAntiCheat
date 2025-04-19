@@ -7,6 +7,7 @@
 #include <intrin.h>
 #include <iostream>
 #include "../Common/Logger.hpp"
+#include "VirtualMachineException.hpp"
 
 #define USING_OBFUSCATE //comment this out to disable opcode obfuscation
 
@@ -131,7 +132,7 @@ public:
 
         T retVal = 0;
 
-        ip = (_UINT)&bytecode[0];
+        uint8_t* ip = (uint8_t*)bytecode;
 
         //adding a RAII lock means __try/__except won't compile without errors - it's up to the caller to ensure we don't dereference unallocated memory or execute past the buffer
         std::lock_guard<std::mutex> lock(execution_mtx); //multi threading could potentially lead to sp/ip corruption, so use a mutex
@@ -310,10 +311,12 @@ public:
                 _UINT numParameters = *(_UINT*)ip DEOBFUSCATE;
                 ip += sizeof(_UINT);
                 _UINT callAddress = *(_UINT*)ip DEOBFUSCATE;
+                ip += sizeof(_UINT);
 #else
                 _UINT numParameters = *(_UINT*)ip;
                 ip += sizeof(_UINT);
                 _UINT callAddress = *(_UINT*)ip;
+                ip += sizeof(_UINT);
 #endif
 
 #ifdef _M_X64  
@@ -370,6 +373,7 @@ public:
                 break;
 
             default: //opcode unknown
+                throw VirtualMachineException(VirtualMachineException::VMException::UnknownOpcode);
                 break;
             };
         }
@@ -387,7 +391,6 @@ private:
 
     _UINT registers[MAX_REGISTERS]{ 0 };  //general purpose
 
-    _UINT ip = 0;
     _UINT sp = 0;
 
     _UINT* stack = nullptr;
@@ -405,40 +408,4 @@ private:
     };
 
     ComparisonFlag cmp_flag = Equal;
-};
-
-// VMException class
-class VirtualMachineException : public std::exception
-{
-public:
-
-    enum VMException
-    {
-        DivisionByZero,
-        FragmentedFunction,
-        StackOutOfSpace,
-        UnknownOpcode,
-    };
-
-    VMException type;
-
-    VirtualMachineException(VMException exception) : type(exception)
-    {
-
-    }
-
-    const char* what() const noexcept override
-    {
-        return exceptionMessages.at(type).c_str();
-    }
-
-private:
-
-	std::unordered_map<VMException, std::string> exceptionMessages =
-	{
-		{ DivisionByZero, "Division by zero error in bytecode arithmetic" },
-		{ FragmentedFunction, "Fragmented function error, no end opcode in bytecode" },
-		{ StackOutOfSpace, "Stack out of space error" },
-        { UnknownOpcode, "Unknown opcode in VM bytecode" },
-	};
 };
