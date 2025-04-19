@@ -7,6 +7,7 @@
 #include "Obscure/Obfuscation.hpp" //`ObfuscatedData` class
 #include "EvidenceLocker.hpp" //evidence locker/flags manager
 #include "Obscure/ntldr.hpp" //dll notification structures
+#include "Obscure/VirtualMachine.hpp" //simple virtual machine for detection routine calls
 
 #include <future>
 #include <Wbemidl.h> //for process event creation (WMI)
@@ -138,4 +139,6 @@ private:
 	list<wstring> PassedCertCheckModules;
 
 	EvidenceLocker* EvidenceManager = nullptr;
+
+	unique_ptr<VirtualMachine> VM = nullptr; //simple virtual machine for detection routine calls
 };

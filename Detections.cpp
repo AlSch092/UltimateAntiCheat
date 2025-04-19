@@ -29,6 +29,8 @@ Detections::Detections(Settings* s, EvidenceLocker* evidence, BOOL StartMonitor,
         _Services = make_unique<Services>();
 
         integrityChecker = make_shared<Integrity>(ModuleList);
+
+        VM = std::make_unique<VirtualMachine>(256);
     }
     catch (const std::bad_alloc& e)
     {
@@ -125,7 +127,7 @@ VOID CALLBACK Detections::OnDllNotification(ULONG NotificationReason, const PLDR
 
         if (Monitor != nullptr && FullDllName != nullptr)
         {
-            Logger::logfw(Info, L"[LdrpDllNotification Callback] dll loaded: %s\n", FullDllName);
+            Logger::logfw(Info, L"[LdrpDllNotification Callback] dll loaded: %s", FullDllName);
             std::lock_guard<std::mutex> lock(Monitor->DLLVerificationQueueMutex);
             Monitor->DLLVerificationQueue.push(wstring(FullDllName));
         }
@@ -158,7 +160,7 @@ void Detections::CheckDLLSignature()
         {
             if (!Authenticode::HasSignature(FullDllName.c_str(), TRUE))
             {
-                Logger::logfw(Detection, L"Failed to verify signature of %s\n", FullDllName);
+                Logger::logfw(Detection, L"Failed to verify signature of %s", FullDllName.c_str());
                 this->EvidenceManager->AddFlagged(DetectionFlags::INJECTED_ILLEGAL_PROGRAM, Utility::ConvertWStringToString(FullDllName), GetCurrentProcessId());
                 this->UnsignedModulesLoaded.push_back(FullDllName);
             }
@@ -616,7 +618,7 @@ bool Detections::DoesFunctionAppearHooked(__in const char* moduleName, __in cons
 
     if (hMod == NULL)
     {
-        Logger::logf(Err, " Couldn't fetch module @ Detections::DoesFunctionAppearHooked: %s\n", moduleName);
+        Logger::logf(Err, " Couldn't fetch module @ Detections::DoesFunctionAppearHooked: %s", moduleName);
         return false;
     }
 
@@ -624,7 +626,7 @@ bool Detections::DoesFunctionAppearHooked(__in const char* moduleName, __in cons
 
     if (AddressFunction == NULL)
     {
-        Logger::logf(Err, " Couldn't fetch address of function @ Detections::DoesFunctionAppearHooked: %s\n", functionName);
+        Logger::logf(Err, " Couldn't fetch address of function @ Detections::DoesFunctionAppearHooked: %s", functionName);
         return false;
     }
 
@@ -635,7 +637,7 @@ bool Detections::DoesFunctionAppearHooked(__in const char* moduleName, __in cons
     }
     __except(EXCEPTION_EXECUTE_HANDLER)
     {
-        Logger::logf(Warning, " Couldn't read bytes @ Detections::DoesFunctionAppearHooked: %s\n", functionName);
+        Logger::logf(Warning, " Couldn't read bytes @ Detections::DoesFunctionAppearHooked: %s", functionName);
         return false; //couldn't read memory at function
     }
 
