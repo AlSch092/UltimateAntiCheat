@@ -343,84 +343,37 @@ BOOL Services::IsTestsigningEnabled()
 */
 BOOL Services::IsDebugModeEnabled()
 {
-    HANDLE hReadPipe, hWritePipe;
-    SECURITY_ATTRIBUTES sa;
-    STARTUPINFOA si;
-    PROCESS_INFORMATION pi;
-    char szOutput[1024];
-    DWORD bytesRead;
-    BOOL foundKDebugMode = FALSE;
+    HKEY hKey;
+    DWORD dwSize = sizeof(DWORD);
+    DWORD dwValue = 0;
+    const char* registryPath = "SYSTEM\\CurrentControlSet\\Control";
+    const char* valueName = "SystemStartOptions";
+    wchar_t buffer[256];
+    DWORD bufferSize = sizeof(buffer);
+    DWORD type = 0;
 
-    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-    sa.bInheritHandle = TRUE;
-    sa.lpSecurityDescriptor = NULL;
+    if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, registryPath, 0, KEY_READ, &hKey) != ERROR_SUCCESS)
+        return false;
 
-    string volumeName = GetWindowsDrive();
+    bool isDebug = false;
 
-    if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0)) //use a pipe to read output of bcdedit command
+    if (RegQueryValueExA(hKey, valueName, nullptr, &type, reinterpret_cast<LPBYTE>(&buffer), &bufferSize) == ERROR_SUCCESS)
     {
-        Logger::logf(Err, "CreatePipe failed @ Services::IsMachineAllowingSelfSignedDrivers: %d\n", GetLastError());
-        return foundKDebugMode;
-    }
-
-    memset(&si, 0, sizeof(si));
-    si.cb = sizeof(si);
-    si.dwFlags = STARTF_USESTDHANDLES;
-    si.hStdOutput = hWritePipe;
-
-    string bcdedit_location = "Windows\\System32\\bcdedit.exe";
-    string fullpath_bcdedit = (volumeName + bcdedit_location);
-
-    if (!CreateProcessA(fullpath_bcdedit.c_str(), NULL, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
-    {
-        Logger::logf(Err, "CreateProcess failed @ Services::IsDebugModeEnabled: %d\n", GetLastError());
-        CloseHandle(hReadPipe);
-        CloseHandle(hWritePipe);
-        return foundKDebugMode;
-    }
-
-    //..wait for the process to finish
-    WaitForSingleObject(pi.hProcess, INFINITE);
-
-    CloseHandle(hWritePipe);
-    CloseHandle(pi.hThread);
-
-    if (!ReadFile(hReadPipe, szOutput, 1024 - 1, &bytesRead, NULL)) //now read our pipe
-    {
-        Logger::logf(Err, "ReadFile failed @ Services::IsDebugModeEnabled: %d\n", GetLastError());
-        CloseHandle(hReadPipe);
-        return foundKDebugMode;
-    }
-
-    CloseHandle(hReadPipe);
-
-    szOutput[bytesRead] = '\0';
-
-    if (strstr(szOutput, "The boot configuration data store could not be opened") != NULL)
-    {
-        Logger::logf(Err, "Failed to run bcdedit @ IsMachineAllowingSelfSignedDrivers. Please make sure program is run as administrator\n");
-        foundKDebugMode = FALSE;
-    }
-
-    char* token = strtok(szOutput, "\r\n"); //split based on new line
-
-    while (token != NULL)      //Iterate through tokens, both "yes" and "debug" on same line = debug mode
-    {
-        if (strstr(token, "debug") != NULL && strstr(token, "Yes") != NULL)
+        if (type == REG_SZ)
         {
-            foundKDebugMode = TRUE;
+            std::wstring options(buffer);
+            std::transform(options.begin(), options.end(), options.begin(), ::towlower);
+            isDebug = options.find(L"debug") != std::wstring::npos;
         }
-
-        token = strtok(NULL, "\r\n");
     }
 
-    return foundKDebugMode;
+    RegCloseKey(hKey);
+    return isDebug;
 }
 
 /*
     IsSecureBootEnabled - checks if secure bool is enabled on machine through a powershell cmdlet (`Confirm-SecureBootUEFI`)
     returns `true` if secure boot is enabled
-    ** note ** this routine doesn't really need to be called multiple times, boot state cannot be changed without a reboot
 */
 BOOL Services::IsSecureBootEnabled()
 {
@@ -434,7 +387,7 @@ BOOL Services::IsSecureBootEnabled()
     lResult = RegOpenKeyExA(HKEY_LOCAL_MACHINE, registryPath, 0, KEY_READ, &hKey);
     if (lResult != ERROR_SUCCESS)
     {
-        Logger::logf(Err, "Error opening registry key:  (%d) @ Services::IsSecureBootEnabled_RegKey", GetLastError());
+        Logger::logf(Err, "Error opening registry key:  (%d) @ Services::IsSecureBootEnabled", GetLastError());
         return FALSE;
     }
 
@@ -442,7 +395,7 @@ BOOL Services::IsSecureBootEnabled()
 
     if (lResult != ERROR_SUCCESS)
     {
-        Logger::logf(Err, "Error querying registry value: %d @ Services::IsSecureBootEnabled_RegKey", GetLastError());
+        Logger::logf(Err, "Error querying registry value: %d @ Services::IsSecureBootEnabled", GetLastError());
         RegCloseKey(hKey);
         return FALSE;
     }
