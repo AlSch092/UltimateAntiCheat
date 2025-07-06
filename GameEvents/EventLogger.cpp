@@ -1,3 +1,4 @@
+//UltimateAnticheat Project by AlSch092 @ Github
 #include "EventLogger.hpp"
 #include "../Common/json.hpp"
 

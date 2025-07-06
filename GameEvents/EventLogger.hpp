@@ -1,3 +1,4 @@
+//UltimateAnticheat Project by AlSch092 @ Github
 #pragma once
 #include "../Common/Logger.hpp"
 #include "../Network/HttpClient.hpp"
@@ -33,6 +34,13 @@ struct GameEvent
     std::string details;
 };
 
+/*
+	EventLogger - A singleton class that logs game events to a server endpoint.
+	It uses a separate thread to send data to the server asynchronously.
+
+	Purely for telemetry, this class does not perform any security checks or validations.
+    You should call this as `EventLogger::GetInstance().LogEvent(event);` from your game after setting your server endpoint via `SetEndpoint(string url)`
+*/
 class EventLogger
 {
 public:
