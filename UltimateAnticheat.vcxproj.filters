@@ -43,6 +43,9 @@
     <Filter Include="Obscure">
       <UniqueIdentifier>{801cab93-2306-42a5-bc0e-fc2b7c5a74e9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="GameEvents">
+      <UniqueIdentifier>{aede6a69-ab91-4f01-8484-a65f25cec4ff}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -116,6 +119,9 @@
     </ClCompile>
     <ClCompile Include="EvidenceLocker.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GameEvents\EventLogger.cpp">
+      <Filter>GameEvents</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -229,6 +235,15 @@
     </ClInclude>
     <ClInclude Include="Obscure\VirtualMachineException.hpp">
       <Filter>Obscure</Filter>
+    </ClInclude>
+    <ClInclude Include="GameEvents\EventLogger.hpp">
+      <Filter>GameEvents</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\json.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\json_fwd.hpp">
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

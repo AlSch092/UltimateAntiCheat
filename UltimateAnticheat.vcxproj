@@ -182,6 +182,7 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
     <ClCompile Include="Detections.cpp" />
     <ClCompile Include="Environment\Services.cpp" />
     <ClCompile Include="EvidenceLocker.cpp" />
+    <ClCompile Include="GameEvents\EventLogger.cpp" />
     <ClCompile Include="Network\HttpClient.cpp" />
     <ClCompile Include="Network\NetClient.cpp" />
     <ClCompile Include="Network\Packets\Packets.cpp" />
@@ -206,6 +207,8 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
     <ClInclude Include="API\API.hpp" />
     <ClInclude Include="Common\DetectionFlags.hpp" />
     <ClInclude Include="Common\Error.hpp" />
+    <ClInclude Include="Common\json.hpp" />
+    <ClInclude Include="Common\json_fwd.hpp" />
     <ClInclude Include="Common\Logger.hpp" />
     <ClInclude Include="Common\Settings.hpp" />
     <ClInclude Include="Common\SHA256.hpp" />
@@ -213,6 +216,7 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
     <ClInclude Include="Detections.hpp" />
     <ClInclude Include="Environment\Services.hpp" />
     <ClInclude Include="EvidenceLocker.hpp" />
+    <ClInclude Include="GameEvents\EventLogger.hpp" />
     <ClInclude Include="Network\HttpClient.hpp" />
     <ClInclude Include="Network\NetClient.hpp" />
     <ClInclude Include="Network\Packets\PacketReader.hpp" />
