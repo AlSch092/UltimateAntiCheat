@@ -2,6 +2,11 @@
 
 # UltimateAntiCheat: A usermode anti-cheat built in C++ (x64)
 
+![C++](https://img.shields.io/badge/c++-%2300599C.svg?style=for-the-badge&logo=c%2B%2B&logoColor=white)
+![Visual Studio](https://img.shields.io/badge/Visual%20Studio-5C2D91.svg?style=for-the-badge&logo=visual-studio&logoColor=white)
+![MySQL](https://img.shields.io/badge/mysql-4479A1.svg?style=for-the-badge&logo=mysql&logoColor=white)
+![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
+
 UltimateAntiCheat is an open source usermode anti-cheat system made to detect and prevent common attack vectors of game hacking. The project also features an optional client-server mechanism, with a heartbeat being sent every minute to clients. No privacy-invasive techniques are used. Optionally, a hybrid kernelmode + usermode approach can now be used through the settings in `main.cpp` and `Common/Settings.hpp` (you will need to make/provide your own driver for this).
 
 The project now supports CMake & using the LLVM/clang-cl compiler, which can be found in the `llvm-clang` branch. In the future we will attempt to add in code obfuscation via LLVM transformative passes.
