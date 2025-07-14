@@ -1,4 +1,6 @@
 ## Updates
+- July 13, '25: Added the `GameEvents` class to assist with game data telemetry. Game actions such as player deaths, jumps, crouches, etc can be sent to an endpoint via HTTP. This feature will be improved soon to add bulk events in one request rather than one-by-one for all events.  
+  
 - Feb 28, '25: Fix manually mapped image detection, now properly detecting erased PE headers. Further development of any new detection & prevention methods will be ending due to lack of funding; I can no longer give out free work since I can't find any for myself. Any further development of the project will likely switch to being related to design and code cleanliness.  
 
 - Feb 26, '25: Add `ProtectedMemory` class (write protected and resistant to page security modifications via `SEC_NO_CHANGE`) in `AntiTamper/MapProtectedClass.hpp`, make `Settings` class object `ProtectedMemory` to prevent modification of config at runtime, remove `UnmanagedGlobals` namespace, remove `EXPECTED_SECTIONS` define and instead make it fetch at runtime (makes it compatible with any game/number of sections).  
