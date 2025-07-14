@@ -277,37 +277,19 @@ void Preventions::EnableProcessMitigations(__in const bool useDEP, __in const bo
             Logger::logf(Warning, "Failed to set system call disable policy @ EnableProcessMitigations: %d", GetLastError());
         }
     }
+
+    PROCESS_MITIGATION_BINARY_SIGNATURE_POLICY signaturePolicy = { 0 };     // Binary Signature Policy
+    signaturePolicy.MicrosoftSignedOnly = 1;
+    SetProcessMitigationPolicy(ProcessSignaturePolicy, &signaturePolicy, sizeof(signaturePolicy));
+
+    PROCESS_MITIGATION_IMAGE_LOAD_POLICY imageLoadPolicy = { 0 };     //Image Load Policy, a few useful ones in here
+    imageLoadPolicy.NoRemoteImages = 1;
+    imageLoadPolicy.PreferSystem32Images = 1; //enforce loading from system32 before relative paths for .dlls
+    SetProcessMitigationPolicy(ProcessImageLoadPolicy, &imageLoadPolicy, sizeof(imageLoadPolicy));
 }
 
 #endif
 
-/*
-    Preventions::PreventDllInjection - changes the export name of specific K32 routines such that an external attacker trying to fetch the address of these is given bad values.
-    *Note* : Changing export names for certain important dll routines can result in popup errors for the end-user, thus its not recommended for a live product. Alternatively, routines can have their function preambles 'ret' patched for similar effects  (if you know it wont impact program functionality).
-*/
-bool Preventions::PreventDllInjection()
-{
-    bool success = false;
-
-    //Anti-dll injection (creating remote thread on LoadLibrary)
-    string RandString1 = Utility::GenerateRandomString(12);
-    string RandString2 = Utility::GenerateRandomString(12);
-    string RandString3 = Utility::GenerateRandomString(14);
-    string RandString4 = Utility::GenerateRandomString(14);
-
-    //prevents DLL injection from any host process relying on calling LoadLibrary in the target process (we are the target in this case) -> can possibly be disruptive to end user
-    if (Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryA", RandString1) &&
-        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryW", RandString2) &&
-        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExA", RandString3) &&
-        Exports::ChangeFunctionName("KERNEL32.DLL", "LoadLibraryExW", RandString4))
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
 
 /*
     UnloadBlacklistedDrivers - attempts to unload/stop blacklisted drivers in `driverPaths`

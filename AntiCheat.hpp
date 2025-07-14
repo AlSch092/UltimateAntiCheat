@@ -27,6 +27,8 @@ public:
 	AntiCheat(__in Settings* config, __in const WindowsVersion WinVersion);
 	~AntiCheat();
 
+	Error FastCleanup(); //cleanup function for when we need to exit the program quickly
+
 	AntiCheat& operator=(AntiCheat&& other) = delete; //delete move assignments
 
 	AntiCheat operator+(AntiCheat& other) = delete; //delete all arithmetic operators, unnecessary for context

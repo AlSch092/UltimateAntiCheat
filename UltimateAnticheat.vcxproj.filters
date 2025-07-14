@@ -78,9 +78,6 @@
     <ClCompile Include="API\API.cpp">
       <Filter>API</Filter>
     </ClCompile>
-    <ClCompile Include="Process\Exports.cpp">
-      <Filter>Process</Filter>
-    </ClCompile>
     <ClCompile Include="Environment\Services.cpp">
       <Filter>Environment</Filter>
     </ClCompile>
@@ -161,14 +158,8 @@
     <ClInclude Include="API\API.hpp">
       <Filter>API</Filter>
     </ClInclude>
-    <ClInclude Include="Process\Exports.hpp">
-      <Filter>Process</Filter>
-    </ClInclude>
     <ClInclude Include="Environment\Services.hpp">
       <Filter>Environment</Filter>
-    </ClInclude>
-    <ClInclude Include="Obscure\Obfuscation.hpp">
-      <Filter>Obscure</Filter>
     </ClInclude>
     <ClInclude Include="AntiTamper\NAuthenticode.hpp">
       <Filter>AntiTamper</Filter>

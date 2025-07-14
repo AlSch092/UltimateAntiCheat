@@ -4,10 +4,10 @@
 #include "Network/HttpClient.hpp" //web requests
 #include "AntiTamper/Integrity.hpp" //Code Integrity
 #include "Environment/Services.hpp" //`Services` class
-#include "Obscure/Obfuscation.hpp" //`ObfuscatedData` class
 #include "EvidenceLocker.hpp" //evidence locker/flags manager
 #include "Obscure/ntldr.hpp" //dll notification structures
 #include "Obscure/VirtualMachine.hpp" //simple virtual machine for detection routine calls
+#include "Obscure/XorStr.hpp"
 
 #include <future>
 #include <Wbemidl.h> //for process event creation (WMI)
@@ -31,7 +31,7 @@ class Detections final
 {
 public:
 
-	Detections(Settings* s, EvidenceLocker* evidence, BOOL StartMonitor, shared_ptr<NetClient> client);
+	Detections(Settings* s, EvidenceLocker* evidence, shared_ptr<NetClient> client);
 	~Detections();
 
 	Detections(Detections&&) = delete;  //delete move constructr

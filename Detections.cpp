@@ -1,7 +1,7 @@
 //By AlSch092 @github
 #include "Detections.hpp"
 
-Detections::Detections(Settings* s, EvidenceLocker* evidence, BOOL StartMonitor, shared_ptr<NetClient> client) : Config(s), EvidenceManager(evidence), netClient(client)
+Detections::Detections(Settings* s, EvidenceLocker* evidence, shared_ptr<NetClient> client) : Config(s), EvidenceManager(evidence), netClient(client)
 {
     this->InitializeBlacklistedProcessesList();
 
@@ -50,9 +50,6 @@ Detections::Detections(Settings* s, EvidenceLocker* evidence, BOOL StartMonitor,
         _LdrRegisterDllNotification pLdrRegisterDllNotification = (_LdrRegisterDllNotification)GetProcAddress(hNtdll, "LdrRegisterDllNotification");
         NTSTATUS status = pLdrRegisterDllNotification(0, (PLDR_DLL_NOTIFICATION_FUNCTION)OnDllNotification, this, &DllCallbackRegistrationCookie);
     }
-
-    if (StartMonitor)
-        this->StartMonitor();
 }
 
 Detections::~Detections()
@@ -90,6 +87,7 @@ Detections::~Detections()
 
 /*
     Detections::StartMonitor - use class member MonitorThread to start our main detections loop
+	returns `true` on success, `false` if the thread was already created or failed to create
 */
 bool Detections::StartMonitor()
 {
@@ -139,7 +137,7 @@ VOID CALLBACK Detections::OnDllNotification(ULONG NotificationReason, const PLDR
 */
 void Detections::CheckDLLSignature()
 {
-    while (true) 
+	while (true) //loop until there are no more modules to check
     {
         wstring FullDllName;
      

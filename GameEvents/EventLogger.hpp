@@ -22,7 +22,7 @@ enum class EventType
     ENEMY_HEAD_IN_CROSSHAIR,
     ITEM_PICKUP,
     ON_KILL_ENEMY,
-    CUSTOM,
+    CUSTOM, //specify in the actual message details
     UNKNOWN
 };
 

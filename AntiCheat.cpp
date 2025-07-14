@@ -7,32 +7,39 @@ AntiCheat::AntiCheat(__in Settings* config, __in const WindowsVersion WinVersion
 		throw AntiCheatInitFail(AntiCheatInitFailReason::NullSettings);
 	}
 
-	{   //call `DoPreInitializeChecks()` through VM as a concept proof 
-		std::unique_ptr<VirtualMachine> VM = std::make_unique<VirtualMachine>(128);
-
-		bool (AntiCheat::*callAddr)() = &AntiCheat::DoPreInitializeChecks; //check various things such as secure boot, DSE, kdebugging, if they are enabled in settings
-		_UINT address = (_UINT)&callAddr; //get address to non-static function
-
-#ifdef USING_OBFUSCATE
-		_UINT bytecode[]
+	{
+		if (!DoPreInitializeChecks())
 		{
-			(_UINT)VM_Opcode::VM_PUSH OBFUSCATE, (_UINT)(this) OBFUSCATE,
-			(_UINT)VM_Opcode::VM_CALL OBFUSCATE, 1 OBFUSCATE, *(_UINT*)address OBFUSCATE, //1 parameter (this ptr since DoPreInitializeChecks() has an implicit class pointer passed into RCX )
-			(_UINT)VM_Opcode::VM_END_FUNC OBFUSCATE
-		};
-#else
-		_UINT bytecode[] 
-		{
-			(_UINT)VM_Opcode::VM_PUSH, (_UINT)(this),
-			(_UINT)VM_Opcode::VM_CALL, 1, *(_UINT*)address, //1 parameter (this ptr)
-			(_UINT)VM_Opcode::VM_END_FUNC
-		};
-#endif
-		if (!VM->Execute<bool>(bytecode, sizeof(bytecode) / sizeof(_UINT)))  //execute bytecode in VM
-		{
-			Logger::logfw(Err, L"One or more pre-initialize checks did not pass @ AntiCheat::AntiCheat.");
+			Logger::logfw(Err, L"Pre-initialize checks did not pass @ AntiCheat::AntiCheat.");
 			throw AntiCheatInitFail(AntiCheatInitFailReason::PreInitializeChecksDidNotPass);
 		}
+
+		//call `DoPreInitializeChecks()` through VM as a concept proof 
+//		std::unique_ptr<VirtualMachine> VM = std::make_unique<VirtualMachine>(128);
+//
+//		bool (AntiCheat::*callAddr)() = &AntiCheat::DoPreInitializeChecks; //check various things such as secure boot, DSE, kdebugging, if they are enabled in settings
+//		_UINT address = (_UINT)&callAddr; //get address to non-static function
+//
+//#ifdef USING_OBFUSCATE
+//		_UINT bytecode[]
+//		{
+//			(_UINT)VM_Opcode::VM_PUSH OBFUSCATE, (_UINT)(this) OBFUSCATE,
+//			(_UINT)VM_Opcode::VM_CALL OBFUSCATE, 1 OBFUSCATE, *(_UINT*)address OBFUSCATE, //1 parameter (this ptr since DoPreInitializeChecks() has an implicit class pointer passed into RCX )
+//			(_UINT)VM_Opcode::VM_END_FUNC OBFUSCATE
+//		};
+//#else
+//		_UINT bytecode[] 
+//		{
+//			(_UINT)VM_Opcode::VM_PUSH, (_UINT)(this),
+//			(_UINT)VM_Opcode::VM_CALL, 1, *(_UINT*)address, //1 parameter (this ptr)
+//			(_UINT)VM_Opcode::VM_END_FUNC
+//		};
+//#endif
+//		if (!VM->Execute<bool>(bytecode, sizeof(bytecode) / sizeof(_UINT)))  //execute bytecode in VM
+//		{
+//			Logger::logfw(Err, L"One or more pre-initialize checks did not pass @ AntiCheat::AntiCheat.");
+//			throw AntiCheatInitFail(AntiCheatInitFailReason::PreInitializeChecksDidNotPass);
+//		}
 	}
 
 	try
@@ -43,7 +50,7 @@ AntiCheat::AntiCheat(__in Settings* config, __in const WindowsVersion WinVersion
 
 		this->AntiDebugger = make_unique<DebuggerDetections>(config, this->Evidence, NetworkClient); //any detection methods need the netclient for comms
 
-		this->Monitor = make_unique<Detections>(config, this->Evidence, false, NetworkClient);
+		this->Monitor = make_unique<Detections>(config, this->Evidence, NetworkClient);
 
 		this->Barrier = make_unique<Preventions>(config, true, Monitor.get()->GetIntegrityChecker()); //true = prevent new threads from being made
 	}
@@ -69,7 +76,7 @@ AntiCheat::AntiCheat(__in Settings* config, __in const WindowsVersion WinVersion
 			throw AntiCheatInitFail(AntiCheatInitFailReason::DriverUnsigned);
 		}
 
-		if (!Services::LoadDriver(Config->GetKMDriverName().c_str(), absolutePath))
+		if (!Services::LoadDriver(Config->GetKMDriverName().c_str(), absolutePath)) //Remove this call, along with Services::LoadDriver and Services::UnloadDriver
 		{
 			throw AntiCheatInitFail(AntiCheatInitFailReason::DriverLoadFail);
 		}
@@ -103,6 +110,61 @@ AntiCheat::~AntiCheat()
 	}
 }
 
+
+/*
+	FastCleanup - Unloads the driver and stops all threads that were started by the AntiCheat class. Uses TerminateThread(), so thread cleanup is not proper (but executes much faster)
+	returns Error::OK on success
+*/
+Error AntiCheat::FastCleanup()
+{
+	if (Config != nullptr && Config->bUsingDriver)
+	{
+		if (!Services::UnloadDriver(Config->GetKMDriverName()))
+		{
+			Logger::logf(Warning, "Failed to unload kernelmode driver!");
+		}
+	}
+
+	if (Config != nullptr && Config->bNetworkingEnabled)
+	{
+		auto client = GetNetworkClient().lock();
+
+		if (client)
+		{
+			if (client->GetRecvThread() != nullptr) //stop anti-cheat monitor thread
+			{
+				client->EndConnection(0);
+				TerminateThread(client->GetRecvThread()->GetHandle(), 0);
+			}
+		}
+		else
+		{
+			Logger::logf(Warning, "Couldn't fetch/lock netclient @  AntiCheat::FastCleanup");
+		}
+	}
+
+	if (GetConfig()->bUseAntiDebugging && GetAntiDebugger() != nullptr && GetAntiDebugger()->GetDetectionThread() != nullptr) //stop anti-debugger thread
+	{
+		TerminateThread(GetAntiDebugger()->GetDetectionThread()->GetHandle(), 0);
+	}
+
+	if (GetMonitor() != nullptr && GetMonitor()->GetMonitorThread() != nullptr) //stop anti-cheat monitor thread
+	{
+		TerminateThread(GetMonitor()->GetMonitorThread()->GetHandle(), 0);
+	}
+
+	if (GetMonitor() != nullptr && GetMonitor()->GetProcessCreationMonitorThread() != nullptr) //stop process creation monitor thread
+	{
+		TerminateThread(GetMonitor()->GetProcessCreationMonitorThread()->GetHandle(), 0);
+	}
+
+	if (GetMonitor() != nullptr && GetMonitor()->GetRegistryMonitorThread() != nullptr) //stop registry monitor
+	{
+		TerminateThread(GetMonitor()->GetRegistryMonitorThread()->GetHandle(), 0);
+	}
+
+	return Error::OK;
+}
 
 bool AntiCheat::DoPreInitializeChecks()
 {

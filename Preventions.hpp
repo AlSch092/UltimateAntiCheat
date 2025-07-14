@@ -1,9 +1,7 @@
 //By AlSch092 @github
 #pragma once
 #include "Process/Process.hpp"
-#include "Process/Exports.hpp" 
 #include "AntiTamper/remap.hpp"
-#include "Obscure/Obfuscation.hpp"
 #include "Common/Error.hpp"
 #include "Common/Utility.hpp"
 #include "Common/Settings.hpp"
@@ -36,7 +34,6 @@ public:
 	Error DeployBarrier(); //activate all protections
 
 	static bool RemapProgramSections();
-	static bool PreventDllInjection(); //experimental, gives warning messagebox
 
 	static bool StopAPCInjection(); //patch over ntdll.Ordinal8
 
