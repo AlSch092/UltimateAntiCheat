@@ -9,39 +9,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # Define the location of the splash.png in the project root
 set(EXECUTABLE_NAME "UltimateAntiCheat.exe")
 
+set(LIB_DIR "${CMAKE_SOURCE_DIR}/Libs")
+
 # Collect all .cpp files from the base directory and subdirectories
-file(GLOB_RECURSE SOURCES 
-    "*.cpp" 
-    "AntiDebug/*.cpp"
-    "AntiTamper/*.cpp"
-    "API/*.cpp"
-    "Common/*.cpp"
-    "Environment/*.cpp"
-    "Network/*.cpp"
-    "Obscure/*.cpp"
-    "Process/*.cpp"
-)
+file(GLOB_RECURSE SOURCES "*.cpp")
 
 # Collect all .hpp, .h files from the base directory and subdirectories
-file(GLOB_RECURSE HEADERS 
-    "*.hpp"
-    "*.h"
-    "AntiDebug/*.hpp"
-    "AntiTamper/*.hpp"
-    "API/*.hpp"
-    "Common/*.hpp"
-    "Environment/*.hpp"
-    "Network/*.hpp"
-    "Obscure/*.hpp"
-    "Process/*.hpp"
-    "Process/*.h"
-)
+file(GLOB_RECURSE HEADERS "*.h" "*.hpp")
 
 # Collect resource files like .aps, .rc
-file(GLOB_RECURSE RESOURCES 
-    "*.aps"
-    "*.rc"
-)
+file(GLOB_RECURSE RESOURCES  "*.aps"  "*.rc")
 
 # Explicitly remove CMakeCXXCompilerId.cpp if it's in the list of sources
 list(FILTER SOURCES EXCLUDE REGEX ".*CMakeCXXCompilerId.cpp$")
@@ -52,10 +29,13 @@ set(SPLASH_IMAGE "${CMAKE_SOURCE_DIR}/splash.png")
 # Define the base output directory (e.g., the "bin" folder)
 set(BASE_OUTPUT_DIR "${CMAKE_BINARY_DIR}/bin")
 
-
-
 # Create the executable
 add_executable(UltimateAnticheat ${SOURCES} ${HEADERS} ${RESOURCES})
+
+# Add .asm files
+target_sources(UltimateAnticheat PRIVATE
+    "${CMAKE_SOURCE_DIR}/Obscure/ASMStubs.asm"
+)
 
 # Target windows version -> change this if you're on a different major version of windows
 target_compile_definitions(UltimateAnticheat PRIVATE _WIN32_WINNT=0x0A00)
@@ -92,6 +72,17 @@ add_custom_command(TARGET UltimateAnticheat POST_BUILD
 # Link to ntdll.lib
 target_link_libraries(UltimateAnticheat PRIVATE ntdll.lib)
 
+# Link to libraries in Libs folder
+target_link_libraries(UltimateAnticheat PRIVATE
+    "${LIB_DIR}/brotlicommon.lib"
+    "${LIB_DIR}/brotlidec.lib"
+    "${LIB_DIR}/brotlienc.lib"
+    "$<$<CONFIG:Debug>:${LIB_DIR}/libcurl-d.lib>"
+    "$<$<CONFIG:Release>:${LIB_DIR}/libcurl.lib>"
+    "$<$<CONFIG:Debug>:${LIB_DIR}/zlibd.lib>"
+    "$<$<CONFIG:Release>:${LIB_DIR}/zlib.lib>"
+)
+
 # Add the TSAWARE flag and linker options if using LLVM/Clang
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_link_options(UltimateAnticheat PRIVATE "/TSAWARE")
@@ -111,6 +102,7 @@ if(MSVC)
 endif()
 
 # Define DEBUG_MODE for Debug builds
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_definitions(UltimateAnticheat PRIVATE DEBUG_MODE)
-endif()
+target_compile_definitions(UltimateAnticheat PRIVATE
+    "$<$<CONFIG:Debug>:DEBUG_MODE>"
+)
+

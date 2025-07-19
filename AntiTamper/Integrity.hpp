@@ -97,8 +97,8 @@ public:
 
 private:
 	
-	std::unordered_map<std::string, std::vector<uint64_t>> SectionHashes; //section hashes for current/main module's sections
+	std::unordered_map<std::string, std::vector<uint64_t>> SectionHashes; //section hashes for current/main module's sections: .text, .rdata, etc
 
 	std::vector<ProcessData::MODULE_DATA> WhitelistedModules;
-	std::vector<ModuleHashData*> ModuleHashes;
+	std::vector<ModuleHashData*> ModuleHashes; //.text hashes only for other modules -> future versions should include all sections for all loaded modules if possible
 };

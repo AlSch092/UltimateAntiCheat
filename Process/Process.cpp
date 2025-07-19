@@ -124,7 +124,7 @@ list<ProcessData::Section*> Process::GetSections(__in const string module)
         s->name = std::string(reinterpret_cast<const char*>(sectionHeader[i].Name));
       
         if (s->name.size() > 8)
-            s->name.resize(9);
+            s->name.resize(8, 0);
 
         s->Misc.VirtualSize = sectionHeader[i].Misc.VirtualSize;
         s->size = s->Misc.VirtualSize;
@@ -717,7 +717,7 @@ DWORD Process::GetModuleSize(__in const HMODULE hModule)
 */
 bool Process::FillModuleList()
 {
-    HMODULE hModules[256];
+    HMODULE hModules[512];
     DWORD cbNeeded = 0;
 
     // Get the module handles for the current process

@@ -169,24 +169,24 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="AntiCheat.cpp" />
     <ClCompile Include="AntiDebug\AntiDebugger.cpp" />
     <ClCompile Include="AntiDebug\DebuggerDetections.cpp" />
     <ClCompile Include="AntiTamper\Integrity.cpp" />
     <ClCompile Include="AntiTamper\NAuthenticode.cpp" />
     <ClCompile Include="AntiTamper\remap.cpp" />
-    <ClCompile Include="API\API.cpp" />
+    <ClCompile Include="Common\EvidenceLocker.cpp" />
     <ClCompile Include="Common\Logger.cpp" />
     <ClCompile Include="Common\SHA256.cpp" />
     <ClCompile Include="Common\Utility.cpp" />
-    <ClCompile Include="Detections.cpp" />
+    <ClCompile Include="Core\AntiCheat.cpp" />
+    <ClCompile Include="Core\API.cpp" />
+    <ClCompile Include="Core\Detections.cpp" />
+    <ClCompile Include="Core\Preventions.cpp" />
     <ClCompile Include="Environment\Services.cpp" />
-    <ClCompile Include="EvidenceLocker.cpp" />
     <ClCompile Include="GameEvents\EventLogger.cpp" />
     <ClCompile Include="Network\HttpClient.cpp" />
     <ClCompile Include="Network\NetClient.cpp" />
     <ClCompile Include="Network\Packets\Packets.cpp" />
-    <ClCompile Include="Preventions.cpp" />
     <ClCompile Include="Process\Handles.cpp" />
     <ClCompile Include="Process\PEB.cpp" />
     <ClCompile Include="Process\Process.cpp" />
@@ -195,26 +195,27 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
     <ClCompile Include="SplashScreen.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AntiCheat.hpp" />
-    <ClInclude Include="AntiCheatInitFail.hpp" />
     <ClInclude Include="AntiDebug\AntiDebugger.hpp" />
     <ClInclude Include="AntiDebug\DebuggerDetections.hpp" />
     <ClInclude Include="AntiTamper\Integrity.hpp" />
     <ClInclude Include="AntiTamper\MapProtectedClass.hpp" />
     <ClInclude Include="AntiTamper\NAuthenticode.hpp" />
     <ClInclude Include="AntiTamper\remap.hpp" />
-    <ClInclude Include="API\API.hpp" />
     <ClInclude Include="Common\DetectionFlags.hpp" />
     <ClInclude Include="Common\Error.hpp" />
+    <ClInclude Include="Common\EvidenceLocker.hpp" />
     <ClInclude Include="Common\json.hpp" />
     <ClInclude Include="Common\json_fwd.hpp" />
     <ClInclude Include="Common\Logger.hpp" />
     <ClInclude Include="Common\Settings.hpp" />
     <ClInclude Include="Common\SHA256.hpp" />
     <ClInclude Include="Common\Utility.hpp" />
-    <ClInclude Include="Detections.hpp" />
+    <ClInclude Include="Core\AntiCheat.hpp" />
+    <ClInclude Include="Core\AntiCheatInitFail.hpp" />
+    <ClInclude Include="Core\API.hpp" />
+    <ClInclude Include="Core\Detections.hpp" />
+    <ClInclude Include="Core\Preventions.hpp" />
     <ClInclude Include="Environment\Services.hpp" />
-    <ClInclude Include="EvidenceLocker.hpp" />
     <ClInclude Include="GameEvents\EventLogger.hpp" />
     <ClInclude Include="Network\HttpClient.hpp" />
     <ClInclude Include="Network\NetClient.hpp" />
@@ -225,7 +226,6 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
     <ClInclude Include="Obscure\VirtualMachine.hpp" />
     <ClInclude Include="Obscure\VirtualMachineException.hpp" />
     <ClInclude Include="Obscure\XorStr.hpp" />
-    <ClInclude Include="Preventions.hpp" />
     <ClInclude Include="Process\Handles.hpp" />
     <ClInclude Include="Process\Memory\ntdll.h" />
     <ClInclude Include="Process\PEB.hpp" />

@@ -71,7 +71,7 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 			AntiDbg->EvidenceManager->AddFlagged(DetectionFlags::DEBUG_DBK64_DRIVER);
 		}
 
-		Sleep(MonitorLoopDelayMS);
+		this_thread::sleep_for(std::chrono::milliseconds(MonitorLoopDelayMS)); //ease the CPU a bit
 	}
 }
 

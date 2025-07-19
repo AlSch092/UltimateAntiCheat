@@ -70,7 +70,7 @@ enum class VM_Opcode : _UINT //these can be randomized at runtime on each instan
     VM_END_FUNC //each bytecode block must end with this opcode
 };
 
-class VirtualMachine
+class VirtualMachine final
 {
 public:
 
@@ -276,7 +276,6 @@ public:
                 _UINT varAddress = *(_UINT*)ip;
                 ip += sizeof(_UINT);
                 memcpy((void*)varAddress, (const void*)&stack[sp], sizeof(_UINT));
-                //*(_UINT*)varAddress = stack[sp];
             }break;
 
             case VM_Opcode::VM_CMP: //how do we best implement this, given that someone could pass in two class objects with overloaded comparison operators?

@@ -2,7 +2,7 @@
 #pragma once
 #include "../Network/NetClient.hpp" //to flag users to server
 #include "../Common/Settings.hpp"
-#include "../EvidenceLocker.hpp"
+#include "../Common/EvidenceLocker.hpp"
 #include <functional>
 
 #define USER_SHARED_DATA ((KUSER_SHARED_DATA * const)0x7FFE0000)
@@ -37,7 +37,20 @@ namespace Debugger
             CommonDebuggerProcesses.push_back(L"DbgX.Shell.exe");
         }
 
-		~AntiDebug() = default; //any smart pointers will be cleaned up automatically
+        ~AntiDebug()
+        {
+			if (DetectionThread != nullptr)
+			{
+				DetectionThread->SignalShutdown(TRUE);
+                DetectionThread->JoinThread();
+				DetectionThread.reset();
+			}
+
+			if (netClient != nullptr)
+			{
+				netClient.reset();
+			}
+        } 
 
         AntiDebug operator+(AntiDebug& other) = delete; //delete all arithmetic operators, unnecessary for context
         AntiDebug operator-(AntiDebug& other) = delete;

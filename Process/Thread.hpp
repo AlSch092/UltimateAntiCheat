@@ -8,7 +8,7 @@
 /*
 	The `Thread` class is a RAII wrapper around std::thread, providing additional functionality for thread management
 */
-class Thread
+class Thread final
 {
 public:
 

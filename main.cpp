@@ -8,8 +8,8 @@
     Author: AlSch092 @ Github
 */
 
-#include "API/API.hpp"
-#include "AntiCheat.hpp"
+#include "Core/API.hpp"
+#include "Core/AntiCheat.hpp"
 #include "SplashScreen.hpp"
 #include "AntiTamper/MapProtectedClass.hpp" //to make Settings class object write-protected (see https://github.com/AlSch092/RemapProtectedClass)
 #include "Obscure/XorStr.hpp"
@@ -79,12 +79,12 @@ int main(int argc, char** argv)
     wchar_t decrypted_1[parent_1.getSize()] = {};
     parent_1.decrypt(decrypted_1);
 
-    constexpr auto parent_2 = make_encrypted(L"steam.exe");
+    constexpr auto parent_2 = make_encrypted(L"VsDebugConsole.exe");
     wchar_t decrypted_2[parent_2.getSize()] = {};
     parent_2.decrypt(decrypted_2);
 
     const std::list<std::wstring> allowedParents = { decrypted_1, decrypted_2 }; //add your launcher here
-    const std::string logFileName = ""; //empty : does not log to file
+    const std::string logFileName = "UltimateAnticheat.log"; //empty : does not log to file
 #endif
 
 #ifdef _DEBUG
@@ -200,6 +200,8 @@ int main(int argc, char** argv)
     {
         Logger::logf(Info, "Detected a possible cheater during program execution!");
     }
+
+    Anti_Cheat->FastCleanup();
 
 #ifdef _DEBUG
 

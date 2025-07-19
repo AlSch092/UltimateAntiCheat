@@ -34,9 +34,6 @@
     <Filter Include="Network\Packets">
       <UniqueIdentifier>{bf416040-a94e-46d1-b4c7-d1e63836a414}</UniqueIdentifier>
     </Filter>
-    <Filter Include="API">
-      <UniqueIdentifier>{2a48520d-6768-45e2-ba4a-c1c4f4f94063}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Environment">
       <UniqueIdentifier>{f11964fb-44bf-4c13-a627-f67ab2e79386}</UniqueIdentifier>
     </Filter>
@@ -45,6 +42,9 @@
     </Filter>
     <Filter Include="GameEvents">
       <UniqueIdentifier>{aede6a69-ab91-4f01-8484-a65f25cec4ff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core">
+      <UniqueIdentifier>{7ac38772-7f3f-41d6-94f4-5f590bda1928}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -75,20 +75,11 @@
     <ClCompile Include="Common\SHA256.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="API\API.cpp">
-      <Filter>API</Filter>
-    </ClCompile>
     <ClCompile Include="Environment\Services.cpp">
       <Filter>Environment</Filter>
     </ClCompile>
     <ClCompile Include="AntiTamper\NAuthenticode.cpp">
       <Filter>AntiTamper</Filter>
-    </ClCompile>
-    <ClCompile Include="Preventions.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Detections.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AntiTamper\remap.cpp">
       <Filter>AntiTamper</Filter>
@@ -111,20 +102,26 @@
     <ClCompile Include="Network\HttpClient.cpp">
       <Filter>Network</Filter>
     </ClCompile>
-    <ClCompile Include="AntiCheat.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="EvidenceLocker.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="GameEvents\EventLogger.cpp">
       <Filter>GameEvents</Filter>
     </ClCompile>
+    <ClCompile Include="Core\AntiCheat.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Detections.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Preventions.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\API.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\EvidenceLocker.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AntiCheat.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="AntiDebug\AntiDebugger.hpp">
       <Filter>AntiDebug</Filter>
     </ClInclude>
@@ -155,20 +152,11 @@
     <ClInclude Include="Common\Utility.hpp">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="API\API.hpp">
-      <Filter>API</Filter>
-    </ClInclude>
     <ClInclude Include="Environment\Services.hpp">
       <Filter>Environment</Filter>
     </ClInclude>
     <ClInclude Include="AntiTamper\NAuthenticode.hpp">
       <Filter>AntiTamper</Filter>
-    </ClInclude>
-    <ClInclude Include="Preventions.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Detections.hpp">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Common\Error.hpp">
       <Filter>Common</Filter>
@@ -206,17 +194,11 @@
     <ClInclude Include="Network\HttpClient.hpp">
       <Filter>Network</Filter>
     </ClInclude>
-    <ClInclude Include="AntiCheatInitFail.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Common\DetectionFlags.hpp">
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="AntiTamper\MapProtectedClass.hpp">
       <Filter>AntiTamper</Filter>
-    </ClInclude>
-    <ClInclude Include="EvidenceLocker.hpp">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Obscure\XorStr.hpp">
       <Filter>Obscure</Filter>
@@ -234,6 +216,24 @@
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="Common\json_fwd.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\AntiCheat.hpp">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\AntiCheatInitFail.hpp">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Detections.hpp">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Preventions.hpp">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\API.hpp">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\EvidenceLocker.hpp">
       <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>

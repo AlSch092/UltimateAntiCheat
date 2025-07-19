@@ -20,7 +20,7 @@ namespace Handles
         USHORT Handle;
         PVOID Object;
         ACCESS_MASK GrantedAccess;
-        BOOL ReferencingOurProcess; //my own addition to the structure, we fill this member in ::DetectOpenHandlesToProcess
+        BOOL ReferencingOurProcess; //custom addition to the structure, we fill this member in ::DetectOpenHandlesToProcess
     } SYSTEM_HANDLE, * PSYSTEM_HANDLE;
 
     typedef struct _SYSTEM_HANDLE_INFORMATION

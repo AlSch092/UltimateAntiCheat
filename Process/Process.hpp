@@ -15,12 +15,6 @@
 
 using namespace std;
 
-#define MAX_DLLS_LOADED 128
-#define MAX_FILE_PATH_LENGTH 512
-
-#define SystemHandleInformation 16
-#define STATUS_INFO_LENGTH_MISMATCH ((NTSTATUS)0xC0000004L)
-
 namespace ProcessData
 {
 	typedef enum _PROCESS_INFORMATION_CLASS 
@@ -83,7 +77,7 @@ class Process final
 {
 public:
 
-	Process(__in const int nProgramSections) //we manually set number of program sections in order to spoof it at runtime to 0 or 1, and not have the program be confused
+	Process(__in const unsigned int nProgramSections) //we manually set number of program sections in order to spoof it at runtime to 0 or 1, and not have the program be confused
 	{
 		_PEB = new _MYPEB();
 		
@@ -92,7 +86,17 @@ public:
 			Logger::logf(Err, "Unable to traverse loaded modules @ ::Process() .\n");
 		}
 
-		SetParentName(GetProcessName(GetParentProcessId()));
+		DWORD parentPid = GetParentProcessId();
+
+		if (parentPid != 0)
+		{
+			SetParentName(GetProcessName(parentPid));
+			SetParentId(parentPid);
+		}
+		else
+		{
+			Logger::logf(Warning, "Could not fetch parent process ID");
+		}
 
 		Process::SetNumSections(nProgramSections); //save original # of program sections so that we can modify NumberOfSections in the NT headers and still achieve program functionality
 	}
@@ -120,9 +124,6 @@ public:
 
 	static DWORD GetParentProcessId();
 	static BOOL CheckParentProcess(__in const wstring desiredParent, __in const bool bShouldCheckSignature);
-
-	void SetElevated(__in const BOOL bElevated) { this->_Elevated = bElevated; }
-	BOOL GetElevated() { return this->_Elevated; }
 
 	wstring GetParentName() const { return this->_ParentProcessName; }
 	uint32_t GetParentId() const { return this->_ParentProcessId; }
@@ -169,7 +170,7 @@ public:
 	static std::vector<BYTE> ReadRemoteTextSection(__in const DWORD pid); //fetch .text of a running process (can improve this by making it any section instead of just .text)
 
 	static int GetNumSections() { return NumSections; }
-	static void SetNumSections(int nSections) { NumSections = nSections; }
+	static void SetNumSections(__in const unsigned int nSections) { NumSections = nSections; }
 
 	static wstring GetExecutableModuleName() { return ExecutableModuleNameW; }
 	static void SetExecutableModuleName(wstring name) { ExecutableModuleNameW = name; }
@@ -187,11 +188,9 @@ private:
 	wstring _ParentProcessName;
 	uint32_t _ParentProcessId = 0;
 
-	list<ProcessData::Section*> _sections;
+	list<ProcessData::Section*> MainModuleSections;
 
 	list<ProcessData::MODULE_DATA*> ModuleList; //todo: make routine to fill this member
-
-	bool _Elevated = false;
 
 	static int NumSections;
 	static wstring ExecutableModuleNameW;

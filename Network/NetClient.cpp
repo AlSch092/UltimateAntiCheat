@@ -87,10 +87,7 @@ Error NetClient::EndConnection(__in const int reason)
 		}
 	}
 
-	if (Socket != SOCKET_ERROR && Socket != NULL)
-	{
-		closesocket(Socket);
-	}
+	closesocket(Socket);
 
 	this->ConnectedDuration = GetTickCount64() - this->ConnectedAt;
 
