@@ -15,7 +15,7 @@ class Preventions final
 {
 public:
 
-	Preventions(__in Settings* config, __in bool preventingThreads, __in shared_ptr<Integrity> integrityChecker) : IsPreventingThreadCreation(preventingThreads), integrityChecker(integrityChecker), Config(config)
+	Preventions(__in Settings* config, __in bool preventingUnknownThreads, __in shared_ptr<Integrity> integrityChecker) : IsPreventingThreadCreation(preventingUnknownThreads), integrityChecker(integrityChecker), Config(config)
 	{
 	}
 

@@ -1,45 +1,54 @@
 #include "AntiCheat.hpp"
 
-AntiCheat::AntiCheat(__in Settings* config, __in const WindowsVersion WinVersion) : Config(config), WinVersion(WinVersion)
+AntiCheat::AntiCheat(__in Settings* config) : Config(config)
 {
 	if (config == nullptr)
 	{
 		throw AntiCheatInitFail(AntiCheatInitFailReason::NullSettings);
 	}
 
-	{
-		if (!DoPreInitializeChecks())
-		{
-			Logger::logfw(Err, L"Pre-initialize checks did not pass @ AntiCheat::AntiCheat.");
-			throw AntiCheatInitFail(AntiCheatInitFailReason::PreInitializeChecksDidNotPass);
-		}
+	this->WinVersion = Services::GetWindowsVersion();
 
-		//call `DoPreInitializeChecks()` through VM as a concept proof 
-//		std::unique_ptr<VirtualMachine> VM = std::make_unique<VirtualMachine>(128);
-//
-//		bool (AntiCheat::*callAddr)() = &AntiCheat::DoPreInitializeChecks; //check various things such as secure boot, DSE, kdebugging, if they are enabled in settings
-//		_UINT address = (_UINT)&callAddr; //get address to non-static function
-//
-//#ifdef USING_OBFUSCATE
-//		_UINT bytecode[]
-//		{
-//			(_UINT)VM_Opcode::VM_PUSH OBFUSCATE, (_UINT)(this) OBFUSCATE,
-//			(_UINT)VM_Opcode::VM_CALL OBFUSCATE, 1 OBFUSCATE, *(_UINT*)address OBFUSCATE, //1 parameter (this ptr since DoPreInitializeChecks() has an implicit class pointer passed into RCX )
-//			(_UINT)VM_Opcode::VM_END_FUNC OBFUSCATE
-//		};
-//#else
-//		_UINT bytecode[] 
-//		{
-//			(_UINT)VM_Opcode::VM_PUSH, (_UINT)(this),
-//			(_UINT)VM_Opcode::VM_CALL, 1, *(_UINT*)address, //1 parameter (this ptr)
-//			(_UINT)VM_Opcode::VM_END_FUNC
-//		};
-//#endif
-//		if (!VM->Execute<bool>(bytecode, sizeof(bytecode) / sizeof(_UINT)))  //execute bytecode in VM
-//		{
-//			Logger::logfw(Err, L"One or more pre-initialize checks did not pass @ AntiCheat::AntiCheat.");
-//			throw AntiCheatInitFail(AntiCheatInitFailReason::PreInitializeChecksDidNotPass);
-//		}
+	{
+		bool usingVirtualMachine = false;
+
+		if (usingVirtualMachine)
+		{
+			//call `DoPreInitializeChecks()` through VM as a concept proof 
+			std::unique_ptr<VirtualMachine> VM = std::make_unique<VirtualMachine>(128);
+	
+			bool (AntiCheat::*callAddr)() = &AntiCheat::DoPreInitializeChecks; //check various things such as secure boot, DSE, kdebugging, if they are enabled in settings
+			_UINT address = (_UINT)&callAddr; //get address to non-static function
+	
+	#ifdef USING_OBFUSCATE
+			_UINT bytecode[]
+			{
+				(_UINT)VM_Opcode::VM_PUSH OBFUSCATE, (_UINT)(this) OBFUSCATE,
+				(_UINT)VM_Opcode::VM_CALL OBFUSCATE, 1 OBFUSCATE, *(_UINT*)address OBFUSCATE, //1 parameter (this ptr since DoPreInitializeChecks() has an implicit class pointer passed into RCX )
+				(_UINT)VM_Opcode::VM_END_FUNC OBFUSCATE
+			};
+	#else
+			_UINT bytecode[] 
+			{
+				(_UINT)VM_Opcode::VM_PUSH, (_UINT)(this),
+				(_UINT)VM_Opcode::VM_CALL, 1, *(_UINT*)address, //1 parameter (this ptr)
+				(_UINT)VM_Opcode::VM_END_FUNC
+			};
+	#endif
+			if (!VM->Execute<bool>(bytecode, sizeof(bytecode) / sizeof(_UINT)))  //execute bytecode in VM
+			{
+				Logger::logfw(Err, L"One or more pre-initialize checks did not pass @ AntiCheat::AntiCheat.");
+				throw AntiCheatInitFail(AntiCheatInitFailReason::PreInitializeChecksDidNotPass);
+			}
+		}
+		else
+		{
+			if (!DoPreInitializeChecks())
+			{
+				Logger::logfw(Err, L"Pre-initialize checks did not pass @ AntiCheat::AntiCheat.");
+				throw AntiCheatInitFail(AntiCheatInitFailReason::PreInitializeChecksDidNotPass);
+			}
+		}
 	}
 
 	try
@@ -71,7 +80,7 @@ AntiCheat::AntiCheat(__in Settings* config, __in const WindowsVersion WinVersion
 		//additionally, we need to check the signature on our driver to make sure someone isn't spoofing it. this will be added soon after initial testing is done
 		wstring driverCertSubject = Authenticode::GetSignerFromFile(absolutePath);
 
-		if (driverCertSubject.size() == 0 || driverCertSubject != DriverSignerSubject) //check if driver cert has correct sign subject
+		if (driverCertSubject.size() == 0 || driverCertSubject != GetConfig()->DriverSignerSubject) //check if driver cert has correct sign subject
 		{
 			throw AntiCheatInitFail(AntiCheatInitFailReason::DriverUnsigned);
 		}
@@ -84,9 +93,15 @@ AntiCheat::AntiCheat(__in Settings* config, __in const WindowsVersion WinVersion
 		Logger::logfw(Info, L"Loaded driver: %s from path %s", Config->GetKMDriverName().c_str(), absolutePath);
 	}
 
-	if (API::Dispatch(this, API::DispatchCode::INITIALIZE) != Error::OK) //initialize AC , this will start all detections + preventions
+	if (Initialize("GAMECODE-COOLGAME1", GetConfig()->bNetworkingEnabled) != Error::OK) //initialize AC , this will start all detections + preventions
 	{
 		throw AntiCheatInitFail(AntiCheatInitFailReason::DispatchFail);
+	}
+
+	if (LaunchDefenses() != Error::OK) //start all the threads and defenses
+	{
+		Logger::logf(Err, "Failed to launch defenses @ AntiCheat::AntiCheat(). Shutting down.");
+		throw AntiCheatInitFail(AntiCheatInitFailReason::StartupFailed);
 	}
 }
 
@@ -100,7 +115,7 @@ AntiCheat::~AntiCheat()
 		}
 	}
 
-	if (API::Dispatch(this, API::DispatchCode::CLIENT_EXIT) == Error::OK)
+	if (Cleanup() == Error::OK)
 	{
 		Logger::logf(Info, " Cleanup successful. Shutting down program");
 	}
@@ -110,6 +125,55 @@ AntiCheat::~AntiCheat()
 	}
 }
 
+/*
+	Cleanup - signals thread shutdowns and deletes memory associated with the Anticheat* object `AC`
+	returns Error::OK on success
+*/
+Error AntiCheat::Cleanup()
+{
+	if ((GetConfig() != nullptr && GetConfig()->bUseAntiDebugging) 
+		&& (GetAntiDebugger() != nullptr && GetAntiDebugger()->GetDetectionThread() != nullptr)) //stop anti-debugger thread
+	{
+		GetAntiDebugger()->GetDetectionThread()->SignalShutdown(true);
+		GetAntiDebugger()->GetDetectionThread()->JoinThread();
+	}
+
+	if (GetMonitor() != nullptr && GetMonitor()->GetMonitorThread() != nullptr) //stop anti-cheat monitor thread
+	{
+		GetMonitor()->GetMonitorThread()->SignalShutdown(true);
+		GetMonitor()->GetMonitorThread()->JoinThread();
+	}
+
+	if (GetMonitor() != nullptr && GetMonitor()->GetProcessCreationMonitorThread() != nullptr) //stop process creation monitor thread
+	{
+		GetMonitor()->GetProcessCreationMonitorThread()->SignalShutdown(true);
+		GetMonitor()->GetProcessCreationMonitorThread()->JoinThread();
+	}
+
+	if (GetMonitor() != nullptr && GetMonitor()->GetRegistryMonitorThread() != nullptr) //stop registry monitor
+	{
+		GetMonitor()->GetRegistryMonitorThread()->SignalShutdown(true);
+		GetMonitor()->GetRegistryMonitorThread()->JoinThread();
+	}
+
+	auto client = GetNetworkClient().lock();
+
+	if (client)
+	{
+		if (client->GetRecvThread() != nullptr) //stop anti-cheat monitor thread
+		{
+			client->GetRecvThread()->SignalShutdown(true);
+			client->GetRecvThread()->JoinThread();
+		}
+	}
+	else
+	{
+		Logger::logf(Err, "Couldn't fetch/lock netclient @  API::Cleanup");
+		return Error::NULL_MEMORY_REFERENCE;
+	}
+
+	return Error::OK;
+}
 
 /*
 	FastCleanup - Unloads the driver and stops all threads that were started by the AntiCheat class. Uses TerminateThread(), so thread cleanup is not proper (but executes much faster)
@@ -253,4 +317,99 @@ bool AntiCheat::IsAnyThreadSuspended()
 	}
 
 	return false;
+}
+
+/*
+	Initialize - Initializes the anti-cheat module by connecting to the auth server (if available) and sending it the game's unique code, and checking the parent process to ensure a rogue launcher wasn't used
+	returns Error::OK on success.
+*/
+Error AntiCheat::Initialize(std::string licenseKey, bool isServerAvailable)
+{
+	Error errorCode = Error::OK;
+	bool isLicenseValid = false;
+
+	std::list<wstring> allowedParents = GetConfig()->allowedParents;
+	auto it = std::find_if(allowedParents.begin(), allowedParents.end(), [](const wstring& parentName)
+		{
+			return Process::CheckParentProcess(parentName, true);
+		});
+
+	if (it != allowedParents.end())
+	{
+		GetMonitor()->GetProcessObj()->SetParentName(*it);
+	}
+	else //bad parent process detected, or parent process mismatch, shut down the program (and optionally report the error to the server)
+	{
+		Logger::logfw(Detection, L"Parent process '%s' was not whitelisted, shutting down program!", Process::GetProcessName(Process::GetParentProcessId()).c_str());
+		errorCode = Error::PARENT_PROCESS_MISMATCH;
+	}
+
+	if (isServerAvailable)
+	{
+		Logger::logf(Info, "Starting networking component...");
+
+		auto client = GetNetworkClient().lock();
+
+		if (client)
+		{
+			if (client->Initialize(Settings::Instance->serverIP, Settings::Instance->serverPort, licenseKey) != Error::OK) //initialize client is separate from license key auth
+			{
+				errorCode = Error::CANT_STARTUP;		//don't allow AC startup if network portion doesn't succeed
+				goto end;
+			}
+		}
+		else
+		{
+			Logger::logf(Err, "Could not fetch/lock network client, exiting...");
+			return Error::NULL_MEMORY_REFERENCE;
+		}
+	}
+	else
+	{
+		Logger::logf(Info, "Networking is currently disabled, no heartbeats will occur");
+	}
+
+end:
+	return errorCode;
+}
+
+
+/*
+	LaunchDefenses - Initialize detections, preventions, and ADbg techniques
+	returns Error::OK on success
+*/
+Error AntiCheat::LaunchDefenses()
+{
+	if (GetMonitor() == nullptr || GetAntiDebugger() == nullptr || GetBarrier() == nullptr)
+		return Error::NULL_MEMORY_REFERENCE;
+
+	Error errorCode = Error::OK;
+
+	if (GetBarrier()->DeployBarrier() == Error::OK) //activate all techniques to stop cheaters
+	{
+		Logger::logf(Info, " Barrier techniques were applied successfully!");
+	}
+	else
+	{
+		Logger::logf(Err, "Could not initialize the barrier @ API::LaunchBasicTests");
+		errorCode = Error::CANT_APPLY_TECHNIQUE;
+	}
+
+	if (!GetMonitor()->StartMonitor()) //start looped detections
+	{
+		Logger::logf(Err, "Could not initialize the barrier @ API::LaunchBasicTests");
+		errorCode = Error::CANT_STARTUP;
+	}
+
+	GetAntiDebugger()->StartAntiDebugThread(); //start debugger checks in a seperate thread
+
+	//AC->GetMonitor()->GetServiceManager()->GetServiceModules(); //enumerate services -> currently not in use
+
+	if (!Process::CheckParentProcess(GetMonitor()->GetProcessObj()->GetParentName(), true)) //parent process check, the parent process would normally be set using our API methods
+	{
+		Logger::logf(Detection, "Parent process was not in whitelist!");
+		errorCode = Error::PARENT_PROCESS_MISMATCH;
+	}
+
+	return errorCode;
 }

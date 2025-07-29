@@ -5,7 +5,7 @@
 
 enum AntiCheatInitFailReason
 {
-    NullSettings, BadAlloc, DriverNotFound, DriverUnsigned, DriverLoadFail, DispatchFail, PreInitializeChecksDidNotPass
+    NullSettings, BadAlloc, DriverNotFound, DriverUnsigned, DriverLoadFail, DispatchFail, PreInitializeChecksDidNotPass, StartupFailed
 };
 
 class AntiCheatInitFail : public std::exception 
@@ -30,10 +30,11 @@ class AntiCheatInitFail : public std::exception
 			{ DriverUnsigned, "Driver certificate subject/signer was not correct" },
 			{ DriverLoadFail, "Could not load driver" },
 			{ DispatchFail, "API::Dispatch failed" },
-			{ PreInitializeChecksDidNotPass, "One or more pre-initialize checks did not pass"}
+			{ PreInitializeChecksDidNotPass, "One or more pre-initialize checks did not pass"},
+			{ StartupFailed, "Startup failed, please check the logs for more information" }
 		};
 	#else
-	const std::map<AntiCheatInitFailReason, const std::string> reasonExplainMap = 
+	const std::map<AntiCheatInitFailReason, const std::string> reasonExplainMap = //in release mode, hide string mappings to make reversing less straightforward
 	{
 			{ NullSettings, "" },
 			{ BadAlloc, "" },
@@ -41,7 +42,8 @@ class AntiCheatInitFail : public std::exception
 			{ DriverUnsigned, "" },
 			{ DriverLoadFail, "" },
 			{ DispatchFail, "" },
-			{ PreInitializeChecksDidNotPass, ""}
+			{ PreInitializeChecksDidNotPass, ""},
+			{ StartupFailed, "" }
     };
 	#endif
 };

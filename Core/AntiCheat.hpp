@@ -9,10 +9,11 @@
 #endif
 #endif
 
+#ifndef _LIB_
+
 #include "AntiCheatInitFail.hpp"
 #include "Detections.hpp"
 #include "Preventions.hpp"
-#include "API.hpp"
 #include "../Common/Logger.hpp"
 #include "../Common/Settings.hpp"
 #include "../AntiDebug/DebuggerDetections.hpp"
@@ -24,10 +25,15 @@ class AntiCheat final
 {
 public:
 
-	AntiCheat(__in Settings* config, __in const WindowsVersion WinVersion);
+	AntiCheat(__in Settings* config);
 	~AntiCheat();
 
+	Error Cleanup();
 	Error FastCleanup(); //cleanup function for when we need to exit the program quickly
+
+	Error Initialize(std::string licenseKey, bool isServerAvailable);
+	bool DoPreInitializeChecks();
+	Error LaunchDefenses();
 
 	AntiCheat& operator=(AntiCheat&& other) = delete; //delete move assignments
 
@@ -48,8 +54,6 @@ public:
 
 	bool IsAnyThreadSuspended();
 
-	bool DoPreInitializeChecks();
-
 private:
 
 	unique_ptr<Detections> Monitor;  //cheat detections
@@ -63,8 +67,9 @@ private:
 	Settings* Config = nullptr; //the unique_ptr for this is made in main.cpp
 
 	WindowsVersion WinVersion;
-
-	const wstring DriverSignerSubject = L"YourCoolCompany";  //this refers to the company/party who initiated the file signing, for example "Valve Corp.". If you have an EV certificate, you can change this to your own company
-
+	
 	EvidenceLocker* Evidence = nullptr;
 };
+
+
+#endif

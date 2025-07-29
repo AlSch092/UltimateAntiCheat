@@ -86,6 +86,23 @@ public:
         }
     }
 
+    /*
+    Reset - unmaps the view and closes the section handle, effectively resetting the ProtectedMemory object
+*/
+    void Reset()
+    {
+        if (pViewBase)
+        {
+            NtUnmapViewOfSection(NtCurrentProcess(), pViewBase);
+            pViewBase = nullptr;
+        }
+        if (hSection && hSection != INVALID_HANDLE_VALUE)
+        {
+            CloseHandle(hSection);
+            hSection = INVALID_HANDLE_VALUE;
+        }
+    }
+
     template<typename T, typename... Args>      //"placement new" concept using variadic template
     T* Construct(Args&&... args)
     {

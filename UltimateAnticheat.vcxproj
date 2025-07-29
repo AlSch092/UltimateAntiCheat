@@ -5,6 +5,14 @@
       <Configuration>Debug</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="LibRelease|Win32">
+      <Configuration>LibRelease</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="LibRelease|x64">
+      <Configuration>LibRelease</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|Win32">
       <Configuration>Release</Configuration>
       <Platform>Win32</Platform>
@@ -41,6 +49,13 @@
     <WholeProgramOptimization>PGInstrument</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='LibRelease|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>PGInstrument</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -49,6 +64,12 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='LibRelease|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
@@ -65,10 +86,16 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='LibRelease|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='LibRelease|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
@@ -78,6 +105,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='LibRelease|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <GenerateManifest>false</GenerateManifest>
@@ -85,6 +115,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='LibRelease|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg">
+    <VcpkgEnabled>false</VcpkgEnabled>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -124,6 +161,30 @@
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='LibRelease|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>Default</ConformanceMode>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <TreatLinkerWarningAsErrors>false</TreatLinkerWarningAsErrors>
+      <OptimizeReferences>false</OptimizeReferences>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+    </Link>
+  </ItemDefinitionGroup>
+ 
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -136,7 +197,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ntdll.lib;$(CoreLibraryDependencies);%(AdditionalDependencies); wintrust.lib; crypt32.lib;</AdditionalDependencies>
+      <AdditionalDependencies>ntdll.lib;$(CoreLibraryDependencies);%(AdditionalDependencies);wintrust.lib;crypt32.lib;ws2_32.lib;iphlpapi.lib</AdditionalDependencies>
       <TreatLinkerWarningAsErrors>false</TreatLinkerWarningAsErrors>
     </Link>
     <PostBuildEvent>
@@ -161,13 +222,39 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ntdll.lib;$(CoreLibraryDependencies);%(AdditionalDependencies); wintrust.lib; Crypt32.lib;</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);wintrust.lib;Crypt32.lib;ntdll.lib;ws2_32.lib;iphlpapi.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(ProjectDir)\splash.png" "$(ProjectDir)\x64\Release\splash.png" </Command>
       <Message>Copy Splash Image</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='LibRelease|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;_WIN32_WINNT=0x0A00;_MAIN_MODULE_NAME="UltimateAnticheat.exe";_MAIN_MODULE_NAME_W=L"UltimateAnticheat.exe";_LIB_</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>ntdll.lib;$(CoreLibraryDependencies);%(AdditionalDependencies); wintrust.lib; Crypt32.lib;</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy "$(ProjectDir)\splash.png" "$(ProjectDir)\x64\Release\splash.png" </Command>
+      <Message>Copy Splash Image</Message>
+    </PostBuildEvent>
+    <Lib>
+      <AdditionalDependencies>wintrust.lib;Crypt32.lib;ntdll.lib;%(AdditionalDependencies);iphlpapi.lib</AdditionalDependencies>
+    </Lib>
+  </ItemDefinitionGroup>
+
   <ItemGroup>
     <ClCompile Include="AntiDebug\AntiDebugger.cpp" />
     <ClCompile Include="AntiDebug\DebuggerDetections.cpp" />
@@ -178,8 +265,14 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
     <ClCompile Include="Common\Logger.cpp" />
     <ClCompile Include="Common\SHA256.cpp" />
     <ClCompile Include="Common\Utility.cpp" />
-    <ClCompile Include="Core\AntiCheat.cpp" />
-    <ClCompile Include="Core\API.cpp" />
+    <ClCompile Include="Core\AntiCheat.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='LibRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Core\AntiCheatLib.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='LibRelease|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Core\Detections.cpp" />
     <ClCompile Include="Core\Preventions.cpp" />
     <ClCompile Include="Environment\Services.cpp" />
@@ -190,7 +283,9 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
     <ClCompile Include="Process\Handles.cpp" />
     <ClCompile Include="Process\PEB.cpp" />
     <ClCompile Include="Process\Process.cpp" />
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="main.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='LibRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Process\Thread.cpp" />
     <ClCompile Include="SplashScreen.cpp" />
   </ItemGroup>
@@ -210,9 +305,16 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
     <ClInclude Include="Common\Settings.hpp" />
     <ClInclude Include="Common\SHA256.hpp" />
     <ClInclude Include="Common\Utility.hpp" />
-    <ClInclude Include="Core\AntiCheat.hpp" />
+    <ClInclude Include="Core\AntiCheat.hpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='LibRelease|x64'">true</ExcludedFromBuild>
+
+    </ClInclude>
     <ClInclude Include="Core\AntiCheatInitFail.hpp" />
-    <ClInclude Include="Core\API.hpp" />
+    <ClInclude Include="Core\AntiCheatLib.hpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='LibRelease|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="Core\Detections.hpp" />
     <ClInclude Include="Core\Preventions.hpp" />
     <ClInclude Include="Environment\Services.hpp" />

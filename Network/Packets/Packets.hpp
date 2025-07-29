@@ -32,11 +32,11 @@ namespace Packets
 
 	namespace Builder
 	{
-		PacketWriter* ClientHello(string gameCode, string HWID, string Ipv4, string MACAddress);
-		PacketWriter* ClientGoodbye(int reason);
-		PacketWriter* Heartbeat(const char* cookie_str);
-		PacketWriter* DetectedCheater(int flags);
+		PacketWriter* ClientHello(__in const std::string gameCode, __in const std::string HWID, __in  const std::string Ipv4, __in  const std::string MACAddress);
+		PacketWriter* ClientGoodbye(__in const int reason);
+		PacketWriter* Heartbeat(__in const char* cookie_str);
+		PacketWriter* DetectedCheater(__in const int flags);
 		PacketWriter* DetectedCheater(__in const uint32_t flags, __in const const std::string detectedModule, __in const DWORD pid);
-		PacketWriter* QueryMemory(byte* bytestring, int size);
+		PacketWriter* QueryMemory(__in const byte* bytestring, __in const int size);
 	}
 }

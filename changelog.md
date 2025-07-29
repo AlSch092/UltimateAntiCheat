@@ -1,4 +1,7 @@
 ## Updates
+- July 29, '25: Added `LibRelease` build mode, which supports building as a .lib (needs testing still, which will happen very soon). Removed API namespace, moved routines into AntiCheat class + variables into Settings class.  
+                Doxygen-style comments will be added over time, along with general refactoring to improve readability and flow, since there's many parts which can be improved.  
+
 - July 13, '25: Added the `GameEvents` class to assist with game data telemetry. Game actions such as player deaths, jumps, crouches, etc can be sent to an endpoint via HTTP. This feature will be improved soon to add bulk events in one request rather than one-by-one for all events.  
   
 - Feb 28, '25: Fix manually mapped image detection, now properly detecting erased PE headers. Further development of any new detection & prevention methods will be ending due to lack of funding; I can no longer give out free work since I can't find any for myself. Any further development of the project will likely switch to being related to design and code cleanliness.  

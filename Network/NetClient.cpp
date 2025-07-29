@@ -223,7 +223,7 @@ std::string NetClient::GetHostname()
 #ifdef WIN32
 	WSADATA wsaData;
 	WORD wVersionRequested = MAKEWORD(2, 0);
-	if (::WSAStartup(wVersionRequested, &wsaData) != 0)
+	if (WSAStartup(wVersionRequested, &wsaData) != 0)
 		return "";
 #endif
 	if (gethostname(szBuffer, sizeof(szBuffer)) == SOCKET_ERROR)
@@ -234,7 +234,7 @@ std::string NetClient::GetHostname()
 		return "";
 	}
 
-	struct hostent* host = gethostbyname(szBuffer);
+	auto host = gethostbyname(szBuffer);
 	if (host == NULL)
 	{
 #ifdef WIN32

@@ -802,9 +802,9 @@ bool Services::UnloadDriver(__in const std::wstring& serviceName)
 /*
     EnumerateProcesses - return list of running processes ids
 */
-list<DWORD> Services::EnumerateProcesses()
+std::list<DWORD> Services::EnumerateProcesses()
 {
-    list<DWORD> procs;
+    std::list<DWORD> procs;
 
     PROCESSENTRY32 entry;
     entry.dwSize = sizeof(PROCESSENTRY32);
@@ -832,7 +832,8 @@ std::string Services::GetProcessDirectory(__in const DWORD pid)
         return "";
 
     HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
-    if (hProcess == nullptr)
+
+    if (hProcess == NULL)
     {
         Logger::logf(Err, "Failed to open process with PID %d @ GetProcessDirectory", pid);
         return "";
@@ -868,7 +869,7 @@ std::string Services::GetProcessDirectory(__in const DWORD pid)
 /*
     GetProcessDirectoryW - return directory of process `pid`
 */
-wstring Services::GetProcessDirectoryW(__in const DWORD pid)
+std::wstring Services::GetProcessDirectoryW(__in const DWORD pid)
 {
     if (pid <= 4)
         return L"";
@@ -890,7 +891,7 @@ wstring Services::GetProcessDirectoryW(__in const DWORD pid)
 
         if (lastSlash != nullptr)
         {
-            *lastSlash = '\0';
+            *lastSlash = '\0'; //__try,__except won't compile here, function requires unwinding
 
             CloseHandle(hProcess);
             wcscat(imagePath, L"\\");
@@ -929,7 +930,7 @@ bool Services::IsDriverRunning(__in const std::wstring& serviceName)
 
     if (!hService)
     {
-        Logger::logfw(Warning, L"Failed to open service %s: %d", serviceName.c_str(), GetLastError());
+        Logger::logfw(Info, L"Failed to open service %s: %d (this is not an error)", serviceName.c_str(), GetLastError());
         CloseServiceHandle(hSCManager);
         return false;
     }

@@ -25,12 +25,12 @@ namespace Authenticode
 	BOOL VerifyCatalogSignature(__in const LPCWSTR filePath, __in const  BOOL checkRevoked);
 	BOOL HasSignature(__in const LPCWSTR filePath, __in const BOOL checkEndCertRevoked);
 
-	wstring GetSignerFromFile(const wstring& filePath); //get the 'subject' field of the certifcate (often the company which published the software file)
+	std::wstring GetSignerFromFile(__in const wstring& filePath); //get the 'subject' field of the certifcate (often the company which published the software file)
 
 	//https://learn.microsoft.com/en-us/previous-versions/troubleshoot/windows/win32/get-information-authenticode-signed-executables
-	BOOL GetProgAndPublisherInfo(PCMSG_SIGNER_INFO pSignerInfo, PSPROG_PUBLISHERINFO Info);
-	BOOL GetDateOfTimeStamp(PCMSG_SIGNER_INFO pSignerInfo, SYSTEMTIME* st);
-	wstring GetCertificateSubject(PCCERT_CONTEXT pCertContext);
-	BOOL GetTimeStampSignerInfo(PCMSG_SIGNER_INFO pSignerInfo, PCMSG_SIGNER_INFO* pCounterSignerInfo);
-	LPWSTR AllocateAndCopyWideString(LPCWSTR inputString);
+	BOOL GetProgAndPublisherInfo(__in const PCMSG_SIGNER_INFO pSignerInfo, __out PSPROG_PUBLISHERINFO Info);
+	BOOL GetDateOfTimeStamp(__in const PCMSG_SIGNER_INFO pSignerInfo, __out SYSTEMTIME* st);
+	std::wstring GetCertificateSubject(__in const PCCERT_CONTEXT pCertContext);
+	BOOL GetTimeStampSignerInfo(__in const PCMSG_SIGNER_INFO pSignerInfo, __out PCMSG_SIGNER_INFO* pCounterSignerInfo);
+	LPWSTR AllocateAndCopyWideString(__in const LPCWSTR inputString);
 }

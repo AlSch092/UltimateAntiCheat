@@ -1,7 +1,6 @@
 //By AlSch092 @github
 #pragma once
-#include <winsock2.h>
-#include <Iphlpapi.h>
+
 #include <list>
 #include <stdint.h>
 #include <string>
@@ -14,8 +13,8 @@
 #include "Packets/Packets.hpp"
 #include "../Process/Process.hpp"
 
-#pragma comment(lib, "ws2_32")
-#pragma comment(lib, "iphlpapi.lib")
+
+#include <Iphlpapi.h>
 
 #define DEFAULT_RECV_LENGTH 512
 #define MINIMUM_PACKET_SIZE 4

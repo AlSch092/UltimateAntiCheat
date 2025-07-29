@@ -114,11 +114,11 @@
     <ClCompile Include="Core\Preventions.cpp">
       <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="Core\API.cpp">
-      <Filter>Core</Filter>
-    </ClCompile>
     <ClCompile Include="Common\EvidenceLocker.cpp">
       <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\AntiCheatLib.cpp">
+      <Filter>Core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -230,11 +230,11 @@
     <ClInclude Include="Core\Preventions.hpp">
       <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="Core\API.hpp">
-      <Filter>Core</Filter>
-    </ClInclude>
     <ClInclude Include="Common\EvidenceLocker.hpp">
       <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\AntiCheatLib.hpp">
+      <Filter>Core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

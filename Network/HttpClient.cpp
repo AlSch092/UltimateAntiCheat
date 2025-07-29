@@ -136,7 +136,7 @@ string HttpClient::PostRequest(__in const string url, __in const vector<string> 
     }
     else
     {
-        Logger::logf(Err, "Failed to initialize libcurl @ WeAuth::SignOut");
+        Logger::logf(Err, "Failed to initialize libcurl @ HttpClient::PostRequest");
         return "";
     }
 

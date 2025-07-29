@@ -8,11 +8,14 @@
     Author: AlSch092 @ Github
 */
 
-#include "Core/API.hpp"
 #include "Core/AntiCheat.hpp"
 #include "SplashScreen.hpp"
 #include "AntiTamper/MapProtectedClass.hpp" //to make Settings class object write-protected (see https://github.com/AlSch092/RemapProtectedClass)
 #include "Obscure/XorStr.hpp"
+#include "Common/Settings.hpp"
+#include "Common/DetectionFlags.hpp"
+#include "Process/Thread.hpp"
+#include <unordered_map>
 
 #pragma comment(linker, "/ALIGN:0x10000") //for remapping technique (anti-tamper) - each section gets its own region, align with system allocation granularity
 #pragma comment (linker, "/INCLUDE:_tls_used")
@@ -59,9 +62,16 @@ int main(int argc, char** argv)
     const bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option  
     const bool bEnableLogging = true;
 
+    std::wstring DriverCertSubject = L"YourGameCompany";
+
+    if (bUsingDriver)
+        DriverCertSubject = L"";
+
     const std::list<std::wstring> allowedParents = {L"VsDebugConsole.exe", L"vsdbg.exe", L"powershell.exe", L"bash.exe", L"zsh.exe", L"explorer.exe"};
     const std::string logFileName = "UltimateAnticheat.log";
 
+    const std::string serverIP = "127.0.0.1";
+    const uint16_t serverPort = 5445;
 #else
     const bool bEnableNetworking = false; //change this to false if you don't want to use the server
     const bool bEnforceSecureBoot = false; //secure boot is recommended in distribution builds
@@ -73,18 +83,22 @@ int main(int argc, char** argv)
     const bool bCheckHypervisor = false;
     const bool bRequireRunAsAdministrator = true;
     const bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
+    std::wstring DriverCertSubject = L"YourGameCompany";
+    
+    if (bUsingDriver)
+        DriverCertSubject = L"";
+
     const bool bEnableLogging = true; // set to false to not create a detailed AntiCheat log file on the user's system
 
     constexpr auto parent_1 = make_encrypted(L"explorer.exe"); //in release build we can encrypt any compiled strings and decrypt them at runtime
     wchar_t decrypted_1[parent_1.getSize()] = {};
     parent_1.decrypt(decrypted_1);
 
-    constexpr auto parent_2 = make_encrypted(L"VsDebugConsole.exe");
-    wchar_t decrypted_2[parent_2.getSize()] = {};
-    parent_2.decrypt(decrypted_2);
-
-    const std::list<std::wstring> allowedParents = { decrypted_1, decrypted_2 }; //add your launcher here
+    const std::list<std::wstring> allowedParents = { decrypted_1 }; //add your launcher here
     const std::string logFileName = "UltimateAnticheat.log"; //empty : does not log to file
+
+    const std::string serverIP = "127.0.0.1";
+    const uint16_t serverPort = 5445;
 #endif
 
 #ifdef _DEBUG
@@ -105,10 +119,10 @@ int main(int argc, char** argv)
 
     for (auto parent: allowedParents) 
     {
-        wcout << parent << " ";
+        std::wcout << parent << " ";
     }
 
-    cout << endl;
+    std::cout << std::endl;
 
 #endif
 
@@ -131,6 +145,8 @@ int main(int argc, char** argv)
     ProtectedMemory ProtectedSettingsMemory(sizeof(Settings));
 
     Settings::Instance = ProtectedSettingsMemory.Construct<Settings>(
+        serverIP,
+        serverPort,
         bEnableNetworking, 
         bEnforceSecureBoot, 
         bEnforceDSE, 
@@ -140,7 +156,8 @@ int main(int argc, char** argv)
         bCheckThreadIntegrity, 
         bCheckHypervisor, 
         bRequireRunAsAdministrator, 
-        bUsingDriver, 
+        bUsingDriver,
+        DriverCertSubject,
         allowedParents, 
         bEnableLogging, 
         logFileName);
@@ -157,7 +174,7 @@ int main(int argc, char** argv)
 
     try
     {
-        Anti_Cheat = std::make_unique<AntiCheat>(Settings::Instance, Services::GetWindowsVersion());   //after all environmental checks (secure boot, DSE, adminmode) are performed, create the AntiCheat object
+        Anti_Cheat = std::make_unique<AntiCheat>(Settings::Instance);   //after all environmental checks (secure boot, DSE, adminmode) are performed, create the AntiCheat object
     }
     catch (const std::bad_alloc& e)
     {
