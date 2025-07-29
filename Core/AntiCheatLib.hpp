@@ -17,6 +17,4 @@ public:
 	AntiCheat& operator=(AntiCheat&&) noexcept = default;
 	AntiCheat(const AntiCheat&) = delete;
 	AntiCheat& operator=(const AntiCheat&) = delete;
-
-	Settings* GetConfig() const { return Settings::Instance; }
 };

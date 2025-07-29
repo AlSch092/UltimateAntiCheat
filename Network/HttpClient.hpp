@@ -10,13 +10,12 @@
 #ifdef _DEBUG
 #pragma comment(lib, "Libs/libcurl-d.lib") //debug build doesnt use static libraries, still requires libcurl.dll in .exe folder
 #else
-#pragma comment(lib, "Libs/brotlicommon.lib")
-#pragma comment(lib, "Libs/libcurl.lib") //located in project root folder
-#pragma comment(lib, "Libs/brotlidec.lib")
-#pragma comment(lib, "Libs/brotlienc.lib") //statically linked libs to not require external .dlls to run .exe (libcurl and zlib.dll arent signed)
-#pragma comment(lib, "Libs/zlib.lib")
+//#pragma comment(lib, "Libs/brotlicommon.lib")
+//#pragma comment(lib, "Libs/libcurl.lib") //located in project root folder
+//#pragma comment(lib, "Libs/brotlidec.lib")
+//#pragma comment(lib, "Libs/brotlienc.lib") //statically linked libs to not require external .dlls to run .exe (libcurl and zlib.dll arent signed)
+//#pragma comment(lib, "Libs/zlib.lib")
 #endif
-
 
 using namespace std;
 

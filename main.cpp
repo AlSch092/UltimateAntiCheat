@@ -35,9 +35,7 @@ PIMAGE_TLS_CALLBACK _tls_callback = TLSCallback;
 #pragma data_seg ()
 #pragma const_seg ()
 
-Settings* Settings::Instance = nullptr; //singleton-style instance of Settings class, which will be made write-protected via ProtectedMemory class
-
-bool SupressingNewThreads = true; //we need some variables in both our TLS callback and main()
+bool SupressingUnknownThreads = true; //we need some variables in both our TLS callback and main()
 
 LONG WINAPI g_ExceptionHandler(__in EXCEPTION_POINTERS* ExceptionInfo);
 
@@ -90,11 +88,10 @@ int main(int argc, char** argv)
 
     const bool bEnableLogging = true; // set to false to not create a detailed AntiCheat log file on the user's system
 
-    constexpr auto parent_1 = make_encrypted(L"explorer.exe"); //in release build we can encrypt any compiled strings and decrypt them at runtime
-    wchar_t decrypted_1[parent_1.getSize()] = {};
-    parent_1.decrypt(decrypted_1);
+    constexpr auto parent_1 = make_encrypted(L"explorer.exe"); //in release build we can encrypt strings at compile time and decrypt them at runtime
+    constexpr auto parent_2 = make_encrypted(L"powershell.exe"); //ideally this type of thing would be done via LLVM passes or some post-compilation tool
 
-    const std::list<std::wstring> allowedParents = { decrypted_1 }; //add your launcher here
+    const std::list<std::wstring> allowedParents = { parent_1.decrypt(), parent_2.decrypt()}; //add your launcher here
     const std::string logFileName = "UltimateAnticheat.log"; //empty : does not log to file
 
     const std::string serverIP = "127.0.0.1";
@@ -144,7 +141,7 @@ int main(int argc, char** argv)
 
     ProtectedMemory ProtectedSettingsMemory(sizeof(Settings));
 
-    Settings::Instance = ProtectedSettingsMemory.Construct<Settings>(
+    Settings* Config = ProtectedSettingsMemory.Construct<Settings>(
         serverIP,
         serverPort,
         bEnableNetworking, 
@@ -174,7 +171,7 @@ int main(int argc, char** argv)
 
     try
     {
-        Anti_Cheat = std::make_unique<AntiCheat>(Settings::Instance);   //after all environmental checks (secure boot, DSE, adminmode) are performed, create the AntiCheat object
+        Anti_Cheat = std::make_unique<AntiCheat>(Config);   //after all environmental checks (secure boot, DSE, adminmode) are performed, create the AntiCheat object
     }
     catch (const std::bad_alloc& e)
     {
@@ -187,7 +184,7 @@ int main(int argc, char** argv)
         goto Cleanup;
     }
 
-    if (Settings::Instance->bCheckThreads)
+    if (Config->bCheckThreads)
     {   //typically thread should cross-check eachother to ensure nothing is suspended, in this version of the program we only check thread suspends once at the start
         if (Anti_Cheat->IsAnyThreadSuspended()) //make sure that all our necessary threads aren't suspended by an attacker
         {
@@ -196,7 +193,7 @@ int main(int argc, char** argv)
         }
     }
 
-    SupressingNewThreads = Anti_Cheat->GetBarrier()->IsPreventingThreads(); //if this is set to TRUE, we can stop the creation of any new unknown threads via the TLS callback
+    SupressingUnknownThreads = Anti_Cheat->GetBarrier()->IsPreventingThreads(); //if this is set to TRUE, we can stop the creation of any new unknown threads via the TLS callback
 
     cout << "\n----------------------------------------------------------------------------------------------------------" << endl;
     cout << "All protections have been deployed, the program will now loop using its detection methods. Thanks for your interest in the project!" << endl;
@@ -257,12 +254,11 @@ int main(int argc, char** argv)
 #endif
 
 Cleanup:
-    if(t != nullptr)
+    if(t != nullptr) //cleanup splash screen thread obj
         delete t;
 
 	Anti_Cheat.reset(); //we need to call AntiCheat's destructor before ~ProtectedMemory, since AntiCheat destructor will reference the Settings object
-
-    ProtectedSettingsMemory.~ProtectedMemory(); //we need to unmap the memory before 
+    ProtectedSettingsMemory.Reset();
 
     return 0;
 }
@@ -329,7 +325,7 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
             }
 #endif
 
-            if (SupressingNewThreads)
+            if (SupressingUnknownThreads)
             {
                 if (WinVersion == Windows11) //Windows 11 no longer has the thread's start address on the its stack, bummer. don't have a W11 machine either at home
                     return;

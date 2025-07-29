@@ -5,6 +5,8 @@ VisualStudioVersion = 17.7.34003.232
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UltimateAnticheat", "UltimateAnticheat.vcxproj", "{344D69C4-3DE6-4D23-8FAF-66D8DC95CD9C}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UACLibTest", "LibTest\UACLibTest.vcxproj", "{9D5C2BB5-F1FA-49FF-9175-B244761DEC66}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -27,6 +29,18 @@ Global
 		{344D69C4-3DE6-4D23-8FAF-66D8DC95CD9C}.Release|x64.Build.0 = Release|x64
 		{344D69C4-3DE6-4D23-8FAF-66D8DC95CD9C}.Release|x86.ActiveCfg = Release|Win32
 		{344D69C4-3DE6-4D23-8FAF-66D8DC95CD9C}.Release|x86.Build.0 = Release|Win32
+		{9D5C2BB5-F1FA-49FF-9175-B244761DEC66}.Debug|x64.ActiveCfg = Debug|x64
+		{9D5C2BB5-F1FA-49FF-9175-B244761DEC66}.Debug|x64.Build.0 = Debug|x64
+		{9D5C2BB5-F1FA-49FF-9175-B244761DEC66}.Debug|x86.ActiveCfg = Debug|Win32
+		{9D5C2BB5-F1FA-49FF-9175-B244761DEC66}.Debug|x86.Build.0 = Debug|Win32
+		{9D5C2BB5-F1FA-49FF-9175-B244761DEC66}.LibRelease|x64.ActiveCfg = Release|x64
+		{9D5C2BB5-F1FA-49FF-9175-B244761DEC66}.LibRelease|x64.Build.0 = Release|x64
+		{9D5C2BB5-F1FA-49FF-9175-B244761DEC66}.LibRelease|x86.ActiveCfg = Release|Win32
+		{9D5C2BB5-F1FA-49FF-9175-B244761DEC66}.LibRelease|x86.Build.0 = Release|Win32
+		{9D5C2BB5-F1FA-49FF-9175-B244761DEC66}.Release|x64.ActiveCfg = Release|x64
+		{9D5C2BB5-F1FA-49FF-9175-B244761DEC66}.Release|x64.Build.0 = Release|x64
+		{9D5C2BB5-F1FA-49FF-9175-B244761DEC66}.Release|x86.ActiveCfg = Release|Win32
+		{9D5C2BB5-F1FA-49FF-9175-B244761DEC66}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

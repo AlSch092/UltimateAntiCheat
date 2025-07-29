@@ -24,8 +24,6 @@ PIMAGE_TLS_CALLBACK _tls_callback = TLSCallback;
 #pragma data_seg ()
 #pragma const_seg ()
 
-Settings* Settings::Instance = nullptr; //singleton static instance decl to avoid compilation errors
-
 struct AntiCheat::Impl
 {
     ProtectedMemory* ProtectedSettings = nullptr;
@@ -40,6 +38,8 @@ struct AntiCheat::Impl
     
     shared_ptr <NetClient> NetworkClient = nullptr; //for client-server comms, our other classes need access to this to send detected flags to the server
     
+	Settings* Config = nullptr; //protected settings object, which is write-protected via ProtectedMemory class
+
     EvidenceLocker* Evidence = nullptr;
 
     Impl(Settings* settings)
@@ -48,7 +48,7 @@ struct AntiCheat::Impl
 
         this->WinVersion = Services::GetWindowsVersion();
 
-        Settings::Instance = this->ProtectedSettings->Construct<Settings>(
+        this->Config = this->ProtectedSettings->Construct<Settings>( //remake settings object inside our protected section
             settings->serverIP,
             settings->serverPort,
             settings->bNetworkingEnabled,
@@ -87,22 +87,22 @@ struct AntiCheat::Impl
 
             this->Evidence = new EvidenceLocker(this->NetworkClient.get());
 
-            this->AntiDebugger = make_unique<DebuggerDetections>(Settings::Instance, this->Evidence, NetworkClient);
+            this->AntiDebugger = make_unique<DebuggerDetections>(Config, this->Evidence, NetworkClient);
 
-            this->Monitor = make_unique<Detections>(Settings::Instance, this->Evidence, NetworkClient);
+            this->Monitor = make_unique<Detections>(Config, this->Evidence, NetworkClient);
 
-            this->Barrier = make_unique<Preventions>(Settings::Instance, true, Monitor.get()->GetIntegrityChecker());
+            this->Barrier = make_unique<Preventions>(Config, true, Monitor.get()->GetIntegrityChecker());
         }
         catch (const std::bad_alloc& _)
         {
             throw AntiCheatInitFail(AntiCheatInitFailReason::BadAlloc);
         }
 
-        if (Settings::Instance->bUsingDriver) //register + load the driver if it's correctly signed, unload it when the program is exiting
+        if (Config->bUsingDriver) //register + load the driver if it's correctly signed, unload it when the program is exiting
         {
             wchar_t absolutePath[MAX_PATH] = { 0 };
 
-            if (!GetFullPathName(Settings::Instance->GetKMDriverPath().c_str(), MAX_PATH, absolutePath, nullptr))
+            if (!GetFullPathName(Config->GetKMDriverPath().c_str(), MAX_PATH, absolutePath, nullptr))
             {
                 throw AntiCheatInitFail(AntiCheatInitFailReason::DriverNotFound);
             }
@@ -110,7 +110,7 @@ struct AntiCheat::Impl
             //additionally, we need to check the signature on our driver to make sure someone isn't spoofing it. this will be added soon after initial testing is done
             wstring driverCertSubject = Authenticode::GetSignerFromFile(absolutePath);
 
-            if (driverCertSubject.size() == 0 || driverCertSubject != Settings::Instance->DriverSignerSubject) //check if driver cert has correct sign subject
+            if (driverCertSubject.size() == 0 || driverCertSubject != Config->DriverSignerSubject) //check if driver cert has correct sign subject
             {
                 throw AntiCheatInitFail(AntiCheatInitFailReason::DriverUnsigned);
             }
@@ -123,7 +123,7 @@ struct AntiCheat::Impl
             Logger::logfw(Info, L"Loaded driver: %s from path %s", GetConfig()->GetKMDriverName().c_str(), absolutePath);
         }
 
-		if (this->Initialize("GAMECODE-COOLGAME1", settings->bNetworkingEnabled) != Error::OK) //initialize AC , this will start all detections + preventions
+		if (this->Initialize("GAMECODE-COOLGAME1", Config->bNetworkingEnabled) != Error::OK) //initialize AC , this will start all detections + preventions
 		{
 			Logger::logf(Err, "Failed to initialize AntiCheat @ Impl::Impl(). Shutting down.");
 			throw AntiCheatInitFail(AntiCheatInitFailReason::StartupFailed);
@@ -158,7 +158,7 @@ struct AntiCheat::Impl
 
     Detections* GetMonitor() const { return this->Monitor.get(); }
 
-    Settings* GetConfig() const { return Settings::Instance; }
+    Settings* GetConfig() const { return this->Config; }
 };
 
 
@@ -302,7 +302,7 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 */
 Error AntiCheat::Impl::Cleanup()
 {
-    if (Settings::Instance->bUseAntiDebugging && GetAntiDebugger() != nullptr && GetAntiDebugger()->GetDetectionThread() != nullptr) //stop anti-debugger thread
+    if (Config->bUseAntiDebugging && GetAntiDebugger() != nullptr && GetAntiDebugger()->GetDetectionThread() != nullptr) //stop anti-debugger thread
     {
         GetAntiDebugger()->GetDetectionThread()->SignalShutdown(true);
         GetAntiDebugger()->GetDetectionThread()->JoinThread();
@@ -351,15 +351,15 @@ Error AntiCheat::Impl::Cleanup()
 */
 Error AntiCheat::Impl::FastCleanup()
 {
-    if (Settings::Instance != nullptr && Settings::Instance->bUsingDriver)
+    if (Config != nullptr && Config->bUsingDriver)
     {
-        if (!Services::UnloadDriver(Settings::Instance->GetKMDriverName()))
+        if (!Services::UnloadDriver(Config->GetKMDriverName()))
         {
             Logger::logf(Warning, "Failed to unload kernelmode driver!");
         }
     }
 
-    if (Settings::Instance != nullptr && Settings::Instance->bNetworkingEnabled)
+    if (Config != nullptr && Config->bNetworkingEnabled)
     {
         auto client = GetNetworkClient().lock();
 
@@ -377,7 +377,7 @@ Error AntiCheat::Impl::FastCleanup()
         }
     }
 
-    if (Settings::Instance != nullptr && Settings::Instance->bUseAntiDebugging && GetAntiDebugger()->GetDetectionThread() != nullptr) //stop anti-debugger thread
+    if (Config != nullptr && Config->bUseAntiDebugging && GetAntiDebugger()->GetDetectionThread() != nullptr) //stop anti-debugger thread
     {
         TerminateThread(GetAntiDebugger()->GetDetectionThread()->GetHandle(), 0);
     }
@@ -403,7 +403,7 @@ Error AntiCheat::Impl::FastCleanup()
 
 bool AntiCheat::Impl::DoPreInitializeChecks()
 {
-    if (Settings::Instance->bRequireRunAsAdministrator)
+    if (Config->bRequireRunAsAdministrator)
     {
         if (!Services::IsRunningAsAdmin()) //enforce secure boot to stop bootloader cheats
         {
@@ -413,7 +413,7 @@ bool AntiCheat::Impl::DoPreInitializeChecks()
         }
     }
 
-    if (Settings::Instance->bEnforceSecureBoot)
+    if (Config->bEnforceSecureBoot)
     {
         if (!Services::IsSecureBootEnabled()) //enforce secure boot to stop bootloader cheats
         {
@@ -423,7 +423,7 @@ bool AntiCheat::Impl::DoPreInitializeChecks()
         }
     }
 
-    if (Settings::Instance->bEnforceDSE)
+    if (Config->bEnforceDSE)
     {
         if (Services::IsTestsigningEnabled()) //check test signing mode before startup
         {
@@ -433,7 +433,7 @@ bool AntiCheat::Impl::DoPreInitializeChecks()
         }
     }
 
-    if (Settings::Instance->bCheckHypervisor)
+    if (Config->bCheckHypervisor)
     {
         if (Services::IsHypervisorPresent()) //we can either block all hypervisors to try and stop SLAT/EPT manipulation, or only allow certain vendors.
         {
@@ -476,7 +476,7 @@ bool AntiCheat::Impl::IsAnyThreadSuspended()
         Logger::logf(Detection, "Monitor's process creation thread was found suspended! Abnormal program execution.");
         return true;
     }
-    else if (Settings::Instance->bUseAntiDebugging && AntiDebugger != nullptr && AntiDebugger->GetDetectionThread() != nullptr && Thread::IsThreadSuspended(AntiDebugger->GetDetectionThread()->GetId()))
+    else if (Config->bUseAntiDebugging && AntiDebugger != nullptr && AntiDebugger->GetDetectionThread() != nullptr && Thread::IsThreadSuspended(AntiDebugger->GetDetectionThread()->GetId()))
     {
         Logger::logf(Detection, "Anti-debugger was found suspended! Abnormal program execution.");
         return true;
@@ -524,7 +524,7 @@ Error AntiCheat::Impl::Initialize(std::string licenseKey, bool isServerAvailable
 
         if (client)
         {
-            if (client->Initialize(Settings::Instance->serverIP, Settings::Instance->serverPort, licenseKey) != Error::OK) //initialize client is separate from license key auth
+            if (client->Initialize(Config->serverIP, Config->serverPort, licenseKey) != Error::OK) //initialize client is separate from license key auth
             {
                 errorCode = Error::CANT_STARTUP;		//don't allow AC startup if network portion doesn't succeed
                 goto end;

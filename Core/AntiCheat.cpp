@@ -168,7 +168,7 @@ Error AntiCheat::Cleanup()
 	}
 	else
 	{
-		Logger::logf(Err, "Couldn't fetch/lock netclient @  API::Cleanup");
+		Logger::logf(Err, "Couldn't fetch/lock netclient @  AntiCheat::Cleanup");
 		return Error::NULL_MEMORY_REFERENCE;
 	}
 
@@ -352,7 +352,7 @@ Error AntiCheat::Initialize(std::string licenseKey, bool isServerAvailable)
 
 		if (client)
 		{
-			if (client->Initialize(Settings::Instance->serverIP, Settings::Instance->serverPort, licenseKey) != Error::OK) //initialize client is separate from license key auth
+			if (client->Initialize(Config->serverIP, Config->serverPort, licenseKey) != Error::OK) //initialize client is separate from license key auth
 			{
 				errorCode = Error::CANT_STARTUP;		//don't allow AC startup if network portion doesn't succeed
 				goto end;

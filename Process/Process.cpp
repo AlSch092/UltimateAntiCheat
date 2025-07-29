@@ -31,13 +31,10 @@ BOOL Process::CheckParentProcess(__in const wstring desiredParent, __in const bo
             }
         }
 
-		if (!bFoundValidSignature)
-			Logger::logf(Err, "Parent process %s does not have a valid signature", desiredParent.c_str());
-
 		return bFoundValidSignature;
     }
     else
-        return (std::find(std::begin(pids), std::end(pids), parentPid) != std::end(pids));
+        return (std::find(std::begin(pids), std::end(pids), parentPid) != std::end(pids)); //just make sure process name matches, if no sig check (we can't guarantee this isn't a spoofed process though)
 }
 
 /*
@@ -103,7 +100,7 @@ list<ProcessData::Section*> Process::GetSections(__in const string module)
 
     if (pDoH == NULL || hInst == NULL)
     {
-        Logger::logf(Err, " PIMAGE_DOS_HEADER or hInst was NULL at Process::GetSections\n");
+        Logger::logf(Err, " PIMAGE_DOS_HEADER or hInst was NULL at Process::GetSections (module %s)", module.c_str());
         return Sections;
     }
 

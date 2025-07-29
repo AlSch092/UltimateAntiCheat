@@ -184,7 +184,6 @@
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
- 
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -222,7 +221,7 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);wintrust.lib;Crypt32.lib;ntdll.lib;ws2_32.lib;iphlpapi.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);wintrust.lib;Crypt32.lib;ntdll.lib;ws2_32.lib;iphlpapi.lib;Libs/brotlicommon.lib;Libs/libcurl.lib;Libs/brotlidec.lib;Libs/brotlienc.lib;Libs/zlib.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(ProjectDir)\splash.png" "$(ProjectDir)\x64\Release\splash.png" </Command>
@@ -235,7 +234,7 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;_WIN32_WINNT=0x0A00;_MAIN_MODULE_NAME="UltimateAnticheat.exe";_MAIN_MODULE_NAME_W=L"UltimateAnticheat.exe";_LIB_</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;_WIN32_WINNT=0x0A00;_MAIN_MODULE_NAME="UACLibTest.exe";_MAIN_MODULE_NAME_W=L"UACLibTest.exe";_LIB_</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <BufferSecurityCheck>true</BufferSecurityCheck>
     </ClCompile>
@@ -251,10 +250,9 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
       <Message>Copy Splash Image</Message>
     </PostBuildEvent>
     <Lib>
-      <AdditionalDependencies>wintrust.lib;Crypt32.lib;ntdll.lib;%(AdditionalDependencies);iphlpapi.lib</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;wintrust.lib;Crypt32.lib;ntdll.lib;%(AdditionalDependencies);iphlpapi.lib;Libs/brotlicommon.lib;Libs/libcurl.lib;Libs/brotlidec.lib;Libs/brotlienc.lib;Libs/zlib.lib</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
-
   <ItemGroup>
     <ClCompile Include="AntiDebug\AntiDebugger.cpp" />
     <ClCompile Include="AntiDebug\DebuggerDetections.cpp" />
@@ -307,7 +305,6 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
     <ClInclude Include="Common\Utility.hpp" />
     <ClInclude Include="Core\AntiCheat.hpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='LibRelease|x64'">true</ExcludedFromBuild>
-
     </ClInclude>
     <ClInclude Include="Core\AntiCheatInitFail.hpp" />
     <ClInclude Include="Core\AntiCheatLib.hpp">
