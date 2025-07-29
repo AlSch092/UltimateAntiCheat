@@ -7,7 +7,7 @@
 ![CMake](https://img.shields.io/badge/CMake-%23008FBA.svg?style=for-the-badge&logo=cmake&logoColor=white)
 ![MySQL](https://img.shields.io/badge/mysql-4479A1.svg?style=for-the-badge&logo=mysql&logoColor=white)
 ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
-![Version](https://img.shields.io/badge/2.0-999999?style=flat-square&logo=Version&label=Version&labelColor=333333)
+![Version](https://img.shields.io/badge/2.1-999999?style=flat-square&logo=Version&label=Version&labelColor=333333)
 
 UltimateAntiCheat is an open source usermode anti-cheat system made to detect and prevent common attack vectors of game hacking. The project also features an optional client-server mechanism, with a heartbeat being sent every minute to clients. No privacy-invasive techniques are used. Optionally, a hybrid kernelmode + usermode approach can now be used through the settings in `main.cpp` and `Common/Settings.hpp` (you will need to make/provide your own driver for this).
 
@@ -29,7 +29,7 @@ Networking support is available in the project: the server can be found in the `
 The preprocessor definition `_WIN32_WINNT=0x...` can be used to target different versions of Windows at compile-time. For example, using 0x0A00 will target Windows 10 and above, and 0x0601 will target Windows 7 and above. Certain features might only work on newer Windows versions and are excluded from compilation based on this value. The client will also fetch the machine's windows version at program startup, in `main.cpp`.
 
 ## Advanced Features
-This open source version is considered a minimal, or bare-bones version of the project. If you're looking for customization, database integration, user metrics, and improved protective & detective features for your small to mid-sized game/software: this can be provided for a fair licensing fee, and can run alongside your game server on the same host machine.
+This open source version is considered a minimal, or bare-bones version of the project. If you're looking for customization, database integration, user metrics, and improved protective & detective features for your small to mid-sized game/software: this can be provided for a fair licensing fee, and can run alongside your game server on the same machine.
 
 ## Licensing  
 
