@@ -26,10 +26,15 @@ jobs:
     - name: Run UACLibTest.exe and capture output
       shell: pwsh
       run: |
-        .\x64\Release\UACLibTest.exe 2>&1 | Tee-Object -FilePath output.log
-        $exitCode = $LASTEXITCODE
-        Write-Host "Exit code: $exitCode"
-        exit $exitCode
+        Write-Host "Starting test..."
+        $process = Start-Process -FilePath .\x64\Release\UACLibTest.exe -NoNewWindow -RedirectStandardOutput output.log -RedirectStandardError error.log -PassThru
+        if (-not $process.WaitForExit(30)) {
+          Write-Error "Test timed out after 30s"
+          Stop-Process -Id $process.Id -Force
+          exit 1
+        }
+        Write-Host "Exit code: $($process.ExitCode)"
+        exit $process.ExitCode
         
     - name: Upload UACTest output
       uses: actions/upload-artifact@v4
