@@ -42,7 +42,7 @@ int main()
 	catch (const std::bad_alloc& e)
 	{
 		std::cerr << "Exception caught: " << e.what() << std::endl;
-		return 1; // Exit with error code -> test failed
+		return 1;
 	}
 
 	//cout << "\n----------------------------------------------------------------------------------------------------------" << endl;
@@ -61,6 +61,8 @@ int main()
 	//        break;
 	//    }
 	//}
+
+	anticheat->Destroy();
 
 	return 0;
 }
