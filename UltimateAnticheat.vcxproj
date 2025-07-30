@@ -196,14 +196,14 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ntdll.lib;$(CoreLibraryDependencies);%(AdditionalDependencies);wintrust.lib;crypt32.lib;ws2_32.lib;iphlpapi.lib</AdditionalDependencies>
+      <AdditionalDependencies>ntdll.lib;$(CoreLibraryDependencies);%(AdditionalDependencies);wintrust.lib;crypt32.lib;ws2_32.lib;iphlpapi.lib;Libs/libcurl-d.lib</AdditionalDependencies>
       <TreatLinkerWarningAsErrors>false</TreatLinkerWarningAsErrors>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(ProjectDir)\splash.png" "$(ProjectDir)\x64\Debug\splash.png" 
-copy "$(ProjectDir)\DLLs\libcurl-d.dll" "$(ProjectDir)\x64\Debug\libcurl-d.dll"
-copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Command>
-      <Message>Copy Splash Image</Message>
+      <Command>copy "$(ProjectDir)splash.png" "$(OutDir)splash.png" 
+copy "$(ProjectDir)DLLs\libcurl-d.dll" "$(OutDir)libcurl-d.dll"
+copy "$(ProjectDir)DLLs\zlibd1.dll" "$(OutDir)zlibd1.dll"</Command>
+      <Message>Copy Splash Image, libraries</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -338,6 +338,9 @@ copy "$(ProjectDir)\DLLs\zlibd1.dll" "$(ProjectDir)\x64\Debug\zlibd1.dll"</Comma
   </ItemGroup>
   <ItemGroup>
     <MASM Include="Obscure\ASMStubs.asm" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

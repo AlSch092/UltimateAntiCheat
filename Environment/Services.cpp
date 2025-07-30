@@ -14,13 +14,24 @@ bool Services::FetchBlacklistedDrivers(__in const char* url)
     if (url == nullptr)
         return false;
 
-    vector<string> responseHeaders;
-    string response = HttpClient::ReadWebPage(string(url), {}, "", responseHeaders); //fetch blacklisted drivers
+    HttpRequest request;
+    request.url = url;
+    request.cookie = "";
+    request.body = "";
+    request.requestHeaders =
+    {
+        {"User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"},
+        {"Accept", "text/plain, */*; q=0.01"},
+        {"Accept-Language", "en-US,en;q=0.5"},
+        {"Connection", "keep-alive"}
+    };
 
-    if (response.size() == 0)
+    if (!HttpClient::GetRequest(request))
+    {
         return false;
+    }
 
-    stringstream ss(response);
+    stringstream ss(request.responseText);
 
     string blacklistedDriver;
 

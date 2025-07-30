@@ -6,6 +6,9 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UltimateAnticheat", "UltimateAnticheat.vcxproj", "{344D69C4-3DE6-4D23-8FAF-66D8DC95CD9C}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UACLibTest", "LibTest\UACLibTest.vcxproj", "{9D5C2BB5-F1FA-49FF-9175-B244761DEC66}"
+	ProjectSection(ProjectDependencies) = postProject
+		{344D69C4-3DE6-4D23-8FAF-66D8DC95CD9C} = {344D69C4-3DE6-4D23-8FAF-66D8DC95CD9C}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

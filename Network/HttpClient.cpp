@@ -1,14 +1,22 @@
 //By AlSch092 @github
 #include "HttpClient.hpp"
 
-/*
-    ReadWebPage - returns contents at `url` using cURL library
-    returns empty string on failure
-*/
-string HttpClient::ReadWebPage(__in const string url, __in const vector<string> headers, __in const string cookie, __out vector<string>& responseHeaders) //GET request
+/**
+ * @brief Sends a GET HTTP request to a specified URL
+ *
+ * @param requestInfo Structure containing request data, along with response text
+ *
+ * @return true/false if request was successful
+ *
+ * @usage
+ * bool wasSuccess = HttpClient::ReadWebPage(requestInfo);
+ */
+bool HttpClient::GetRequest(__inout HttpRequest& requestInfo) //GET request
 {
     const int OPERATION_TIMEOUT = 15L;
     const int CONNECT_TIMEOUT = 15L;
+
+    bool wasSuccess = false;
 
     CURL* curl = nullptr;
     CURLcode res;
@@ -19,27 +27,25 @@ string HttpClient::ReadWebPage(__in const string url, __in const vector<string> 
     struct curl_slist* request_headers = NULL;
     vector<std::string> response_headers;
 
-    string readBuffer;
-
     if (curl)
     {
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_URL, requestInfo.url.c_str());
 
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &requestInfo.responseText);
 
         curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, HeaderCallback);
         curl_easy_setopt(curl, CURLOPT_HEADERDATA, &response_headers);
 
         //set cookie
-        curl_easy_setopt(curl, CURLOPT_COOKIE, cookie.c_str()); //cookie should be "all cookies combined" , for example "a=12345;b=222;csef_token=blahblah"
+        curl_easy_setopt(curl, CURLOPT_COOKIE, requestInfo.cookie.c_str());
 
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, OPERATION_TIMEOUT);
         curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, CONNECT_TIMEOUT);
 
-        if (headers.size() > 0)
+        if (requestInfo.requestHeaders.size() > 0)
         {
-            for (string header : headers)
+            for (string header : requestInfo.requestHeaders)
             {
                 request_headers = curl_slist_append(request_headers, header.c_str());
             }
@@ -51,29 +57,44 @@ string HttpClient::ReadWebPage(__in const string url, __in const vector<string> 
 
         if (res != CURLE_OK)
         {
+#ifdef ENABLE_LOGGING
             Logger::logf(Warning, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+#endif
             goto cleanup;
         }
 
         for (const auto& response_header : response_headers) //extract cookies from header if needed or do any additional parsing
         {
-            responseHeaders.push_back(response_header);
+            requestInfo.responseHeaders.push_back(response_header);
         }
+
+        wasSuccess = true;
     }
 
 cleanup:
-    if (headers.size() > 0)
+    if (requestInfo.requestHeaders.size() > 0)
     {
         curl_slist_free_all(request_headers);
     }
 
     curl_easy_cleanup(curl);
     curl_global_cleanup();
-    return readBuffer;
+    return wasSuccess;
 }
 
-string HttpClient::PostRequest(__in const string url, __in const vector<string> headers, __in const string cookie, __in const string body, __out vector<string>& responseHeaders)
+/**
+ * @brief Sends a POST HTTP request to a specified URL
+ *
+ * @param requestInfo Structure containing request data, along with response text
+ *
+ * @return true/false if request was successful
+ *
+ * @usage
+ * bool wasSuccess = HttpClient::PostRequest(requestInfo);
+ */
+bool HttpClient::PostRequest(__inout HttpRequest& requestInfo)
 {
+    bool wasSuccess = false;
     CURL* curl = nullptr;
     CURLcode res;
 
@@ -82,17 +103,15 @@ string HttpClient::PostRequest(__in const string url, __in const vector<string> 
 
     if (curl)
     {
-        string response;
+        curl_easy_setopt(curl, CURLOPT_URL, requestInfo.url.c_str());
 
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());         //specify url
-
-        curl_easy_setopt(curl, CURLOPT_POST, 1L);         //POST request
+        curl_easy_setopt(curl, CURLOPT_POST, 1L);
 
         struct curl_slist* request_headers = NULL;
 
-        if (headers.size() > 0)
+        if (requestInfo.requestHeaders.size() > 0)
         {
-            for (string header : headers)
+            for (string header : requestInfo.requestHeaders)
             {
                 request_headers = curl_slist_append(request_headers, header.c_str());
             }
@@ -100,9 +119,9 @@ string HttpClient::PostRequest(__in const string url, __in const vector<string> 
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, request_headers); //set headers
         }
 
-        curl_easy_setopt(curl, CURLOPT_COOKIE, cookie.c_str()); //set cookie
+        curl_easy_setopt(curl, CURLOPT_COOKIE, requestInfo.cookie.c_str()); //set cookie
 
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.c_str()); //set body
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, requestInfo.body.c_str()); //set body
 
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L); // Timeout for the whole operation in seconds
         curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 5L); // Timeout for the connection phase in seconds
@@ -110,20 +129,22 @@ string HttpClient::PostRequest(__in const string url, __in const vector<string> 
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);         // Set the callback function to handle the response data
 
         curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, HeaderCallback);
-        curl_easy_setopt(curl, CURLOPT_HEADERDATA, &responseHeaders);
+        curl_easy_setopt(curl, CURLOPT_HEADERDATA, &requestInfo.responseHeaders);
 
         curl_easy_setopt(curl, CURLOPT_READFUNCTION, read_callback);
 
         // Set the data pointer
         curl_easy_setopt(curl, CURLOPT_READDATA, (void*)0);
 
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response); //response data , write to
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &requestInfo.responseText); //response data , write to
 
         res = curl_easy_perform(curl);
 
         if (res != CURLE_OK)
         {
+#ifdef LOGGING_ENABLED
             Logger::logf(Warning, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+#endif
             goto fail_cleanup;
         }
 
@@ -132,17 +153,19 @@ string HttpClient::PostRequest(__in const string url, __in const vector<string> 
 
         curl_easy_cleanup(curl);
         curl_global_cleanup();
-        return response;
+        return true;
     }
     else
     {
+#ifdef LOGGING_ENABLED
         Logger::logf(Err, "Failed to initialize libcurl @ HttpClient::PostRequest");
-        return "";
+#endif
+        return false;
     }
 
 fail_cleanup:
     curl_global_cleanup();
-    return "";
+    return false;
 }
 
 size_t HttpClient::WriteCallback(void* contents, size_t size, size_t nmemb, std::string* s)

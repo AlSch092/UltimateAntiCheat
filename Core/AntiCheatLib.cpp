@@ -24,6 +24,9 @@ PIMAGE_TLS_CALLBACK _tls_callback = TLSCallback;
 #pragma data_seg ()
 #pragma const_seg ()
 
+/**
+ * @brief the Impl structure is used to hide implementation details of the AntiCheat class, using the PIMPL idiom
+ */
 struct AntiCheat::Impl
 {
     ProtectedMemory* ProtectedSettings = nullptr;
@@ -123,7 +126,7 @@ struct AntiCheat::Impl
             Logger::logfw(Info, L"Loaded driver: %s from path %s", GetConfig()->GetKMDriverName().c_str(), absolutePath);
         }
 
-		if (this->Initialize("GAMECODE-COOLGAME1", Config->bNetworkingEnabled) != Error::OK) //initialize AC , this will start all detections + preventions
+		if (this->Initialize("GAMECODE-COOLGAME1") != Error::OK) //initialize AC , this will start all detections + preventions
 		{
 			Logger::logf(Err, "Failed to initialize AntiCheat @ Impl::Impl(). Shutting down.");
 			throw AntiCheatInitFail(AntiCheatInitFailReason::StartupFailed);
@@ -142,7 +145,7 @@ struct AntiCheat::Impl
         delete this->ProtectedSettings;
     }
 
-    Error Initialize(std::string licenseKey, bool isServerAvailable);
+    Error Initialize(std::string licenseKey);
     Error Cleanup();
     Error FastCleanup();
 
@@ -161,11 +164,29 @@ struct AntiCheat::Impl
     Settings* GetConfig() const { return this->Config; }
 };
 
+/**
+ * @brief Constructs an AntiCheat object with the provided settings
+ *
+ * @param settings Pointer to the settings object containing configuration for the anti-cheat system
 
+ * @return Anticheat class object
+ *
+ * @usage
+ * AntiCheat* antiCheat = new AntiCheat(settings);
+ */
 AntiCheat::AntiCheat(Settings* settings) : pImpl(new AntiCheat::Impl(settings))
 {
 }
 
+/**
+ * @brief Cleans up resources and deletes the current AntiCheat instance
+ *
+ *
+ * @return void
+ *
+ * @usage
+ * anticheat->Destroy();
+ */
 void AntiCheat::Destroy()
 {
     if (this->pImpl != nullptr)
@@ -176,10 +197,16 @@ void AntiCheat::Destroy()
     }
 }
 
-/*
-	ExceptionHandler - User defined exception handler which catches program-wide exceptions
-	...Currently we are not doing anything special with this, but we'll leave it here incase we need it later
-*/
+/**
+ * @brief Vectored exception handler that logs unhandled exceptions in the process
+ *
+ * @param ExceptionInfo Structure containing info about the exception
+ *
+ * @return EXCEPTION_CONTINUE_SEARCH to keep looking for handlers
+ *
+ * @usage
+ * AddVectoredExceptionHandler(1, g_ExceptionHandler);
+ */
 LONG WINAPI g_ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo)  //handler that will be called whenever an unhandled exception occurs in any thread of the process
 {
 	DWORD exceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
@@ -192,11 +219,18 @@ LONG WINAPI g_ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo)  //handler tha
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
-/*
-The TLS callback triggers on process + thread attachment & detachment, which means we can catch any threads made by an attacker in our process space.
-We can end attacker threads using ExitThread(), and let in our threads which are managed.
-...An attacker can circumvent this by modifying the pointers to TLS callbacks which the program usually keeps track of, which requires re-remapping
-*/
+/**
+ * @brief TLS callback triggers on process + thread attachment & detachment
+ * 
+ * @details Can be used to prevent rogue threads from being created, or to initialize certain anti-cheat features
+ * 
+ * @param pHandle handle to the current module
+ * @param dwReason action that occured to trigger the callback
+ * @param Reserved N/A, unused
+ * 
+ * @return void
+ *
+ */
 void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 {
     const UINT ThreadExecutionAddressStackOffset = 0x378; //** this might change on different version of window, Windows 10 is all I have access to currently
@@ -305,10 +339,15 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
     };
 }
 
-/*
-    Cleanup - signals thread shutdowns and deletes memory associated with the Anticheat* object `AC`
-    returns Error::OK on success
-*/
+/**
+ * @brief Signals threads to shutdown and waits for them
+ *
+ *
+ * @return Error::OK on success, otherwise an error code indicating the failure reason
+ *
+ * @usage
+ * anticheat->pImpl->Cleanup();
+ */
 Error AntiCheat::Impl::Cleanup()
 {
     if (Config->bUseAntiDebugging && GetAntiDebugger() != nullptr && GetAntiDebugger()->GetDetectionThread() != nullptr) //stop anti-debugger thread
@@ -354,10 +393,14 @@ Error AntiCheat::Impl::Cleanup()
     return Error::OK;
 }
 
-/*
-    FastCleanup - Unloads the driver and stops all threads that were started by the AntiCheat class. Uses TerminateThread(), so thread cleanup is not proper (but executes much faster)
-    returns Error::OK on success
-*/
+/**
+ * @brief Terminates threads and cleans up resources, used for fast cleanup in case of critical errors or shutdowns
+ *
+ * @return Error::OK on success, otherwise an error code indicating the failure reason
+ *
+ * @usage
+ * anticheat->pImpl->FastCleanup();
+ */
 Error AntiCheat::Impl::FastCleanup()
 {
     if (Config != nullptr && Config->bUsingDriver)
@@ -409,7 +452,14 @@ Error AntiCheat::Impl::FastCleanup()
     return Error::OK;
 }
 
-
+/**
+ * @brief Performs checks to ensure security config on the system is appropriate based on program settings
+ *
+ * @return true if all checks pass, false otherwise
+ *
+ * @usage
+ * bool safeToRun = anticheat->pImpl->DoPreInitializeChecks();
+ */
 bool AntiCheat::Impl::DoPreInitializeChecks()
 {
     if (Config->bRequireRunAsAdministrator)
@@ -468,11 +518,14 @@ bool AntiCheat::Impl::DoPreInitializeChecks()
     return true;
 }
 
-
-/*
-    IsAnyThreadSuspended - Checks the looping threads of class members to ensure the program is running as normal. An attacker may try to suspend threads to either remap or disable functionalities
-    returns true if any thread is found suspended
-*/
+/**
+ * @brief Checks if any core functionality threads are suspended, which may indicate abnormal program execution or tampering
+ *
+ * @return true any thread is suspended, false otherwise
+ *
+ * @usage
+ * bool anyThreadSuspended = anticheat->pImpl->IsAnyThreadSuspended();
+ */
 bool AntiCheat::Impl::IsAnyThreadSuspended()
 {
     if (Monitor != nullptr && Monitor->GetMonitorThread() != nullptr && Thread::IsThreadSuspended(Monitor->GetMonitorThread()->GetId()))
@@ -499,12 +552,16 @@ bool AntiCheat::Impl::IsAnyThreadSuspended()
     return false;
 }
 
-
-/*
-    Initialize - Initializes the anti-cheat module by connecting to the auth server (if available) and sending it the game's unique code, and checking the parent process to ensure a rogue launcher wasn't used
-    returns Error::OK on success.
-*/
-Error AntiCheat::Impl::Initialize(std::string licenseKey, bool isServerAvailable)
+/**
+ * @brief Checks parent process, initializes the networking components (if applicable)
+ *
+ * @param gameCode a unique code identifying the game or service being protected
+ * @return Error::OK on success, otherwise an error describing the failure cause
+ *
+ * @usage
+ * Error err = anticheat->pImpl->Initialize("GAMECODE-COOLGAME1");
+ */
+Error AntiCheat::Impl::Initialize(std::string gameCode)
 {
     Error errorCode = Error::OK;
     bool isLicenseValid = false;
@@ -525,7 +582,7 @@ Error AntiCheat::Impl::Initialize(std::string licenseKey, bool isServerAvailable
         errorCode = Error::PARENT_PROCESS_MISMATCH;
     }
 
-    if (isServerAvailable)
+    if (Config->bNetworkingEnabled)
     {
         Logger::logf(Info, "Starting networking component...");
 
@@ -533,7 +590,7 @@ Error AntiCheat::Impl::Initialize(std::string licenseKey, bool isServerAvailable
 
         if (client)
         {
-            if (client->Initialize(Config->serverIP, Config->serverPort, licenseKey) != Error::OK) //initialize client is separate from license key auth
+            if (client->Initialize(Config->serverIP, Config->serverPort, gameCode) != Error::OK) //initialize client is separate from license key auth
             {
                 errorCode = Error::CANT_STARTUP;		//don't allow AC startup if network portion doesn't succeed
                 goto end;
@@ -555,10 +612,14 @@ end:
 }
 
 
-/*
-    LaunchDefenses - Initialize detections, preventions, and ADbg techniques
-    returns Error::OK on success
-*/
+/**
+ * @brief Executes cheat prevention routines, along with starting the anti-cheat monitor and anti-debugger threads
+ *
+ * @return Error::OK on success, otherwise an error describing the failure cause
+ *
+ * @usage
+ * Error err = anticheat->pImpl->LaunchDefenses();
+ */
 Error AntiCheat::Impl::LaunchDefenses()
 {
     if (GetMonitor() == nullptr || GetAntiDebugger() == nullptr || GetBarrier() == nullptr)

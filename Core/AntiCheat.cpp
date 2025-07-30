@@ -1,5 +1,15 @@
 #include "AntiCheat.hpp"
 
+/*
+ * @brief Constructs an AntiCheat object with the provided settings
+ *
+ * @param config Pointer to the settings object containing configuration for the anti-cheat system
+ *
+ * @return Anticheat class object
+ *
+ * @usage
+ * AntiCheat* antiCheat = new AntiCheat(config);
+ */ 
 AntiCheat::AntiCheat(__in Settings* config) : Config(config)
 {
 	if (config == nullptr)
@@ -105,6 +115,14 @@ AntiCheat::AntiCheat(__in Settings* config) : Config(config)
 	}
 }
 
+/**
+ * @brief Cleans up resources and deletes the current AntiCheat instance
+ *
+ * @return void
+ *
+ * @usage
+ * anticheat->Destroy();
+ */
 AntiCheat::~AntiCheat()
 {
 	if (Config != nullptr && Config->bUsingDriver) //unload the KM driver
@@ -125,9 +143,13 @@ AntiCheat::~AntiCheat()
 	}
 }
 
-/*
-	Cleanup - signals thread shutdowns and deletes memory associated with the Anticheat* object `AC`
-	returns Error::OK on success
+/**
+ * @brief Cleans up resources and stops all threads started by the AntiCheat class
+ *
+ * @return Error::OK on success, otherwise an error code indicating the failure reason
+ *
+ * @usage
+ *
 */
 Error AntiCheat::Cleanup()
 {
@@ -175,9 +197,13 @@ Error AntiCheat::Cleanup()
 	return Error::OK;
 }
 
-/*
-	FastCleanup - Unloads the driver and stops all threads that were started by the AntiCheat class. Uses TerminateThread(), so thread cleanup is not proper (but executes much faster)
-	returns Error::OK on success
+/**
+ * @brief Terminates threads and cleans up resources, used for fast cleanup in case of critical errors or shutdowns
+ *
+ * @return Error::OK on success, otherwise an error code indicating the failure reason
+ *
+ * @usage
+ * anticheat->FastCleanup();
 */
 Error AntiCheat::FastCleanup()
 {
@@ -230,6 +256,17 @@ Error AntiCheat::FastCleanup()
 	return Error::OK;
 }
 
+/* *
+ * @brief Performs pre-initialization checks to ensure the environment is secure and meets the requirements for running the anti-cheat system
+ *
+ * @return true if all checks pass, false otherwise
+ *
+ * @usage
+ * if (!anticheat->DoPreInitializeChecks())
+ * {
+ *     // Handle failure case
+ * }
+*/
 bool AntiCheat::DoPreInitializeChecks()
 {
 	if (Config->bRequireRunAsAdministrator)
@@ -289,9 +326,16 @@ bool AntiCheat::DoPreInitializeChecks()
 }
 
 
-/*
-	IsAnyThreadSuspended - Checks the looping threads of class members to ensure the program is running as normal. An attacker may try to suspend threads to either remap or disable functionalities
-	returns true if any thread is found suspended
+/* *
+ * @brief Checks if any of the critical threads in the anti-cheat system are suspended, indicating potential tampering or abnormal execution
+ *
+ * @return true if any thread is suspended, false otherwise
+ *
+ * @usage
+ * if (anticheat->IsAnyThreadSuspended())
+ * {
+ *     // Handle abnormal execution case
+ * }
 */
 bool AntiCheat::IsAnyThreadSuspended()
 {
@@ -319,9 +363,13 @@ bool AntiCheat::IsAnyThreadSuspended()
 	return false;
 }
 
-/*
-	Initialize - Initializes the anti-cheat module by connecting to the auth server (if available) and sending it the game's unique code, and checking the parent process to ensure a rogue launcher wasn't used
-	returns Error::OK on success.
+/* *
+	@brief Initializes the anti-cheat system with the provided license key and checks for server availability
+	@param licenseKey The license key to authenticate the anti-cheat system
+	@param isServerAvailable Flag indicating if the server is available for communication
+	@return Error::OK on success, otherwise an error code indicating the failure reason
+	@usage
+	Error err = anticheat->Initialize("YOUR_LICENSE_KEY", true);
 */
 Error AntiCheat::Initialize(std::string licenseKey, bool isServerAvailable)
 {
@@ -373,11 +421,14 @@ end:
 	return errorCode;
 }
 
-
 /*
-	LaunchDefenses - Initialize detections, preventions, and ADbg techniques
-	returns Error::OK on success
-*/
+ * @brief Launches the anti-cheat defenses, including starting the monitor and anti-debugger threads, and applying prevention techniques
+ *
+ * @return Error::OK on success, otherwise an error code indicating the failure reason
+ *
+ * @usage
+ * Error err = anticheat->LaunchDefenses();
+ */
 Error AntiCheat::LaunchDefenses()
 {
 	if (GetMonitor() == nullptr || GetAntiDebugger() == nullptr || GetBarrier() == nullptr)

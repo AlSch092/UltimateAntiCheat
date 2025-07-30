@@ -39,6 +39,17 @@ bool SupressingUnknownThreads = true; //we need some variables in both our TLS c
 
 LONG WINAPI g_ExceptionHandler(__in EXCEPTION_POINTERS* ExceptionInfo);
 
+
+/**
+ * @brief Entry point function which creates an anticheat object and loops until the user wants to exit
+ *
+ * @details serves as a proof of concept for the anticheat, and demonstrates how to use the AntiCheat class. this file is excluded if building in `LibRelease`
+ *
+ * @param argc Number of command line arguments
+ * @param argv Each command line argument
+ *
+ * @return int 0 on success, non-zero on failure
+ */
 int main(int argc, char** argv)
 {
 	std::string userKeyboardInput; //for looping until user wants to exit
@@ -263,11 +274,19 @@ Cleanup:
     return 0;
 }
 
-/*
-The TLS callback triggers on process + thread attachment & detachment, which means we can catch any threads made by an attacker in our process space.
-We can end attacker threads using ExitThread(), and let in our threads which are managed.
-...An attacker can circumvent this by modifying the pointers to TLS callbacks which the program usually keeps track of, which requires re-remapping
-*/
+
+/**
+ * @brief TLS callback triggers on process + thread attachment & detachment
+ *
+ * @details Can be used to prevent rogue threads from being created, or to initialize certain anti-cheat features
+ *
+ * @param pHandle handle to the current module
+ * @param dwReason action that occured to trigger the callback
+ * @param Reserved N/A, unused
+ *
+ * @return void
+ *
+ */
 void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 {
     const UINT ThreadExecutionAddressStackOffset = 0x378; //** this might change on different version of window, Windows 10 is all I have access to currently
@@ -375,10 +394,16 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
     };
 }
 
-/*
-    ExceptionHandler - User defined exception handler which catches program-wide exceptions
-    ...Currently we are not doing anything special with this, but we'll leave it here incase we need it later
-*/
+/**
+ * @brief Vectored exception handler that logs unhandled exceptions in the process
+ *
+ * @param ExceptionInfo Structure containing info about the exception
+ *
+ * @return EXCEPTION_CONTINUE_SEARCH to keep looking for handlers
+ *
+ * @usage
+ * AddVectoredExceptionHandler(1, g_ExceptionHandler);
+ */
 LONG WINAPI g_ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo)  //handler that will be called whenever an unhandled exception occurs in any thread of the process
 {
     DWORD exceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;

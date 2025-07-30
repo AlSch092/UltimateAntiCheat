@@ -60,5 +60,5 @@ private:
     std::string ServerEndpoint;
     std::atomic<bool> running;
 
-    void SendDataToServer();
+    bool SendDataToServer();
 };

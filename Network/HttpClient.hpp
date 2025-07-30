@@ -7,17 +7,17 @@
 #include "curl/easy.h"
 #include "../Common/Logger.hpp"
 
-#ifdef _DEBUG
-#pragma comment(lib, "Libs/libcurl-d.lib") //debug build doesnt use static libraries, still requires libcurl.dll in .exe folder
-#else
-//#pragma comment(lib, "Libs/brotlicommon.lib")
-//#pragma comment(lib, "Libs/libcurl.lib") //located in project root folder
-//#pragma comment(lib, "Libs/brotlidec.lib")
-//#pragma comment(lib, "Libs/brotlienc.lib") //statically linked libs to not require external .dlls to run .exe (libcurl and zlib.dll arent signed)
-//#pragma comment(lib, "Libs/zlib.lib")
-#endif
-
 using namespace std;
+
+struct HttpRequest
+{
+    string url;
+    vector<string> requestHeaders;
+    string cookie;
+    string body;
+    vector<string> responseHeaders;
+    string responseText;
+};
 
 struct MemoryStruct
 {
@@ -33,8 +33,8 @@ class HttpClient //a simple class for making web/http requests.
 {
 public:
 
-    static string ReadWebPage(__in const string url, __in const vector<string> headers, __in const string cookie, __out vector<string>& responseHeaders);
-    static string PostRequest(__in const string url, __in const vector<string> headers, __in const string cookie, __in const string body, __out vector<string>& responseHeaders);
+    static bool GetRequest(__inout HttpRequest& requestInfo);
+    static bool PostRequest(__inout HttpRequest& requestInfo);
 
 private:
     static size_t read_callback(void* ptr, size_t size, size_t nmemb, void* userdata);
