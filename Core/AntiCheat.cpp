@@ -1,5 +1,7 @@
 #include "AntiCheat.hpp"
 
+#ifndef _LIB_ 
+
 /*
  * @brief Constructs an AntiCheat object with the provided settings
  *
@@ -464,3 +466,5 @@ Error AntiCheat::LaunchDefenses()
 
 	return errorCode;
 }
+
+#endif //_LIB_

@@ -8,6 +8,8 @@
     Author: AlSch092 @ Github
 */
 
+#ifndef _LIB_ //building in LibRelease, so we don't want to include the main.cpp file
+
 #include "Core/AntiCheat.hpp"
 #include "SplashScreen.hpp"
 #include "AntiTamper/MapProtectedClass.hpp" //to make Settings class object write-protected (see https://github.com/AlSch092/RemapProtectedClass)
@@ -415,3 +417,6 @@ LONG WINAPI g_ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo)  //handler tha
 
     return EXCEPTION_CONTINUE_SEARCH;
 }
+
+
+#endif  // _LIB_

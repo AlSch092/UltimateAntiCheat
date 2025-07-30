@@ -156,9 +156,9 @@ bool EventLogger::SendDataToServer()
 			Logger::log(Info, "Event data sent successfully: " + request.responseText);
 			return true;
 		}
-
-		return false;
 	}
+
+	return false;
 }
 
 /**
