@@ -247,7 +247,4 @@
       <Filter>Obscure</Filter>
     </MASM>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="ClassDiagram.cd" />
-  </ItemGroup>
 </Project>

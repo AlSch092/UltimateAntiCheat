@@ -339,9 +339,6 @@ copy "$(ProjectDir)DLLs\zlibd1.dll" "$(OutDir)zlibd1.dll"</Command>
   <ItemGroup>
     <MASM Include="Obscure\ASMStubs.asm" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="ClassDiagram.cd" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
