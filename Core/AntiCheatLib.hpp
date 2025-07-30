@@ -13,6 +13,8 @@ private:
 public:
 	explicit AntiCheat(__in Settings* config);
 
+	void Destroy();
+
 	AntiCheat(AntiCheat&&) = delete;
 	AntiCheat& operator=(AntiCheat&&) noexcept = default;
 	AntiCheat(const AntiCheat&) = delete;

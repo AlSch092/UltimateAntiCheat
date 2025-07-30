@@ -162,9 +162,18 @@ struct AntiCheat::Impl
 };
 
 
-
 AntiCheat::AntiCheat(Settings* settings) : pImpl(new AntiCheat::Impl(settings))
 {
+}
+
+void AntiCheat::Destroy()
+{
+    if (this->pImpl != nullptr)
+    {
+        this->pImpl->Cleanup(); //clean up the anticheat
+        delete this->pImpl;
+        this->pImpl = nullptr;
+    }
 }
 
 /*
