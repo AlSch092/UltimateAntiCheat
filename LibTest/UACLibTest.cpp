@@ -8,59 +8,59 @@
 
 int main()
 {
-	std::list<std::wstring> validParents = { L"explorer.exe", L"powershell.exe", L"cmd.exe", L"VsDebugConsole.exe" };
-	
-    std::unique_ptr<Settings> settings = nullptr;
-    std::unique_ptr<AntiCheat> anticheat = nullptr;
+	std::list<std::wstring> validParents = { L"explorer.exe", L"powershell.exe", L"cmd.exe", L"pwsh.exe", L"VsDebugConsole.exe" };
 
-    const bool bNetworkingEnabled = false; //change this to false if you don't want to use the server
-    const bool bEnforceSecureBoot = false; //secure boot is recommended in distribution builds
-    const bool bEnforceDSE = true;
-    const bool bEnforceNoKDBG = true;
-    const bool bUseAntiDebugging = true;
-    const bool bUseIntegrityChecking = true;
-    const bool bCheckThreadIntegrity = true;
-    const bool bCheckHypervisor = false;
-    const bool bRequireRunAsAdministrator = true;
-    const bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
-    std::wstring DriverCertSubject = L"YourGameCompany";
+	std::unique_ptr<Settings> settings = nullptr;
+	std::unique_ptr<AntiCheat> anticheat = nullptr;
 
-    if (bUsingDriver)
-        DriverCertSubject = L"";
+	const bool bNetworkingEnabled = false; //change this to false if you don't want to use the server
+	const bool bEnforceSecureBoot = false; //secure boot is recommended in distribution builds
+	const bool bEnforceDSE = true;
+	const bool bEnforceNoKDBG = true;
+	const bool bUseAntiDebugging = true;
+	const bool bUseIntegrityChecking = true;
+	const bool bCheckThreadIntegrity = true;
+	const bool bCheckHypervisor = false;
+	const bool bRequireRunAsAdministrator = true;
+	const bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
+	std::wstring DriverCertSubject = L"YourGameCompany";
 
-    const bool bEnableLogging = true;
-    const std::string logFIleName = "UltimateAnticheatLib.log";
+	if (bUsingDriver)
+		DriverCertSubject = L"";
 
-    try
-    {
-        settings = std::make_unique<Settings>("127.0.0.1", 5445, bNetworkingEnabled, 
-            bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor, 
-            bRequireRunAsAdministrator, bUsingDriver, DriverCertSubject, validParents, bEnableLogging, logFIleName);
-       
-        anticheat = std::make_unique<AntiCheat>(settings.get());
-    }
+	const bool bEnableLogging = true;
+	const std::string logFIleName = "UltimateAnticheatLib.log";
+
+	try
+	{
+		settings = std::make_unique<Settings>("127.0.0.1", 5445, bNetworkingEnabled,
+			bEnforceSecureBoot, bEnforceDSE, bEnforceNoKDBG, bUseAntiDebugging, bUseIntegrityChecking, bCheckThreadIntegrity, bCheckHypervisor,
+			bRequireRunAsAdministrator, bUsingDriver, DriverCertSubject, validParents, bEnableLogging, logFIleName);
+
+		anticheat = std::make_unique<AntiCheat>(settings.get());
+	}
 	catch (const std::bad_alloc& e)
 	{
 		std::cerr << "Exception caught: " << e.what() << std::endl;
 		return 1; // Exit with error code -> test failed
 	}
-   
-    cout << "\n----------------------------------------------------------------------------------------------------------" << endl;
-    cout << "All protections have been deployed, the program will now loop using its detection methods" << endl;
-    cout << "Please enter 'q' if you'd like to end the program." << endl;
 
-    std::string userKeyboardInput;
+	//cout << "\n----------------------------------------------------------------------------------------------------------" << endl;
+	//cout << "All protections have been deployed, the program will now loop using its detection methods" << endl;
+	//cout << "Please enter 'q' if you'd like to end the program." << endl;
 
-    while (true)
-    {
-        cin >> userKeyboardInput;
+	//std::string userKeyboardInput;
 
-        if (userKeyboardInput == "q" || userKeyboardInput == "Q")
-        {
-            cout << "Exit key was pressed, shutting down program..." << endl;
-            break;
-        }
-    }
+	//while (true)
+	//{
+	//    cin >> userKeyboardInput;
+
+	//    if (userKeyboardInput == "q" || userKeyboardInput == "Q")
+	//    {
+	//        cout << "Exit key was pressed, shutting down program..." << endl;
+	//        break;
+	//    }
+	//}
 
 	return 0;
 }
