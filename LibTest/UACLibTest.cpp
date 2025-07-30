@@ -21,7 +21,7 @@ int main()
 	const bool bUseIntegrityChecking = true;
 	const bool bCheckThreadIntegrity = true;
 	const bool bCheckHypervisor = false;
-	const bool bRequireRunAsAdministrator = true;
+	const bool bRequireRunAsAdministrator = false; //no admin mode in Github Actions
 	const bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
 	std::wstring DriverCertSubject = L"YourGameCompany";
 
