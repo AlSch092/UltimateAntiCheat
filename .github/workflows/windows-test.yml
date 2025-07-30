@@ -25,11 +25,11 @@ jobs:
 
     - name: Run UACLibTest.exe and capture output
       shell: pwsh
-    - run: |
-       .\x64\Release\UACLibTest.exe 2>&1 | Tee-Object -FilePath output.log
-       $exitCode = $LASTEXITCODE
-       Write-Host "Exit code: $exitCode"
-       exit $exitCode
+      run: |
+        .\x64\Release\UACLibTest.exe 2>&1 | Tee-Object -FilePath output.log
+        $exitCode = $LASTEXITCODE
+        Write-Host "Exit code: $exitCode"
+        exit $exitCode
         
     - name: Upload UACTest output
       uses: actions/upload-artifact@v4
