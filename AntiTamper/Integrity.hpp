@@ -15,6 +15,7 @@ using namespace std;
 struct ModuleHashData 
 {
 	std::wstring Name;
+	std::wstring Section;
 	std::vector<uint64_t> Hashes;
 };
 
@@ -29,7 +30,8 @@ struct ModuleInfo
 
 	Hash lists (vector<uint64_t>) are used such that we can pinpoint the memory offset of any particular modifications, as opposed to using a CRC32 or SHA of a module or section
 
-	..Probably the messiest class in the program, it could really use a code cleanup
+	** This class needs to be rewritten, there are several things that can be improved, and the current code is just too messy.
+	    This was one of the first things added into this project back in 2022, back when I used primarily C rather than C++. **
 */
 class Integrity final
 {
@@ -54,13 +56,18 @@ public:
 		}
 	}
 
+	Integrity& operator=(Integrity&& other) = delete; //delete move assignments
+	Integrity operator+(Integrity& other) = delete; //delete all arithmetic operators, unnecessary for context
+	Integrity operator-(Integrity& other) = delete;
+	Integrity operator*(Integrity& other) = delete;
+	Integrity operator/(Integrity& other) = delete;
+
 	bool Check(__in const uint64_t Address, __in int const nBytes, __in const std::vector<uint64_t> hashList); //returns true if hashes calculated at `Address` don't match hashList
 	
 	static std::vector<uint64_t> GetMemoryHash(__in const uint64_t Address, __in const int nBytes); //get hash list at `Address`
-	static std::vector<uint64_t> GetMemoryHash(__in const LPBYTE memory, __in const int nBytes);
 	static uint64_t GetStackedHash(__in const uint64_t Address, __in const int nBytes);
 
-	void SetSectionHashList(__out std::vector<uint64_t> hList, __in const std::string section);
+	void SetSectionHashList(__out vector<uint64_t> hList, __in const string section);
 
 	std::vector<uint64_t> GetSectionHashList(__in const std::string sectionName) const
 	{

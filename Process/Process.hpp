@@ -162,7 +162,7 @@ public:
 	
 	static HMODULE GetModuleHandle_Ldr(__in const  wchar_t* moduleName);
 
-	static DWORD GetTextSectionSize(__in const HMODULE hModule);
+	static DWORD GetSectionSize(__in const HMODULE hModule, __in const std::string section);
 
 	static HMODULE GetRemoteModuleBaseAddress(__in const DWORD processId, __in const  wchar_t* moduleName);
 

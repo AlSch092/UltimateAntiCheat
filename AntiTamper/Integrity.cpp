@@ -1,10 +1,14 @@
 //By AlSch092 @github
 #include "Integrity.hpp"
 
-/*
-    Integrity::Check - fetches list of hashes from .text section and compares to `hashList`
-	returns `true` if hash lists match
-*/
+/**
+ * @brief Checks if hash list gathered from memory at `Address` of size `nBytes` matches the provided `hashList`
+ * @details  This function is somewhat expensive, and should not be used constantly. 
+ * @param `Address`  address in memory to start checking from
+ * @param `nBytes`  number of bytes to check from `Address`
+ * @param `hashList` pre-existing hash list to compare against
+ * @return true/false if hash list matches `hashList`
+ */
 bool Integrity::Check(__in uint64_t Address, __in int nBytes, __in vector<uint64_t> hashList)
 {
 	bool hashesMatch = true;
@@ -23,6 +27,12 @@ bool Integrity::Check(__in uint64_t Address, __in int nBytes, __in vector<uint64
 	return hashesMatch;
 }
 
+/**
+ * @brief Collects a vector of sha256 hashes of memory of `nBytes` starting from `Address`
+ * @param `Address`  address in memory to start checking from
+ * @param `nBytes`  number of bytes to check from `Address`
+ * @return vector of uint64_t hashes representing the memory from `Address` to `Address + nBytes`
+ */
 vector<uint64_t> Integrity::GetMemoryHash(__in uint64_t Address, __in int nBytes)
 {
 	std::vector<uint64_t> hashList;
@@ -51,38 +61,13 @@ vector<uint64_t> Integrity::GetMemoryHash(__in uint64_t Address, __in int nBytes
 	return hashList;
 }
 
-/*
-	GetMemoryHash (overloaded) - returns a vector of sha256 hashes of memory of nBytes
-*/
-vector<uint64_t> Integrity::GetMemoryHash(LPBYTE memory, int nBytes)
-{
-	if (memory == nullptr)
-		return {};
-
-	vector<uint64_t> hashList;
-
-	SHA256 sha;
-	uint8_t* digest = 0;
-	UINT64 digestCache = 0;
-
-	for (int i = 0; i < nBytes; i = i + 32)
-	{
-		sha.update(&memory[i], 32);
-		digest = sha.digest();
-		digestCache += *(UINT64*)digest + i;
-		hashList.push_back(digestCache);
-		delete digest;
-	}
-
-	return hashList;
-}
-
-
-/*
-	GetStackedHash - fetch single uint64_t hash reprsenting full bytes from `Address` to `Address + nBytes`
-	returns a uint64_t of the sum of all sha digests
-*/
-uint64_t Integrity::GetStackedHash(uint64_t Address, int nBytes)
+/**
+ * @brief Collects a value computed from the sum of sha256 hashes
+ * @param `Address`  address in memory to start checking from
+ * @param `nBytes`  number of bytes to check from `Address`
+ * @return uint64_t value representing the sum of sha256 hashes computed from memory at `Address` to `Address + nBytes`
+ */
+uint64_t Integrity::GetStackedHash(__in const uint64_t Address, __in const int nBytes)
 {
 	if (Address == 0 || nBytes == 0)
 		return 0;
@@ -102,15 +87,22 @@ uint64_t Integrity::GetStackedHash(uint64_t Address, int nBytes)
 	return digestCache;
 }
 
+/**
+ * @brief Assigns a vector of sha256 hashes to a specific section in `SectionHashes` member
+ * @param `hList`  hash vector to assign
+ * @param `section`  module section name (.text, .rdata, etc)
+ * @return void
+ */
 void Integrity::SetSectionHashList(__out vector<uint64_t> hList, __in const string section)
 {
 	this->SectionHashes[section].assign(hList.begin(), hList.end());
 }
 
-/*
-	IsUnknownModulePresent - compares current module list to one gathered at program startup, any delta modules are checked via WinVerifyTrust and added to our `WhitelistedModules` member
-	return true if an unsigned module (besides current executable) was found
-*/
+/**
+ * @brief Checks if any unknown modules are present in the process by comparing new module list against the list taken at program startup
+ * @return true/false if unknown modules were found. Also fills the `WhitelistedModules` class member with any newly signed modules
+ * @details This function also uses a whitelist of modules - unknown modules which are not Authenticode verified will be flagged
+ */
 bool Integrity::IsUnknownModulePresent()
 {
 	bool foundUnknown = false;
@@ -154,10 +146,13 @@ bool Integrity::IsUnknownModulePresent()
 	return foundUnknown;
 }
 
-/*
-	GetModuleHash - fetches .text section hashes for a specific module,
-     returns a `ModuleHashData` object, returns nullptr if module or section not found
-*/
+/**
+ * @brief Collects hashes for a specific section of a module
+ * @param `moduleName`  address in memory to start checking from
+ * @param `sectionName`  number of bytes to check from `Address`
+ * @return ModuleHashData* object containing the module name and a vector of hashes for the specified section
+ * @details You must free the returned value after usage, or a memory leak will occur
+ */
 ModuleHashData* Integrity::GetModuleHash(__in const wchar_t* moduleName, __in const char* sectionName)
 {
 	string modName = Utility::ConvertWStringToString(moduleName);
@@ -181,10 +176,11 @@ ModuleHashData* Integrity::GetModuleHash(__in const wchar_t* moduleName, __in co
 	return nullptr;
 }
 
-/*
-	GetModuleHashes  - fill member `ModuleHashes` with hashes of each whitelisted module's .text section
-	returns a vector* of `ModuleHashData*` objects
-*/
+/**
+ * @brief Collects vector of hashes for all whitelisted modules' .text sections
+ * @return vector of ModuleHashData* object containing the module names and a vector of hashes for the module's .text section
+ * @details You must free the returned values in the vector after usage, or  memory leaks will occur
+ */
 vector<ModuleHashData*> Integrity::GetModuleHashes()
 {
 	vector<ModuleHashData*> moduleHashes;
@@ -200,10 +196,12 @@ vector<ModuleHashData*> Integrity::GetModuleHashes()
 	return moduleHashes;
 }
 
-/*
-	IsModuleModified - checks if module `moduleName` has had its .text section modified (compared to `ModuleHashes` member)
-	returns true if current module hash does not match original from `ModuleHashes`
-*/
+/**
+ * @brief Checks if the module's .text section has been modified
+ * @param `moduleName`  name of the module to check
+ * @return true/false if the module's .text section has been modified
+ * @details This function compares the hashes of the module's .text section against the hashes stored in `ModuleHashes`
+ */
 bool Integrity::IsModuleModified(__in const wchar_t* moduleName)
 {
 	bool foundModified = false;
@@ -224,6 +222,12 @@ bool Integrity::IsModuleModified(__in const wchar_t* moduleName)
 			uint64_t* arr2 = currentModuleHash->Hashes.data();
 
 			size_t size = modHash->Hashes.size();
+
+			if (arr1 == nullptr || arr2 == nullptr)
+			{
+				delete currentModuleHash;
+				throw std::runtime_error("Null memory dereference - abnormal behaviour detected in Integrity::IsModuleModified");
+			}
 
 			for (int i = 0; i < size - 1; i++)
 			{
@@ -356,9 +360,13 @@ bool Integrity::IsAddressInModule(const std::vector<ProcessData::MODULE_DATA>& m
 	return false;
 }
 
-/*
-	GetSectionHashFromDisc - returns hash list (vector of uint64_t) from file `path` of section `sectionName`
-*/
+/**
+* @brief Reads the .text section of a file from disk and computes its hash
+ * @param `path`  path to the file on disk
+ * @param `sectionName`  name of the section to read (e.g., ".text")
+ * @return vector of uint64_t hashes representing the .text section of the file
+ * @details This function reads the specified section from a PE file on disk and computes its hash.
+ */
 vector<uint64_t> Integrity::GetSectionHashFromDisc(wstring path, const char* sectionName)
 {
 	vector<uint8_t> sectionBytes;
@@ -394,7 +402,7 @@ vector<uint64_t> Integrity::GetSectionHashFromDisc(wstring path, const char* sec
 	for (int i = 0; i < ntHeaders.FileHeader.NumberOfSections; i++)
 	{
 		file.read(reinterpret_cast<char*>(&sectionHeader), sizeof(IMAGE_SECTION_HEADER));
-		if (strcmp((const char*)sectionHeader.Name, ".text") == 0)
+		if (strcmp((const char*)sectionHeader.Name, sectionName) == 0)
 		{
 			found = true;
 			break;
@@ -412,13 +420,9 @@ vector<uint64_t> Integrity::GetSectionHashFromDisc(wstring path, const char* sec
 	file.read(reinterpret_cast<char*>(sectionBytes.data()), sectionHeader.SizeOfRawData);
 
 	BYTE* sectionMemory = new BYTE[sectionHeader.SizeOfRawData];
+	memcpy(sectionMemory, sectionBytes.data(), sectionHeader.SizeOfRawData);
 
-	for (int i = 0; i < sectionHeader.SizeOfRawData; i++)
-	{
-		sectionMemory[i] = sectionBytes[i];
-	}
-
-	vector<uint64_t> sectionHashes = GetMemoryHash(sectionMemory, sectionHeader.SizeOfRawData);
+	vector<uint64_t> sectionHashes = GetMemoryHash((uint64_t)sectionMemory, sectionHeader.SizeOfRawData);
 
 	if(sectionMemory != nullptr)
 		delete[] sectionMemory;

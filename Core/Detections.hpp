@@ -70,7 +70,7 @@ public:
 	
 	static bool DoesIATContainHooked(); //check IAT for hooks
 	
-	static UINT64 IsTextSectionWritable(); //check all pages in .text section of image module for writable pages (after remapping, our .text section should only have RX protected pages)
+	static uint64_t FindWritableAddress(__in const std::string moduleName, __in const std::string sectionName); //check all pages in .text section of image module for writable pages (after remapping, our .text section should only have RX protected pages)
 	
 	static bool CheckOpenHandles(); //detect any open handles to our process, very useful since this will detect most external cheats
 	

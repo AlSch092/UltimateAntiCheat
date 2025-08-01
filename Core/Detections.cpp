@@ -193,49 +193,26 @@ void Detections::Monitor(__in LPVOID thisPtr)
         return;
     }
 
-    UINT64 CachedTextSectionAddress = 0;
-    DWORD CachedTextSectionSize = 0;
+    list<ProcessData::Section*> sections = Process::GetSections(_MAIN_MODULE_NAME);
 
-    UINT64 CachedRDataSectionAddress = 0;
-    DWORD CachedRDataSectionSize = 0;
+    if (sections.size() == 0)
+    {
+        Logger::logf(Err, "Sections size was 0 @ Detections::Monitor");
+        return;
+    }
+
+    UINT64 ModuleAddr = (UINT64)GetModuleHandleA(_MAIN_MODULE_NAME);
+
+    if (ModuleAddr == 0)
+    {
+        Logger::logf(Err, "Module couldn't be retrieved @ Detections::Monitor. Aborting execution! (%d)", GetLastError());
+        return;
+    }
 
     if (Monitor->Config->bCheckIntegrity) //integrity check setup if option is enabled
-    {
-        list<ProcessData::Section*> sections = Process::GetSections(_MAIN_MODULE_NAME);
-            
+    {         
         Monitor->SetSectionHash(_MAIN_MODULE_NAME, ".text"); //set our memory hashes of .text
         Monitor->SetSectionHash(_MAIN_MODULE_NAME, ".rdata");
-
-        if (sections.size() == 0)
-        {
-            Logger::logf(Err, "Sections size was 0 @ Detections::Monitor. Aborting execution!");
-            return;
-        }
-
-        UINT64 ModuleAddr = (UINT64)GetModuleHandleA(NULL);
-
-        if (ModuleAddr == 0)
-        {
-            Logger::logf(Err, "Module couldn't be retrieved @ Detections::Monitor. Aborting execution! (%d)\n", GetLastError());
-            return;
-        }
-
-        for (auto section : sections)
-        {
-            if (section == nullptr)
-                continue;
-
-            if(section->name == ".text")          
-            {
-                CachedTextSectionAddress = section->address + ModuleAddr;  //cache our .text sections address and memory size, since an attacker could possibly spoof the section name or # of sections in ntheaders to prevent section traversing
-                CachedTextSectionSize = section->size;
-            }
-            else if (section->name == ".rdata")
-            {
-                CachedRDataSectionAddress = section->address + ModuleAddr;
-                CachedRDataSectionSize = section->size;
-            }
-        }
     }
     
     //Main Monitor Loop, continuous detections go in here. we need access to CachedSectionAddress variables so this loop doesnt get its own function.
@@ -246,13 +223,13 @@ void Detections::Monitor(__in LPVOID thisPtr)
     {
         if (Monitor == nullptr) //critical error
         {
-            Logger::logf(Err, "Monitor ptr was NULL @ Detections::Monitor, shutting down");
+            Logger::logf(Err, "Monitor ptr was NULL @ Detections::Monitor");
             std::terminate();
         }
 
         if (Monitor->GetMonitorThread()->IsShutdownSignalled()) //end thread if thread shutdown is signalled
         {
-            Logger::logf(Info, "STOPPING  Detections::Monitor , ending detections thread");
+            Logger::logf(Info, "STOPPING  Detections::Monitor");
             return;
         }
 
@@ -289,16 +266,16 @@ void Detections::Monitor(__in LPVOID thisPtr)
                 Monitor->EvidenceManager->AddFlagged(DetectionFlags::CODE_INTEGRITY);
             }
 
-            if (Monitor->IsSectionHashUnmatching(CachedTextSectionAddress, CachedTextSectionSize, ".text")) //compare hashes of .text for modifications
+            for (auto section : sections)
             {
-                Logger::logf(Detection, "Found modified .text section (or you're debugging with software breakpoints)!\n");
-                Monitor->EvidenceManager->AddFlagged(DetectionFlags::CODE_INTEGRITY);
-            }
-
-            if (Monitor->IsSectionHashUnmatching(CachedRDataSectionAddress, CachedRDataSectionSize, ".rdata")) //compare hashes of .text for modifications
-            {
-                Logger::logf(Detection, "Found modified .rdata section!\n");
-                Monitor->EvidenceManager->AddFlagged(DetectionFlags::CODE_INTEGRITY);
+                if (section->name == ".text" || section->name == ".rdata")
+                {
+                    if (Monitor->IsSectionHashUnmatching(ModuleAddr + section->address, section->size, section->name)) //compare hashes of .text for modifications
+                    {
+                        Logger::logf(Detection, "Found modified %s section (or you're debugging with software breakpoints)!", (section->name == ".text" ? ".text" : ".rdata"));
+                        Monitor->EvidenceManager->AddFlagged(DetectionFlags::CODE_INTEGRITY);
+                    }
+                }
             }
 
             if (!Monitor->GetIntegrityChecker()->CheckFileIntegrityFromDisc()) //check .text of file on disc versus runtime process - this fills the gap of gathering .text hashes at program startup and comparing to that
@@ -369,12 +346,12 @@ void Detections::Monitor(__in LPVOID thisPtr)
             Monitor->EvidenceManager->AddFlagged(DetectionFlags::BAD_IAT);
         }
 
-        if (Detections::IsTextSectionWritable()) //page protections check, can be made more granular or loop over all mem pages
+        if (Detections::FindWritableAddress(_MAIN_MODULE_NAME, ".text")) //page protections check, can be made more granular or loop over all mem pages
         {
             Logger::logf(Detection, ".text section was writable, which means someone re-re-mapped our memory regions! (or you ran this in DEBUG build)");
             
-#ifndef _DEBUG           //in debug build we are not remapping, and software breakpoints in VS may cause page protections to be writable
-            Monitor->EvidenceManager->AddFlagged(DetectionFlags::PAGE_PROTECTIONS);
+#ifndef _DEBUG        //in debug build we are not remapping, and software breakpoints in VS may cause page protections to be writable    
+            Monitor->EvidenceManager->AddFlagged(DetectionFlags::PAGE_PROTECTIONS); 
 #endif
         }
 
@@ -411,10 +388,10 @@ bool Detections::FetchBlacklistedBytePatterns(__in const char* url)
 	request.body = "";
 	request.requestHeaders = 
     {
-		{"User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"},
-		{"Accept", "text/plain, */*; q=0.01"},
-		{"Accept-Language", "en-US,en;q=0.5"},
-		{"Connection", "keep-alive"}
+		"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
+		"Accept: text/plain, */*; q=0.01",
+		"Accept-Language: en-US,en;q=0.5",
+		"Connection: keep-alive"
 	};
 
     if (!HttpClient::GetRequest(request))
@@ -539,34 +516,7 @@ bool Detections::IsSectionHashUnmatching(__in const UINT64 cachedAddress, __in c
 
     Logger::logf(Info, "Checking hashes of address: %llx (%d bytes) for memory integrity\n", cachedAddress, cachedSize);
 
-    if (section == ".text")
-    {
-        if (GetIntegrityChecker()->Check((uint64_t)cachedAddress, cachedSize, GetIntegrityChecker()->GetSectionHashList(".text"))) //compares hash to one gathered previously
-        {
-            Logger::logf(Info, "Hashes match: Program's .text section appears genuine.\n");
-            return false;
-        }
-        else
-        {
-            Logger::logf(Detection, " .text section of program is modified!\n");
-            return true;
-        }
-    }
-    else if (section == ".rdata")
-    {
-        if (GetIntegrityChecker()->Check((uint64_t)cachedAddress, cachedSize, GetIntegrityChecker()->GetSectionHashList(".rdata"))) //compares hash to one gathered previously
-        {
-            Logger::logf(Info, "Hashes match: Program's .rdata section appears genuine.\n");
-            return false;
-        }
-        else
-        {
-            Logger::logf(Detection, " .rdata section of program is modified!\n");
-            return true;
-        }
-    }
-
-    return false;
+    return !GetIntegrityChecker()->Check((uint64_t)cachedAddress, cachedSize, GetIntegrityChecker()->GetSectionHashList(section));
 }
 
 /*
@@ -578,6 +528,7 @@ bool Detections::IsBlacklistedProcessRunning() const
     bool foundBlacklistedProcess = false;
 
     HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+
     if (hSnapshot == INVALID_HANDLE_VALUE) 
     {
         Logger::logf(Err, "Failed to create snapshot of processes. Error code: %d @ Detections::IsBlacklistedProcessRunning\n", GetLastError());
@@ -612,6 +563,7 @@ bool Detections::IsBlacklistedProcessRunning() const
 /*
 *   DoesFunctionAppearHooked - Checks if first bytes of a routine are a jump or call. Please make sure the function you use with this doesnt normally start with a jump or call.
     Returns TRUE if the looked up function contains a jump or call as its first instruction
+    ** This function can easily throw false positives, it's recommended to use only on function preambles where you know the expected opcode beforehand **
 */
 bool Detections::DoesFunctionAppearHooked(__in const char* moduleName, __in const char* functionName)
 {
@@ -641,7 +593,11 @@ bool Detections::DoesFunctionAppearHooked(__in const char* moduleName, __in cons
 
     __try
     {
-        if (*(BYTE*)AddressFunction == 0xE8 || *(BYTE*)AddressFunction == 0xE9 || *(BYTE*)AddressFunction == 0xEA || *(BYTE*)AddressFunction == 0xEB) //0xEB = short jump, 0xE8 = call X, 0xE9 = long jump, 0xEA = "jmp oper2:oper1"
+        if (*(UINT8*)AddressFunction == 0xE8 ||
+            *(UINT8*)AddressFunction == 0xE9 ||
+            *(UINT8*)AddressFunction == 0xEA ||
+            *(UINT8*)AddressFunction == 0xEB ||
+            (*(UINT8*)AddressFunction == 0xFF && *(UINT8*)AddressFunction+1 == 0x25)) //0xEB = short jump, 0xE8 = call X, 0xE9 = long jump, 0xEA = "jmp oper2:oper1" (short jumps), FF25 = long jump
             FunctionPreambleHooked = true;
     }
     __except(EXCEPTION_EXECUTE_HANDLER)
@@ -670,8 +626,8 @@ bool Detections::DoesIATContainHooked()
 
         bool FoundIATEntryInModule = false;
 
-        if (moduleSize != 0)
-        {   //some IAT functions in k32 can point to ntdll (forwarding), thus we have to compare IAT to each other whitelisted DLL range
+        if (moduleSize != 0) //some IAT functions in k32 can point to ntdll (forwarding), thus we have to compare IAT to each other whitelisted DLL range
+        {   
             for (auto mod : modules)
             {
                 UINT64 LowAddr = (UINT64)mod.dllInfo.lpBaseOfDll;
@@ -687,8 +643,7 @@ bool Detections::DoesIATContainHooked()
             {
                 isIATHooked = true;
                 break;
-            }
-                
+            }            
         }
         else //error, we shouldnt get here!
         {
@@ -701,39 +656,62 @@ bool Detections::DoesIATContainHooked()
 }
 
 
-/*
-Detections::IsTextSectionWritable() - Simple memory protections check on page in the .text section
-    returns address where the page was writable, which imples someone re-re-mapped our process memory and wants to write patches.
-*/
-UINT64 Detections::IsTextSectionWritable()
+/**
+ * @brief Finds a writable address in a specific section of a module
+ *
+ * This function searches for a writable address in the specified section of a module.
+ *
+ * @param moduleName The name of the module to search in
+ * @param sectionName The name of the section to search in
+ *
+ * @return The address of the writable section, or 0 if not found
+ *
+ * @details N/A
+ *
+ * @usage
+ * uint64_t writableAddress = Integrity::FindWritableAddress("myModule.dll", ".rdata");
+ */
+uint64_t Detections::FindWritableAddress(__in const std::string moduleName, __in const std::string sectionName)
 {
-    UINT64 textAddr = Process::GetSectionAddress(NULL, ".text");
-    MEMORY_BASIC_INFORMATION mbi = { 0 };
-    SIZE_T result;
-    UINT64 address = textAddr;
-
-    const int pageSize = 0x1000;
-
-    if (textAddr == NULL)
+    if (moduleName.empty() || sectionName.empty())
     {
-        Logger::logf(Err, "textAddr was NULL @ Detections::IsTextSectionWritable");
         return 0;
     }
 
-    UINT64 max_addr = textAddr + Process::GetTextSectionSize(GetModuleHandle(NULL));
+    HMODULE hMod = GetModuleHandleA(moduleName.c_str());
 
-    while ((result = VirtualQuery((LPCVOID)address, &mbi, sizeof(mbi))) != 0)     //Loop through all pages in .text
+    if (hMod == NULL)
     {
-        if (address >= max_addr)
+        Logger::logfw(Err, L"Failed to get module handle for %s @ Integrity::FindWritableAddress", moduleName.c_str());
+        return 0;
+    }
+
+    const uint64_t sectionAddr = Process::GetSectionAddress(moduleName.c_str(), sectionName.c_str());
+    MEMORY_BASIC_INFORMATION mbi = { 0 };
+    SIZE_T result = 0;
+    uint64_t currentPageAddress = sectionAddr;
+
+    const int pageSize = 0x1000;
+
+    if (sectionAddr == NULL)
+    {
+        Logger::logf(Err, "sectionAddr was NULL @ Detections::FindWritableAddress");
+        return 0;
+    }
+
+    uint64_t max_addr = sectionAddr + Process::GetSectionSize(hMod, sectionName);
+
+    while ((result = VirtualQuery((LPCVOID)currentPageAddress, &mbi, sizeof(mbi))) != 0)     //Loop through all pages in .text
+    {
+        if (currentPageAddress >= max_addr)
             break;
 
         if (mbi.Protect != PAGE_EXECUTE_READ) //check if its not RX protections
         {
-            Logger::logfw(Detection, L"Memory region at address %p is not PAGE_EXECUTE_READ - attacker likely re-re-mapped\n", address);
-            return address;
+            return currentPageAddress;
         }
 
-        address += pageSize;
+        currentPageAddress += pageSize;
     }
 
     return 0;

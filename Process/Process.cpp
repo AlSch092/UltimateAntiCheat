@@ -568,7 +568,7 @@ list<DWORD> Process::GetProcessIdsByName(__in const wstring procName)
     GetSectionAddress - Get the address of a named section of the module with the named `moduleName`
     returns a memory address of the section if found, and 0 if no section is found or an error occurs
 */
-UINT64 Process::GetSectionAddress(__in const  char* moduleName, __in const  char* sectionName)
+UINT64 Process::GetSectionAddress(__in const char* moduleName, __in const  char* sectionName)
 {
     HMODULE hModule = GetModuleHandleA(moduleName);
 
@@ -1069,8 +1069,14 @@ HMODULE Process::GetModuleHandle_Ldr(__in const  wchar_t* moduleName)
     return (HMODULE)NULL;
 }
 
-DWORD Process::GetTextSectionSize(__in const HMODULE hModule)
+DWORD Process::GetSectionSize(__in const HMODULE hModule, __in const std::string section)
 {
+    if (hModule == NULL || section.empty())
+    {
+        Logger::logf(Err, "Invalid parameter @ GetTextSectionSize");
+        return 0;
+    }
+
     PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)hModule;
     if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
     {
@@ -1089,7 +1095,7 @@ DWORD Process::GetTextSectionSize(__in const HMODULE hModule)
 
     for (int i = 0; i < ntHeaders->FileHeader.NumberOfSections; i++)
     {
-        if (strcmp((char*)sectionHeaders[i].Name, ".text") == 0)
+        if (strcmp((char*)sectionHeaders[i].Name, section.c_str()) == 0)
         {
             return sectionHeaders[i].Misc.VirtualSize;
         }
