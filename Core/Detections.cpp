@@ -646,26 +646,81 @@ bool Detections::DoesIATContainHooked()
 
             if (!FoundIATEntryInModule) //iat points to outside loaded module
             {
-#ifdef _LOGGING_ENABLED
                 std::cout << "Hooked IAT detected: " << IATEntry.AssociatedModuleName.c_str() << " at: " << IATEntry.FunctionPtr << std::endl;
-#endif
-
                 isIATHooked = true;
                 break;
             }
         }
         else //error, we shouldnt get here!
         {
-#if _LOGGING_ENABLED
             std::cerr << " Couldn't fetch  module size @ Detections::DoesIATContainHooked" << std::endl;
-#endif
-            return FALSE;
+            continue;
         }
     }
 
     return isIATHooked;
 }
 
+/**
+ * @brief Checks if an IAT is hooked for current module (will soon be expanded to all modules)
+ * @details This routine has O(n^2) execution time, and should go in its own thread or future
+ * @return list of hooked iat entries
+ *
+ * @usage
+ *  std::list<ProcessData::ImportFunction> hookedIATEntries = Integrity::FetchHookedIATEntries();
+ */
+std::list<ProcessData::ImportFunction> Detections::FetchHookedIATEntries()
+{
+    bool isIATHooked = false;
+
+    std::list<ProcessData::ImportFunction> hookedIATEntries;
+
+    auto modules = Process::GetLoadedModules();
+
+    if (modules.size() == 0)
+    {
+        throw std::runtime_error("Module size was 0!");
+    }
+
+    for (auto mod : modules)
+    {
+        std::list<ProcessData::ImportFunction> IATFunctions = Process::GetIATEntries(Utility::ConvertWStringToString(mod.baseName));
+
+        for (const auto& IATEntry : IATFunctions)
+        {
+            DWORD moduleSize = Process::GetModuleSize(IATEntry.Module);
+
+            bool FoundIATEntryInModule = false;
+
+            if (moduleSize != 0)  //some IAT functions in k32 can point to ntdll (forwarding), thus we have to compare IAT to each other whitelisted DLL range
+            {
+                for (auto mod : modules)
+                {
+                    uintptr_t LowAddr = (uintptr_t)mod.dllInfo.lpBaseOfDll;
+                    uintptr_t HighAddr = LowAddr + mod.dllInfo.SizeOfImage;
+
+                    if (IATEntry.FunctionPtr >= LowAddr && IATEntry.FunctionPtr < HighAddr) //each IAT entry needs to be checked thru all loaded ranges
+                    {
+                        FoundIATEntryInModule = true;
+                    }
+                }
+
+                if (!FoundIATEntryInModule) //iat points to outside loaded module
+                {
+                    std::cout << "Hooked IAT detected: " << IATEntry.AssociatedModuleName.c_str() << " at: " << IATEntry.FunctionPtr << std::endl;
+                    hookedIATEntries.push_back(IATEntry);
+                }
+            }
+            else //error, we shouldnt get here!
+            {
+                std::cerr << " Couldn't fetch  module size @ Detections::DoesIATContainHooked" << std::endl;
+                return hookedIATEntries;
+            }
+        }
+    }
+
+    return hookedIATEntries;
+}
 
 /**
  * @brief Finds a writable address in a specific section of a module
