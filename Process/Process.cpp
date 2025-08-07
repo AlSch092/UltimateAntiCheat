@@ -638,46 +638,63 @@ BYTE* Process::GetBytesAtAddress(__in const UINT64 address, __in const  UINT siz
     GetIATEntries -Returns a list of ImportFunction* from the program IAT , for later hook checks
     returns a list of ProcessData::ImportFunction* such that lists can be compared for modifications 
 */
-list<ProcessData::ImportFunction*> Process::GetIATEntries() 
+list<ProcessData::ImportFunction> Process::GetIATEntries(const std::string& module)
 {
-    HMODULE hModule = GetModuleHandleW(NULL);
+    if (module.empty())
+        return {};
+
+    HMODULE hModule = GetModuleHandleA(module.c_str());
 
     if (hModule == NULL)
     {
-        Logger::logf(Err, "Couldn't fetch module handle @ Process::GetIATEntries ");
-        return (list<ProcessData::ImportFunction*>)NULL;
+        std::cerr << "Couldn't fetch module handle @ Process::GetIATEntries " << std::endl;
+        return {};
     }
 
     IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER*)hModule;
 
     if (dosHeader == nullptr)
     {
-        Logger::logf(Err, "Couldn't fetch dosHeader @ Process::GetIATEntries ");
-        return (list<ProcessData::ImportFunction*>)NULL;
+        std::cerr << "Couldn't fetch dosHeader @ Process::GetIATEntries " << std::endl;
+        return {};
     }
 
     IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((BYTE*)hModule + dosHeader->e_lfanew);
     IMAGE_IMPORT_DESCRIPTOR* importDesc = (IMAGE_IMPORT_DESCRIPTOR*)((BYTE*)hModule + ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
 
-    list <ProcessData::ImportFunction*> importList;
+    if (ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size == 0)
+    {
+        std::cerr << "DataDirectory (IMAGE_DIRECTORY_ENTRY_IMPORT) size was 0! " << std::endl;
+        return {};
+    }
 
-    while (importDesc->OriginalFirstThunk != 0) 
-    {    
+    std::list<ProcessData::ImportFunction> importList;
+
+    while (importDesc->OriginalFirstThunk != 0 || importDesc->FirstThunk != 0)
+    {
+        if (!IsBadReadPtr(importDesc, sizeof(IMAGE_IMPORT_DESCRIPTOR)))
+            break;
+
         const char* dllName = (const char*)((BYTE*)hModule + importDesc->Name);
 
-        if (dllName == NULL)
+        if (dllName == nullptr)
             continue;
 
         IMAGE_THUNK_DATA* iat = (IMAGE_THUNK_DATA*)((BYTE*)hModule + importDesc->FirstThunk);
 
-        while (iat->u1.AddressOfData != 0) 
+        if (iat != nullptr)
         {
-            ProcessData::ImportFunction* import = new ProcessData::ImportFunction();
-            import->AssociatedModuleName = dllName;
-            import->Module = GetModuleHandleA(dllName);
-            import->AddressOfData = iat->u1.AddressOfData;         
-            importList.push_back(import);
-            iat++;
+            while (iat->u1.Function != 0)
+            {
+                ProcessData::ImportFunction import;
+                import.AssociatedModuleName = dllName;
+                import.Module = GetModuleHandleA(dllName);
+                import.AddressOfData = (uintptr_t)iat->u1.AddressOfData;
+                import.FunctionPtr = (uintptr_t)iat->u1.Function; //actual IAT pointer
+                import.AddressToFuncPtr = (uintptr_t)&iat->u1.Function;
+                importList.push_back(import);
+                iat++;
+            }
         }
 
         importDesc++;
