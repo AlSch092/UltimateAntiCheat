@@ -39,7 +39,7 @@ namespace ProcessData
 		wstring baseName;
 		wstring name;
 		MODULEINFO dllInfo;
-		HMODULE hModule;
+		HMODULE hModule = 0;
 	};
 
 	struct Section
@@ -105,14 +105,11 @@ public:
 
 	~Process()
 	{
-		for (ProcessData::MODULE_DATA* s : ModuleList)
-			if(s != nullptr)
-			    delete s;
 	}
 
 	bool FillModuleList();
 
-	static list<ProcessData::Section*> GetSections(__in const string module);
+	static list<ProcessData::Section> GetSections(__in const string& module);
 
 #ifdef _M_IX86
 	static _MYPEB* GetPEB() { return (_MYPEB*)__readfsdword(0x30); }
@@ -125,42 +122,36 @@ public:
 	static list<DWORD> GetProcessIdsByName(__in const wstring procName);
 
 	static DWORD GetParentProcessId();
-	static BOOL CheckParentProcess(__in const wstring desiredParent, __in const bool bShouldCheckSignature);
+	static bool CheckParentProcess(__in const wstring desiredParent, __in const bool bShouldCheckSignature);
 
-	wstring GetParentName() const { return this->_ParentProcessName; }
-	uint32_t GetParentId() const { return this->_ParentProcessId; }
+	wstring GetParentName() const noexcept { return this->_ParentProcessName; }
+	uint32_t GetParentId() const noexcept { return this->_ParentProcessId; }
 
-	void SetParentName(__in const wstring parentName) { this->_ParentProcessName = parentName; }
-	void SetParentId(__in const uint32_t id) { this->_ParentProcessId = id; }
+	void SetParentName(__in const wstring parentName) noexcept { if(!parentName.empty()) this->_ParentProcessName = parentName; }
+	void SetParentId(__in const uint32_t id) noexcept { this->_ParentProcessId = id; }
 
 	static bool ChangeModuleName(__in const  wstring szModule, __in const  wstring newName); //these `ChangeXYZ` routines all modify aspects of the PEB
-	static bool ChangeModuleBase(__in const  wchar_t* szModule, __in const  uint64_t moduleBaseAddress);
-	static bool ChangeModulesChecksum(__in const  wchar_t* szModule, __in const DWORD checksum);
-	static bool ChangePEEntryPoint(__in const DWORD newEntry);
-	static bool ChangeImageSize(__in const DWORD newImageSize);
-	static bool ChangeSizeOfCode(__in const DWORD newSizeOfCode);
-	static bool ChangeImageBase(__in const UINT64 newImageBase);
 	static bool ChangeNumberOfSections(__in const string module, __in const DWORD newSectionsCount);
 	
-	static bool ModifyTLSCallbackPtr(__in const UINT64 NewTLSFunction);
-
+	static bool ModifyTLSCallbackPtr(__in const uintptr_t NewTLSFunction);
 
 	static bool HasExportedFunction(__in const string dllName, __in const string functionName);
 
 	static FARPROC _GetProcAddress(__in const PCSTR Module, __in const  LPCSTR lpProcName); //GetProcAddress without winAPI call
 
-	static UINT64 GetSectionAddress(__in const  char* moduleName, __in const  char* sectionName);
+	static uintptr_t GetSectionAddress(__in const char* moduleName, __in const char* sectionName);
 
-	static BYTE* GetBytesAtAddress(__in const UINT64 address, __in const UINT size);
+	static BYTE* GetBytesAtAddress(__in const uintptr_t address, __in const UINT size);
 
 	static DWORD GetModuleSize(__in const HMODULE module);
 
 	static list<ProcessData::ImportFunction> GetIATEntries(const std::string& module);
 
-	static bool IsReturnAddressInModule(__in const UINT64 RetAddr, __in const  wchar_t* module);
+	static bool IsReturnAddressInModule(__in const uintptr_t RetAddr, __in const  wchar_t* module);
 
 	static std::vector<ProcessData::MODULE_DATA> GetLoadedModules();
-	static ProcessData::MODULE_DATA* GetModuleInfo(__in const  wchar_t* name);
+
+	static ProcessData::MODULE_DATA GetModuleInfo(__in const  wchar_t* name);
 	
 	static HMODULE GetModuleHandle_Ldr(__in const  wchar_t* moduleName);
 
@@ -190,9 +181,9 @@ private:
 	wstring _ParentProcessName;
 	uint32_t _ParentProcessId = 0;
 
-	list<ProcessData::Section*> MainModuleSections;
+	list<ProcessData::Section> MainModuleSections;
 
-	list<ProcessData::MODULE_DATA*> ModuleList; //todo: make routine to fill this member
+	list<ProcessData::MODULE_DATA> ModuleList; //todo: make routine to fill this member
 
 	static int NumSections;
 	static wstring ExecutableModuleNameW;

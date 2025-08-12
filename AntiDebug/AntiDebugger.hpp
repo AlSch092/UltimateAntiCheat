@@ -74,18 +74,21 @@ namespace Debugger
         {
             std::lock_guard<std::mutex> lock(this->DetectionRoutineMutex);
             
-            for (auto& func : this->DetectionFunctionList)
+            for (const auto& func : this->DetectionFunctionList)
             {
-                DetectionFlags DetectedDebugger = NONE;
+                DetectionFlags DetectedMethod = NONE;
 
-                if (DetectedDebugger = func()) //call the debugger detection method
+                if (DetectedMethod = func()) //call the debugger detection method
                 {
-                    this->AddFlagged(DetectedDebugger);
-                    
-                    if(this->EvidenceManager != nullptr)
-                        this->EvidenceManager->AddFlagged(DetectionFlags::DEBUG_DEBUG_PORT);
+                    if (DetectedMethod > EXECUTION_ERROR)
+                    {
+                        this->AddFlagged(DetectedMethod);
 
-                    Logger::logf(Info, "Debugger flag detected: %d", DetectedDebugger); //optionally, iterate over DetectedMethods list if you want a more granular logging 
+                        if (this->EvidenceManager != nullptr)
+                            this->EvidenceManager->AddFlagged(DetectedMethod);
+
+                        Logger::logf(Info, "Debugger flag detected: %d", DetectedMethod); //optionally, iterate over DetectedMethods list if you want a more granular logging 
+                    }    
                 }
             }
         }

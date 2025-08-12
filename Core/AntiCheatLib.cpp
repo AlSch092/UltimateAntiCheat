@@ -220,6 +220,20 @@ LONG WINAPI g_ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo)  //handler tha
 }
 
 /**
+ * @brief TLS callback helper to end unknown threads without patching over their start address or calling ExitThread
+ *
+ * This function is executed by writing over the start address of new unknown threads in the tls callback
+
+ * @return None
+ *
+ * @usage
+ *  N/A
+ */
+void ExitThreadGracefully()
+{
+}
+
+/**
  * @brief TLS callback triggers on process + thread attachment & detachment
  * 
  * @details Can be used to prevent rogue threads from being created, or to initialize certain anti-cheat features
@@ -289,48 +303,32 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
         }
 #endif
 
-        if (SupressingNewThreads)
+        if (WinVersion == Windows11) //Windows 11 no longer has the thread's start address on the its stack, bummer. don't have a W11 machine either at home
+            return;
+
+        uintptr_t stackThreadStartSlot = (uintptr_t)_AddressOfReturnAddress() + ThreadExecutionAddressStackOffset;
+        uintptr_t ThreadExecutionAddress = *(uintptr_t*)((uintptr_t)_AddressOfReturnAddress() + ThreadExecutionAddressStackOffset); //check down the stack for the thread execution address, compare it to good module range, and if not in range then we've detected a rogue thread
+
+        if (ThreadExecutionAddress == 0) //this generally should never be 0, but we'll add a check for good measure incase the offset changes on different W10 builds
+            return;
+
+        auto modules = Process::GetLoadedModules();
+
+        for (const auto& module : modules)
         {
-            if (WinVersion == Windows11) //Windows 11 no longer has the thread's start address on the its stack, bummer. don't have a W11 machine either at home
-                return;
+            uintptr_t LowAddr = (uintptr_t)module.dllInfo.lpBaseOfDll;
+            uintptr_t HighAddr = (uintptr_t)module.dllInfo.lpBaseOfDll + module.dllInfo.SizeOfImage;
 
-            UINT64 ThreadExecutionAddress = *(UINT64*)((UINT64)_AddressOfReturnAddress() + ThreadExecutionAddressStackOffset); //check down the stack for the thread execution address, compare it to good module range, and if not in range then we've detected a rogue thread
-
-            if (ThreadExecutionAddress == 0) //this generally should never be 0, but we'll add a check for good measure incase the offset changes on different W10 builds
-                return;
-
-            auto modules = Process::GetLoadedModules();
-
-            for (auto module : modules)
+            if (ThreadExecutionAddress > LowAddr && ThreadExecutionAddress < HighAddr) //a properly loaded DLL is making the thread, so allow it to execute
             {
-                UINT64 LowAddr = (UINT64)module.dllInfo.lpBaseOfDll;
-                UINT64 HighAddr = (UINT64)module.dllInfo.lpBaseOfDll + module.dllInfo.SizeOfImage;
-
-                if (ThreadExecutionAddress > LowAddr && ThreadExecutionAddress < HighAddr) //a properly loaded DLL is making the thread, so allow it to execute
-                {
-                    //if any unsigned .dll is loaded, it will be caught in the DLL load callback/notifications, so we shouldnt need to cert check in this routine (this will cause slowdowns in execution, also cert checking inside the TLS callback doesn't seem to work properly here)
-                    return; //any manually mapped modules' threads will be stopped since they arent using the loader and thus won't be in the loaded modules list
-                }
-            }
-
-            Logger::logf(Detection, " Stopping unknown thread from being created  @ TLSCallback: thread id %d", GetCurrentThreadId());
-            Logger::logf(Detection, " Thread id %d wants to execute function @ %llX. Patching over this address.", GetCurrentThreadId(), ThreadExecutionAddress);
-
-            DWORD dwOldProt = 0;
-
-            if (!VirtualProtect((LPVOID)ThreadExecutionAddress, sizeof(byte), PAGE_EXECUTE_READWRITE, &dwOldProt)) //make thread start address writable
-            {
-                Logger::logf(Warning, "Failed to call VirtualProtect on ThreadStart address @ TLSCallback: %llX", ThreadExecutionAddress);
-            }
-            else
-            {
-                if (ThreadExecutionAddress != 0)
-                {
-                    *(BYTE*)ThreadExecutionAddress = 0xC3; //write over any functions which are scheduled to execute next by this thread and not inside our whitelisted address range
-                }
+                //if any unsigned .dll is loaded, it will be caught in the DLL load callback/notifications, so we shouldnt need to cert check in this routine (this will cause slowdowns in execution, also cert checking inside the TLS callback doesn't seem to work properly here)
+                return; //any manually mapped modules' threads will be stopped since they arent using the loader and thus won't be in the loaded modules list
             }
         }
 
+        Logger::logf(Detection, " Stopping unknown thread from being created  @ TLSCallback: thread id %d", GetCurrentThreadId());
+        *(uintptr_t*)stackThreadStartSlot = (uintptr_t)&ExitThreadGracefully;
+       
     }break;
 
     case DLL_THREAD_DETACH:

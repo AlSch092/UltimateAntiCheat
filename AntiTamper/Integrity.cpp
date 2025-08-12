@@ -9,7 +9,7 @@
  * @param `hashList` pre-existing hash list to compare against
  * @return true/false if hash list matches `hashList`
  */
-bool Integrity::Check(__in uint64_t Address, __in int nBytes, __in vector<uint64_t> hashList)
+bool Integrity::Check(__in const uintptr_t Address, __in const int nBytes, __in const vector<uint64_t>& hashList)
 {
 	bool hashesMatch = true;
 
@@ -33,7 +33,7 @@ bool Integrity::Check(__in uint64_t Address, __in int nBytes, __in vector<uint64
  * @param `nBytes`  number of bytes to check from `Address`
  * @return vector of uint64_t hashes representing the memory from `Address` to `Address + nBytes`
  */
-vector<uint64_t> Integrity::GetMemoryHash(__in uint64_t Address, __in int nBytes)
+vector<uint64_t> Integrity::GetMemoryHash(__in const uintptr_t Address, __in const int nBytes)
 {
 	std::vector<uint64_t> hashList;
 
@@ -46,13 +46,13 @@ vector<uint64_t> Integrity::GetMemoryHash(__in uint64_t Address, __in int nBytes
 
 	SHA256 sha;
 	uint8_t* digest = 0;
-	UINT64 digestCache = 0;
+	unsigned long long digestCache = 0;
 
 	for (int i = 0; i < nBytes; i = i + 32)
 	{
 		sha.update(&arr[i], 32);
 		digest = sha.digest();
-		digestCache += *(UINT64*)digest + i;
+		digestCache += *(unsigned long long*)digest + i;
 		hashList.push_back(digestCache);
 		delete digest;
 	}
@@ -93,8 +93,14 @@ uint64_t Integrity::GetStackedHash(__in const uint64_t Address, __in const int n
  * @param `section`  module section name (.text, .rdata, etc)
  * @return void
  */
-void Integrity::SetSectionHashList(__out vector<uint64_t> hList, __in const string section)
+void Integrity::SetSectionHashList(__out vector<uint64_t> hList, __in const string& section)
 {
+	if (section.empty())
+	{
+		Logger::logfw(Err, L"section parameter was empty @ Integrity::SetSectionHashList");
+		return;
+	}
+
 	this->SectionHashes[section].assign(hList.begin(), hList.end());
 }
 
@@ -127,7 +133,7 @@ bool Integrity::IsUnknownModulePresent()
 		{
 			if (Authenticode::HasSignature(it->name.c_str(), TRUE)) //if file is signed and not yet on our whitelist, we can add it
 			{
-				ProcessData::MODULE_DATA mod = *Process::GetModuleInfo(it->baseName.c_str());
+				ProcessData::MODULE_DATA mod = Process::GetModuleInfo(it->baseName.c_str());
 				modulesToAdd.push_back(mod);		
 			}
 			else
@@ -153,27 +159,34 @@ bool Integrity::IsUnknownModulePresent()
  * @return ModuleHashData* object containing the module name and a vector of hashes for the specified section
  * @details You must free the returned value after usage, or a memory leak will occur
  */
-ModuleHashData* Integrity::GetModuleHash(__in const wchar_t* moduleName, __in const char* sectionName)
+ModuleHashData Integrity::GetModuleHash(__in const wchar_t* moduleName, __in const char* sectionName)
 {
-	string modName = Utility::ConvertWStringToString(moduleName);
-	list<ProcessData::Section*> sections = Process::GetSections(modName);
-
-	for (auto s : sections)
+	if (moduleName == nullptr || sectionName == nullptr)
 	{
-		if (s->name == sectionName)
-		{
-			uint64_t sec_addr = (uint64_t)(s->address) + (uint64_t)GetModuleHandleA(modName.c_str());
-			vector<uint64_t> hashes = GetMemoryHash(sec_addr, s->size); //make hashes of .text of module
+		Logger::logfw(Err, L"One or more arguments were nullptr @ Integrity::GetModuleHash");
+		return {};
+	}
 
-			ModuleHashData* moduleHashData = new ModuleHashData();
-			moduleHashData->Name = moduleName;
-			moduleHashData->Hashes = hashes;
+	string modName = Utility::ConvertWStringToString(moduleName);
+	list<ProcessData::Section> sections = Process::GetSections(modName);
+
+	for (const auto& s : sections)
+	{
+		if (s.name == sectionName)
+		{
+			uintptr_t sec_addr = (uintptr_t)(s.address) + (uintptr_t)GetModuleHandleA(modName.c_str());
+			vector<uint64_t> hashes = GetMemoryHash(sec_addr, s.size); //make hashes of .text of module
+
+			ModuleHashData moduleHashData;
+			moduleHashData.Name = moduleName;
+			moduleHashData.Hashes = hashes;
+			moduleHashData.Section = Utility::ConvertStringToWString(sectionName);
 
 			return moduleHashData;
 		}
 	}
 
-	return nullptr;
+	return {};
 }
 
 /**
@@ -181,11 +194,11 @@ ModuleHashData* Integrity::GetModuleHash(__in const wchar_t* moduleName, __in co
  * @return vector of ModuleHashData* object containing the module names and a vector of hashes for the module's .text section
  * @details You must free the returned values in the vector after usage, or  memory leaks will occur
  */
-vector<ModuleHashData*> Integrity::GetModuleHashes()
+vector<ModuleHashData> Integrity::GetModuleHashes()
 {
-	vector<ModuleHashData*> moduleHashes;
+	vector<ModuleHashData> moduleHashes;
 
-	for (auto module : WhitelistedModules) //traverse whitelisted modules
+	for (const auto& module : WhitelistedModules) //traverse whitelisted modules
 	{
 		if (module.dllInfo.lpBaseOfDll == GetModuleHandleA(NULL)) //skip main executable module, we're tracking that with another member. they could probably be merged into one list to optimize
 			continue;
@@ -204,28 +217,32 @@ vector<ModuleHashData*> Integrity::GetModuleHashes()
  */
 bool Integrity::IsModuleModified(__in const wchar_t* moduleName)
 {
+	if (moduleName == nullptr)
+	{
+		Logger::logfw(Err, L"`moduleName` argument was nullptr @ Integrity::IsModuleModified");
+		return false;
+	}
+
 	bool foundModified = false;
 
-	ModuleHashData* currentModuleHash = GetModuleHash(moduleName, ".text"); //todo: add in .rdata, etc 
+	ModuleHashData currentModuleHash = GetModuleHash(moduleName, ".text"); //todo: add in .rdata, etc 
 
-	for (ModuleHashData* modHash : this->ModuleHashes)
+	for (const auto& modHash : this->ModuleHashes)
 	{
-		if (modHash->Name == currentModuleHash->Name) //moduleName matches module in list
+		if (modHash.Name == currentModuleHash.Name) //moduleName matches module in list
 		{
-			if (modHash->Hashes.size() != currentModuleHash->Hashes.size()) //size check
+			if (modHash.Hashes.size() != currentModuleHash.Hashes.size()) //size check
 			{
-				delete currentModuleHash; //return true if sizes dont match, attacker may have increased memory size at end of section to avoid detection (or they re-wrote entire dll's memory)
-				return true;
+				return true; //hash list size mismatch may indicate section had bytes added to it or other changes
 			}
 
-			uint64_t* arr1 = modHash->Hashes.data();
-			uint64_t* arr2 = currentModuleHash->Hashes.data();
+			const uint64_t* arr1 = modHash.Hashes.data();
+			const uint64_t* arr2 = currentModuleHash.Hashes.data();
 
-			size_t size = modHash->Hashes.size();
+			size_t size = modHash.Hashes.size();
 
 			if (arr1 == nullptr || arr2 == nullptr)
 			{
-				delete currentModuleHash;
 				throw std::runtime_error("Null memory dereference - abnormal behaviour detected in Integrity::IsModuleModified");
 			}
 
@@ -243,31 +260,30 @@ bool Integrity::IsModuleModified(__in const wchar_t* moduleName)
 		}
 	}
 
-	delete currentModuleHash;
 	return foundModified;
 }
 
 /*
 	AddModuleHash - fetches hash list for `moduleName` and adds to `moduleHashList`
 */
-void Integrity::AddModuleHash(__in vector<ModuleHashData*>& moduleHashList, __in const wchar_t* moduleName, __in const char* sectionName)
+void Integrity::AddModuleHash(__inout vector<ModuleHashData>& moduleHashList, __in const wchar_t* moduleName, __in const char* sectionName)
 {
-	if (moduleName == nullptr)
+	if (moduleName == nullptr || sectionName == nullptr)
 		return;
 
 	string modName = Utility::ConvertWStringToString(moduleName);
-	list<ProcessData::Section*> sections = Process::GetSections(modName);
+	list<ProcessData::Section> sections = Process::GetSections(modName);
 
-	for (auto s : sections)
+	for (const auto& s : sections)
 	{
-		if (s->name == string(sectionName))
+		if (s.name == string(sectionName))
 		{
-			uint64_t sec_addr = (uint64_t)(s->address) + (uint64_t)GetModuleHandleA(modName.c_str());
-			vector<uint64_t> hashes = GetMemoryHash(sec_addr, s->size); //get hashes of .text of module
+			uintptr_t sec_addr = (uintptr_t)(s.address) + (uintptr_t)GetModuleHandleA(modName.c_str());
+			vector<uint64_t> hashes = GetMemoryHash(sec_addr, s.size); //get hashes of .text of module
 
-			ModuleHashData* moduleHashData = new ModuleHashData();
-			moduleHashData->Name = moduleName;
-			moduleHashData->Hashes = hashes;
+			ModuleHashData moduleHashData;
+			moduleHashData.Name = moduleName;
+			moduleHashData.Hashes = hashes;
 
 			moduleHashList.push_back(moduleHashData);
 			break;
@@ -348,11 +364,11 @@ bool Integrity::IsPEHeader(__in unsigned char* pMemory)
 	IsAddressInModule - check if `address` falls within a known module (element of `modules`)
 	returns `true` if `address` falls within a known module (element of `modules`)
 */
-bool Integrity::IsAddressInModule(const std::vector<ProcessData::MODULE_DATA>& modules, uintptr_t address)
+bool Integrity::IsAddressInModule(__in const std::vector<ProcessData::MODULE_DATA>& modules, __in const uintptr_t address)
 {
 	for (const auto& module : modules)
 	{
-		if (address >= (DWORD_PTR)module.hModule && address < ((DWORD_PTR)module.hModule + module.dllInfo.SizeOfImage))
+		if (address >= (uintptr_t)module.hModule && address < ((uintptr_t)module.hModule + module.dllInfo.SizeOfImage))
 		{
 			return true; // Address is within a known module
 		}
@@ -367,8 +383,14 @@ bool Integrity::IsAddressInModule(const std::vector<ProcessData::MODULE_DATA>& m
  * @return vector of uint64_t hashes representing the .text section of the file
  * @details This function reads the specified section from a PE file on disk and computes its hash.
  */
-vector<uint64_t> Integrity::GetSectionHashFromDisc(wstring path, const char* sectionName)
+vector<uint64_t> Integrity::GetSectionHashFromDisc(__in const std::wstring& path, __in const char* sectionName)
 {
+	if (path.empty() || sectionName == nullptr)
+	{
+		Logger::logfw(Detection, L"One or more arguments were null @ Integrity::GetSectionHashFromDisc");
+		return {};
+	}
+
 	vector<uint8_t> sectionBytes;
 
 	std::ifstream file(path, std::ios::binary);

@@ -129,7 +129,7 @@ int main(int argc, char** argv)
     cout << "\t Enable logging :\t\t" << boolalpha << bEnableLogging << endl;
     cout << "\t Allowed parent processes: \t\t" << endl;
 
-    for (auto parent: allowedParents) 
+    for (const auto& parent: allowedParents) 
     {
         std::wcout << parent << " ";
     }
@@ -307,7 +307,7 @@ void ExitThreadGracefully()
  */
 void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 {
-    const UINT ThreadExecutionAddressStackOffset = 0x378; //** this might change on different version of window, Windows 10 is all I have access to currently
+    const uintptr_t ThreadExecutionAddressStackOffset = 0x378; //** this might change on different version of window, Windows 10 is all I have access to currently
 
     static bool FirstProcessAttach = true;
     static bool SetExceptionHandler = false;
@@ -375,7 +375,7 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 
                 auto modules = Process::GetLoadedModules();
 
-                for (auto module : modules)
+                for (const auto& module : modules)
                 {
                     uintptr_t LowAddr = (uintptr_t)module.dllInfo.lpBaseOfDll;
                     uintptr_t HighAddr = (uintptr_t)module.dllInfo.lpBaseOfDll + module.dllInfo.SizeOfImage;

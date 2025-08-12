@@ -20,12 +20,6 @@ Detections::Detections(Settings* s, EvidenceLocker* evidence, shared_ptr<NetClie
 
         Process::SetNumSections(sections.size());
 
-        for (ProcessData::Section* section : sections)
-        {
-            if (section != nullptr)
-                delete section;
-        }
-
         _Services = make_unique<Services>();
 
         integrityChecker = make_shared<Integrity>(ModuleList);
@@ -174,6 +168,12 @@ void Detections::CheckDLLSignature()
 /*
     Detections::Monitor(LPVOID thisPtr)
      Routine which monitors aspects of the process for fragments of cheating, loops continuously until the thread is signalled to shut down
+
+     * This routine is a good example of where inheritance -should- be used! A monolithic loop with a ton of detections all in the same class is not great.
+     * The ideal design is to make a detector interface class, and each type of detection gets its own derived class
+     * Detections are then added to a list with their types being determined at runtime, and each one run in a simple range-based for
+     * Its also best for this to happen from a modular library - make the detections its own library that can be easily dropped into new projects
+     * (I have a detections library finished, but not sure if I'll make it open source yet)
 */
 void Detections::Monitor(__in LPVOID thisPtr)
 {
@@ -187,13 +187,7 @@ void Detections::Monitor(__in LPVOID thisPtr)
 
     Detections* Monitor = reinterpret_cast<Detections*>(thisPtr);
 
-    if (Monitor == nullptr)
-    {
-        Logger::logf(Err, "Monitor Ptr was NULL @ Detections::Monitor. Aborting execution!");
-        return;
-    }
-
-    list<ProcessData::Section*> sections = Process::GetSections(_MAIN_MODULE_NAME);
+    list<ProcessData::Section> sections = Process::GetSections(_MAIN_MODULE_NAME);
 
     if (sections.size() == 0)
     {
@@ -201,7 +195,7 @@ void Detections::Monitor(__in LPVOID thisPtr)
         return;
     }
 
-    UINT64 ModuleAddr = (UINT64)GetModuleHandleA(_MAIN_MODULE_NAME);
+    uintptr_t ModuleAddr = (uintptr_t)GetModuleHandleA(_MAIN_MODULE_NAME);
 
     if (ModuleAddr == 0)
     {
@@ -266,13 +260,13 @@ void Detections::Monitor(__in LPVOID thisPtr)
                 Monitor->EvidenceManager->AddFlagged(DetectionFlags::CODE_INTEGRITY);
             }
 
-            for (auto section : sections)
+            for (const auto& section : sections)
             {
-                if (section->name == ".text" || section->name == ".rdata")
+                if (section.name == ".text" || section.name == ".rdata")
                 {
-                    if (Monitor->IsSectionHashUnmatching(ModuleAddr + section->address, section->size, section->name)) //compare hashes of .text for modifications
+                    if (Monitor->IsSectionHashUnmatching(ModuleAddr + section.address, section.size, section.name)) //compare hashes of .text for modifications
                     {
-                        Logger::logf(Detection, "Found modified %s section (or you're debugging with software breakpoints)!", (section->name == ".text" ? ".text" : ".rdata"));
+                        Logger::logf(Detection, "Found modified %s section (or you're debugging with software breakpoints)!", (section.name == ".text" ? ".text" : ".rdata"));
                         Monitor->EvidenceManager->AddFlagged(DetectionFlags::CODE_INTEGRITY);
                     }
                 }
@@ -291,11 +285,11 @@ void Detections::Monitor(__in LPVOID thisPtr)
             Monitor->EvidenceManager->AddFlagged(DetectionFlags::CODE_INTEGRITY);
         }
 
-        vector<uint64_t> mappedRegions = Monitor->DetectManualMapping();
+        vector<uintptr_t> mappedRegions = Monitor->DetectManualMapping();
 
         if (mappedRegions.size() > 0)
         {
-            for (uint64_t mappedRegionAddress : mappedRegions)
+            for (const uintptr_t mappedRegionAddress : mappedRegions)
             {
                 Logger::logf(Detection, "Found potentially manually mapped region at: %llX", mappedRegionAddress);
                 Monitor->EvidenceManager->AddFlagged(DetectionFlags::MANUAL_MAPPING, std::to_string(mappedRegionAddress), GetCurrentProcessId());
@@ -308,7 +302,7 @@ void Detections::Monitor(__in LPVOID thisPtr)
 
             if (Monitor->GetUnsignedLoadedDriversList().size() > 0) //found one or more unsigned, non-whitelisted drivers loaded
             {
-                for (wstring driver : Monitor->GetUnsignedLoadedDriversList())
+                for (const auto& driver : Monitor->GetUnsignedLoadedDriversList())
                 {
                     Logger::logfw(Warning, L"Unsigned driver was loaded: %s", driver.c_str());
                 }
@@ -435,6 +429,9 @@ bool Detections::FetchBlacklistedBytePatterns(__in const char* url)
 /*
 SetSectionHash sets the member variable `_TextSectionHashes` or `_RDataSectionHashes` via SetSectionHashList() call after finding the `sectionName` named section (.text in our case)
  Returns a list<Section*>  which we can use in later hashing calls to compare sets of these hashes and detect memory tampering within the section
+
+ * The integrity checking code in this project should be replaced with using UltimateDRM.lib, as it has a much better version in a compact library
+ * It also does integrity checking for every non-writable section in all loaded modules, which is way better than here
 */
 bool Detections::SetSectionHash(__in const char* moduleName, __in const char* sectionName)
 {
@@ -444,7 +441,7 @@ bool Detections::SetSectionHash(__in const char* moduleName, __in const char* se
         return false;
     }
 
-    if (GetIntegrityChecker() == nullptr)
+    if (this->GetIntegrityChecker().get() == nullptr)
     {
 		Logger::logf(Err, "IntegrityChecker was nullptr @ SetSectionHash");
 		return false;
@@ -452,7 +449,7 @@ bool Detections::SetSectionHash(__in const char* moduleName, __in const char* se
 
     bool funcFailed = false;
 
-    UINT64 ModuleAddr = (UINT64)GetModuleHandleA(moduleName);
+    uintptr_t ModuleAddr = (uintptr_t)GetModuleHandleA(moduleName);
 
     if (ModuleAddr == 0)
     {
@@ -460,23 +457,19 @@ bool Detections::SetSectionHash(__in const char* moduleName, __in const char* se
         return false;
     }
 
-    list<ProcessData::Section*> sections = Process::GetSections(moduleName);
+    list<ProcessData::Section> sections = Process::GetSections(moduleName);
     
     if (sections.size() == 0)
     {
         Logger::logf(Err, "sections.size() of section %s was 0 @ SetSectionHash", sectionName);
-        funcFailed = true;
-        goto cleanup;
+        return false;
     }
 
-    for (auto section : sections) 
+    for (const auto& section : sections) 
     {
-        if (section == nullptr)
-            continue;
-
-		if (section->name == sectionName)
+		if (section.name == sectionName)
         {
-            vector<uint64_t> hashes = GetIntegrityChecker()->GetMemoryHash((uint64_t)section->address + ModuleAddr, section->size);
+            vector<uintptr_t> hashes = GetIntegrityChecker()->GetMemoryHash((uintptr_t)section.address + ModuleAddr, section.size);
 
             if (hashes.size() > 0)
             {
@@ -487,16 +480,9 @@ bool Detections::SetSectionHash(__in const char* moduleName, __in const char* se
             {
                 Logger::logf(Err, "hashes.size() was 0 @ SetSectionHash", sectionName);
                 funcFailed = true;
-                goto cleanup;
+                break;
             }
         }
-    }
-
-cleanup:
-    for (auto section : sections)
-    {
-        if (section != nullptr)
-            delete section;
     }
 
     return !funcFailed;
@@ -508,7 +494,7 @@ cleanup:
 */
 bool Detections::IsSectionHashUnmatching(__in const UINT64 cachedAddress, __in const DWORD cachedSize, __in const string section)
 {
-    if (cachedAddress == 0 || cachedSize == 0)
+    if (cachedAddress == 0 || cachedSize == 0 || section.empty())
     {
         Logger::logf(Err, "Parameters were 0 @ Detections::IsSectionHashUnmatching");
         return false;
@@ -546,7 +532,7 @@ bool Detections::IsBlacklistedProcessRunning() const
 
     do 
     {
-        for (wstring blacklisted : BlacklistedProcesses)
+        for (const auto& blacklisted : BlacklistedProcesses)
         {
             if (Utility::wcscmp_insensitive(blacklisted.c_str(), pe32.szExeFile))
             {
@@ -616,16 +602,17 @@ bool Detections::DoesFunctionAppearHooked(__in const char* moduleName, __in cons
 bool Detections::DoesIATContainHooked()
 {
     std::list<ProcessData::ImportFunction> IATFunctions = Process::GetIATEntries(Utility::ConvertWStringToString(Process::GetProcessName(GetCurrentProcessId()))); //current module
+    
     bool isIATHooked = false;
 
     auto modules = Process::GetLoadedModules();
 
-    if (modules.size() == 0)
+    if (modules.empty())
     {
-        throw std::runtime_error("Module size was 0!");
+        throw std::runtime_error("Module list size was 0 @ Detections::DoesIATContainHooked");
     }
 
-    for (ProcessData::ImportFunction IATEntry : IATFunctions)
+    for (const auto& IATEntry : IATFunctions)
     {
         DWORD moduleSize = Process::GetModuleSize(IATEntry.Module);
 
@@ -633,7 +620,7 @@ bool Detections::DoesIATContainHooked()
 
         if (moduleSize != 0)  //some IAT functions in k32 can point to ntdll (forwarding), thus we have to compare IAT to each other whitelisted DLL range
         {
-            for (auto mod : modules)
+            for (const auto& mod : modules)
             {
                 uintptr_t LowAddr = (uintptr_t)mod.dllInfo.lpBaseOfDll;
                 uintptr_t HighAddr = LowAddr + mod.dllInfo.SizeOfImage;
@@ -641,19 +628,19 @@ bool Detections::DoesIATContainHooked()
                 if (IATEntry.FunctionPtr >= LowAddr && IATEntry.FunctionPtr < HighAddr) //each IAT entry needs to be checked thru all loaded ranges
                 {
                     FoundIATEntryInModule = true;
+                    break;
                 }
             }
 
-            if (!FoundIATEntryInModule) //iat points to outside loaded module
+            if (!FoundIATEntryInModule)
             {
-                std::cout << "Hooked IAT detected: " << IATEntry.AssociatedModuleName.c_str() << " at: " << IATEntry.FunctionPtr << std::endl;
-                isIATHooked = true;
-                break;
+                Logger::logf(Detection, "Hooked IAT detected: %s at %llX", IATEntry.AssociatedModuleName.c_str(), IATEntry.FunctionPtr);
+                isIATHooked = true; //don't break out of loop to find other possibly hooked routines
             }
         }
-        else //error, we shouldnt get here!
+        else
         {
-            std::cerr << " Couldn't fetch  module size @ Detections::DoesIATContainHooked" << std::endl;
+            Logger::logf(Err, " Couldn't fetch  module size @ Detections::DoesIATContainHooked");
             continue;
         }
     }
@@ -682,40 +669,40 @@ std::list<ProcessData::ImportFunction> Detections::FetchHookedIATEntries()
         throw std::runtime_error("Module size was 0!");
     }
 
-    for (auto mod : modules)
-    {
+    for (const auto& mod : modules) // check all IAT funcs for all modules -> Expensive routine, O(n^2) execution time or worse
+    {                              
         std::list<ProcessData::ImportFunction> IATFunctions = Process::GetIATEntries(Utility::ConvertWStringToString(mod.baseName));
 
         for (const auto& IATEntry : IATFunctions)
         {
             DWORD moduleSize = Process::GetModuleSize(IATEntry.Module);
 
+            if (moduleSize == 0)
+            {
+                Logger::logf(Warning, " Couldn't fetch  module size @ Detections::FetchHookedIATEntries");
+                continue;
+            }
+                
             bool FoundIATEntryInModule = false;
-
-            if (moduleSize != 0)  //some IAT functions in k32 can point to ntdll (forwarding), thus we have to compare IAT to each other whitelisted DLL range
+           
+            //some IAT functions in k32 can point to ntdll (forwarding), thus we have to compare IAT to each other whitelisted DLL range
+            for (const auto& mod : modules)
             {
-                for (auto mod : modules)
-                {
-                    uintptr_t LowAddr = (uintptr_t)mod.dllInfo.lpBaseOfDll;
-                    uintptr_t HighAddr = LowAddr + mod.dllInfo.SizeOfImage;
+                uintptr_t LowAddr = (uintptr_t)mod.dllInfo.lpBaseOfDll;
+                uintptr_t HighAddr = LowAddr + mod.dllInfo.SizeOfImage;
 
-                    if (IATEntry.FunctionPtr >= LowAddr && IATEntry.FunctionPtr < HighAddr) //each IAT entry needs to be checked thru all loaded ranges
-                    {
-                        FoundIATEntryInModule = true;
-                    }
-                }
-
-                if (!FoundIATEntryInModule) //iat points to outside loaded module
+                if (IATEntry.FunctionPtr >= LowAddr && IATEntry.FunctionPtr < HighAddr) //each IAT entry needs to be checked thru all loaded ranges
                 {
-                    std::cout << "Hooked IAT detected: " << IATEntry.AssociatedModuleName.c_str() << " at: " << IATEntry.FunctionPtr << std::endl;
-                    hookedIATEntries.push_back(IATEntry);
+                    FoundIATEntryInModule = true;
+                    break;
                 }
             }
-            else //error, we shouldnt get here!
+
+            if (!FoundIATEntryInModule) //iat points to outside loaded module
             {
-                std::cerr << " Couldn't fetch  module size @ Detections::DoesIATContainHooked" << std::endl;
-                return hookedIATEntries;
-            }
+                Logger::logf(Detection, "Hooked IAT detected: %s at %llX", IATEntry.AssociatedModuleName.c_str(), IATEntry.FunctionPtr);
+                hookedIATEntries.push_back(IATEntry);
+            }      
         }
     }
 
@@ -737,7 +724,7 @@ std::list<ProcessData::ImportFunction> Detections::FetchHookedIATEntries()
  * @usage
  * uint64_t writableAddress = Integrity::FindWritableAddress("myModule.dll", ".rdata");
  */
-uint64_t Detections::FindWritableAddress(__in const std::string moduleName, __in const std::string sectionName)
+uint64_t Detections::FindWritableAddress(__in const std::string& moduleName, __in const std::string& sectionName)
 {
     if (moduleName.empty() || sectionName.empty())
     {
@@ -752,10 +739,12 @@ uint64_t Detections::FindWritableAddress(__in const std::string moduleName, __in
         return 0;
     }
 
-    const uint64_t sectionAddr = Process::GetSectionAddress(moduleName.c_str(), sectionName.c_str());
+    const uintptr_t sectionAddr = Process::GetSectionAddress(moduleName.c_str(), sectionName.c_str());
+    
     MEMORY_BASIC_INFORMATION mbi = { 0 };
     SIZE_T result = 0;
-    uint64_t currentPageAddress = sectionAddr;
+    
+    uintptr_t currentPageAddress = sectionAddr;
 
     const int pageSize = 0x1000;
 
@@ -765,7 +754,7 @@ uint64_t Detections::FindWritableAddress(__in const std::string moduleName, __in
         return 0;
     }
 
-    uint64_t max_addr = sectionAddr + Process::GetSectionSize(hMod, sectionName);
+    uintptr_t max_addr = sectionAddr + Process::GetSectionSize(hMod, sectionName);
 
     while ((result = VirtualQuery((LPCVOID)currentPageAddress, &mbi, sizeof(mbi))) != 0)     //Loop through all pages in .text
     {
@@ -792,7 +781,7 @@ bool Detections::CheckOpenHandles()
     bool foundHandle = false;
     vector<Handles::_SYSTEM_HANDLE> handles = Handles::DetectOpenHandlesToProcess();
 
-    for (auto& handle : handles)
+    for (const auto& handle : handles)
     {
         if (Handles::DoesProcessHaveOpenHandleToUs(handle.ProcessId, handles))
         {
@@ -833,48 +822,23 @@ bool Detections::IsBlacklistedWindowPresent()
         {
             char windowTitle[256]{ 0 };
             char className[256]{ 0 };
-            const int xorKey1 = 0x44;
-            const int xorKey2 = 0x47;
 
             Detections* Monitor = reinterpret_cast<Detections*>(lParam); //optionally, make blacklisted xor'd strings into a list in Detections class
 
-            unsigned char CheatEngine[] =  //"Cheat Engine"
-            { 
-                'C' ^ xorKey1, 'h' ^ xorKey1, 'e' ^ xorKey1, 'a' ^ xorKey1, 't' ^ xorKey1, ' ' ^ xorKey1,
-                'E' ^ xorKey1, 'n' ^ xorKey1, 'g' ^ xorKey1, 'i' ^ xorKey1, 'n' ^ xorKey1, 'e' ^ xorKey1
-            };
-
-            unsigned char LuaScript[] = // //"Lua script:"
-            { 
-                'L' ^ xorKey2, 'u' ^ xorKey2, 'a' ^ xorKey2, ' ' ^ xorKey2,
-                's' ^ xorKey2, 'c' ^ xorKey2, 'r' ^ xorKey2, 'i' ^ xorKey2,
-                'p' ^ xorKey2, 't' ^ xorKey2, ':' ^ xorKey2
-            };
-
-            char original_CheatEngine[13]{ 0 };
-            char original_LUAScript[12]{ 0 };
-
-            for (int i = 0; i < sizeof(original_CheatEngine) - 1; i++) //13 - 1 to stop last 00 from being xor'd
-            {
-                original_CheatEngine[i] = (char)(CheatEngine[i] ^ xorKey1);
-            }
-
-            for (int i = 0; i < sizeof(original_LUAScript) - 1; i++)
-            {
-                original_LUAScript[i] = (char)(LuaScript[i] ^ xorKey2);
-            }
+            constexpr auto CheatEngineTxt = make_encrypted("Cheat Engine");
+            constexpr auto luaScript = make_encrypted("Lua script:");
 
             if (GetWindowTextA(hwnd, windowTitle, sizeof(windowTitle)))
             {
                 if (GetClassNameA(hwnd, className, sizeof(className)))
                 {
-                    if (strcmp(windowTitle, (const char*)original_CheatEngine) == 0  || strstr(windowTitle, (const char*)original_CheatEngine) != NULL) //*note* this will detect open folders named "Cheat Engine" also, which doesn't imply the actual program is opened.
+                    if (strcmp(windowTitle, (const char*)CheatEngineTxt.decrypt().c_str()) == 0  || strstr(windowTitle, (const char*)CheatEngineTxt.decrypt().c_str()) != NULL) //*note* this will detect open folders named "Cheat Engine" also, which doesn't imply the actual program is opened.
                     {
                         Monitor->EvidenceManager->AddFlagged(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
                         Logger::logf(Detection, "Detected a window named 'Cheat Engine' (includes open folder names)");
                         return false;
                     }
-                    else if (strstr(windowTitle, (const char*)original_LUAScript))
+                    else if (strstr(windowTitle, (const char*)luaScript.decrypt().c_str()))
                     {
                         Monitor->EvidenceManager->AddFlagged(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
                         Logger::logf(Detection, "Detected cheat engine's lua script window");
@@ -887,6 +851,7 @@ bool Detections::IsBlacklistedWindowPresent()
         };
 
         ENUMWINDOWS pEnumWindows = (ENUMWINDOWS)GetProcAddress(hUser32, "EnumWindows");
+
         if (pEnumWindows != NULL)
         {
             EnumWindows(WindowCallback, (LPARAM)this);
@@ -1014,7 +979,7 @@ void Detections::MonitorProcessCreation(__in LPVOID thisPtr)
                 pClassObj->Get(L"Name", 0, &vtName, 0, 0);
                 pClassObj->Get(L"ProcessId", 0, &vtProcId, 0, 0);
 
-                for (wstring blacklistedProcess : monitor->BlacklistedProcesses)
+                for (const wstring& blacklistedProcess : monitor->BlacklistedProcesses)
                 {
                     if (Utility::wcscmp_insensitive(blacklistedProcess.c_str(), vtName.bstrVal))
                     {
@@ -1041,7 +1006,7 @@ void Detections::MonitorProcessCreation(__in LPVOID thisPtr)
         if(monitor->GetMonitorThread() != nullptr)
             monitor->GetMonitorThread()->UpdateTick(); //update tick on each loop, then we can check this value from a different thread to see if someone has suspended it
 
-        //this_thread::sleep_for(std::chrono::milliseconds(100)); //ease the CPU a bit
+        this_thread::sleep_for(std::chrono::milliseconds(50)); //ease the CPU a bit
     }
 
     pSvc->Release();
@@ -1057,12 +1022,17 @@ void Detections::MonitorProcessCreation(__in LPVOID thisPtr)
 */
 void Detections::InitializeBlacklistedProcessesList()
 {
-    this->BlacklistedProcesses.push_back(L"Cheat Engine.exe");
-    this->BlacklistedProcesses.push_back(L"CheatEngine.exe"); 
-    this->BlacklistedProcesses.push_back(L"cheatengine-x86_64-SSE4-AVX2.exe");
-    this->BlacklistedProcesses.push_back(L"x64dbg.exe");
-    this->BlacklistedProcesses.push_back(L"windbg.exe");
-    this->BlacklistedProcesses.push_back(L"DSEFix.exe");
+    constexpr auto CE1 = make_encrypted(L"Cheat Engine.exe");
+    constexpr auto CE2 = make_encrypted(L"CheatEngine.exe");
+    constexpr auto CE3 = make_encrypted(L"cheatengine-x86_64-SSE4-AVX2.exe");
+    constexpr auto x64dbg = make_encrypted(L"x64dbg.exe");
+    constexpr auto windbg = make_encrypted(L"windbg.exe");
+
+    this->BlacklistedProcesses.push_back(CE1.decrypt().c_str());
+    this->BlacklistedProcesses.push_back(CE2.decrypt().c_str());
+    this->BlacklistedProcesses.push_back(CE3.decrypt().c_str());
+    this->BlacklistedProcesses.push_back(x64dbg.decrypt().c_str());
+    this->BlacklistedProcesses.push_back(windbg.decrypt().c_str());
 }
 
 /*
@@ -1076,38 +1046,37 @@ bool Detections::FindBlacklistedProgramsThroughByteScan(__in const DWORD pid)
 
     bool foundSignature = false;
 
-    for (BytePattern pattern : this->BlacklistedBytePatterns)
+    for (const auto& pattern : this->BlacklistedBytePatterns)
     {
         DWORD patternSize = pattern.size;
 
         vector<BYTE> textSectionBytes = Process::ReadRemoteTextSection(pid);
 
-        if (!textSectionBytes.empty())
-        {
-            for (size_t i = 0; i <= textSectionBytes.size() - patternSize; ++i)
-            {
-                bool found = true;
-                for (size_t j = 0; j < patternSize; ++j)
-                {
-                    if (textSectionBytes[i + j] != pattern.data[j])
-                    {
-                        found = false;
-                        break;
-                    }
-                }
-
-                if (found)
-                {
-                    foundSignature = true;
-                    Logger::logfw(Detection, L"Found blacklisted byte pattern in process %d at offset %d", pid, i);
-                    break;
-                }
-            }
-        }
-        else
+        if (textSectionBytes.empty())
         {
             Logger::logfw(Warning, L"Failed to read .text section of process %d", pid);
             continue;
+        }
+
+        for (size_t i = 0; i <= textSectionBytes.size() - patternSize; ++i)
+        {
+            bool found = true;
+
+            for (size_t j = 0; j < patternSize; ++j)
+            {
+                if (textSectionBytes[i + j] != pattern.data[j])
+                {
+                    found = false;
+                    break;
+                }
+            }
+
+            if (found)
+            {
+                foundSignature = true;
+                Logger::logfw(Detection, L"Found blacklisted byte pattern in process %d at offset %d", pid, i);
+                break;
+            }
         }
     }
 
@@ -1220,7 +1189,7 @@ void Detections::MonitorImportantRegistryKeys(__in LPVOID thisPtr)
     DetectManualMapping - detects if a manually mapped module is injected. also tries to detect PE header erased mapped modules, however this is tricky and possible to throw false positives!
     returns a vector of memory addresses (uint64_t), representing suspicious memory regions not belonging to a loaded module
 */
-vector<uint64_t> Detections::DetectManualMapping()
+vector<uintptr_t> Detections::DetectManualMapping()
 {
     auto modules = Process::GetLoadedModules();
 
@@ -1230,10 +1199,10 @@ vector<uint64_t> Detections::DetectManualMapping()
         return {};
     }
 
-    vector<uint64_t> SuspiciousRegions;
+    vector<uintptr_t> SuspiciousRegions;
 
     MEMORY_BASIC_INFORMATION mbi;
-    uint64_t CurrentRegionAddr = 0;  //starting address to scan from
+    uintptr_t CurrentRegionAddr = 0;  //starting address to scan from
     uintptr_t userModeLimit = 0x00007FFFFFFFFFFF; 	// 64-bit user-mode memory typically ends around 0x00007FFFFFFFFFFF
 
     while ((uintptr_t)CurrentRegionAddr < userModeLimit && VirtualQuery((LPCVOID)CurrentRegionAddr, &mbi, sizeof(mbi)) == sizeof(mbi)) //loop through all memory regions in the process
@@ -1259,7 +1228,7 @@ vector<uint64_t> Detections::DetectManualMapping()
             if (Integrity::IsPEHeader(buffer)) //if the PE header is deleted, this won't detect it, so tackle that in the "else" block below
             {
                 Logger::logf(Detection, "Suspicious PE header found at address %llX", mbi.BaseAddress);
-                SuspiciousRegions.push_back((uint64_t)mbi.BaseAddress);
+                SuspiciousRegions.push_back((uintptr_t)mbi.BaseAddress);
             }
             else //check for erased PE headers. * confirmed working against some manual mappers found on github *
             {
@@ -1279,7 +1248,7 @@ vector<uint64_t> Detections::DetectManualMapping()
 
                             //todo: make some better way than just using a hardcoded offset , since this can be changed via section alignment in compilation
 
-                            uint64_t possibleTextSectionAddress = (uint64_t)(mbi.BaseAddress);
+                            uintptr_t possibleTextSectionAddress = (uintptr_t)(mbi.BaseAddress);
 
                             //maybe i'll change this to memcpy_s() afterwards - this works fine currently and it's late at night, so maybe next time.
                             if (ReadProcessMemory(GetCurrentProcess(), (LPCVOID)possibleTextSectionAddress, bufferPossibleMappedSection, sizeof(bufferPossibleMappedSection), NULL))

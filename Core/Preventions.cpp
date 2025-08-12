@@ -25,12 +25,11 @@ bool Preventions::RandomizeModuleName()
 
         Process::SetExecutableModuleName(newModuleName);
       
-        ProcessData::MODULE_DATA* mod = Process::GetModuleInfo(newModuleName.c_str());
+        ProcessData::MODULE_DATA mod = Process::GetModuleInfo(newModuleName.c_str());
         
-        if (mod != nullptr)
+        if (mod.hModule != 0)
         {
-            this->integrityChecker->AddToWhitelist(*mod);
-            delete mod;
+            this->integrityChecker->AddToWhitelist(mod);
         }
 
         Logger::logfw(Info, L"Changed module name to: %s\n", newModuleName.c_str());

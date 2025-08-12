@@ -49,11 +49,6 @@ public:
 
 	~Integrity()
 	{
-		for (vector<ModuleHashData*>::const_iterator it = ModuleHashes.begin(); it != ModuleHashes.end(); ++it)
-		{
-			if(*it != nullptr)
-			    delete* it;
-		}
 	}
 
 	Integrity& operator=(Integrity&& other) = delete; //delete move assignments
@@ -62,15 +57,18 @@ public:
 	Integrity operator*(Integrity& other) = delete;
 	Integrity operator/(Integrity& other) = delete;
 
-	bool Check(__in const uint64_t Address, __in int const nBytes, __in const std::vector<uint64_t> hashList); //returns true if hashes calculated at `Address` don't match hashList
+	bool Check(__in const uintptr_t Address, __in int const nBytes, __in const std::vector<uint64_t>& hashList); //returns true if hashes calculated at `Address` don't match hashList
 	
-	static std::vector<uint64_t> GetMemoryHash(__in const uint64_t Address, __in const int nBytes); //get hash list at `Address`
-	static uint64_t GetStackedHash(__in const uint64_t Address, __in const int nBytes);
+	static std::vector<uintptr_t> GetMemoryHash(__in const uintptr_t Address, __in const int nBytes); //get hash list at `Address`
+	static uintptr_t GetStackedHash(__in const uintptr_t Address, __in const int nBytes);
 
-	void SetSectionHashList(__out vector<uint64_t> hList, __in const string section);
+	void SetSectionHashList(__out vector<uint64_t> hList, __in const string& section);
 
-	std::vector<uint64_t> GetSectionHashList(__in const std::string sectionName) const
+	std::vector<uint64_t> GetSectionHashList(__in const std::string& sectionName) const
 	{
+		if (sectionName.empty())
+			return {};
+
 		auto it = this->SectionHashes.find(sectionName);
 
 		if (it != this->SectionHashes.end())
@@ -87,19 +85,20 @@ public:
 	
 	void AddToWhitelist(__in ProcessData::MODULE_DATA mod) { WhitelistedModules.push_back(mod); }
 
-	void AddModuleHash(__in std::vector<ModuleHashData*>& moduleHashList, __in const wchar_t* moduleName, __in const char* sectionName);
-	ModuleHashData* GetModuleHash(__in const wchar_t* moduleName, __in const char* sectionName);
+	void AddModuleHash(__inout std::vector<ModuleHashData>& moduleHashList, __in const wchar_t* moduleName, __in const char* sectionName);
+	
+	ModuleHashData GetModuleHash(__in const wchar_t* moduleName, __in const char* sectionName);
 
-	std::vector<ModuleHashData*> GetModuleHashes();
+	std::vector<ModuleHashData> GetModuleHashes();
 
 	bool IsModuleModified(__in const wchar_t* moduleName); //pinpoint any specific modules that have had their .text sections changed
 
 	bool IsTLSCallbackStructureModified() const; //checks the TLSCallback structure in data directory for mods
 
 	static bool IsPEHeader(__in unsigned char* pMemory); //checks for MZ and PE signatures
-	static bool IsAddressInModule(const std::vector<ProcessData::MODULE_DATA>& modules, uintptr_t address);
+	static bool IsAddressInModule(__in const std::vector<ProcessData::MODULE_DATA>& modules, __in const uintptr_t address);
 
-	static std::vector<uint64_t> GetSectionHashFromDisc(std::wstring path, const char* sectionName);
+	static std::vector<uint64_t> GetSectionHashFromDisc(__in const std::wstring& path, __in const char* sectionName);
 	bool CheckFileIntegrityFromDisc(); //compare process image to executable file saved on disc
 
 private:
@@ -107,5 +106,5 @@ private:
 	std::unordered_map<std::string, std::vector<uint64_t>> SectionHashes; //section hashes for current/main module's sections: .text, .rdata, etc
 
 	std::vector<ProcessData::MODULE_DATA> WhitelistedModules;
-	std::vector<ModuleHashData*> ModuleHashes; //.text hashes only for other modules -> future versions should include all sections for all loaded modules if possible
+	std::vector<ModuleHashData> ModuleHashes; //.text hashes only for other modules -> future versions should include all sections for all loaded modules if possible
 };

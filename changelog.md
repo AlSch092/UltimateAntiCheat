@@ -1,4 +1,7 @@
 ## Updates
+
+- Aug 12, '25: Started cleaning up parts of code that were unacceptable in terms of safety or execution speed, such as changing argument copies to references, adding checks for null parameters at start of routines. Fixed various memory leaks. While much of the code is still very messy, it should now atleast run faster and safer. Regerssion testing passed, showing that protective methods are still working fine.  
+
 - Aug 11, '25: Changed anti-debugger routines to return DetectionFlags instead of bool, other small misc. improvements. May or may not replace all the detection code soon, a way better version has been made but unsure whether to make it open source or not    
 
 - July 29, '25: Added `LibRelease` build mode, which supports building as a .lib. Removed API namespace, moved routines into AntiCheat class + variables into Settings class.  
