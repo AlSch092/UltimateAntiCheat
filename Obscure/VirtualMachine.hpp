@@ -70,6 +70,12 @@ enum class VM_Opcode : _UINT //these can be randomized at runtime on each instan
     VM_END_FUNC //each bytecode block must end with this opcode
 };
 
+/**
+ * @brief A simple virtual machine implementation for executing bytecode.
+ *
+ * This class provides a stack-based virtual machine that can execute a set of predefined opcodes.
+ * It supports basic arithmetic operations, control flow, and function calls.
+ */
 class VirtualMachine final
 {
 public:
@@ -120,9 +126,13 @@ public:
         this->stackSize = newSize;
     }
 
-    /*
-        bool Execute(_UINT* virtualizedCode, uint32_t executeSize) - executes bytecode
-        returns `true` on success, `false` on failure
+    /**
+    * @brief Executes a bytecode sequence and returns the result.
+    * @tparam T The type of the return value, typically an integer or float.
+    * @param bytecode Pointer to the bytecode to execute.
+    * @param executeSize The size of the bytecode in bytes.
+    * @return The result of the execution, or false if an error occurred.
+    * @details The bytecode is expected to be an array of VM_Opcode values followed by their operands.
     */
     template<typename T>
     T Execute(_UINT* bytecode, uint32_t executeSize)

@@ -90,7 +90,7 @@ struct AntiCheat::Impl
 
             this->Evidence = new EvidenceLocker(this->NetworkClient.get());
 
-            this->AntiDebugger = make_unique<DebuggerDetections>(Config, this->Evidence, NetworkClient);
+            this->AntiDebugger = make_unique<DebuggerDetections>(Config, this->Evidence);
 
             this->Monitor = make_unique<Detections>(Config, this->Evidence, NetworkClient);
 

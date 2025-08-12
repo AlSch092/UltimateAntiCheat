@@ -1,7 +1,9 @@
 /*  
-    U.A.C. is a non-invasive usermode anticheat for x64 Windows, tested on Windows 10 & 11. Usermode is used to ensure an optimal end user experience. It also provides insight into how many kernelmode attack methods can be prevented from usermode, through concepts such as secure boot enforcement and DSE checking.
+    U.A.C. is a non-invasive usermode client-run anticheat for x64 Windows, tested on Windows 7, 10 & 11. 
     
-    Please view the readme for more information regarding program features. If you'd like to use this project in your game/software, please contact the author.
+    While everything works fine, parts of the code are messy and could use a cleanup
+
+    Please view the readme and/or github wiki page for more a full list of techniques and design information
 
     License: GNU Affero general public license, please be aware of what and what not can be done with this license.. ** you do not have the right to copy this project into your closed-source, for-profit project **
 
@@ -142,7 +144,7 @@ int main(int argc, char** argv)
 
     cout << "*----------------------------------------------------------------------------------------*\n";
     cout << "|                           Welcome to Ultimate Anti-Cheat (UAC)!                        |\n";
-    cout << "|    An in-development, non-commercial AC made to help teach concepts in game security   |\n";
+    cout << "|       A non-commercial, educational AC made to help teach concepts in game security    |\n";
     cout << "|                              Made by AlSch092 @Github                                  |\n";
     cout << "|         ...With special thanks to:                                                     |\n";
     cout << "|           changeofpace (remapping method)                                              |\n";
@@ -278,6 +280,20 @@ Cleanup:
 
 
 /**
+ * @brief TLS callback helper to end unknown threads without patching over their start address or calling ExitThread
+ *
+ * This function is executed by writing over the start address of new unknown threads in the tls callback
+
+ * @return None
+ *
+ * @usage
+ *  N/A
+ */
+void ExitThreadGracefully()
+{
+}
+
+/**
  * @brief TLS callback triggers on process + thread attachment & detachment
  *
  * @details Can be used to prevent rogue threads from being created, or to initialize certain anti-cheat features
@@ -351,7 +367,8 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
                 if (WinVersion == Windows11) //Windows 11 no longer has the thread's start address on the its stack, bummer. don't have a W11 machine either at home
                     return;
 
-                UINT64 ThreadExecutionAddress = *(UINT64*)((UINT64)_AddressOfReturnAddress() + ThreadExecutionAddressStackOffset); //check down the stack for the thread execution address, compare it to good module range, and if not in range then we've detected a rogue thread
+                uintptr_t stackThreadStartSlot = (uintptr_t)_AddressOfReturnAddress() + ThreadExecutionAddressStackOffset;
+                uintptr_t ThreadExecutionAddress = *(uintptr_t*)((uintptr_t)_AddressOfReturnAddress() + ThreadExecutionAddressStackOffset); //check down the stack for the thread execution address, compare it to good module range, and if not in range then we've detected a rogue thread
                 
                 if (ThreadExecutionAddress == 0) //this generally should never be 0, but we'll add a check for good measure incase the offset changes on different W10 builds
                     return;
@@ -360,8 +377,8 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
 
                 for (auto module : modules)
                 {
-                    UINT64 LowAddr = (UINT64)module.dllInfo.lpBaseOfDll;
-                    UINT64 HighAddr = (UINT64)module.dllInfo.lpBaseOfDll + module.dllInfo.SizeOfImage;
+                    uintptr_t LowAddr = (uintptr_t)module.dllInfo.lpBaseOfDll;
+                    uintptr_t HighAddr = (uintptr_t)module.dllInfo.lpBaseOfDll + module.dllInfo.SizeOfImage;
 
                     if (ThreadExecutionAddress > LowAddr && ThreadExecutionAddress < HighAddr) //a properly loaded DLL is making the thread, so allow it to execute
                     {
@@ -371,21 +388,7 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
                 }
 
                 Logger::logf(Detection, " Stopping unknown thread from being created  @ TLSCallback: thread id %d", GetCurrentThreadId());
-                Logger::logf(Detection, " Thread id %d wants to execute function @ %llX. Patching over this address.", GetCurrentThreadId(), ThreadExecutionAddress);
-
-                DWORD dwOldProt = 0;
-
-                if(!VirtualProtect((LPVOID)ThreadExecutionAddress, sizeof(byte), PAGE_EXECUTE_READWRITE, &dwOldProt)) //make thread start address writable
-                {
-                    Logger::logf(Warning, "Failed to call VirtualProtect on ThreadStart address @ TLSCallback: %llX", ThreadExecutionAddress);
-                }
-                else
-                {
-                    if (ThreadExecutionAddress != 0)
-                    {
-                        *(BYTE*)ThreadExecutionAddress = 0xC3; //write over any functions which are scheduled to execute next by this thread and not inside our whitelisted address range
-                    }
-                }
+                *(uintptr_t*)stackThreadStartSlot = (uintptr_t)&ExitThreadGracefully;
             }
 
         }break;
@@ -406,7 +409,7 @@ void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved)
  * @usage
  * AddVectoredExceptionHandler(1, g_ExceptionHandler);
  */
-LONG WINAPI g_ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo)  //handler that will be called whenever an unhandled exception occurs in any thread of the process
+LONG WINAPI g_ExceptionHandler(__in EXCEPTION_POINTERS* ExceptionInfo)  //handler that will be called whenever an unhandled exception occurs in any thread of the process
 {
     DWORD exceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
 

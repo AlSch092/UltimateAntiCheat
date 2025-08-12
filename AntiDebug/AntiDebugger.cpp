@@ -30,7 +30,7 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 
 	Debugger::AntiDebug* AntiDbg = reinterpret_cast<Debugger::AntiDebug*>(AD);
 
-	Logger::logf(Info, "STARTED Debugger detection thread");
+	Logger::logf(Info, "Started Debugger detection thread");
 
 	bool MonitoringDebugger = true;
 
@@ -38,33 +38,21 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 
 	while (MonitoringDebugger)
 	{
-		if (AntiDbg == NULL)
-		{
-			Logger::logf(Err, "AntiDbg class was NULL @ CheckForDebugger");
-			return;
-		}
-
 		if (AntiDbg->DetectionThread->IsShutdownSignalled())
 		{
 			Logger::logf(Info, "Shutting down Debugger detection thread with Id: %d", AntiDbg->DetectionThread->GetId());
-			return; //exit thread
+			break;
 		}
 
+		//make new thread to check all other threads, since we suspend threads and check their context
 		HANDLE CheckHardwareRegistersThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)_IsHardwareDebuggerPresent, (LPVOID)AntiDbg, 0, 0);
 
 		if (CheckHardwareRegistersThread == INVALID_HANDLE_VALUE || CheckHardwareRegistersThread == NULL)
 		{
 			Logger::logf(Warning, "Failed to create new thread to call _IsHardwareDebuggerPresent: %d", GetLastError());
 		}
-		else
-		{
-			WaitForSingleObject(CheckHardwareRegistersThread, 2000); //Shouldn't take more than 2000ms to call _IsHardwareDebuggerPresent
-		}
 
-		if (AntiDbg->RunDetectionFunctions())
-		{
-			Logger::logf(Info, "Atleast one debugger detection function caught a debugger!"); //optionally, iterate over DetectedMethods list if you want a more granular logging 
-		}
+		AntiDbg->RunDetectionFunctions();
 
 		if (AntiDbg->IsDBK64DriverLoaded())
 		{
@@ -126,6 +114,8 @@ void Debugger::AntiDebug::_IsHardwareDebuggerPresent(LPVOID AD)
 					{
 						Logger::logf(Detection, "Found at least one debug register enabled (hardware debugging)");
 						ResumeThread(hThread);
+
+						AntiDbg->AddFlagged(DetectionFlags::DEBUG_HARDWARE_REGISTERS);
 
 						if (!AntiDbg->EvidenceManager->AddFlagged(DetectionFlags::DEBUG_HARDWARE_REGISTERS))
 						{ //optionally take further action, `Flag` will already log a warning
@@ -241,4 +231,50 @@ bool Debugger::AntiDebug::HideThreadFromDebugger(HANDLE hThread)
 bool Debugger::AntiDebug::IsDBK64DriverLoaded()
 {
 	return Services::IsDriverRunning(this->DBK64Driver);
+}
+
+void Debugger::AntiDebug::HideAllThreadsFromDebugger()
+{
+	HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+
+	if (hSnapshot == INVALID_HANDLE_VALUE)
+	{
+		std::cerr << "Failed to create snapshot." << std::endl;
+		return;
+	}
+
+	DWORD pid = GetCurrentProcessId();
+
+	THREADENTRY32 te;
+	te.dwSize = sizeof(THREADENTRY32);
+
+	if (Thread32First(hSnapshot, &te))
+	{
+		do
+		{
+			if (te.th32OwnerProcessID == pid)
+			{
+				HANDLE hThread = OpenThread(THREAD_SET_INFORMATION | THREAD_QUERY_INFORMATION, FALSE, te.th32ThreadID);
+
+				if (!hThread)
+				{
+					std::cerr << "Failed to open thread: " << GetLastError() << std::endl;
+					continue;
+				}
+
+				if (!Debugger::AntiDebug::HideThreadFromDebugger(hThread)) //hide thread from debuggers, placing this in the TLS callback allows all threads to be hidden
+				{
+					Logger::logf(Warning, " Failed to hide thread from debugger @ TLSCallback: thread id %d\n", GetCurrentThreadId());
+				}
+
+				CloseHandle(hThread);
+			}
+		} while (Thread32Next(hSnapshot, &te));
+	}
+	else
+	{
+		std::cerr << "Failed to retrieve thread information." << std::endl;
+	}
+
+	CloseHandle(hSnapshot);
 }

@@ -1,4 +1,6 @@
 ## Updates
+- Aug 11, '25: Changed anti-debugger routines to return DetectionFlags instead of bool, other small misc. improvements. May or may not replace all the detection code soon, a way better version has been made but unsure whether to make it open source or not    
+
 - July 29, '25: Added `LibRelease` build mode, which supports building as a .lib. Removed API namespace, moved routines into AntiCheat class + variables into Settings class.  
                 Doxygen-style comments will be added over time, along with general refactoring to improve readability and flow, since there's many parts which can be improved.  
 

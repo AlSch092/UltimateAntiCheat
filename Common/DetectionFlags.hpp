@@ -2,6 +2,9 @@
 
 enum DetectionFlags //used in client-server comms to flag cheaters. needs to be visible to NetClient thus not inside the Detections class since we don't want to #include Detections.hpp from NetClient.hpp
 {
+    NONE = 0,
+    EXECUTION_ERROR,
+
 	PAGE_PROTECTIONS = 1000, //re-remapping
 	CODE_INTEGRITY,   //.text section changes
 	DLL_TAMPERING, //hooking or modifying loaded DLLs
@@ -32,5 +35,6 @@ enum DetectionFlags //used in client-server comms to flag cheaters. needs to be 
     DEBUG_PROCESS_DEBUG_FLAGS,
     DEBUG_REMOTE_DEBUGGER,
     DEBUG_DBG_BREAK,
+    DEBUG_KNOWN_DEBUGGER_PROCESS,
     ///DEBUGGER DETECTIONS ----------------
 };

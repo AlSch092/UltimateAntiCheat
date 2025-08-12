@@ -17,7 +17,7 @@ namespace Debugger
     {
     public:
         
-        AntiDebug(Settings* s, EvidenceLocker* evidence, shared_ptr<NetClient> netClient) : netClient(netClient), Config(s), EvidenceManager(evidence)
+        AntiDebug(Settings* s, EvidenceLocker* evidence) :  Config(s), EvidenceManager(evidence)
         {
             if (s == nullptr)
             {
@@ -45,11 +45,6 @@ namespace Debugger
                 DetectionThread->JoinThread();
 				DetectionThread.reset();
 			}
-
-			if (netClient != nullptr)
-			{
-				netClient.reset();
-			}
         } 
 
         AntiDebug operator+(AntiDebug& other) = delete; //delete all arithmetic operators, unnecessary for context
@@ -58,7 +53,6 @@ namespace Debugger
         AntiDebug operator/(AntiDebug& other) = delete;
         
         Thread* GetDetectionThread() const  { return this->DetectionThread.get(); }
-        NetClient* GetNetClient() const { return this->netClient.get(); }
         Settings* GetSettings() const { return this->Config; }
 
         void StartAntiDebugThread();
@@ -72,41 +66,62 @@ namespace Debugger
         template<typename Func>
         void AddDetectionFunction(Func func) //define detection functions in the subclass, `DebuggerDetections`, then add them to the list using this func
         {
+            std::lock_guard<std::mutex> lock(this->DetectionRoutineMutex);
             DetectionFunctionList.emplace_back(func);
         }
 
-        bool RunDetectionFunctions()  //run all detection functions
+        void RunDetectionFunctions()  //run all detection functions
         {
-            bool DetectedDebugger = false;
-
-            for (auto& func : DetectionFunctionList)
+            std::lock_guard<std::mutex> lock(this->DetectionRoutineMutex);
+            
+            for (auto& func : this->DetectionFunctionList)
             {
+                DetectionFlags DetectedDebugger = NONE;
+
                 if (DetectedDebugger = func()) //call the debugger detection method
-                { //...if debugger was found, optionally take further action below (detected flags are already set in each routine, so this block is empty)
+                {
+                    this->AddFlagged(DetectedDebugger);
+                    
+                    if(this->EvidenceManager != nullptr)
+                        this->EvidenceManager->AddFlagged(DetectionFlags::DEBUG_DEBUG_PORT);
+
+                    Logger::logf(Info, "Debugger flag detected: %d", DetectedDebugger); //optionally, iterate over DetectedMethods list if you want a more granular logging 
                 }
             }
-
-            return DetectedDebugger;
         }
 
         static void _IsHardwareDebuggerPresent(LPVOID AD); //this func needs to run in its own thread, since it suspends all other threads and checks their contexts for DR's with values. its placed in this class since it doesn't fit the correct definition type for our detection function list
 
         bool IsDBK64DriverLoaded();
 
+        static void HideAllThreadsFromDebugger();
+
     protected:
-        vector<function<bool()>> DetectionFunctionList; //list of debugger detection methods, which are contained in the subclass `DebuggerDetections`      
+        vector<std::function<DetectionFlags()>> DetectionFunctionList; //list of debugger detection methods, which are contained in the subclass `DebuggerDetections`      
+        
         list<wstring> CommonDebuggerProcesses;
+        
         EvidenceLocker* EvidenceManager = nullptr;
 
     private:      
 
         unique_ptr<Thread> DetectionThread = nullptr; //set in `StartAntiDebugThread`
 
-        shared_ptr<NetClient> netClient = nullptr; //set in constructor
+        list<DetectionFlags> DetectedMethods;
 
         Settings* Config = nullptr;
 
         const wstring DBK64Driver = L"DBK64.sys"; //DBVM debugger, this driver loaded and in a running state may likely indicate the presence of dark byte's VM debugger *todo -> add check on this driver*
+
+        std::mutex DetectionRoutineMutex;
+        std::mutex FlggedListMutex;
+
+        void AddFlagged(const DetectionFlags& method)
+        {
+            std::lock_guard<std::mutex> lock(FlggedListMutex);
+            if (std::find(this->DetectedMethods.begin(), this->DetectedMethods.end(), method) == this->DetectedMethods.end())
+                this->DetectedMethods.push_back(method);
+        }
     };
 }
 

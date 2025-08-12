@@ -69,7 +69,7 @@ AntiCheat::AntiCheat(__in Settings* config) : Config(config)
 
 		this->Evidence = new EvidenceLocker(this->NetworkClient.get()); //make shared evidence log (change this to shared_ptr later)
 
-		this->AntiDebugger = make_unique<DebuggerDetections>(config, this->Evidence, NetworkClient); //any detection methods need the netclient for comms
+		this->AntiDebugger = make_unique<DebuggerDetections>(config, this->Evidence); //any detection methods need the netclient for comms
 
 		this->Monitor = make_unique<Detections>(config, this->Evidence, NetworkClient);
 
