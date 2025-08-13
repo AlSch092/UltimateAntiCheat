@@ -2,7 +2,6 @@
 #pragma once
 #include "../Process/Process.hpp"
 #include "../AntiTamper/remap.hpp"
-#include "../AntiTamper/Integrity.hpp"
 #include "../Common/Error.hpp"
 #include "../Common/Utility.hpp"
 #include "../Common/Settings.hpp"
@@ -15,7 +14,7 @@ class Preventions final
 {
 public:
 
-	Preventions(__in Settings* config, __in bool preventingUnknownThreads, __in shared_ptr<Integrity> integrityChecker) : IsPreventingThreadCreation(preventingUnknownThreads), integrityChecker(integrityChecker), Config(config)
+	Preventions(__in Settings* config, __in bool preventingUnknownThreads) : Config(config), IsPreventingThreadCreation(preventingUnknownThreads)
 	{
 	}
 
@@ -54,8 +53,6 @@ public:
 private:
 
 	bool IsPreventingThreadCreation = false; //used in TLS callback if we want to supress or track new threads
-
-	shared_ptr<Integrity> integrityChecker = nullptr;
 
 	Settings* Config = nullptr; //assigned to in constructor
 };

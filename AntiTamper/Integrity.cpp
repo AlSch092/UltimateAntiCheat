@@ -2,300 +2,601 @@
 #include "Integrity.hpp"
 
 /**
- * @brief Checks if hash list gathered from memory at `Address` of size `nBytes` matches the provided `hashList`
- * @details  This function is somewhat expensive, and should not be used constantly. 
- * @param `Address`  address in memory to start checking from
- * @param `nBytes`  number of bytes to check from `Address`
- * @param `hashList` pre-existing hash list to compare against
- * @return true/false if hash list matches `hashList`
+ * @brief Calculates the checksum of a section of a module
+ *
+ * This function computes the checksum of a given
+ * module, in its .text and .rdata sections
+ *
+ * @param `hMod` The module's base/start address in memory
+ * @param `section` Section to create checksum from
+ * @param `checksum` Previous computed checksum of hMod
+ *
+ * @return true/false if newly computed checksum equals `checksum` param
+ *
+ * @details If return false, the module has been modified or tampered with
+ *
+ *  @example DRM.cpp
+ *
+ * @usage
+ * bool isModified = Integrity::CompareChecksum("DRMTest.exe", ".text", 12345678);
  */
-bool Integrity::Check(__in const uintptr_t Address, __in const int nBytes, __in const vector<uint64_t>& hashList)
+bool Integrity::CompareChecksum(__in const std::string module, __in const char* section, __in const uintptr_t checksum)
 {
-	bool hashesMatch = true;
+	return (CalculateChecksumFromSection(module, section) == checksum);
+}
 
-	vector<uint64_t> hashes = GetMemoryHash(Address, nBytes);
+/**
+ * @brief Calculates the checksum of `module` disc file, compares it to `loadedImageChecksum`
+ *
+ * @details Used to check if file on disc matches its loaded image
+ *
+ * @param `hMod` The module's base/start address in memory
+ * @param `section` Section to create checksum from
+ * @param `loadedImageChecksum` Previous computed checksum of hMod
+ *
+ * @return true/false if newly computed checksum equals `checksum` param
+ *
+ * @details If return false, the module has been modified or tampered with
+ *
+ *  @example DRM.cpp
+ *
+ * @usage
+ * bool isModified = Integrity::CompareChecksumToFileOnDisc("DRMTest.exe", ".text", 12345678);
+ */
+bool Integrity::CompareChecksumToFileOnDisc(__in const std::wstring& filePath, __in const char* section, __in const uintptr_t loadedImageChecksum)
+{
+	return (GetSectionChecksumFromDisc(filePath, section) == loadedImageChecksum);
+}
 
-	for (int i = 0; i < hashes.size() - 1; i++)
+/**
+ * @brief Thread routine for periodic integrity checks
+ *
+ * This function computes the checksum of modules and compares it to
+ * the checksums grabbed at program startup. Runs continuously
+ *
+ * @param classThisPtr Pointer to an Integrity class object
+ *
+ * @return No return value
+ *
+ * @details if checksums don't match, throws std::runtime_error
+ *
+ *  @example
+ *
+ * @usage
+ * PeriodicIntegrityCheckThread = std::make_unique<Thread>(PeriodicIntegrityCheck, nullptr, true, false);
+ */
+void Integrity::PeriodicIntegrityCheck(LPVOID classThisPtr)
+{
+	if (classThisPtr == nullptr)
 	{
-		if (hashes[i] != hashList[i])
+		Logger::logfw(Err, L"PeriodicIntegrityCheck called with null class Ptr");
+		throw std::runtime_error("PeriodicIntegrityCheck called with null class Ptr");
+	}
+
+	std::this_thread::sleep_for(std::chrono::seconds(3)); //wait a few seconds before starting the checks
+
+	Integrity* integrity = reinterpret_cast<Integrity*>(classThisPtr);
+
+	bool checking = true;
+
+	std::string processName = Utility::ConvertWStringToString(Process::GetProcessName(GetCurrentProcessId()));
+
+	HMODULE currentModule = GetModuleHandleA(processName.c_str());
+
+	if (currentModule == NULL)
+	{
+		Logger::logfw(Err, L"Failed to get module handle for %s in PeriodicIntegrityCheck", processName.c_str());
+		throw std::runtime_error("Failed to get module handle for current process in PeriodicIntegrityCheck");
+	}
+
+	while (checking)
+	{
+		uintptr_t checksum_main = 0;
+		uintptr_t prev_checksum = 0;
+
+		auto hookedIATEntries = FetchHookedIATEntries(); //this should go in a future or thread, has O(n^2) execution time where n=number loaded modules
+
+		if (hookedIATEntries.size() > 0)
 		{
-			hashesMatch = false;
+			Logger::logfw(Detection, L"IAT was hooked!");
+
+			for (const auto& hookedIATEntry : hookedIATEntries)
+			{
+				IntegrityViolation IV(Utility::ConvertStringToWString(hookedIATEntries.front().AssociatedModuleName), L".rdata", L"IAT Hooked", hookedIATEntry.AddressToFuncPtr);
+				integrity->AddViolation(IV); //will avoid duplicates
+			}
+		}
+
+		for (const auto& mod : integrity->ModuleChecksums) //check checksums of all loaded modules vs. what was gathered at startup
+		{
+			auto nonWritableSections = Process::FindNonWritableSections(Utility::ConvertWStringToString(mod.Name)); //.rdata is not a 'guaranteed' section name, especially on WoW64
+
+			for (const auto& section : nonWritableSections)
+			{
+				HMODULE hMod = GetModuleHandleW(mod.Name.c_str());
+
+				if (hMod == NULL) //this shouldn't happen unless possibly a module is unloaded 
+				{
+					Logger::logfw(Warning, L"Module %s was no longer found @ PeriodicIntegrityCheck", mod.Name.c_str());
+					continue;
+				}
+
+				prev_checksum = integrity->RetrieveModuleChecksum(hMod, section.name.c_str()); //fetch old, don't calculate 
+
+				if (!CompareChecksum(Utility::ConvertWStringToString(mod.Name), section.name.c_str(), prev_checksum))
+				{
+
+					Logger::logf(Detection, "Checksum for module %s, section %s is different, tampering detected", Utility::ConvertWStringToString(mod.Name).c_str(), section.name.c_str());
+					IntegrityViolation IV(mod.Name, Utility::ConvertStringToWString(section.name), L"", (uintptr_t)mod.hMod + section.address);
+					integrity->AddViolation(IV);				
+				}
+
+				if (!CompareChecksumToFileOnDisc(mod.Path, section.name.c_str(), CalculateChecksumFromSection(Utility::ConvertWStringToString(mod.Name), section.name.c_str())))
+				{
+
+					Logger::logf(Detection, "Checksum for module %s on disk (section %s) is different, tampering detected", Utility::ConvertWStringToString(mod.Name).c_str(), section.name.c_str());
+					IntegrityViolation IV(mod.Name, Utility::ConvertStringToWString(section.name), L"", (uintptr_t)mod.hMod + section.address);
+					integrity->AddViolation(IV);
+					
+				}
+
+#ifndef _DEBUG
+				if (uintptr_t addr = FindWritableAddress(Utility::ConvertWStringToString(mod.Name), section.name.c_str()) != 0) //check if any page is writable inside .text|.rdata
+				{
+
+					Logger::logf(Detection, "non-writable section %s had writable page at %llx", section.name.c_str(), addr);
+#endif			
+
+					IntegrityViolation IV(mod.Name, Utility::ConvertStringToWString(section.name), L"page=writable", (uintptr_t)mod.hMod + section.address);
+					integrity->AddViolation(IV);
+					
+				}
+			}
+		}
+
+		this_thread::sleep_for(std::chrono::seconds(5));
+	}
+}
+
+
+/**
+* @brief Reads a section of a file from disk and computes its hash
+*
+ * @param `path`  path to the file on disk
+ *
+ * @param `sectionName`  name of the section to read (e.g., ".text")
+ *
+ * @return uintptr_t checksum representing the .text section of the file
+ *
+ * @details This function reads the specified section from a PE file on disk and computes its hash.
+ */
+uintptr_t Integrity::GetSectionChecksumFromDisc(__in const std::wstring path, __in const char* sectionName)
+{
+	std::vector<uint8_t> sectionBytes;
+
+	std::ifstream file(path, std::ios::binary);
+	if (!file)
+	{
+		Logger::logfw(Detection, L"Error reading file: %s @ GetSectionHashFromDisc", path.c_str());
+		return 0;
+	}
+
+	IMAGE_DOS_HEADER dosHeader;
+	file.read(reinterpret_cast<char*>(&dosHeader), sizeof(IMAGE_DOS_HEADER));
+
+	if (dosHeader.e_magic != IMAGE_DOS_SIGNATURE)
+	{
+
+		Logger::logfw(Detection, L"Lacking MZ signature in file: %s @ GetSectionHashFromDisc", path.c_str());
+		return 0;
+	}
+
+	file.seekg(dosHeader.e_lfanew, std::ios::beg);
+	IMAGE_NT_HEADERS ntHeaders;
+	file.read(reinterpret_cast<char*>(&ntHeaders), sizeof(IMAGE_NT_HEADERS));
+	if (ntHeaders.Signature != IMAGE_NT_SIGNATURE)
+	{
+		Logger::logfw(Detection, L"Invalid PE signature in file: %s @ GetSectionHashFromDisc", path.c_str());
+		return 0;
+	}
+
+	IMAGE_SECTION_HEADER sectionHeader;
+	bool found = false;
+
+	for (int i = 0; i < ntHeaders.FileHeader.NumberOfSections; i++)
+	{
+		file.read(reinterpret_cast<char*>(&sectionHeader), sizeof(IMAGE_SECTION_HEADER));
+		if (strcmp((const char*)sectionHeader.Name, sectionName) == 0)
+		{
+			found = true;
 			break;
 		}
 	}
 
-	return hashesMatch;
-}
-
-/**
- * @brief Collects a vector of sha256 hashes of memory of `nBytes` starting from `Address`
- * @param `Address`  address in memory to start checking from
- * @param `nBytes`  number of bytes to check from `Address`
- * @return vector of uint64_t hashes representing the memory from `Address` to `Address + nBytes`
- */
-vector<uint64_t> Integrity::GetMemoryHash(__in const uintptr_t Address, __in const int nBytes)
-{
-	std::vector<uint64_t> hashList;
-
-	if (Address == 0)
-		return hashList;
-
-	byte* arr = new byte[nBytes];
-
-	memcpy(arr, (void*)Address, nBytes);
-
-	SHA256 sha;
-	uint8_t* digest = 0;
-	unsigned long long digestCache = 0;
-
-	for (int i = 0; i < nBytes; i = i + 32)
+	if (!found)
 	{
-		sha.update(&arr[i], 32);
-		digest = sha.digest();
-		digestCache += *(unsigned long long*)digest + i;
-		hashList.push_back(digestCache);
-		delete digest;
+
+		Logger::logfw(Detection, L"section not found in file: %s @ GetSectionHashFromDisc", path.c_str());
+		return 0;
 	}
 
-	delete[] arr;
-	return hashList;
+	sectionBytes.resize(sectionHeader.SizeOfRawData);
+	file.seekg(sectionHeader.PointerToRawData, std::ios::beg);
+	file.read(reinterpret_cast<char*>(sectionBytes.data()), sectionHeader.SizeOfRawData);
+
+	BYTE* sectionMemory = new BYTE[sectionHeader.SizeOfRawData];
+	memcpy(sectionMemory, sectionBytes.data(), sectionHeader.SizeOfRawData);
+
+	std::wstring processName = path.substr(path.find_last_of(L"\\") + 1);
+
+	HMODULE hMod = GetModuleHandleW(processName.c_str());
+
+	if (!hMod)
+	{
+		Logger::logfw(Detection, L"Failed to get module handle for %s @ GetSectionChecksumFromDisc", processName.c_str());
+		return 0;
+	}
+
+	uintptr_t sectionChecksum = CalculateChecksumFromSection(Utility::ConvertWStringToString(processName), sectionName);
+
+	if (sectionMemory != nullptr)
+		delete[] sectionMemory;
+
+	return sectionChecksum;
 }
 
 /**
- * @brief Collects a value computed from the sum of sha256 hashes
- * @param `Address`  address in memory to start checking from
- * @param `nBytes`  number of bytes to check from `Address`
- * @return uint64_t value representing the sum of sha256 hashes computed from memory at `Address` to `Address + nBytes`
+ * @brief Calculates the checksum of a specific section in a module
+ *
+ * This function computes the checksum of a given section in a module.
+ *
+ * @param hMod The module's base/start address in memory
+ * @param sectionName The name of the section to calculate the checksum for
+ *
+ * @return The sum of all bytes in the specified section
+ *
+ * @details N/A
+ *
+ * @usage
+ * const uintptr_t result = Integrity::CalculateChecksumFromSection(GetModuleHandleA(NULL), ".text");
  */
-uint64_t Integrity::GetStackedHash(__in const uint64_t Address, __in const int nBytes)
+uintptr_t Integrity::CalculateChecksumFromSection(const std::string module, const char* sectionName)
 {
-	if (Address == 0 || nBytes == 0)
+	if (module.empty() || sectionName == nullptr)
 		return 0;
 
-	SHA256 sha;
-	uint8_t* digest = 0;
-	UINT64 digestCache = 0;
+	uintptr_t checksum = 0;
 
-	for (int i = 0; i < nBytes - 32; i = i + 32)
+	HMODULE hMod = GetModuleHandleA(module.c_str());
+
+	if (hMod == NULL)
 	{
-		sha.update((const uint8_t*)Address + i, 32);
-		digest = sha.digest();
-		digestCache += *(UINT64*)digest + i;
-		delete digest;
+		Logger::logfw(Err, L"Failed to get module handle for %s @ Integrity::CalculateChecksumFromSection", module.c_str());
+		return 0;
 	}
 
-	return digestCache;
-}
+	auto SectionList = Process::GetSections(module);
 
-/**
- * @brief Assigns a vector of sha256 hashes to a specific section in `SectionHashes` member
- * @param `hList`  hash vector to assign
- * @param `section`  module section name (.text, .rdata, etc)
- * @return void
- */
-void Integrity::SetSectionHashList(__out vector<uint64_t> hList, __in const string& section)
-{
-	if (section.empty())
+	for (auto section : SectionList)
 	{
-		Logger::logfw(Err, L"section parameter was empty @ Integrity::SetSectionHashList");
-		return;
-	}
-
-	this->SectionHashes[section].assign(hList.begin(), hList.end());
-}
-
-/**
- * @brief Checks if any unknown modules are present in the process by comparing new module list against the list taken at program startup
- * @return true/false if unknown modules were found. Also fills the `WhitelistedModules` class member with any newly signed modules
- * @details This function also uses a whitelist of modules - unknown modules which are not Authenticode verified will be flagged
- */
-bool Integrity::IsUnknownModulePresent()
-{
-	bool foundUnknown = false;
-
-	vector<ProcessData::MODULE_DATA> currentModules = Process::GetLoadedModules();
-	list<ProcessData::MODULE_DATA> modulesToAdd;
-
-	for (auto it = currentModules.begin(); it != currentModules.end(); ++it)  //if an attacker signs their dll, they'll be able to get past this
-	{
-		bool found_whitelisted = false;
-
-		for (auto it2 = this->WhitelistedModules.begin(); it2 != this->WhitelistedModules.end(); ++it2) //our whitelisted module list is initially populated inside the constructor with modules gathered at program startup
+		if (section.name == std::string(sectionName))
 		{
-			if (it->baseName == it2->baseName)
+			if (section.size > 0)
 			{
-				found_whitelisted = true;
+				uintptr_t sectionChecksum = 0;
+
+				uintptr_t sectionAddr = (uintptr_t)(section.address) + (uintptr_t)hMod;
+
+				for (DWORD j = 0; j < section.size; j++)
+					checksum += *(uint8_t*)(sectionAddr + j);
+
 				break;
 			}
 		}
+	}
 
-		if (!found_whitelisted)
+	return checksum;
+}
+
+/**
+ * @brief Checks if the loaded module's section hash matches the disk file's section hash
+ *
+ * This function compares the checksum of a specific section in a loaded module
+ * with the checksum of the same section in a file on disk.
+ *
+ * @param hMod The handle to the loaded module
+ * @param sectionName The name of the section to check
+ * @param diskFilePath The path to the file on disk
+ *
+ * @return true if the checksums match, false otherwise
+ *
+ * @details N/A
+ *
+ * @usage
+ * bool isValid = Integrity::CheckLoadedModuleHashVersusDiskHash(hMod, ".text", L"C:\\path\\to\\file.exe");
+ */
+bool Integrity::CheckLoadedModuleHashVersusDiskHash(__in const std::string module, __in const char* sectionName, __in std::wstring diskFilePath)
+{
+	if (module.empty() || sectionName == nullptr || diskFilePath.empty())
+		return false;
+
+	uintptr_t diskFileSectionChecksum = GetSectionChecksumFromDisc(diskFilePath, sectionName);
+	uintptr_t loadedModuleSectionChecksum = CalculateChecksumFromSection(module, sectionName);
+
+	return (diskFileSectionChecksum == loadedModuleSectionChecksum);
+}
+
+/**
+ * @brief Finds a writable address in a specific section of a module
+ *
+ * This function searches for a writable address in the specified section of a module.
+ *
+ * @param moduleName The name of the module to search in
+ * @param sectionName The name of the section to search in
+ *
+ * @return The address of the writable section, or 0 if not found
+ *
+ * @details N/A
+ *
+ * @usage
+ * uintptr_t writableAddress = Integrity::FindWritableAddress("myModule.dll", ".rdata");
+ */
+uintptr_t Integrity::FindWritableAddress(__in const std::string moduleName, __in const std::string sectionName)
+{
+	if (moduleName.empty() || sectionName.empty())
+	{
+		return 0;
+	}
+
+	HMODULE hMod = GetModuleHandleA(moduleName.c_str());
+
+	if (hMod == NULL)
+	{
+		Logger::logfw(Err, L"Failed to get module handle for %s @ Integrity::FindWritableAddress", moduleName.c_str());
+		return 0;
+	}
+
+	const uintptr_t sectionAddr = Process::GetSectionAddress(hMod, sectionName.c_str());
+	MEMORY_BASIC_INFORMATION mbi = { 0 };
+	SIZE_T result = 0;
+	uintptr_t currentPageAddress = sectionAddr;
+
+	const int pageSize = 0x1000;
+
+	if (sectionAddr == NULL)
+	{
+		Logger::logf(Err, "section address was NULL @ Integrity::FindWritableAddress");
+		return 0;
+	}
+
+	uintptr_t max_addr = sectionAddr + Process::GetSectionSize(hMod, sectionName);
+
+	while ((result = VirtualQuery((LPCVOID)currentPageAddress, &mbi, sizeof(mbi))) != 0)     //Loop through all pages in .text
+	{
+		if (currentPageAddress >= max_addr)
+			break;
+
+		if (sectionName == ".text")
 		{
-			if (Authenticode::HasSignature(it->name.c_str(), TRUE)) //if file is signed and not yet on our whitelist, we can add it
+			if (mbi.Protect != PAGE_EXECUTE_READ)
 			{
-				ProcessData::MODULE_DATA mod = Process::GetModuleInfo(it->baseName.c_str());
-				modulesToAdd.push_back(mod);		
-			}
-			else
-			{
-				Logger::logfw(Detection, L"Unsigned module was found loaded in the process: %s", it->name.c_str());
-				foundUnknown = true;
+				return currentPageAddress;
 			}
 		}
-	}
-
-	for (const ProcessData::MODULE_DATA& mod : modulesToAdd) //add any signed modules to our whitelist
-	{
-		this->WhitelistedModules.push_back(mod);
-	}
-
-	return foundUnknown;
-}
-
-/**
- * @brief Collects hashes for a specific section of a module
- * @param `moduleName`  address in memory to start checking from
- * @param `sectionName`  number of bytes to check from `Address`
- * @return ModuleHashData* object containing the module name and a vector of hashes for the specified section
- * @details You must free the returned value after usage, or a memory leak will occur
- */
-ModuleHashData Integrity::GetModuleHash(__in const wchar_t* moduleName, __in const char* sectionName)
-{
-	if (moduleName == nullptr || sectionName == nullptr)
-	{
-		Logger::logfw(Err, L"One or more arguments were nullptr @ Integrity::GetModuleHash");
-		return {};
-	}
-
-	string modName = Utility::ConvertWStringToString(moduleName);
-	list<ProcessData::Section> sections = Process::GetSections(modName);
-
-	for (const auto& s : sections)
-	{
-		if (s.name == sectionName)
+		else if (sectionName == ".rdata")
 		{
-			uintptr_t sec_addr = (uintptr_t)(s.address) + (uintptr_t)GetModuleHandleA(modName.c_str());
-			vector<uint64_t> hashes = GetMemoryHash(sec_addr, s.size); //make hashes of .text of module
-
-			ModuleHashData moduleHashData;
-			moduleHashData.Name = moduleName;
-			moduleHashData.Hashes = hashes;
-			moduleHashData.Section = Utility::ConvertStringToWString(sectionName);
-
-			return moduleHashData;
+			if (mbi.Protect != PAGE_READONLY)
+			{
+				return currentPageAddress;
+			}
 		}
+
+		currentPageAddress += pageSize;
 	}
 
-	return {};
+	return 0;
 }
 
 /**
- * @brief Collects vector of hashes for all whitelisted modules' .text sections
- * @return vector of ModuleHashData* object containing the module names and a vector of hashes for the module's .text section
- * @details You must free the returned values in the vector after usage, or  memory leaks will occur
+ * @brief Checks if an address `RetAddr` belongs to `module`'s .text section
+ *
+ *
+ * @param `RetAddr` Address to check
+ * @param `module` The name of the module to search in.
+ *
+ * @return True/False if `RetAddr` was located in `module`'s .text section
+ *
+ * @details  Passing a nullptr `module` results in `GetModuleHandleW(NULL)`, rather than an error
+ *
+ * @usage
+ * if(IsReturnAddressInModule(*(uintptr_t*)_AddressOfReturnAddress(), "mydll.dll"))
  */
-vector<ModuleHashData> Integrity::GetModuleHashes()
+bool Integrity::IsReturnAddressInModule(__in const uintptr_t RetAddr, __in const wchar_t* module)
 {
-	vector<ModuleHashData> moduleHashes;
-
-	for (const auto& module : WhitelistedModules) //traverse whitelisted modules
+	if (RetAddr == 0)
 	{
-		if (module.dllInfo.lpBaseOfDll == GetModuleHandleA(NULL)) //skip main executable module, we're tracking that with another member. they could probably be merged into one list to optimize
-			continue;
-
-		AddModuleHash(moduleHashes, module.baseName.c_str(), ".text");
-	}
-
-	return moduleHashes;
-}
-
-/**
- * @brief Checks if the module's .text section has been modified
- * @param `moduleName`  name of the module to check
- * @return true/false if the module's .text section has been modified
- * @details This function compares the hashes of the module's .text section against the hashes stored in `ModuleHashes`
- */
-bool Integrity::IsModuleModified(__in const wchar_t* moduleName)
-{
-	if (moduleName == nullptr)
-	{
-		Logger::logfw(Err, L"`moduleName` argument was nullptr @ Integrity::IsModuleModified");
+		Logger::logf(Err, "RetAddr was 0 @ : Integrity::IsReturnAddressInModule");
 		return false;
 	}
 
-	bool foundModified = false;
+	HMODULE retBase = 0;
 
-	ModuleHashData currentModuleHash = GetModuleHash(moduleName, ".text"); //todo: add in .rdata, etc 
+	if (module == nullptr)
+		retBase = (HMODULE)GetModuleHandleW(NULL);
+	else
+		retBase = (HMODULE)GetModuleHandleW(module);
 
-	for (const auto& modHash : this->ModuleHashes)
+	if (retBase == 0)
 	{
-		if (modHash.Name == currentModuleHash.Name) //moduleName matches module in list
+		Logger::logf(Err, "retBase was 0 @ : Integrity::IsReturnAddressInModule");
+		return false;
+	}
+
+	DWORD size = Process::GetModuleSize(retBase);
+
+	if (size == 0)
+	{
+		Logger::logf(Err, "size was 0 @ : Integrity::IsReturnAddressInModule");
+		return false;
+	}
+
+	return (RetAddr >= (uintptr_t)retBase && RetAddr < ((uintptr_t)retBase + size)) ? true : false;
+}
+
+/**
+ * @brief Checks if an IAT is hooked for current module (will soon be expanded to all modules)
+ *
+ * @return list of hooked iat entries
+ *
+ * @usage
+ *  std::list<ProcessData::ImportFunction> hookedIATEntries = Integrity::FetchHookedIATEntries();
+ */
+std::list<ProcessData::ImportFunction> Integrity::FetchHookedIATEntries()
+{
+	bool isIATHooked = false;
+
+	std::list<ProcessData::ImportFunction> hookedIATEntries;
+
+	auto modules = Process::GetLoadedModules();
+
+	if (modules.size() == 0)
+	{
+		throw std::runtime_error("Module size was 0!");
+	}
+
+	for (auto mod : modules)
+	{
+		std::list<ProcessData::ImportFunction> IATFunctions = Process::GetIATEntries(Utility::ConvertWStringToString(mod.baseName));
+
+		for (const auto& IATEntry : IATFunctions)
 		{
-			if (modHash.Hashes.size() != currentModuleHash.Hashes.size()) //size check
+			DWORD moduleSize = Process::GetModuleSize(IATEntry.Module);
+
+			bool FoundIATEntryInModule = false;
+
+			if (moduleSize != 0)  //some IAT functions in k32 can point to ntdll (forwarding), thus we have to compare IAT to each other whitelisted DLL range
 			{
-				return true; //hash list size mismatch may indicate section had bytes added to it or other changes
-			}
-
-			const uint64_t* arr1 = modHash.Hashes.data();
-			const uint64_t* arr2 = currentModuleHash.Hashes.data();
-
-			size_t size = modHash.Hashes.size();
-
-			if (arr1 == nullptr || arr2 == nullptr)
-			{
-				throw std::runtime_error("Null memory dereference - abnormal behaviour detected in Integrity::IsModuleModified");
-			}
-
-			for (int i = 0; i < size - 1; i++)
-			{
-				if (arr1[i] != arr2[i])
+				for (auto mod : modules)
 				{
-					foundModified = true;
-					break; //break out of checker loop
+					uintptr_t LowAddr = (uintptr_t)mod.dllInfo.lpBaseOfDll;
+					uintptr_t HighAddr = LowAddr + mod.dllInfo.SizeOfImage;
+
+					if (IATEntry.FunctionPtr >= LowAddr && IATEntry.FunctionPtr < HighAddr) //each IAT entry needs to be checked thru all loaded ranges
+					{
+						FoundIATEntryInModule = true;
+					}
+				}
+
+				if (!FoundIATEntryInModule) //iat points to outside loaded module
+				{
+
+					std::cout << "Hooked IAT detected: " << IATEntry.AssociatedModuleName.c_str() << " at: " << IATEntry.FunctionPtr << std::endl;
+
+					hookedIATEntries.push_back(IATEntry);
 				}
 			}
-
-			if (foundModified) //break out of outer loop
-				break;
+			else //error, we shouldnt get here!
+			{
+				std::cerr << " Couldn't fetch  module size @ Detections::DoesIATContainHooked" << std::endl;
+				return hookedIATEntries;
+			}
 		}
 	}
 
-	return foundModified;
+	return hookedIATEntries;
 }
 
-/*
-	AddModuleHash - fetches hash list for `moduleName` and adds to `moduleHashList`
-*/
-void Integrity::AddModuleHash(__inout vector<ModuleHashData>& moduleHashList, __in const wchar_t* moduleName, __in const char* sectionName)
+/**
+ * @brief Checks if an IAT is hooked for current module (will soon be expanded to all modules). Faster execution time than `FetchHookedIATEntries`
+ *
+ * @return True/False if any function ptr is hooked in the IAT of main module
+ *
+ * @usage
+ *  bool isIATHooked = Integrity::DoesIATContainHooked();
+ */
+bool Integrity::DoesIATContainHooked()
 {
-	if (moduleName == nullptr || sectionName == nullptr)
-		return;
+	bool isIATHooked = false;
 
-	string modName = Utility::ConvertWStringToString(moduleName);
-	list<ProcessData::Section> sections = Process::GetSections(modName);
+	auto modules = Process::GetLoadedModules();
 
-	for (const auto& s : sections)
+	if (modules.size() == 0)
 	{
-		if (s.name == string(sectionName))
+		throw std::runtime_error("Module size was 0!");
+	}
+
+	for (auto mod : modules)
+	{
+		std::list<ProcessData::ImportFunction> IATFunctions = Process::GetIATEntries(Utility::ConvertWStringToString(mod.baseName));
+
+		for (ProcessData::ImportFunction IATEntry : IATFunctions)
 		{
-			uintptr_t sec_addr = (uintptr_t)(s.address) + (uintptr_t)GetModuleHandleA(modName.c_str());
-			vector<uint64_t> hashes = GetMemoryHash(sec_addr, s.size); //get hashes of .text of module
+			DWORD moduleSize = Process::GetModuleSize(IATEntry.Module);
 
-			ModuleHashData moduleHashData;
-			moduleHashData.Name = moduleName;
-			moduleHashData.Hashes = hashes;
+			bool FoundIATEntryInModule = false;
 
-			moduleHashList.push_back(moduleHashData);
-			break;
+			if (moduleSize != 0)  //some IAT functions in k32 can point to ntdll (forwarding), thus we have to compare IAT to each other whitelisted DLL range
+			{
+				for (auto mod : modules)
+				{
+					uintptr_t LowAddr = (uintptr_t)mod.dllInfo.lpBaseOfDll;
+					uintptr_t HighAddr = LowAddr + mod.dllInfo.SizeOfImage;
+
+					if (IATEntry.FunctionPtr >= LowAddr && IATEntry.FunctionPtr < HighAddr) //each IAT entry needs to be checked thru all loaded ranges
+					{
+						FoundIATEntryInModule = true;
+					}
+				}
+
+				if (!FoundIATEntryInModule) //iat points to outside loaded module
+				{
+					std::cout << "Hooked IAT detected: " << IATEntry.AssociatedModuleName.c_str() << " at: " << IATEntry.FunctionPtr << std::endl;
+
+					isIATHooked = true;
+					break;
+				}
+			}
+			else //error, we shouldnt get here!
+			{
+#if _LOGGING_ENABLED
+				std::cerr << " Couldn't fetch  module size @ Detections::DoesIATContainHooked" << std::endl;
+#endif
+				continue;
+			}
 		}
 	}
+
+	return isIATHooked;
 }
 
-/*
-	Integrity::IsTLSCallbackModified() - checks if the pointer to the TLS callback address has been modified
-	Note: Someone should only be able to modifyh th
-*/
-bool Integrity::IsTLSCallbackStructureModified() const
+/**
+ * @brief check if `address` falls within a known module (element of `modules`)
+ * @param `modules`  list of modules to check for `address`
+ * @param `address`  address to check
+ *
+ * @return true/false  if `address` falls within a known module (element of `modules`)
+ */
+bool Integrity::IsAddressInModule(__in const std::vector<ProcessData::MODULE_DATA>& modules, __in const uintptr_t address)
+{
+	for (const auto& module : modules)
+	{
+		if (address >= (uintptr_t)module.hModule && address < ((uintptr_t)module.hModule + module.dllInfo.SizeOfImage))
+		{
+			return true; // Address is within a known module
+		}
+	}
+	return false;
+}
+
+
+/**
+ * @brief Checks if the program's TLS callback has been modified
+ * @details if TLS callbacks lead to somewhere outside our module, is might be modified, or another module installed their own 
+ *
+ * @return true/false  whether the TLS callbacks point to inside our main module or not
+ *
+ */
+bool Integrity::IsTLSCallbackStructureModified() 
 {
 	HMODULE hModule = GetModuleHandle(NULL);
 	IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER*)hModule;
@@ -311,7 +612,7 @@ bool Integrity::IsTLSCallbackStructureModified() const
 		return true; //No TLS callbacks in data directory indicates something is wrong, abort!
 	}
 
-	if ((UINT64)tlsDir < (UINT64)MainModule || (UINT64)tlsDir > (UINT64)((UINT64)MainModule + ModuleSize)) //check if TLS directory address is inside main module for good measure
+	if ((uintptr_t)tlsDir < (uintptr_t)MainModule || (uintptr_t)tlsDir > (uintptr_t)((uintptr_t)MainModule + ModuleSize)) //check if TLS directory address is inside main module for good measure
 	{
 		return true;
 	}
@@ -325,7 +626,7 @@ bool Integrity::IsTLSCallbackStructureModified() const
 		if (!pTLSCallbacks)
 			return true;
 
-		if ((UINT64)pTLSCallbacks[i] < (UINT64)MainModule || (UINT64)pTLSCallbacks[i] > (UINT64)((UINT64)MainModule + ModuleSize)) //check if TLS callback is outside of main module range
+		if ((uintptr_t)pTLSCallbacks[i] < (uintptr_t)MainModule || (uintptr_t)pTLSCallbacks[i] > (uintptr_t)((uintptr_t)MainModule + ModuleSize)) //check if TLS callback is outside of main module range
 		{
 			return true;
 		}
@@ -339,6 +640,16 @@ bool Integrity::IsTLSCallbackStructureModified() const
 	return false;
 }
 
+/**
+ * @brief Checks if a blob of bytes looks like a typical PE header, based on positions of MZ & PE signatures
+ *
+ * @param `pMemory` The memory blob to check
+ *
+ * @return true/false  if `pMemory` looks like a PE header
+ *
+ * @details PE headers can be stripped/erased to increase evasion, in this case this won't catch them
+ *
+ */
 bool Integrity::IsPEHeader(__in unsigned char* pMemory)
 {
 	__try
@@ -356,125 +667,6 @@ bool Integrity::IsPEHeader(__in unsigned char* pMemory)
 
 	if (pNtHeaders->Signature != IMAGE_NT_SIGNATURE) //check for "PE" signature
 		return false;
-
-	return true;
-}
-
-/*
-	IsAddressInModule - check if `address` falls within a known module (element of `modules`)
-	returns `true` if `address` falls within a known module (element of `modules`)
-*/
-bool Integrity::IsAddressInModule(__in const std::vector<ProcessData::MODULE_DATA>& modules, __in const uintptr_t address)
-{
-	for (const auto& module : modules)
-	{
-		if (address >= (uintptr_t)module.hModule && address < ((uintptr_t)module.hModule + module.dllInfo.SizeOfImage))
-		{
-			return true; // Address is within a known module
-		}
-	}
-	return false;
-}
-
-/**
-* @brief Reads the .text section of a file from disk and computes its hash
- * @param `path`  path to the file on disk
- * @param `sectionName`  name of the section to read (e.g., ".text")
- * @return vector of uint64_t hashes representing the .text section of the file
- * @details This function reads the specified section from a PE file on disk and computes its hash.
- */
-vector<uint64_t> Integrity::GetSectionHashFromDisc(__in const std::wstring& path, __in const char* sectionName)
-{
-	if (path.empty() || sectionName == nullptr)
-	{
-		Logger::logfw(Detection, L"One or more arguments were null @ Integrity::GetSectionHashFromDisc");
-		return {};
-	}
-
-	vector<uint8_t> sectionBytes;
-
-	std::ifstream file(path, std::ios::binary);
-	if (!file)
-	{
-		Logger::logfw(Detection, L"Error reading file: %s @ GetSectionHashFromDisc", path.c_str());
-		return {};
-	}
-
-	IMAGE_DOS_HEADER dosHeader;
-	file.read(reinterpret_cast<char*>(&dosHeader), sizeof(IMAGE_DOS_HEADER));
-	
-	if (dosHeader.e_magic != IMAGE_DOS_SIGNATURE)
-	{
-		Logger::logfw(Detection, L"Lacking MZ signature in file: %s @ GetSectionHashFromDisc", path.c_str());
-		return {};
-	}
-
-	file.seekg(dosHeader.e_lfanew, std::ios::beg);
-	IMAGE_NT_HEADERS ntHeaders;
-	file.read(reinterpret_cast<char*>(&ntHeaders), sizeof(IMAGE_NT_HEADERS));
-	if (ntHeaders.Signature != IMAGE_NT_SIGNATURE)
-	{
-		Logger::logfw(Detection, L"Invalid PE signature in file: %s @ GetSectionHashFromDisc", path.c_str());
-		return {};
-	}
-
-	IMAGE_SECTION_HEADER sectionHeader;
-	bool found = false;
-	
-	for (int i = 0; i < ntHeaders.FileHeader.NumberOfSections; i++)
-	{
-		file.read(reinterpret_cast<char*>(&sectionHeader), sizeof(IMAGE_SECTION_HEADER));
-		if (strcmp((const char*)sectionHeader.Name, sectionName) == 0)
-		{
-			found = true;
-			break;
-		}
-	}
-
-	if (!found)
-	{
-		Logger::logfw(Detection, L".text section not found in file: %s @ GetSectionHashFromDisc", path.c_str());
-		return {};
-	}
-
-	sectionBytes.resize(sectionHeader.SizeOfRawData);
-	file.seekg(sectionHeader.PointerToRawData, std::ios::beg);
-	file.read(reinterpret_cast<char*>(sectionBytes.data()), sectionHeader.SizeOfRawData);
-
-	BYTE* sectionMemory = new BYTE[sectionHeader.SizeOfRawData];
-	memcpy(sectionMemory, sectionBytes.data(), sectionHeader.SizeOfRawData);
-
-	vector<uint64_t> sectionHashes = GetMemoryHash((uint64_t)sectionMemory, sectionHeader.SizeOfRawData);
-
-	if(sectionMemory != nullptr)
-		delete[] sectionMemory;
-
-	return sectionHashes;
-}
-
-/*
-	CheckFileIntegrityFromDisc - check if file on disc's section differs from running file
-	returns `false` if hashes do not properly match
-*/
-bool Integrity::CheckFileIntegrityFromDisc()
-{
-	wstring procFolder = Services::GetProcessDirectoryW(GetCurrentProcessId());
-	procFolder += wstring(_MAIN_MODULE_NAME_W);
-
-	auto hashes = Integrity::GetSectionHashFromDisc(procFolder, ".text");
-
-	auto running_hashes = GetSectionHashList(".text");
-
-	hashes.resize(running_hashes.size()); //hash list of file on disc is slightly larger than the hashes we gathered at runtime
-
-	for (int i = 0; i < running_hashes.size() - 1; i++)
-	{
-		if (hashes[i] != running_hashes[i])
-		{
-			Logger::logfw(LogType::Detection, L"Hashes of disc .exe and memory don't match for .text at index %d (size %d)", i, running_hashes.size());
-			return false;
-		}
-	}
 
 	return true;
 }

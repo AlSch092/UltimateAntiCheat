@@ -123,12 +123,7 @@ list<ProcessData::Section> Process::GetSections(__in const string& module)
         ProcessData::Section s;
 
         s.address = sectionHeader[i].VirtualAddress;
-
         s.name = std::string(reinterpret_cast<const char*>(sectionHeader[i].Name));
-      
-        if (s.name.size() > 8)
-            s.name.resize(8, 0);
-
         s.Misc.VirtualSize = sectionHeader[i].Misc.VirtualSize;
         s.size = s.Misc.VirtualSize;
         s.PointerToRawData = sectionHeader[i].PointerToRawData;
@@ -374,6 +369,61 @@ uintptr_t Process::GetSectionAddress(__in const char* moduleName, __in const  ch
     return 0;
 }
 
+
+/*
+    GetSectionAddress - Get the address of a named section of the module with the named `moduleName`
+    returns a memory address of the section if found, and 0 if no section is found or an error occurs
+*/
+uintptr_t Process::GetSectionAddress(__in const HMODULE hModule, __in const  char* sectionName)
+{
+    if (hModule == NULL)
+    {
+#ifdef _LOGGING_ENABLED
+        Logger::logf(Err, " Failed to get module handle: %d @ GetSectionAddress\n", GetLastError());
+#endif
+        return 0;
+    }
+
+    uintptr_t baseAddress = (uintptr_t)hModule;
+
+    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)baseAddress;
+    if (pDosHeader->e_magic != IMAGE_DOS_SIGNATURE)
+    {
+#ifdef _LOGGING_ENABLED
+        Logger::logf(Err, " Invalid DOS header @ GetSectionAddress.\n");
+#endif
+        return 0;
+    }
+
+    PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS)(baseAddress + pDosHeader->e_lfanew);
+    if (pNtHeaders->Signature != IMAGE_NT_SIGNATURE)
+    {
+#ifdef _LOGGING_ENABLED
+        Logger::logf(Err, " Invalid NT header @ GetSectionAddress.\n");
+#endif
+        return 0;
+    }
+
+    PIMAGE_SECTION_HEADER pSectionHeader = IMAGE_FIRST_SECTION(pNtHeaders);
+
+    for (int i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++)  //we are modifying # of sections at runtime to throw attackers off
+    {
+        if ((const char*)pSectionHeader->Name != nullptr)
+        {
+            if (strcmp((const char*)pSectionHeader->Name, sectionName) == 0)
+            {
+                return baseAddress + pSectionHeader->VirtualAddress;
+            }
+        }
+
+        pSectionHeader++;
+    }
+#ifdef _LOGGING_ENABLED
+    Logger::logf(Warning, ".text section not found.\n");
+#endif
+    return 0;
+}
+
 /*
     GetBytesAtAddress - return bytes from an address given `size`.
     returns a BYTE array filled with values from `address` for `size` number of bytes
@@ -517,7 +567,7 @@ bool Process::FillModuleList()
             continue;
         }
 
-        module.name = wstring(szModuleName);
+        module.nameWithPath = wstring(szModuleName);
 
         module.hModule = hModules[i];
 
@@ -691,39 +741,34 @@ wstring Process::GetProcessName(__in const DWORD pid)
         return {};
     }
 
-    std::wstring processName;
+    typedef NTSTATUS(NTAPI* pfnNtQueryInformationProcess)(
+        HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG);
 
-    HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
-    
-    if (hProcess) 
+    std::wstring result;
+
+    HANDLE hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+    if (!hProc) return L"";
+
+    HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
+    auto NtQueryInformationProcess =
+        (pfnNtQueryInformationProcess)GetProcAddress(hNtdll, "NtQueryInformationProcess");
+
+    ULONG size = 0;
+    NtQueryInformationProcess(hProc, ProcessImageFileName, NULL, 0, &size);
+    if (size)
     {
-        Logger::logf(Err, "OpenProcess failed with error %d @  Process::GetProcessName", GetLastError());
-        return {};
-    }
-
-    HMODULE hMod = 0;
-    DWORD cbNeeded;
-
-    if (EnumProcessModules(hProcess, &hMod, sizeof(hMod), &cbNeeded)) 
-    {       
-        WCHAR processNameBuffer[MAX_PATH];
-
-        if (GetModuleBaseName(hProcess, hMod, processNameBuffer, sizeof(processNameBuffer) / sizeof(WCHAR))) 
+        std::vector<BYTE> buffer(size);
+        if (NT_SUCCESS(NtQueryInformationProcess(hProc, ProcessImageFileName, buffer.data(), size, &size)))
         {
-            processName = processNameBuffer;
-        }
-        else 
-        {
-            Logger::logf(Err, "GetModuleBaseName failed with error %d @  Process::GetProcessName", GetLastError());
+            UNICODE_STRING* us = (UNICODE_STRING*)buffer.data();
+            result.assign(us->Buffer, us->Length / sizeof(WCHAR));
         }
     }
-    else 
-    {
-        Logger::logf(Err, "EnumProcessModules failed with error %d @  Process::GetProcessName", GetLastError());
-    }
 
-    CloseHandle(hProcess);  
-    return processName;
+    std::wstring exeName = result.substr(result.find_last_of(L"\\") + 1);
+
+    CloseHandle(hProc);
+    return exeName;
 }
 
 /*
@@ -753,7 +798,7 @@ std::vector<ProcessData::MODULE_DATA> Process::GetLoadedModules()
         MY_LDR_DATA_TABLE_ENTRY* module_entry = (MY_LDR_DATA_TABLE_ENTRY*)CONTAINING_RECORD(current_record, MY_LDR_DATA_TABLE_ENTRY, InLoadOrderLinks);
         ProcessData::MODULE_DATA module;
 
-        module.name =  wstring(module_entry->FullDllName.Buffer);
+        module.nameWithPath =  wstring(module_entry->FullDllName.Buffer);
         module.baseName = wstring(module_entry->BaseDllName.Buffer);
 
         module.hModule = (HMODULE)module_entry->DllBase;
@@ -776,9 +821,9 @@ std::vector<ProcessData::MODULE_DATA> Process::GetLoadedModules()
     GetModuleInfo - returns a ProcessData::MODULE_DATA* representing the module given `name`.
     returns nullptr on failure/no module found
 */
-ProcessData::MODULE_DATA Process::GetModuleInfo(__in const  wchar_t* name)
+ProcessData::MODULE_DATA Process::GetModuleInfo(__in const  wchar_t* nameWithPath)
 {
-    if (name == nullptr)
+    if (nameWithPath == nullptr)
     {
         Logger::logf(Err, "name was nullptr @ Process::GetModuleInfo");
         return {};
@@ -801,11 +846,11 @@ ProcessData::MODULE_DATA Process::GetModuleInfo(__in const  wchar_t* name)
     {
         MY_LDR_DATA_TABLE_ENTRY* module_entry = (MY_LDR_DATA_TABLE_ENTRY*)CONTAINING_RECORD(current_record, MY_LDR_DATA_TABLE_ENTRY, InLoadOrderLinks);
 
-        if (wcscmp(module_entry->BaseDllName.Buffer, name) == 0)
+        if (wcscmp(module_entry->BaseDllName.Buffer, nameWithPath) == 0)
         {
             ProcessData::MODULE_DATA module;
 
-            module.name = wstring(module_entry->FullDllName.Buffer);
+            module.nameWithPath = wstring(module_entry->FullDllName.Buffer);
             module.baseName =  wstring(module_entry->BaseDllName.Buffer);
             module.hModule = (HMODULE)module_entry->DllBase;
             module.dllInfo.lpBaseOfDll = module_entry->DllBase;
@@ -1019,4 +1064,72 @@ std::vector<BYTE> Process::ReadRemoteTextSection(__in const DWORD pid)
     CloseHandle(hProcess);
 
     return buffer;
+}
+
+
+/*
+    FindNonWritableSections - Returns a list of non-writable sections in `module`
+*/
+std::list<ProcessData::Section> Process::FindNonWritableSections(__in const std::string module)
+{
+    if (module.empty())
+        return {};
+
+    std::list<ProcessData::Section> nonWritableSections;
+
+    HMODULE hModule = GetModuleHandleA(module.c_str());
+
+    if (hModule == NULL)
+    {
+#ifdef _LOGGING_ENABLED
+        Logger::logf(Err, "hModule was NULL @ FindNonWritableSections");
+#endif
+        return {};
+    }
+
+    PIMAGE_DOS_HEADER dosHeader = reinterpret_cast<PIMAGE_DOS_HEADER>(hModule);
+
+    if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
+    {
+#ifdef _LOGGING_ENABLED
+        Logger::logf(Err, "Invalid DOS header @ FindNonWritableSections");
+#endif
+        return {};
+    }
+
+    // Get NT headers
+    PIMAGE_NT_HEADERS ntHeader = reinterpret_cast<PIMAGE_NT_HEADERS>(
+        reinterpret_cast<BYTE*>(hModule) + dosHeader->e_lfanew);
+
+    if (ntHeader->Signature != IMAGE_NT_SIGNATURE)
+    {
+#ifdef _LOGGING_ENABLED
+        Logger::logf(Err, "Invalid NT header @ FindNonWritableSections");
+#endif
+        return {};
+    }
+
+    // Section headers start right after optional header
+    auto* section = IMAGE_FIRST_SECTION(ntHeader);
+
+    for (WORD i = 0; i < ntHeader->FileHeader.NumberOfSections; ++i, ++section)
+    {
+        std::string nameWithPath(reinterpret_cast<char*>(section->Name),
+            strnlen_s(reinterpret_cast<char*>(section->Name), IMAGE_SIZEOF_SHORT_NAME));
+
+        DWORD characteristics = section->Characteristics;
+
+        bool writable = (characteristics & IMAGE_SCN_MEM_WRITE) != 0;
+
+        if (!writable)
+        {
+            ProcessData::Section s;
+            s.address = section->VirtualAddress;
+            s.size = section->Misc.VirtualSize;
+            s.name = reinterpret_cast<char*>(section->Name);
+            nonWritableSections.push_back(s);
+        }
+    }
+
+    return nonWritableSections;
 }

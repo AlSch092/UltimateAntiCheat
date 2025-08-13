@@ -55,8 +55,8 @@ public:
 
 	list<DetectionFlags> GetDetectedFlags() const { return this->DetectedFlags; }
 
-	bool SetSectionHash(__in const char* module, __in const char* sectionName);
-	bool IsSectionHashUnmatching(__in const UINT64 cachedAddress, __in const DWORD cachedSize, __in const string section);
+	//bool SetSectionHash(__in const char* module, __in const char* sectionName);
+	//bool IsSectionHashUnmatching(__in const UINT64 cachedAddress, __in const DWORD cachedSize, __in const string section);
 
 	Thread* GetMonitorThread() const { return this->MonitorThread; }
 	Thread* GetProcessCreationMonitorThread() const { return this->ProcessCreationMonitorThread; }

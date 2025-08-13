@@ -9,46 +9,127 @@
 
 #include <Psapi.h>
 #include <unordered_map>
+#include <mutex>
 
 using namespace std;
 
-struct ModuleHashData 
+/**
+ * @brief IntegrityViolation structure tracks anomalies with module integrity
+ */
+struct IntegrityViolation
 {
+public:
+	enum Type
+	{
+		None = 0,
+		Integrity,
+		Debugging,
+		License,
+		CodeSignature,
+	};
+
+	Type type = Type::None;
+	uintptr_t address = 0;
+	std::wstring description;
+	uint64_t timestamp = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+
+	std::wstring module;
+	std::wstring section;
+
+	IntegrityViolation(std::wstring _module, std::wstring _section, std::wstring _description, uintptr_t _address)
+		: module(_module), section(_section)
+	{
+		this->description = _description;
+		this->address = _address;
+	}
+
+	bool operator==(const IntegrityViolation& other) const noexcept
+	{
+		return module == other.module && section == other.section && address == other.address;
+	}
+};
+
+/**
+ * @brief ModuleChecksumData holds information about the checksums of each section of a module
+ */
+struct ModuleChecksumData
+{
+	HMODULE hMod = 0;
 	std::wstring Name;
-	std::wstring Section;
-	std::vector<uint64_t> Hashes;
+	std::wstring Path;
+	std::unordered_map<std::string, uintptr_t> SectionChecksums; //stores checksums for each section in the module
+
+	bool operator==(const ModuleChecksumData& other) const noexcept
+	{
+		return hMod == other.hMod && Name == other.Name && Path == other.Path;
+	}
 };
 
-struct ModuleInfo
-{
-	uintptr_t baseAddress;
-	uintptr_t size;
-};
-
-/*
-	The Integrity class provides functionalities for determining if aspects of any program modules have been modified
-
-	Hash lists (vector<uint64_t>) are used such that we can pinpoint the memory offset of any particular modifications, as opposed to using a CRC32 or SHA of a module or section
-
-	** This class needs to be rewritten, there are several things that can be improved, and the current code is just too messy.
-	    This was one of the first things added into this project back in 2022, back when I used primarily C rather than C++. **
-*/
+/**
+ * @brief Class that deals with checksums and runtime integrity
+ * @details Tracks changes to unwritable sections of all loaded modules, along with checking for abnormal writable pages
+ * @details It also compares loaded modules to their files on disc
+ */
 class Integrity final
 {
 public:
 
-	Integrity(__in const vector<ProcessData::MODULE_DATA> startupModuleList) //modules gathered at program startup
+	Integrity(Settings* s) : Config(s)
 	{
-		for (const ProcessData::MODULE_DATA& mod : startupModuleList)
+		if (s == nullptr)
 		{
-			WhitelistedModules.push_back(mod);
+			throw std::runtime_error("Null pointer error");
 		}
 
-		ModuleHashes = GetModuleHashes(); 
+		this->ModuleList = Process::GetLoadedModules(); //get the list of loaded modules at the time of instantiation
+
+		if (this->ModuleList.empty())
+		{
+#ifdef _LOGGING_ENABLED
+			Logger::logf(Err, "Failed to retrieve loaded modules during Integrity class instantiation");
+#endif
+			throw std::runtime_error("Failed to retrieve loaded modules during Integrity class instantiation");
+		}
+
+		for (auto module : ModuleList) //store hashes of all loaded modules for all non-writable sections
+		{
+			ModuleChecksumData moduleChecksum;
+			moduleChecksum.hMod = module.hModule;
+			moduleChecksum.Name = module.baseName;
+			moduleChecksum.Path = module.nameWithPath;
+
+			auto nonWritableSections = Process::FindNonWritableSections(Utility::ConvertWStringToString(module.baseName)); //.rdata is not a 'guaranteed' section name, especially on WoW64
+
+			for (const auto& section : nonWritableSections)
+			{
+				uintptr_t checksum = Integrity::CalculateChecksumFromSection(Utility::ConvertWStringToString(module.baseName), section.name.c_str());
+				moduleChecksum.SectionChecksums[section.name.c_str()] = checksum;
+
+#ifdef _LOGGING_ENABLED	
+				Logger::logf(Info, "Section %s checksum: %llx", section.name.c_str(), checksum);
+#endif
+			}
+
+			StoreModuleChecksum(moduleChecksum); //tested and working fine
+		}
+
+		try
+		{
+			PeriodicIntegrityCheckThread = std::make_unique<Thread>((LPTHREAD_START_ROUTINE)&PeriodicIntegrityCheck, (LPVOID)this, true, false);
+		}
+		catch (const std::bad_alloc& ex)
+		{
+			throw std::runtime_error("Failed to create PeriodicIntegrityCheckThread: " + std::string(ex.what()));
+		}
 	}
 
 	~Integrity()
 	{
+		if (PeriodicIntegrityCheckThread && PeriodicIntegrityCheckThread->IsThreadRunning(PeriodicIntegrityCheckThread->GetHandle()))
+		{
+			PeriodicIntegrityCheckThread->SignalShutdown(TRUE);
+			PeriodicIntegrityCheckThread->JoinThread();
+		}
 	}
 
 	Integrity& operator=(Integrity&& other) = delete; //delete move assignments
@@ -57,54 +138,75 @@ public:
 	Integrity operator*(Integrity& other) = delete;
 	Integrity operator/(Integrity& other) = delete;
 
-	bool Check(__in const uintptr_t Address, __in int const nBytes, __in const std::vector<uint64_t>& hashList); //returns true if hashes calculated at `Address` don't match hashList
-	
-	static std::vector<uintptr_t> GetMemoryHash(__in const uintptr_t Address, __in const int nBytes); //get hash list at `Address`
-	static uintptr_t GetStackedHash(__in const uintptr_t Address, __in const int nBytes);
+	static uintptr_t FindWritableAddress(__in const std::string moduleName, __in const std::string sectionName);
+	static bool IsReturnAddressInModule(__in const uintptr_t RetAddr, __in const wchar_t* module);
 
-	void SetSectionHashList(__out vector<uint64_t> hList, __in const string& section);
+	static uintptr_t CalculateChecksumFromSection(const std::string module, const char* sectionName);
 
-	std::vector<uint64_t> GetSectionHashList(__in const std::string& sectionName) const
+	static bool CompareChecksum(__in const std::string module, __in const char* section, __in const uintptr_t previous_checksum);
+	static bool CompareChecksumToFileOnDisc(__in const std::wstring& module, __in const char* section, __in const uintptr_t previous_checksum);
+
+	static uintptr_t GetSectionChecksumFromDisc(__in const std::wstring path, __in const char* sectionName);
+
+	bool CheckLoadedModuleHashVersusDiskHash(__in const std::string module, __in const char* sectionName, __in std::wstring diskFilePath);
+
+	static std::list<ProcessData::ImportFunction> FetchHookedIATEntries();
+	static bool DoesIATContainHooked();
+
+	static bool IsAddressInModule(__in const std::vector<ProcessData::MODULE_DATA>& modules, __in const uintptr_t address);
+	static bool IsPEHeader(__in unsigned char* pMemory);
+
+	static bool IsTLSCallbackStructureModified();
+
+	void StoreModuleChecksum(ModuleChecksumData module)
 	{
-		if (sectionName.empty())
-			return {};
+		auto it = std::find_if(this->ModuleChecksums.begin(), this->ModuleChecksums.end(), [module](const ModuleChecksumData& m) { return (module.hMod == m.hMod); });
 
-		auto it = this->SectionHashes.find(sectionName);
-
-		if (it != this->SectionHashes.end())
+		if (it == this->ModuleChecksums.end())
 		{
-			return it->second;
+			this->ModuleChecksums.push_back(module);
 		}
-
-		return {};
 	}
 
-	bool IsUnknownModulePresent(); //traverse loaded modules to find any unknown ones (not signed & not whitelisted, in particular)
+	uintptr_t RetrieveModuleChecksum(__in const HMODULE hMod, __in const char* section) const
+	{
+		auto it = std::find_if(this->ModuleChecksums.begin(), this->ModuleChecksums.end(), [hMod](const ModuleChecksumData& m) { return (hMod == m.hMod); });
 
-	std::vector<ProcessData::MODULE_DATA> GetWhitelistedModules() const { return this->WhitelistedModules; }
-	
-	void AddToWhitelist(__in ProcessData::MODULE_DATA mod) { WhitelistedModules.push_back(mod); }
+		if (it == this->ModuleChecksums.end())
+		{
+			return 0;
+		}
 
-	void AddModuleHash(__inout std::vector<ModuleHashData>& moduleHashList, __in const wchar_t* moduleName, __in const char* sectionName);
-	
-	ModuleHashData GetModuleHash(__in const wchar_t* moduleName, __in const char* sectionName);
+		return it->SectionChecksums.at(std::string(section));
+	}
 
-	std::vector<ModuleHashData> GetModuleHashes();
+	auto GetViolations() const noexcept
+	{
+		std::lock_guard<std::mutex> lock(ViolationsMutex);
+		return this->Violations;
+	}
 
-	bool IsModuleModified(__in const wchar_t* moduleName); //pinpoint any specific modules that have had their .text sections changed
+	void AddViolation(const IntegrityViolation& iv)
+	{
+		std::lock_guard<std::mutex>  lock(ViolationsMutex);
+		if (std::find(Violations.begin(), Violations.end(), iv) == Violations.end())
+			Violations.push_back(iv);
+	}
 
-	bool IsTLSCallbackStructureModified() const; //checks the TLSCallback structure in data directory for mods
-
-	static bool IsPEHeader(__in unsigned char* pMemory); //checks for MZ and PE signatures
-	static bool IsAddressInModule(__in const std::vector<ProcessData::MODULE_DATA>& modules, __in const uintptr_t address);
-
-	static std::vector<uint64_t> GetSectionHashFromDisc(__in const std::wstring& path, __in const char* sectionName);
-	bool CheckFileIntegrityFromDisc(); //compare process image to executable file saved on disc
+	mutable std::mutex ViolationsMutex;
 
 private:
-	
-	std::unordered_map<std::string, std::vector<uint64_t>> SectionHashes; //section hashes for current/main module's sections: .text, .rdata, etc
 
-	std::vector<ProcessData::MODULE_DATA> WhitelistedModules;
-	std::vector<ModuleHashData> ModuleHashes; //.text hashes only for other modules -> future versions should include all sections for all loaded modules if possible
+	std::vector<ProcessData::MODULE_DATA> ModuleList;
+
+	std::vector<ModuleChecksumData> ModuleChecksums; //stores module checksums for quick access
+
+	std::unique_ptr<Thread> PeriodicIntegrityCheckThread = nullptr; //thread for periodic integrity checks
+
+	static void PeriodicIntegrityCheck(LPVOID thisClassPtr); //performs periodic integrity checks on the process and its modules
+
+	Settings* Config = nullptr; //non-owning pointer; do not delete at class destruction. 
+
+	std::vector<IntegrityViolation> Violations;
+
 };

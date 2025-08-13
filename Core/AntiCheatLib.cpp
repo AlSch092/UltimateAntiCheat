@@ -84,6 +84,8 @@ struct AntiCheat::Impl
             throw AntiCheatInitFail(AntiCheatInitFailReason::PreInitializeChecksDidNotPass);
         }
             
+        Preventions::StopAPCInjection(); //patch over ntdll.dll Ordinal8 unnamed function: we do this here or else integrity checker will show as nttdll.dll being modified
+
         try
         {
             this->NetworkClient = make_shared<NetClient>();
@@ -94,7 +96,7 @@ struct AntiCheat::Impl
 
             this->Monitor = make_unique<Detections>(Config, this->Evidence, NetworkClient);
 
-            this->Barrier = make_unique<Preventions>(Config, true, Monitor.get()->GetIntegrityChecker());
+            this->Barrier = make_unique<Preventions>(Config, true);
         }
         catch (const std::bad_alloc& _)
         {
@@ -642,8 +644,6 @@ Error AntiCheat::Impl::LaunchDefenses()
     }
 
     GetAntiDebugger()->StartAntiDebugThread(); //start debugger checks in a seperate thread
-
-    //AC->GetMonitor()->GetServiceManager()->GetServiceModules(); //enumerate services -> currently not in use
 
     if (!Process::CheckParentProcess(GetMonitor()->GetProcessObj()->GetParentName(), true)) //parent process check, the parent process would normally be set using our API methods
     {

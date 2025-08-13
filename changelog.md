@@ -1,5 +1,7 @@
 ## Updates
 
+- Aug 12, '25: Integrity checking has been completely replaced with code from `UltimateDRM` project, and de-coupled from the main detections loop. It now detects modifications done to any loaded module, and runs much faster than before.  
+
 - Aug 12, '25: Started cleaning up parts of code that were unacceptable in terms of safety or execution speed, such as changing argument copies to references, adding checks for null parameters at start of routines. Fixed various memory leaks. While much of the code is still very messy, it should now atleast run faster and safer. Regerssion testing passed, showing that protective methods are still working fine.  
 
 - Aug 11, '25: Changed anti-debugger routines to return DetectionFlags instead of bool, other small misc. improvements. May or may not replace all the detection code soon, a way better version has been made but unsure whether to make it open source or not    

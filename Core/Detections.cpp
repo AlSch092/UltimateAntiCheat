@@ -22,7 +22,7 @@ Detections::Detections(Settings* s, EvidenceLocker* evidence, shared_ptr<NetClie
 
         _Services = make_unique<Services>();
 
-        integrityChecker = make_shared<Integrity>(ModuleList);
+        integrityChecker = make_shared<Integrity>(s);
 
         VM = std::make_unique<VirtualMachine>(256);
     }
@@ -187,28 +187,6 @@ void Detections::Monitor(__in LPVOID thisPtr)
 
     Detections* Monitor = reinterpret_cast<Detections*>(thisPtr);
 
-    list<ProcessData::Section> sections = Process::GetSections(_MAIN_MODULE_NAME);
-
-    if (sections.size() == 0)
-    {
-        Logger::logf(Err, "Sections size was 0 @ Detections::Monitor");
-        return;
-    }
-
-    uintptr_t ModuleAddr = (uintptr_t)GetModuleHandleA(_MAIN_MODULE_NAME);
-
-    if (ModuleAddr == 0)
-    {
-        Logger::logf(Err, "Module couldn't be retrieved @ Detections::Monitor. Aborting execution! (%d)", GetLastError());
-        return;
-    }
-
-    if (Monitor->Config->bCheckIntegrity) //integrity check setup if option is enabled
-    {         
-        Monitor->SetSectionHash(_MAIN_MODULE_NAME, ".text"); //set our memory hashes of .text
-        Monitor->SetSectionHash(_MAIN_MODULE_NAME, ".rdata");
-    }
-    
     //Main Monitor Loop, continuous detections go in here. we need access to CachedSectionAddress variables so this loop doesnt get its own function.
     bool Monitoring = true;
     const int MonitorLoopMilliseconds = 5000;
@@ -254,35 +232,11 @@ void Detections::Monitor(__in LPVOID thisPtr)
 
         if (Monitor->Config->bCheckIntegrity)
         {
-            if (Monitor->GetIntegrityChecker()->IsTLSCallbackStructureModified()) //check various aspects of the TLS callback structure for modifications
+            if (Monitor->GetIntegrityChecker() != nullptr && Monitor->GetIntegrityChecker()->IsTLSCallbackStructureModified()) //check various aspects of the TLS callback structure for modifications
             {
                 Logger::logf(Detection, "Found modified TLS callback structure section (atleast one aspect of the TLS data directory structure was modified)");
                 Monitor->EvidenceManager->AddFlagged(DetectionFlags::CODE_INTEGRITY);
             }
-
-            for (const auto& section : sections)
-            {
-                if (section.name == ".text" || section.name == ".rdata")
-                {
-                    if (Monitor->IsSectionHashUnmatching(ModuleAddr + section.address, section.size, section.name)) //compare hashes of .text for modifications
-                    {
-                        Logger::logf(Detection, "Found modified %s section (or you're debugging with software breakpoints)!", (section.name == ".text" ? ".text" : ".rdata"));
-                        Monitor->EvidenceManager->AddFlagged(DetectionFlags::CODE_INTEGRITY);
-                    }
-                }
-            }
-
-            if (!Monitor->GetIntegrityChecker()->CheckFileIntegrityFromDisc()) //check .text of file on disc versus runtime process - this fills the gap of gathering .text hashes at program startup and comparing to that
-            {
-                Logger::logf(Detection, ".text section of file on disc differs from runtime process!");
-                Monitor->EvidenceManager->AddFlagged(DetectionFlags::CODE_INTEGRITY);
-            }
-        }
-
-        if (Monitor->GetIntegrityChecker()->IsModuleModified(L"WINTRUST.dll")) //check hashes of wintrust.dll for signing-related hooks
-        {
-            Logger::logf(Detection, "Found modified .text section in WINTRUST.dll!"); //checking .rdata would be helpful too
-            Monitor->EvidenceManager->AddFlagged(DetectionFlags::CODE_INTEGRITY);
         }
 
         vector<uintptr_t> mappedRegions = Monitor->DetectManualMapping();
@@ -322,22 +276,10 @@ void Detections::Monitor(__in LPVOID thisPtr)
             Monitor->EvidenceManager->AddFlagged(DetectionFlags::DLL_TAMPERING);
         }
 
-        if (Monitor->GetIntegrityChecker()->IsUnknownModulePresent()) //authenticode call and check against whitelisted module list
-        {
-            Logger::logf(Detection, "Found at least one unsigned dll loaded : We ideally only want verified, signed dlls in our application!");
-            Monitor->EvidenceManager->AddFlagged(DetectionFlags::INJECTED_ILLEGAL_PROGRAM);
-        }
-
         if (Services::IsTestsigningEnabled() || Services::IsDebugModeEnabled()) //test signing enabled, self-signed drivers
         {
             Logger::logf(Detection, "Testsigning or debugging mode is enabled! In most cases we don't allow the game/process to continue if testsigning is enabled.");
             Monitor->EvidenceManager->AddFlagged(DetectionFlags::UNSIGNED_DRIVERS);
-        }
-
-        if (Monitor->Detections::DoesIATContainHooked()) //iat hook check
-        {
-            Logger::logf(Detection, "IAT was hooked! One or more functions lead to addresses outside their respective modules!\n");
-            Monitor->EvidenceManager->AddFlagged(DetectionFlags::BAD_IAT);
         }
 
         if (Detections::FindWritableAddress(_MAIN_MODULE_NAME, ".text")) //page protections check, can be made more granular or loop over all mem pages
@@ -433,77 +375,77 @@ SetSectionHash sets the member variable `_TextSectionHashes` or `_RDataSectionHa
  * The integrity checking code in this project should be replaced with using UltimateDRM.lib, as it has a much better version in a compact library
  * It also does integrity checking for every non-writable section in all loaded modules, which is way better than here
 */
-bool Detections::SetSectionHash(__in const char* moduleName, __in const char* sectionName)
-{
-    if (moduleName == nullptr || sectionName == nullptr)
-    {
-        Logger::logf(Err, "one or more parameters were nullptr @ SetSectionHash");
-        return false;
-    }
-
-    if (this->GetIntegrityChecker().get() == nullptr)
-    {
-		Logger::logf(Err, "IntegrityChecker was nullptr @ SetSectionHash");
-		return false;
-    }
-
-    bool funcFailed = false;
-
-    uintptr_t ModuleAddr = (uintptr_t)GetModuleHandleA(moduleName);
-
-    if (ModuleAddr == 0)
-    {
-        Logger::logf(Err, "ModuleAddr was 0 @ SetSectionHash");
-        return false;
-    }
-
-    list<ProcessData::Section> sections = Process::GetSections(moduleName);
-    
-    if (sections.size() == 0)
-    {
-        Logger::logf(Err, "sections.size() of section %s was 0 @ SetSectionHash", sectionName);
-        return false;
-    }
-
-    for (const auto& section : sections) 
-    {
-		if (section.name == sectionName)
-        {
-            vector<uintptr_t> hashes = GetIntegrityChecker()->GetMemoryHash((uintptr_t)section.address + ModuleAddr, section.size);
-
-            if (hashes.size() > 0)
-            {
-                GetIntegrityChecker()->SetSectionHashList(hashes, sectionName);
-                break;
-            }
-            else
-            {
-                Logger::logf(Err, "hashes.size() was 0 @ SetSectionHash", sectionName);
-                funcFailed = true;
-                break;
-            }
-        }
-    }
-
-    return !funcFailed;
-}
+//bool Detections::SetSectionHash(__in const char* moduleName, __in const char* sectionName)
+//{
+//    if (moduleName == nullptr || sectionName == nullptr)
+//    {
+//        Logger::logf(Err, "one or more parameters were nullptr @ SetSectionHash");
+//        return false;
+//    }
+//
+//    if (this->GetIntegrityChecker().get() == nullptr)
+//    {
+//		Logger::logf(Err, "IntegrityChecker was nullptr @ SetSectionHash");
+//		return false;
+//    }
+//
+//    bool funcFailed = false;
+//
+//    uintptr_t ModuleAddr = (uintptr_t)GetModuleHandleA(moduleName);
+//
+//    if (ModuleAddr == 0)
+//    {
+//        Logger::logf(Err, "ModuleAddr was 0 @ SetSectionHash");
+//        return false;
+//    }
+//
+//    list<ProcessData::Section> sections = Process::GetSections(moduleName);
+//    
+//    if (sections.size() == 0)
+//    {
+//        Logger::logf(Err, "sections.size() of section %s was 0 @ SetSectionHash", sectionName);
+//        return false;
+//    }
+//
+//    for (const auto& section : sections) 
+//    {
+//		if (section.name == sectionName)
+//        {
+//            vector<uintptr_t> hashes = GetIntegrityChecker()->GetMemoryHash((uintptr_t)section.address + ModuleAddr, section.size);
+//
+//            if (hashes.size() > 0)
+//            {
+//                GetIntegrityChecker()->SetSectionHashList(hashes, sectionName);
+//                break;
+//            }
+//            else
+//            {
+//                Logger::logf(Err, "hashes.size() was 0 @ SetSectionHash", sectionName);
+//                funcFailed = true;
+//                break;
+//            }
+//        }
+//    }
+//
+//    return !funcFailed;
+//}
 
 /*
     IsSectionHashUnmatching  compares our collected hash list from ::SetSectionHash() , we use cached address + size to prevent spoofing (sections can be renamed at runtime by an attacker)
     Returns true if the two sets of hashes do not match, implying memory was modified
 */
-bool Detections::IsSectionHashUnmatching(__in const UINT64 cachedAddress, __in const DWORD cachedSize, __in const string section)
-{
-    if (cachedAddress == 0 || cachedSize == 0 || section.empty())
-    {
-        Logger::logf(Err, "Parameters were 0 @ Detections::IsSectionHashUnmatching");
-        return false;
-    }
-
-    Logger::logf(Info, "Checking hashes of address: %llx (%d bytes) for memory integrity\n", cachedAddress, cachedSize);
-
-    return !GetIntegrityChecker()->Check((uint64_t)cachedAddress, cachedSize, GetIntegrityChecker()->GetSectionHashList(section));
-}
+//bool Detections::IsSectionHashUnmatching(__in const UINT64 cachedAddress, __in const DWORD cachedSize, __in const string section)
+//{
+//    if (cachedAddress == 0 || cachedSize == 0 || section.empty())
+//    {
+//        Logger::logf(Err, "Parameters were 0 @ Detections::IsSectionHashUnmatching");
+//        return false;
+//    }
+//
+//    Logger::logf(Info, "Checking hashes of address: %llx (%d bytes) for memory integrity\n", cachedAddress, cachedSize);
+//
+//    return !GetIntegrityChecker()->Check((uint64_t)cachedAddress, cachedSize, GetIntegrityChecker()->GetSectionHashList(section));
+//}
 
 /*
     IsBlacklistedProcessRunning 
@@ -835,7 +777,7 @@ bool Detections::IsBlacklistedWindowPresent()
                     if (strcmp(windowTitle, (const char*)CheatEngineTxt.decrypt().c_str()) == 0  || strstr(windowTitle, (const char*)CheatEngineTxt.decrypt().c_str()) != NULL) //*note* this will detect open folders named "Cheat Engine" also, which doesn't imply the actual program is opened.
                     {
                         Monitor->EvidenceManager->AddFlagged(DetectionFlags::EXTERNAL_ILLEGAL_PROGRAM);
-                        Logger::logf(Detection, "Detected a window named 'Cheat Engine' (includes open folder names)");
+                        Logger::logf(Detection, "Detected a window with text '%s' (includes open folder names)", CheatEngineTxt.decrypt().c_str());
                         return false;
                     }
                     else if (strstr(windowTitle, (const char*)luaScript.decrypt().c_str()))

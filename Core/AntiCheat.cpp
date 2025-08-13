@@ -63,6 +63,8 @@ AntiCheat::AntiCheat(__in Settings* config) : Config(config)
 		}
 	}
 
+	Preventions::StopAPCInjection(); //patch over ntdll.dll Ordinal8 unnamed function: we do this here or else integrity checker will show as nttdll.dll being modified
+
 	try
 	{
 		this->NetworkClient = make_shared<NetClient>();
@@ -73,7 +75,7 @@ AntiCheat::AntiCheat(__in Settings* config) : Config(config)
 
 		this->Monitor = make_unique<Detections>(config, this->Evidence, NetworkClient);
 
-		this->Barrier = make_unique<Preventions>(config, true, Monitor.get()->GetIntegrityChecker()); //true = prevent new threads from being made
+		this->Barrier = make_unique<Preventions>(config, true); //true = prevent new threads from being made
 	}
 	catch (const std::bad_alloc& _)
 	{

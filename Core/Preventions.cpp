@@ -29,7 +29,7 @@ bool Preventions::RandomizeModuleName()
         
         if (mod.hModule != 0)
         {
-            this->integrityChecker->AddToWhitelist(mod);
+            //this->integrityChecker->AddToWhitelist(mod);
         }
 
         Logger::logfw(Info, L"Changed module name to: %s\n", newModuleName.c_str());
@@ -72,11 +72,11 @@ Error Preventions::DeployBarrier()
         retError = Error::CANT_APPLY_TECHNIQUE;
     }
 
-    if (!StopAPCInjection()) //patch over ntdll.dll Ordinal8 unnamed function
-    {
-        Logger::logf(Err, "Couldn't apply anti-APC technique @ Preventions::DeployBarrier");
-        retError = Error::CANT_APPLY_TECHNIQUE;
-    }
+    //if (!StopAPCInjection()) //patch over ntdll.dll Ordinal8 unnamed function
+    //{
+    //    Logger::logf(Err, "Couldn't apply anti-APC technique @ Preventions::DeployBarrier");
+    //    retError = Error::CANT_APPLY_TECHNIQUE;
+    //}
 
 #if _WIN32_WINNT >= 0x0602 //minimum windows 8 for SetMitigation routines
     //third parameter (dynamic code) set to true -> prevents VirtualProtect from succeeding on .text sections of loaded/signed modules. while this can be very useful, it breaks our TLS callback protections since we patch over the first byte of new thread's execution addresses

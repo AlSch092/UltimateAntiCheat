@@ -56,17 +56,17 @@ public:
 
 private:
 
-	unique_ptr<Detections> Monitor;  //cheat detections
+	unique_ptr<Detections> Monitor = nullptr;  //cheat detections
 
-	unique_ptr<Preventions> Barrier;  //cheat preventions
+	unique_ptr<Preventions> Barrier = nullptr;  //cheat preventions
 
-	unique_ptr<DebuggerDetections> AntiDebugger;
+	unique_ptr<DebuggerDetections> AntiDebugger = nullptr;
 
-	shared_ptr <NetClient> NetworkClient; //for client-server comms, our other classes need access to this to send detected flags to the server
+	shared_ptr <NetClient> NetworkClient = nullptr; //for client-server comms, our other classes need access to this to send detected flags to the server
 	
 	Settings* Config = nullptr; //the unique_ptr for this is made in main.cpp
 
-	WindowsVersion WinVersion;
+	WindowsVersion WinVersion = WindowsVersion::ErrorUnknown;
 	
 	EvidenceLocker* Evidence = nullptr;
 };

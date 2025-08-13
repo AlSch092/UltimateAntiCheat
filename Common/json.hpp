@@ -2058,7 +2058,7 @@ JSON_HEDLEY_DIAGNOSTIC_POP
     !defined(JSON_HEDLEY_TINYC_VERSION)
     #define JSON_HEDLEY_ARRAY_PARAM(name) (name)
 #else
-    #define JSON_HEDLEY_ARRAY_PARAM(name)
+    #define JSON_HEDLEY_ARRAY_PARAM(nameWithPath)
 #endif
 
 #if defined(JSON_HEDLEY_IS_CONSTANT)
@@ -4384,7 +4384,7 @@ class exception : public std::exception
     JSON_HEDLEY_NON_NULL(3)
     exception(int id_, const char* what_arg) : id(id_), m(what_arg) {} // NOLINT(bugprone-throw-keyword-missing)
 
-    static std::string name(const std::string& ename, int id_)
+    static std::string nameWithPath(const std::string& ename, int id_)
     {
         return concat("[json.exception.", ename, '.', std::to_string(id_), "] ");
     }
@@ -4481,7 +4481,7 @@ class parse_error : public exception
     template<typename BasicJsonContext, enable_if_t<is_basic_json_context<BasicJsonContext>::value, int> = 0>
     static parse_error create(int id_, const position_t& pos, const std::string& what_arg, BasicJsonContext context)
     {
-        const std::string w = concat(exception::name("parse_error", id_), "parse error",
+        const std::string w = concat(exception::nameWithPath("parse_error", id_), "parse error",
                                      position_string(pos), ": ", exception::diagnostics(context), what_arg);
         return {id_, pos.chars_read_total, w.c_str()};
     }
@@ -4489,7 +4489,7 @@ class parse_error : public exception
     template<typename BasicJsonContext, enable_if_t<is_basic_json_context<BasicJsonContext>::value, int> = 0>
     static parse_error create(int id_, std::size_t byte_, const std::string& what_arg, BasicJsonContext context)
     {
-        const std::string w = concat(exception::name("parse_error", id_), "parse error",
+        const std::string w = concat(exception::nameWithPath("parse_error", id_), "parse error",
                                      (byte_ != 0 ? (concat(" at byte ", std::to_string(byte_))) : ""),
                                      ": ", exception::diagnostics(context), what_arg);
         return {id_, byte_, w.c_str()};
@@ -4525,7 +4525,7 @@ class invalid_iterator : public exception
     template<typename BasicJsonContext, enable_if_t<is_basic_json_context<BasicJsonContext>::value, int> = 0>
     static invalid_iterator create(int id_, const std::string& what_arg, BasicJsonContext context)
     {
-        const std::string w = concat(exception::name("invalid_iterator", id_), exception::diagnostics(context), what_arg);
+        const std::string w = concat(exception::nameWithPath("invalid_iterator", id_), exception::diagnostics(context), what_arg);
         return {id_, w.c_str()};
     }
 
@@ -4543,7 +4543,7 @@ class type_error : public exception
     template<typename BasicJsonContext, enable_if_t<is_basic_json_context<BasicJsonContext>::value, int> = 0>
     static type_error create(int id_, const std::string& what_arg, BasicJsonContext context)
     {
-        const std::string w = concat(exception::name("type_error", id_), exception::diagnostics(context), what_arg);
+        const std::string w = concat(exception::nameWithPath("type_error", id_), exception::diagnostics(context), what_arg);
         return {id_, w.c_str()};
     }
 
@@ -4560,7 +4560,7 @@ class out_of_range : public exception
     template<typename BasicJsonContext, enable_if_t<is_basic_json_context<BasicJsonContext>::value, int> = 0>
     static out_of_range create(int id_, const std::string& what_arg, BasicJsonContext context)
     {
-        const std::string w = concat(exception::name("out_of_range", id_), exception::diagnostics(context), what_arg);
+        const std::string w = concat(exception::nameWithPath("out_of_range", id_), exception::diagnostics(context), what_arg);
         return {id_, w.c_str()};
     }
 
@@ -4577,7 +4577,7 @@ class other_error : public exception
     template<typename BasicJsonContext, enable_if_t<is_basic_json_context<BasicJsonContext>::value, int> = 0>
     static other_error create(int id_, const std::string& what_arg, BasicJsonContext context)
     {
-        const std::string w = concat(exception::name("other_error", id_), exception::diagnostics(context), what_arg);
+        const std::string w = concat(exception::nameWithPath("other_error", id_), exception::diagnostics(context), what_arg);
         return {id_, w.c_str()};
     }
 
@@ -15996,47 +15996,47 @@ class binary_writer
     @return The size of a BSON document entry header, including the id marker
             and the entry name size (and its null-terminator).
     */
-    static std::size_t calc_bson_entry_header_size(const string_t& name, const BasicJsonType& j)
+    static std::size_t calc_bson_entry_header_size(const string_t& nameWithPath, const BasicJsonType& j)
     {
-        const auto it = name.find(static_cast<typename string_t::value_type>(0));
+        const auto it = nameWithPath.find(static_cast<typename string_t::value_type>(0));
         if (JSON_HEDLEY_UNLIKELY(it != BasicJsonType::string_t::npos))
         {
             JSON_THROW(out_of_range::create(409, concat("BSON key cannot contain code point U+0000 (at byte ", std::to_string(it), ")"), &j));
             static_cast<void>(j);
         }
 
-        return /*id*/ 1ul + name.size() + /*zero-terminator*/1u;
+        return /*id*/ 1ul + nameWithPath.size() + /*zero-terminator*/1u;
     }
 
     /*!
     @brief Writes the given @a element_type and @a name to the output adapter
     */
-    void write_bson_entry_header(const string_t& name,
+    void write_bson_entry_header(const string_t& nameWithPath,
                                  const std::uint8_t element_type)
     {
         oa->write_character(to_char_type(element_type)); // boolean
         oa->write_characters(
-            reinterpret_cast<const CharType*>(name.c_str()),
-            name.size() + 1u);
+            reinterpret_cast<const CharType*>(nameWithPath.c_str()),
+            nameWithPath.size() + 1u);
     }
 
     /*!
     @brief Writes a BSON element with key @a name and boolean value @a value
     */
-    void write_bson_boolean(const string_t& name,
+    void write_bson_boolean(const string_t& nameWithPath,
                             const bool value)
     {
-        write_bson_entry_header(name, 0x08);
+        write_bson_entry_header(nameWithPath, 0x08);
         oa->write_character(value ? to_char_type(0x01) : to_char_type(0x00));
     }
 
     /*!
     @brief Writes a BSON element with key @a name and double value @a value
     */
-    void write_bson_double(const string_t& name,
+    void write_bson_double(const string_t& nameWithPath,
                            const double value)
     {
-        write_bson_entry_header(name, 0x01);
+        write_bson_entry_header(nameWithPath, 0x01);
         write_number<double>(value, true);
     }
 
@@ -16051,10 +16051,10 @@ class binary_writer
     /*!
     @brief Writes a BSON element with key @a name and string value @a value
     */
-    void write_bson_string(const string_t& name,
+    void write_bson_string(const string_t& nameWithPath,
                            const string_t& value)
     {
-        write_bson_entry_header(name, 0x02);
+        write_bson_entry_header(nameWithPath, 0x02);
 
         write_number<std::int32_t>(static_cast<std::int32_t>(value.size() + 1ul), true);
         oa->write_characters(
@@ -16065,9 +16065,9 @@ class binary_writer
     /*!
     @brief Writes a BSON element with key @a name and null value
     */
-    void write_bson_null(const string_t& name)
+    void write_bson_null(const string_t& nameWithPath)
     {
-        write_bson_entry_header(name, 0x0A);
+        write_bson_entry_header(nameWithPath, 0x0A);
     }
 
     /*!
@@ -16083,17 +16083,17 @@ class binary_writer
     /*!
     @brief Writes a BSON element with key @a name and integer @a value
     */
-    void write_bson_integer(const string_t& name,
+    void write_bson_integer(const string_t& nameWithPath,
                             const std::int64_t value)
     {
         if ((std::numeric_limits<std::int32_t>::min)() <= value && value <= (std::numeric_limits<std::int32_t>::max)())
         {
-            write_bson_entry_header(name, 0x10); // int32
+            write_bson_entry_header(nameWithPath, 0x10); // int32
             write_number<std::int32_t>(static_cast<std::int32_t>(value), true);
         }
         else
         {
-            write_bson_entry_header(name, 0x12); // int64
+            write_bson_entry_header(nameWithPath, 0x12); // int64
             write_number<std::int64_t>(static_cast<std::int64_t>(value), true);
         }
     }
@@ -16111,17 +16111,17 @@ class binary_writer
     /*!
     @brief Writes a BSON element with key @a name and unsigned @a value
     */
-    void write_bson_unsigned(const string_t& name,
+    void write_bson_unsigned(const string_t& nameWithPath,
                              const BasicJsonType& j)
     {
         if (j.m_data.m_value.number_unsigned <= static_cast<std::uint64_t>((std::numeric_limits<std::int32_t>::max)()))
         {
-            write_bson_entry_header(name, 0x10 /* int32 */);
+            write_bson_entry_header(nameWithPath, 0x10 /* int32 */);
             write_number<std::int32_t>(static_cast<std::int32_t>(j.m_data.m_value.number_unsigned), true);
         }
         else if (j.m_data.m_value.number_unsigned <= static_cast<std::uint64_t>((std::numeric_limits<std::int64_t>::max)()))
         {
-            write_bson_entry_header(name, 0x12 /* int64 */);
+            write_bson_entry_header(nameWithPath, 0x12 /* int64 */);
             write_number<std::int64_t>(static_cast<std::int64_t>(j.m_data.m_value.number_unsigned), true);
         }
         else
@@ -16133,10 +16133,10 @@ class binary_writer
     /*!
     @brief Writes a BSON element with key @a name and object @a value
     */
-    void write_bson_object_entry(const string_t& name,
+    void write_bson_object_entry(const string_t& nameWithPath,
                                  const typename BasicJsonType::object_t& value)
     {
-        write_bson_entry_header(name, 0x03); // object
+        write_bson_entry_header(nameWithPath, 0x03); // object
         write_bson_object(value);
     }
 
@@ -16166,10 +16166,10 @@ class binary_writer
     /*!
     @brief Writes a BSON element with key @a name and array @a value
     */
-    void write_bson_array(const string_t& name,
+    void write_bson_array(const string_t& nameWithPath,
                           const typename BasicJsonType::array_t& value)
     {
-        write_bson_entry_header(name, 0x04); // array
+        write_bson_entry_header(nameWithPath, 0x04); // array
         write_number<std::int32_t>(static_cast<std::int32_t>(calc_bson_array_size(value)), true);
 
         std::size_t array_index = 0ul;
@@ -16185,10 +16185,10 @@ class binary_writer
     /*!
     @brief Writes a BSON element with key @a name and binary value @a value
     */
-    void write_bson_binary(const string_t& name,
+    void write_bson_binary(const string_t& nameWithPath,
                            const binary_t& value)
     {
-        write_bson_entry_header(name, 0x05);
+        write_bson_entry_header(nameWithPath, 0x05);
 
         write_number<std::int32_t>(static_cast<std::int32_t>(value.size()), true);
         write_number(value.has_subtype() ? static_cast<std::uint8_t>(value.subtype()) : static_cast<std::uint8_t>(0x00));
@@ -16200,10 +16200,10 @@ class binary_writer
     @brief Calculates the size necessary to serialize the JSON value @a j with its @a name
     @return The calculated size for the BSON document entry for @a j with the given @a name.
     */
-    static std::size_t calc_bson_element_size(const string_t& name,
+    static std::size_t calc_bson_element_size(const string_t& nameWithPath,
             const BasicJsonType& j)
     {
-        const auto header_size = calc_bson_entry_header_size(name, j);
+        const auto header_size = calc_bson_entry_header_size(nameWithPath, j);
         switch (j.type())
         {
             case value_t::object:
@@ -16248,37 +16248,37 @@ class binary_writer
     @param name The name to associate with the JSON entity @a j within the
                 current BSON document
     */
-    void write_bson_element(const string_t& name,
+    void write_bson_element(const string_t& nameWithPath,
                             const BasicJsonType& j)
     {
         switch (j.type())
         {
             case value_t::object:
-                return write_bson_object_entry(name, *j.m_data.m_value.object);
+                return write_bson_object_entry(nameWithPath, *j.m_data.m_value.object);
 
             case value_t::array:
-                return write_bson_array(name, *j.m_data.m_value.array);
+                return write_bson_array(nameWithPath, *j.m_data.m_value.array);
 
             case value_t::binary:
-                return write_bson_binary(name, *j.m_data.m_value.binary);
+                return write_bson_binary(nameWithPath, *j.m_data.m_value.binary);
 
             case value_t::boolean:
-                return write_bson_boolean(name, j.m_data.m_value.boolean);
+                return write_bson_boolean(nameWithPath, j.m_data.m_value.boolean);
 
             case value_t::number_float:
-                return write_bson_double(name, j.m_data.m_value.number_float);
+                return write_bson_double(nameWithPath, j.m_data.m_value.number_float);
 
             case value_t::number_integer:
-                return write_bson_integer(name, j.m_data.m_value.number_integer);
+                return write_bson_integer(nameWithPath, j.m_data.m_value.number_integer);
 
             case value_t::number_unsigned:
-                return write_bson_unsigned(name, j);
+                return write_bson_unsigned(nameWithPath, j);
 
             case value_t::string:
-                return write_bson_string(name, *j.m_data.m_value.string);
+                return write_bson_string(nameWithPath, *j.m_data.m_value.string);
 
             case value_t::null:
-                return write_bson_null(name);
+                return write_bson_null(nameWithPath);
 
             // LCOV_EXCL_START
             case value_t::discarded:
