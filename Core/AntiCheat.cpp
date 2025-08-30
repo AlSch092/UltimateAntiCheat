@@ -67,15 +67,15 @@ AntiCheat::AntiCheat(__in Settings* config) : Config(config)
 
 	try
 	{
-		this->NetworkClient = make_shared<NetClient>();
+		this->NetworkClient = std::make_shared<NetClient>();
 
 		this->Evidence = new EvidenceLocker(this->NetworkClient.get()); //make shared evidence log (change this to shared_ptr later)
 
-		this->AntiDebugger = make_unique<DebuggerDetections>(config, this->Evidence); //any detection methods need the netclient for comms
+		this->AntiDebugger = std::make_unique<DebuggerDetections>(config, this->Evidence); //any detection methods need the netclient for comms
 
-		this->Monitor = make_unique<Detections>(config, this->Evidence, NetworkClient);
+		this->Monitor = std::make_unique<Detections>(config, this->Evidence, NetworkClient);
 
-		this->Barrier = make_unique<Preventions>(config, true); //true = prevent new threads from being made
+		this->Barrier = std::make_unique<Preventions>(config, true); //true = prevent new threads from being made
 	}
 	catch (const std::bad_alloc& _)
 	{
@@ -92,7 +92,7 @@ AntiCheat::AntiCheat(__in Settings* config) : Config(config)
 		}
 
 		//additionally, we need to check the signature on our driver to make sure someone isn't spoofing it. this will be added soon after initial testing is done
-		wstring driverCertSubject = Authenticode::GetSignerFromFile(absolutePath);
+		std::wstring driverCertSubject = Authenticode::GetSignerFromFile(absolutePath);
 
 		if (driverCertSubject.size() == 0 || driverCertSubject != GetConfig()->DriverSignerSubject) //check if driver cert has correct sign subject
 		{
@@ -307,7 +307,7 @@ bool AntiCheat::DoPreInitializeChecks()
 	{
 		if (Services::IsHypervisorPresent()) //we can either block all hypervisors to try and stop SLAT/EPT manipulation, or only allow certain vendors.
 		{
-			string vendor = Services::GetHypervisorVendor(); //...however, many custom hypervisors will likely spoof their vendorId to be 'HyperV' or 'VMWare' 
+			std::string vendor = Services::GetHypervisorVendor(); //...however, many custom hypervisors will likely spoof their vendorId to be 'HyperV' or 'VMWare' 
 
 			if (vendor.size() == 0)
 			{
@@ -380,8 +380,8 @@ Error AntiCheat::Initialize(std::string licenseKey, bool isServerAvailable)
 	Error errorCode = Error::OK;
 	bool isLicenseValid = false;
 
-	std::list<wstring> allowedParents = GetConfig()->allowedParents;
-	auto it = std::find_if(allowedParents.begin(), allowedParents.end(), [](const wstring& parentName)
+	std::list<std::wstring> allowedParents = GetConfig()->allowedParents;
+	auto it = std::find_if(allowedParents.begin(), allowedParents.end(), [](const std::wstring& parentName)
 		{
 			return Process::CheckParentProcess(parentName, true);
 		});

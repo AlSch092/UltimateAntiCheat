@@ -10,8 +10,6 @@
 
 #define ENCODING (X509_ASN_ENCODING | PKCS_7_ASN_ENCODING)
 
-using namespace std;
-
 typedef struct
 {
 	LPWSTR lpszProgramName;
@@ -25,7 +23,7 @@ namespace Authenticode
 	BOOL VerifyCatalogSignature(__in const LPCWSTR filePath, __in const  BOOL checkRevoked);
 	BOOL HasSignature(__in const LPCWSTR filePath, __in const BOOL checkEndCertRevoked);
 
-	std::wstring GetSignerFromFile(__in const wstring& filePath); //get the 'subject' field of the certifcate (often the company which published the software file)
+	std::wstring GetSignerFromFile(__in const std::wstring& filePath); //get the 'subject' field of the certifcate (often the company which published the software file)
 
 	//https://learn.microsoft.com/en-us/previous-versions/troubleshoot/windows/win32/get-information-authenticode-signed-executables
 	BOOL GetProgAndPublisherInfo(__in const PCMSG_SIGNER_INFO pSignerInfo, __out PSPROG_PUBLISHERINFO Info);

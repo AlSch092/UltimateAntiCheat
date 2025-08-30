@@ -33,13 +33,13 @@ struct AntiCheat::Impl
     
     WindowsVersion WinVersion = WindowsVersion::ErrorUnknown;
     
-    unique_ptr<Detections> Monitor = nullptr;  //cheat detections
+    std::unique_ptr<Detections> Monitor = nullptr;  //cheat detections
     
-    unique_ptr<Preventions> Barrier = nullptr;  //cheat preventions
+    std::unique_ptr<Preventions> Barrier = nullptr;  //cheat preventions
     
-    unique_ptr<DebuggerDetections> AntiDebugger = nullptr;
+    std::unique_ptr<DebuggerDetections> AntiDebugger = nullptr;
     
-    shared_ptr <NetClient> NetworkClient = nullptr; //for client-server comms, our other classes need access to this to send detected flags to the server
+    std::shared_ptr <NetClient> NetworkClient = nullptr; //for client-server comms, our other classes need access to this to send detected flags to the server
     
 	Settings* Config = nullptr; //protected settings object, which is write-protected via ProtectedMemory class
 
@@ -88,15 +88,15 @@ struct AntiCheat::Impl
 
         try
         {
-            this->NetworkClient = make_shared<NetClient>();
+            this->NetworkClient = std::make_shared<NetClient>();
 
             this->Evidence = new EvidenceLocker(this->NetworkClient.get());
 
-            this->AntiDebugger = make_unique<DebuggerDetections>(Config, this->Evidence);
+            this->AntiDebugger = std::make_unique<DebuggerDetections>(Config, this->Evidence);
 
-            this->Monitor = make_unique<Detections>(Config, this->Evidence, NetworkClient);
+            this->Monitor = std::make_unique<Detections>(Config, this->Evidence, NetworkClient);
 
-            this->Barrier = make_unique<Preventions>(Config, true);
+            this->Barrier = std::make_unique<Preventions>(Config, true);
         }
         catch (const std::bad_alloc& _)
         {
@@ -113,7 +113,7 @@ struct AntiCheat::Impl
             }
 
             //additionally, we need to check the signature on our driver to make sure someone isn't spoofing it. this will be added soon after initial testing is done
-            wstring driverCertSubject = Authenticode::GetSignerFromFile(absolutePath);
+            std::wstring driverCertSubject = Authenticode::GetSignerFromFile(absolutePath);
 
             if (driverCertSubject.size() == 0 || driverCertSubject != Config->DriverSignerSubject) //check if driver cert has correct sign subject
             {
@@ -145,6 +145,9 @@ struct AntiCheat::Impl
     {
         this->ProtectedSettings->Reset();
         delete this->ProtectedSettings;
+
+        if (this->Evidence != nullptr)
+            delete this->Evidence;
     }
 
     Error Initialize(std::string licenseKey);
@@ -157,7 +160,7 @@ struct AntiCheat::Impl
 
     DebuggerDetections* GetAntiDebugger() const { return this->AntiDebugger.get(); }
 
-    weak_ptr<NetClient> GetNetworkClient() const { return this->NetworkClient; }
+    std::weak_ptr<NetClient> GetNetworkClient() const { return this->NetworkClient; }
 
     Preventions* GetBarrier() const { return this->Barrier.get(); }  //pointer lifetime stays within the Anticheat class, these 'Get' functions should only be used to call functions of these classes
 
@@ -496,7 +499,7 @@ bool AntiCheat::Impl::DoPreInitializeChecks()
     {
         if (Services::IsHypervisorPresent()) //we can either block all hypervisors to try and stop SLAT/EPT manipulation, or only allow certain vendors.
         {
-            string vendor = Services::GetHypervisorVendor(); //...however, many custom hypervisors will likely spoof their vendorId to be 'HyperV' or 'VMWare' 
+            std::string vendor = Services::GetHypervisorVendor(); //...however, many custom hypervisors will likely spoof their vendorId to be 'HyperV' or 'VMWare' 
 
             if (vendor.size() == 0)
             {
@@ -566,8 +569,8 @@ Error AntiCheat::Impl::Initialize(std::string gameCode)
     Error errorCode = Error::OK;
     bool isLicenseValid = false;
 
-    std::list<wstring> allowedParents = GetConfig()->allowedParents;
-    auto it = std::find_if(allowedParents.begin(), allowedParents.end(), [](const wstring& parentName)
+    std::list<std::wstring> allowedParents = GetConfig()->allowedParents;
+    auto it = std::find_if(allowedParents.begin(), allowedParents.end(), [](const std::wstring& parentName)
     {
         return Process::CheckParentProcess(parentName, true);
     });

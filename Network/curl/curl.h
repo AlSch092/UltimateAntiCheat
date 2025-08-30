@@ -179,7 +179,7 @@ typedef enum {
 
 struct curl_httppost {
   struct curl_httppost *next;       /* next entry in the list */
-  char *name;                       /* pointer to allocated name */
+  char *nameWithPath;                       /* pointer to allocated name */
   long namelength;                  /* length of name length */
   char *contents;                   /* pointer to allocated data contents */
   long contentslength;              /* length of contents field, see also
@@ -1017,7 +1017,7 @@ typedef enum {
 
 
 struct curl_hstsentry {
-  char *name;
+  char *nameWithPath;
   size_t namelen;
   unsigned int includeSubDomains:1;
   char expire[18]; /* YYYYMMDD HH:MM:SS [null-terminated] */
@@ -2433,7 +2433,7 @@ CURL_EXTERN curl_mimepart *curl_mime_addpart(curl_mime *mime);
  *
  * Set mime/form part name.
  */
-CURL_EXTERN CURLcode curl_mime_name(curl_mimepart *part, const char *name);
+CURL_EXTERN CURLcode curl_mime_name(curl_mimepart *part, const char *nameWithPath);
 
 /*
  * NAME curl_mime_filename()
@@ -2793,7 +2793,7 @@ struct curl_slist {
 
 struct curl_ssl_backend {
   curl_sslbackend id;
-  const char *name;
+  const char *nameWithPath;
 };
 typedef struct curl_ssl_backend curl_ssl_backend;
 
@@ -2804,7 +2804,7 @@ typedef enum {
   CURLSSLSET_NO_BACKENDS /* libcurl was built without any SSL support */
 } CURLsslset;
 
-CURL_EXTERN CURLsslset curl_global_sslset(curl_sslbackend id, const char *name,
+CURL_EXTERN CURLsslset curl_global_sslset(curl_sslbackend id, const char *nameWithPath,
                                           const curl_ssl_backend ***avail);
 
 /*

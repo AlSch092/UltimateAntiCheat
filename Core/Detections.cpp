@@ -1,7 +1,7 @@
 //By AlSch092 @github
 #include "Detections.hpp"
 
-Detections::Detections(Settings* s, EvidenceLocker* evidence, shared_ptr<NetClient> client) : Config(s), EvidenceManager(evidence), netClient(client)
+Detections::Detections(Settings* s, EvidenceLocker* evidence, std::shared_ptr<NetClient> client) : Config(s), EvidenceManager(evidence), netClient(client)
 {
     this->InitializeBlacklistedProcessesList();
 
@@ -14,15 +14,15 @@ Detections::Detections(Settings* s, EvidenceLocker* evidence, shared_ptr<NetClie
 		auto sections = Process::GetSections(_MAIN_MODULE_NAME);
 
         if(sections.size() > 0)
-            _Proc = make_unique<Process>(sections.size());
+            _Proc = std::make_unique<Process>(sections.size());
         else
-            _Proc = make_unique<Process>(6); //.text , .rdata, .data, .pdata, .rsrc, .reloc, .tls, 
+            _Proc = std::make_unique<Process>(6); //.text , .rdata, .data, .pdata, .rsrc, .reloc, .tls, 
 
         Process::SetNumSections(sections.size());
 
-        _Services = make_unique<Services>();
+        _Services = std::make_unique<Services>();
 
-        integrityChecker = make_shared<Integrity>(s);
+        integrityChecker = std::make_shared<Integrity>(s);
 
         VM = std::make_unique<VirtualMachine>(256);
     }
@@ -121,7 +121,7 @@ VOID CALLBACK Detections::OnDllNotification(ULONG NotificationReason, const PLDR
         {
             Logger::logfw(Info, L"[LdrpDllNotification Callback] dll loaded: %s", FullDllName);
             std::lock_guard<std::mutex> lock(Monitor->DLLVerificationQueueMutex);
-            Monitor->DLLVerificationQueue.push(wstring(FullDllName));
+            Monitor->DLLVerificationQueue.push(std::wstring(FullDllName));
         }
     }
 }
@@ -133,7 +133,7 @@ void Detections::CheckDLLSignature()
 {
 	while (true) //loop until there are no more modules to check
     {
-        wstring FullDllName;
+        std::wstring FullDllName;
      
         {
             std::lock_guard<std::mutex> lock(this->DLLVerificationQueueMutex); //lock only for queue access
@@ -211,7 +211,7 @@ void Detections::Monitor(__in LPVOID thisPtr)
         {
             if (Services::IsHypervisorPresent()) //we can either block all hypervisors to try and stop SLAT/EPT manipulation, or only allow certain vendors.
             {
-                string vendor = Services::GetHypervisorVendor(); //...however, many custom hypervisors will likely spoof their vendorId to be 'HyperV' or 'VMWare' 
+                std::string vendor = Services::GetHypervisorVendor(); //...however, many custom hypervisors will likely spoof their vendorId to be 'HyperV' or 'VMWare' 
 
                 if (vendor.size() == 0) //custom hypervisors might empty the vendor
                 {
@@ -239,7 +239,7 @@ void Detections::Monitor(__in LPVOID thisPtr)
             }
         }
 
-        vector<uintptr_t> mappedRegions = Monitor->DetectManualMapping();
+        std::vector<uintptr_t> mappedRegions = Monitor->DetectManualMapping();
 
         if (mappedRegions.size() > 0)
         {
@@ -335,13 +335,13 @@ bool Detections::FetchBlacklistedBytePatterns(__in const char* url)
         return false;
     }
 
-    stringstream ss (request.responseText);
+    std::stringstream ss (request.responseText);
 
-    string bytePattern;
+    std::string bytePattern;
 
     while (getline(ss, bytePattern))
     {
-        vector<uint8_t> bytes;
+        std::vector<uint8_t> bytes;
 
         if (!bytePattern.empty() && bytePattern.back() == '\r')
         {
@@ -350,8 +350,8 @@ bool Detections::FetchBlacklistedBytePatterns(__in const char* url)
                 bytePattern.pop_back(); //remove space
         }
 
-        stringstream ss2(bytePattern);
-        string _byte;
+        std::stringstream ss2(bytePattern);
+        std::string _byte;
         
         while (getline(ss2, _byte, ' '))
         {
@@ -721,13 +721,13 @@ uint64_t Detections::FindWritableAddress(__in const std::string& moduleName, __i
 bool Detections::CheckOpenHandles()
 {
     bool foundHandle = false;
-    vector<Handles::_SYSTEM_HANDLE> handles = Handles::DetectOpenHandlesToProcess();
+    std::vector<Handles::_SYSTEM_HANDLE> handles = Handles::DetectOpenHandlesToProcess();
 
     for (const auto& handle : handles)
     {
         if (Handles::DoesProcessHaveOpenHandleToUs(handle.ProcessId, handles))
         {
-            wstring procName = Process::GetProcessName(handle.ProcessId);
+            std::wstring procName = Process::GetProcessName(handle.ProcessId);
             int size = sizeof(Handles::Whitelisted) / sizeof(UINT64);
 
             for (int i = 0; i < size; i++)
@@ -921,7 +921,7 @@ void Detections::MonitorProcessCreation(__in LPVOID thisPtr)
                 pClassObj->Get(L"Name", 0, &vtName, 0, 0);
                 pClassObj->Get(L"ProcessId", 0, &vtProcId, 0, 0);
 
-                for (const wstring& blacklistedProcess : monitor->BlacklistedProcesses)
+                for (const std::wstring& blacklistedProcess : monitor->BlacklistedProcesses)
                 {
                     if (Utility::wcscmp_insensitive(blacklistedProcess.c_str(), vtName.bstrVal))
                     {
@@ -948,7 +948,7 @@ void Detections::MonitorProcessCreation(__in LPVOID thisPtr)
         if(monitor->GetMonitorThread() != nullptr)
             monitor->GetMonitorThread()->UpdateTick(); //update tick on each loop, then we can check this value from a different thread to see if someone has suspended it
 
-        this_thread::sleep_for(std::chrono::milliseconds(50)); //ease the CPU a bit
+        std::this_thread::sleep_for(std::chrono::milliseconds(50)); //ease the CPU a bit
     }
 
     pSvc->Release();
@@ -992,7 +992,7 @@ bool Detections::FindBlacklistedProgramsThroughByteScan(__in const DWORD pid)
     {
         DWORD patternSize = pattern.size;
 
-        vector<BYTE> textSectionBytes = Process::ReadRemoteTextSection(pid);
+        std::vector<BYTE> textSectionBytes = Process::ReadRemoteTextSection(pid);
 
         if (textSectionBytes.empty())
         {
@@ -1115,7 +1115,7 @@ void Detections::MonitorImportantRegistryKeys(__in LPVOID thisPtr)
         if (Monitor != nullptr && Monitor->GetMonitorThread() != nullptr)
             Monitor->GetMonitorThread()->UpdateTick();
 
-        this_thread::sleep_for(std::chrono::milliseconds(100)); //ease the CPU a bit
+        std::this_thread::sleep_for(std::chrono::milliseconds(100)); //ease the CPU a bit
     }
 
     for (int i = 0; i < KEY_COUNT; i++) 
@@ -1131,7 +1131,7 @@ void Detections::MonitorImportantRegistryKeys(__in LPVOID thisPtr)
     DetectManualMapping - detects if a manually mapped module is injected. also tries to detect PE header erased mapped modules, however this is tricky and possible to throw false positives!
     returns a vector of memory addresses (uint64_t), representing suspicious memory regions not belonging to a loaded module
 */
-vector<uintptr_t> Detections::DetectManualMapping()
+std::vector<uintptr_t> Detections::DetectManualMapping()
 {
     auto modules = Process::GetLoadedModules();
 
@@ -1141,7 +1141,7 @@ vector<uintptr_t> Detections::DetectManualMapping()
         return {};
     }
 
-    vector<uintptr_t> SuspiciousRegions;
+    std::vector<uintptr_t> SuspiciousRegions;
 
     MEMORY_BASIC_INFORMATION mbi;
     uintptr_t CurrentRegionAddr = 0;  //starting address to scan from

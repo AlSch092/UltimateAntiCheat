@@ -48,7 +48,7 @@ public:
 
 	bool RandomizeModuleName();
 
-	static void UnloadBlacklistedDrivers(__in const list<wstring> driverPaths);
+	static void UnloadBlacklistedDrivers(__in const std::list<std::wstring> driverPaths);
 
 private:
 

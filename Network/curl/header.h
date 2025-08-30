@@ -29,7 +29,7 @@ extern "C" {
 #endif
 
 struct curl_header {
-  char *name;    /* this might not use the same case */
+  char *nameWithPath;    /* this might not use the same case */
   char *value;
   size_t amount; /* number of headers using this name  */
   size_t index;  /* ... of this instance, 0 or higher */
@@ -56,7 +56,7 @@ typedef enum {
 } CURLHcode;
 
 CURL_EXTERN CURLHcode curl_easy_header(CURL *easy,
-                                       const char *name,
+                                       const char *nameWithPath,
                                        size_t index,
                                        unsigned int origin,
                                        int request,

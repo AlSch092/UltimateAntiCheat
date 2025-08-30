@@ -526,7 +526,7 @@ std::wstring Authenticode::GetCertificateSubject(__in const PCCERT_CONTEXT pCert
         goto end;
     }
 
-    return wstring(szName);
+    return std::wstring(szName);
 
 end:
     if (szName != NULL) LocalFree(szName);
@@ -646,7 +646,7 @@ std::wstring Authenticode::GetSignerFromFile(__in const std::wstring& filePath)
         return {};
     }
 
-    wstring SubjectCert = GetCertificateSubject(pCertContext);
+    std::wstring SubjectCert = GetCertificateSubject(pCertContext);
 
     //// Get the timestamp certificate signerinfo structure.
     //if (GetTimeStampSignerInfo(pSignerInfo, &pCounterSignerInfo))

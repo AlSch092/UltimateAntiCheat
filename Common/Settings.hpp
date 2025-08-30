@@ -4,8 +4,6 @@
 #include <list>
 #include "Logger.hpp" //to access static variables `Logger::enableLogging `, `Logger::logFileName`
 
-using namespace std;
-
 //Settings don't come in a .ini or .cfg file as we don't want end-users modifying program flow on compiled releases
 class Settings final
 {
@@ -25,9 +23,9 @@ public:
 		const bool bRequireRunAsAdministrator,
 		const bool bUsingDriver,
 		const std::wstring DriverSignerSubject,
-		list<wstring> allowedParents,
+		std::list<std::wstring> allowedParents,
 		const bool bEnableLogging,
-		const string logFileName)
+		const std::string logFileName)
 		: serverIP(serverIP), serverPort(serverPort), bNetworkingEnabled(bNetworkingEnabled), bEnforceSecureBoot(bEnforceSecureBoot), bEnforceDSE(bEnforceDSE),
 		bEnforceNoKDbg(bEnforceNoKDbg), bUseAntiDebugging(bUseAntiDebugging), bCheckIntegrity(bCheckIntegrity), bCheckThreads(bCheckThreads), bCheckHypervisor(bCheckHypervisor),
 		bRequireRunAsAdministrator(bRequireRunAsAdministrator), bUsingDriver(bUsingDriver), DriverSignerSubject(DriverSignerSubject), allowedParents(allowedParents), bEnableLogging(bEnableLogging), logFileName(logFileName)
@@ -56,17 +54,17 @@ public:
 	bool bUsingDriver; //signed + msft approved kernelmode driver for hybrid approach
 	std::wstring DriverSignerSubject;  //this refers to the company/party who initiated the file signing, for example "Valve Corp.". If you have an EV certificate, you can change this to your own company
 
-	list<wstring> allowedParents;
+	std::list<std::wstring> allowedParents;
 	
 	bool bEnableLogging;
-	string logFileName;
+	std::string logFileName;
 
-	wstring GetKMDriverName() const { return this->KMDriverName; }
-	wstring GetKMDriverPath() const { return this->KMDriverPath; }
-	wstring GetKMDriverSignee() const { return this->KMDriverSignee; }
+	std::wstring GetKMDriverName() const { return this->KMDriverName; }
+	std::wstring GetKMDriverPath() const { return this->KMDriverPath; }
+	std::wstring GetKMDriverSignee() const { return this->KMDriverSignee; }
  
 private:
-	const wstring KMDriverName = L"UltimateKernelAnticheat"; //optional hybrid approach
-	const wstring KMDriverPath = L".\\UltimateKernelAnticheat.sys"; 
-	const wstring KMDriverSignee = L"YourCoolCompany Ltd.";
+	const std::wstring KMDriverName = L"UltimateKernelAnticheat"; //optional hybrid approach
+	const std::wstring KMDriverPath = L".\\UltimateKernelAnticheat.sys";
+	const std::wstring KMDriverSignee = L"YourCoolCompany Ltd.";
 }; 

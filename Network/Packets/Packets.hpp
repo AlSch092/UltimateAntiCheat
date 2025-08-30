@@ -4,8 +4,6 @@
 #include <list>
 #include <stdint.h>
 
-using namespace std;
-
 namespace Packets
 {
 	namespace Opcodes
@@ -32,11 +30,11 @@ namespace Packets
 
 	namespace Builder
 	{
-		PacketWriter* ClientHello(__in const std::string gameCode, __in const std::string HWID, __in  const std::string Ipv4, __in  const std::string MACAddress);
+		PacketWriter* ClientHello(__in const std::string& gameCode, __in const std::string& HWID, __in  const std::string& Ipv4, __in  const std::string& MACAddress);
 		PacketWriter* ClientGoodbye(__in const int reason);
 		PacketWriter* Heartbeat(__in const char* cookie_str);
 		PacketWriter* DetectedCheater(__in const int flags);
-		PacketWriter* DetectedCheater(__in const uint32_t flags, __in const std::string detectedModule, __in const DWORD pid);
+		PacketWriter* DetectedCheater(__in const uint32_t flags, __in const std::string& detectedModule, __in const DWORD pid);
 		PacketWriter* QueryMemory(__in const byte* bytestring, __in const int size);
 	}
 }

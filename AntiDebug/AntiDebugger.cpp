@@ -12,7 +12,7 @@ void Debugger::AntiDebug::StartAntiDebugThread()
 		return;
 	}
 
-	this->DetectionThread = make_unique<Thread>((LPTHREAD_START_ROUTINE)Debugger::AntiDebug::CheckForDebugger, (LPVOID)this, true, false);
+	this->DetectionThread = std::make_unique<Thread>((LPTHREAD_START_ROUTINE)Debugger::AntiDebug::CheckForDebugger, (LPVOID)this, true, false);
 
 	Logger::logf(Info, "Created Debugger detection thread with Id: %d", this->DetectionThread->GetId());
 }
@@ -59,7 +59,7 @@ void Debugger::AntiDebug::CheckForDebugger(LPVOID AD)
 			AntiDbg->EvidenceManager->AddFlagged(DetectionFlags::DEBUG_DBK64_DRIVER);
 		}
 
-		this_thread::sleep_for(std::chrono::milliseconds(MonitorLoopDelayMS)); //ease the CPU a bit
+		std::this_thread::sleep_for(std::chrono::milliseconds(MonitorLoopDelayMS)); //ease the CPU a bit
 	}
 }
 

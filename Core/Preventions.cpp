@@ -17,7 +17,7 @@ bool Preventions::RandomizeModuleName()
         return false;
     }
 
-    wstring newModuleName = Utility::GenerateRandomWString(moduleNameSize); //intentionally set to -2 to trip up external programs like CE from enumerating dlls & symbols
+    std::wstring newModuleName = Utility::GenerateRandomWString(moduleNameSize); //intentionally set to -2 to trip up external programs like CE from enumerating dlls & symbols
 
     if (Process::ChangeModuleName(_MAIN_MODULE_NAME_W, newModuleName)) //in addition to changing export function names, we can also modify the names of loaded modules/libraries.
     {
@@ -293,7 +293,7 @@ void Preventions::EnableProcessMitigations(__in const bool useDEP, __in const bo
 /*
     UnloadBlacklistedDrivers - attempts to unload/stop blacklisted drivers in `driverPaths`
 */
-void Preventions::UnloadBlacklistedDrivers(__in const list<wstring> driverPaths)
+void Preventions::UnloadBlacklistedDrivers(__in const std::list<std::wstring> driverPaths)
 {
     if (driverPaths.size() > 0)
     {

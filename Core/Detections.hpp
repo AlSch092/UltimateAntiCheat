@@ -13,15 +13,17 @@
 #include <Wbemidl.h> //for process event creation (WMI)
 #include <comdef.h>  //for process event creation (WMI)
 #include <queue>
+#include <vector>
+#include <memory>
 
 #pragma comment(lib, "wbemuuid.lib")  //for process event creation (WMI)
 
 struct BytePattern //byte pattern used in process creation callbacks
 {
-	vector<BYTE> data;
+	std::vector<BYTE> data;
 	size_t size;
 
-	BytePattern(vector<BYTE> d, size_t s) : data(d), size(s) {}
+	BytePattern(std::vector<BYTE> d, size_t s) : data(d), size(s) {}
 };
 
 /*
@@ -31,7 +33,7 @@ class Detections final
 {
 public:
 
-	Detections(Settings* s, EvidenceLocker* evidence, shared_ptr<NetClient> client);
+	Detections(Settings* s, EvidenceLocker* evidence, std::shared_ptr<NetClient> client);
 	~Detections();
 
 	Detections(Detections&&) = delete;  //delete move constructr
@@ -45,15 +47,15 @@ public:
 	Detections operator*(Detections& other) = delete;
 	Detections operator/(Detections& other) = delete;
 
-	weak_ptr<NetClient> GetNetClient() { return this->netClient; }
+	std::weak_ptr<NetClient> GetNetClient() { return this->netClient; }
 
 	Services* GetServiceManager() const { return this->_Services.get(); }
 
-	shared_ptr<Integrity> GetIntegrityChecker() const { return this->integrityChecker; }
+	std::shared_ptr<Integrity> GetIntegrityChecker() const { return this->integrityChecker; }
 
 	bool IsUserCheater() const  { return (this->EvidenceManager->GetFlagListSize() > 0); }
 
-	list<DetectionFlags> GetDetectedFlags() const { return this->DetectedFlags; }
+	std::list<DetectionFlags> GetDetectedFlags() const { return this->DetectedFlags; }
 
 	//bool SetSectionHash(__in const char* module, __in const char* sectionName);
 	//bool IsSectionHashUnmatching(__in const UINT64 cachedAddress, __in const DWORD cachedSize, __in const string section);
@@ -86,12 +88,12 @@ public:
 
 	static void MonitorImportantRegistryKeys(__in LPVOID thisPtr); //threaded func, pass this class ptr to it
 
-	static vector<uintptr_t> DetectManualMapping();
+	static std::vector<uintptr_t> DetectManualMapping();
 
 	static bool WasProcessNotRemapped(); //detect if someone prevented section remapping. could possibly go into Integrity class
 
-	void SetUnsignedLoadedDriversList(list<wstring> unsignedDrivers) { this->UnsignedDriversLoaded = unsignedDrivers; }
-	list<wstring> GetUnsignedLoadedDriversList() const { return this->UnsignedDriversLoaded; }
+	void SetUnsignedLoadedDriversList(std::list<std::wstring> unsignedDrivers) { this->UnsignedDriversLoaded = unsignedDrivers; }
+	std::list<std::wstring> GetUnsignedLoadedDriversList() const { return this->UnsignedDriversLoaded; }
 
 	Settings* GetConfig() const { return this->Config; }
 
@@ -109,37 +111,37 @@ private:
 
 	bool MonitoringProcessCreation = false;
 
-	unique_ptr<Services> _Services = nullptr;
+	std::unique_ptr<Services> _Services = nullptr;
 
-	shared_ptr<Integrity> integrityChecker = nullptr;
-	shared_ptr<NetClient> netClient; //send any detections to the server
+	std::shared_ptr<Integrity> integrityChecker = nullptr;
+	std::shared_ptr<NetClient> netClient; //send any detections to the server
 
 	Thread* MonitorThread = nullptr; //these should ideally be unique_ptrs which end the thread when the pointers go out of scope, will try to make these changes soon
 	Thread* ProcessCreationMonitorThread = nullptr;
 	Thread* RegistryMonitorThread = nullptr;
 
-	list<wstring> BlacklistedProcesses;
-	list<BytePattern> BlacklistedBytePatterns;
+	std::list<std::wstring> BlacklistedProcesses;
+	std::list<BytePattern> BlacklistedBytePatterns;
 
-	unique_ptr<Process> _Proc = nullptr; //keep track of our sections, loaded modules, etc using a managed class
+	std::unique_ptr<Process> _Proc = nullptr; //keep track of our sections, loaded modules, etc using a managed class
 
-	list<DetectionFlags> DetectedFlags;
+	std::list<DetectionFlags> DetectedFlags;
 
 	bool FetchBlacklistedBytePatterns(__in const char* url);
 	const char* BlacklisteBytePatternRepository = "https://raw.githubusercontent.com/AlSch092/UltimateAntiCheat/refs/heads/main/MiscFiles/BlacklistedBytePatternList.txt";
 
 	void CheckDLLSignature(); //process cert check queue for any newly loaded dlls
 
-	queue<wstring> DLLVerificationQueue;
-	mutex DLLVerificationQueueMutex;
+	std::queue<std::wstring> DLLVerificationQueue;
+	std::mutex DLLVerificationQueueMutex;
 
-	list<wstring> UnsignedModulesLoaded; //keep track of any unsigned modules
-	list<wstring> UnsignedDriversLoaded; //...and any unsigned drivers
+	std::list<std::wstring> UnsignedModulesLoaded; //keep track of any unsigned modules
+	std::list<std::wstring> UnsignedDriversLoaded; //...and any unsigned drivers
 
-	list<wstring> PassedCertCheckDrivers; //already checked, keep track so we don't have to re-verify them each time
-	list<wstring> PassedCertCheckModules;
+	std::list<std::wstring> PassedCertCheckDrivers; //already checked, keep track so we don't have to re-verify them each time
+	std::list<std::wstring> PassedCertCheckModules;
 
 	EvidenceLocker* EvidenceManager = nullptr;
 
-	unique_ptr<VirtualMachine> VM = nullptr; //simple virtual machine for detection routine calls
+	std::unique_ptr<VirtualMachine> VM = nullptr; //simple virtual machine for detection routine calls
 };

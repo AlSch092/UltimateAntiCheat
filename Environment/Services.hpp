@@ -15,28 +15,26 @@
 
 #pragma comment(lib, "setupapi.lib")
 
-using namespace std;
-
 extern "C" NTSTATUS NTAPI RtlGetVersion(RTL_OSVERSIONINFOW * lpVersionInformation); //used in GetWindowsVersion
 
 struct Service
 {
-	wstring displayName;
-	wstring serviceName;
+	std::wstring displayName;
+	std::wstring serviceName;
 	DWORD pid;
 	bool isRunning;
 };
 
 struct Device
 {
-	string InstanceID;
-	string Description;
+	std::string InstanceID;
+	std::string Description;
 };
 
 struct DeviceW
 {
-	wstring InstanceID;
-	wstring Description;
+	std::wstring InstanceID;
+	std::wstring Description;
 };
 
 enum WindowsVersion
@@ -69,9 +67,9 @@ public:
 		GetServiceModules();
 
 		//these 3 drivers are unsigned, and have no file on disk but cant still run in memory while secure boot & DSE is on - crash-dump related drivers windows uses
-		WhitelistedUnsignedDrivers.emplace_back(wstring(L"\\SystemRoot\\System32\\Drivers\\dump_diskdump.sys"));
-		WhitelistedUnsignedDrivers.emplace_back(wstring(L"\\SystemRoot\\System32\\Drivers\\dump_storahci.sys"));
-		WhitelistedUnsignedDrivers.emplace_back(wstring(L"\\SystemRoot\\System32\\Drivers\\dump_dumpfve.sys"));
+		WhitelistedUnsignedDrivers.emplace_back(std::wstring(L"\\SystemRoot\\System32\\Drivers\\dump_diskdump.sys"));
+		WhitelistedUnsignedDrivers.emplace_back(std::wstring(L"\\SystemRoot\\System32\\Drivers\\dump_storahci.sys"));
+		WhitelistedUnsignedDrivers.emplace_back(std::wstring(L"\\SystemRoot\\System32\\Drivers\\dump_dumpfve.sys"));
 
 		FetchBlacklistedDrivers(BlacklistedDriversRepository);		
 	}
@@ -93,31 +91,31 @@ public:
 	BOOL GetLoadedDrivers(); //adds to `DriverPaths`
 	BOOL GetServiceModules(); //adds to `ServiceList`
 
-	list<wstring> GetUnsignedDrivers();
-	list<wstring> GetUnsignedDrivers(__in list<wstring>& cachedVerifiedDriverList);
+	std::list<std::wstring> GetUnsignedDrivers();
+	std::list<std::wstring> GetUnsignedDrivers(__in std::list<std::wstring>& cachedVerifiedDriverList);
 
 	static BOOL IsTestsigningEnabled();
 	static BOOL IsDebugModeEnabled();
 	static BOOL IsSecureBootEnabled();
 
-	static string GetWindowsDrive();
-	static wstring GetWindowsDriveW();
+	static std::string GetWindowsDrive();
+	static std::wstring GetWindowsDriveW();
 
 	static BOOL IsRunningAsAdmin();
 
-	static list<DeviceW> GetHardwareDevicesW();
+	static std::list<DeviceW> GetHardwareDevicesW();
 	static BOOL CheckUSBDevices();
 
 	static WindowsVersion GetWindowsVersion();
 	
 	static bool IsHypervisorPresent();
-	static string GetHypervisorVendor();
-	static string GetCPUVendor();
+	static std::string GetHypervisorVendor();
+	static std::string GetCPUVendor();
 	
-	static string GetProcessDirectory(__in const DWORD pid); //fetch the directory of `pid`
-	static wstring GetProcessDirectoryW(__in const DWORD pid); //fetch the directory of `pid`
+	static std::string GetProcessDirectory(__in const DWORD pid); //fetch the directory of `pid`
+	static std::wstring GetProcessDirectoryW(__in const DWORD pid); //fetch the directory of `pid`
 
-	static list<DWORD> EnumerateProcesses(); //fetch process list
+	static std::list<DWORD> EnumerateProcesses(); //fetch process list
 
 	static bool LoadDriver(__in const std::wstring& serviceName, __in const std::wstring& driverPath); //load `driverPath` with service name `driverName`
 	static bool UnloadDriver(__in const std::wstring& serviceName);
@@ -125,16 +123,16 @@ public:
 
 private:
 
-	list<Service*> ServiceList;
+	std::list<Service*> ServiceList;
 
-	list <wstring> DriverPaths; //list of all loaded drivers
+	std::list <std::wstring> DriverPaths; //list of all loaded drivers
 
-	list<DeviceW> HardwareDevices;
+	std::list<DeviceW> HardwareDevices;
 
-	list<wstring> BlacklistedDrivers; //vulnerable driver list (BYOVD concept) which allow an attacker to read/write mem while having test signing or secure boot enabled 
-	list<wstring> FoundBlacklistedDrivers; //any drivers which are loaded and blacklisted
+	std::list<std::wstring> BlacklistedDrivers; //vulnerable driver list (BYOVD concept) which allow an attacker to read/write mem while having test signing or secure boot enabled 
+	std::list<std::wstring> FoundBlacklistedDrivers; //any drivers which are loaded and blacklisted
 
-	list<wstring> WhitelistedUnsignedDrivers; // dump_diskdump.sys, dump_storahci.sys, dump_dumpfve.sys
+	std::list<std::wstring> WhitelistedUnsignedDrivers; // dump_diskdump.sys, dump_storahci.sys, dump_dumpfve.sys
 
 	bool FetchBlacklistedDrivers(__in const char* url);
 	const char* BlacklistedDriversRepository = "https://raw.githubusercontent.com/AlSch092/UltimateAntiCheat/refs/heads/main/MiscFiles/BlacklistedDriverList.txt"; 

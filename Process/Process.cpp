@@ -1,13 +1,13 @@
 #include "Process.hpp"
 
 int Process::NumSections = 0; //we need to store the real number of sections, since we're spoofing it at runtime
-wstring Process::ExecutableModuleNameW = wstring(_MAIN_MODULE_NAME_W); //store the name of the executable module, since we're modifying the module name at runtime
+std::wstring Process::ExecutableModuleNameW = std::wstring(_MAIN_MODULE_NAME_W); //store the name of the executable module, since we're modifying the module name at runtime
 
 /*
     CheckParentProcess - checks if the parent process is the process name `desiredParent`
     returns TRUE if our parameter desiredParent is the same process name as our parent process ID
 */
-bool Process::CheckParentProcess(__in const wstring desiredParent, __in const bool bShouldCheckSignature)
+bool Process::CheckParentProcess(__in const std::wstring& desiredParent, __in const bool bShouldCheckSignature)
 {
     if (desiredParent.empty())
     {
@@ -26,7 +26,7 @@ bool Process::CheckParentProcess(__in const wstring desiredParent, __in const bo
         {
             if (parentPid == pid)
             {
-                wstring fullPath = Services::GetProcessDirectoryW(pid); //get path of `pid` for cert checking
+                std::wstring fullPath = Services::GetProcessDirectoryW(pid); //get path of `pid` for cert checking
                 fullPath += desiredParent;
 
                 if (Authenticode::HasSignature(fullPath.c_str(), TRUE))
@@ -47,13 +47,13 @@ bool Process::CheckParentProcess(__in const wstring desiredParent, __in const bo
     HasExportedFunction checks a loaded module if it's exported `functionName`. Useful for anti-VEH debuggers, since these generally inject themselves into the process and export initialization routines
     returns   true if `dllName` has `functionName` exported.
 */
-bool Process::HasExportedFunction(__in const string dllName, __in const  string functionName)
+bool Process::HasExportedFunction(__in const std::string& dllName, __in const  std::string& functionName)
 {
     DWORD* dNameRVAs(0); //addresses of export names
     _IMAGE_EXPORT_DIRECTORY* ImageExportDirectory;
     unsigned long cDirSize;
     _LOADED_IMAGE LoadedImage;
-    string sName;
+    std::string sName;
 
     bool bFound = false;
 
@@ -91,9 +91,9 @@ bool Process::HasExportedFunction(__in const string dllName, __in const  string 
     GetSections - gathers a list of ProcessData::Section* from the current process
     returns list<ProcessData::Section*>*, and an empty list if the routine fails
 */
-list<ProcessData::Section> Process::GetSections(__in const string& module)
+std::list<ProcessData::Section> Process::GetSections(__in const std::string& module)
 {
-    list<ProcessData::Section> Sections;
+    std::list<ProcessData::Section> Sections;
 
     PIMAGE_SECTION_HEADER sectionHeader;
     HINSTANCE hInst = NULL;  
@@ -143,7 +143,7 @@ list<ProcessData::Section> Process::GetSections(__in const string& module)
     Originally taken from my other project at: https://github.com/AlSch092/changemodulename
     returns `true` on successfully renaming `szModule` to `newName`.
 */
-bool Process::ChangeModuleName(__in const wstring moduleName, __in const  wstring newName)
+bool Process::ChangeModuleName(__in const std::wstring& moduleName, __in const  std::wstring& newName)
 {
 #ifdef _M_IX86
     MYPEB* PEB = (MYPEB*)__readfsdword(0x30);
@@ -180,7 +180,7 @@ bool Process::ChangeModuleName(__in const wstring moduleName, __in const  wstrin
     ChangeNumberOfSections - changes the number of sections in the NT Headers to `newSectionsCount`, which can stop attackers from traversing sections in our program
     returns true on success
 */
-bool Process::ChangeNumberOfSections(__in const string module, __in const  DWORD newSectionsCount)
+bool Process::ChangeNumberOfSections(__in const std::string& module, __in const  DWORD newSectionsCount)
 {
     PIMAGE_SECTION_HEADER sectionHeader = 0;
     HINSTANCE hInst = NULL;
@@ -261,7 +261,7 @@ DWORD Process::GetParentProcessId()
     You should probably use GetProcessIdsByName instead.
     returns a DWORD pid if procName is a running process, otherwise returns 0
 */
-DWORD Process::GetProcessIdByName(__in const wstring procName)
+DWORD Process::GetProcessIdByName(__in const std::wstring& procName)
 {
     PROCESSENTRY32 entry;
     entry.dwSize = sizeof(PROCESSENTRY32);
@@ -288,12 +288,12 @@ DWORD Process::GetProcessIdByName(__in const wstring procName)
     GetProcessIdsByName - Get all pids given a process name
     returns a list of DWORD pids of processes running with procName.
 */
-list<DWORD> Process::GetProcessIdsByName(__in const wstring procName)
+std::list<DWORD> Process::GetProcessIdsByName(__in const std::wstring& procName)
 {
     if (procName.size() == 0)
         return {};
 
-    list<DWORD> pids;
+    std::list<DWORD> pids;
     PROCESSENTRY32 entry;
     entry.dwSize = sizeof(PROCESSENTRY32);
     DWORD pid = 0;
@@ -449,7 +449,7 @@ BYTE* Process::GetBytesAtAddress(__in const uintptr_t address, __in const  UINT 
     GetIATEntries -Returns a list of ImportFunction* from the program IAT , for later hook checks
     returns a list of ProcessData::ImportFunction* such that lists can be compared for modifications 
 */
-list<ProcessData::ImportFunction> Process::GetIATEntries(const std::string& module)
+std::list<ProcessData::ImportFunction> Process::GetIATEntries(const std::string& module)
 {
     if (module.empty())
         return {};
@@ -567,7 +567,7 @@ bool Process::FillModuleList()
             continue;
         }
 
-        module.nameWithPath = wstring(szModuleName);
+        module.nameWithPath = std::wstring(szModuleName);
 
         module.hModule = hModules[i];
 
@@ -733,7 +733,7 @@ bool Process::IsReturnAddressInModule(__in const uintptr_t RetAddr, __in const w
 /*
        GetProcessName - Returns the string name of a process with id `pid`
 */
-wstring Process::GetProcessName(__in const DWORD pid)
+std::wstring Process::GetProcessName(__in const DWORD pid)
 {
     if (pid <= 4)
     {
@@ -798,8 +798,8 @@ std::vector<ProcessData::MODULE_DATA> Process::GetLoadedModules()
         MY_LDR_DATA_TABLE_ENTRY* module_entry = (MY_LDR_DATA_TABLE_ENTRY*)CONTAINING_RECORD(current_record, MY_LDR_DATA_TABLE_ENTRY, InLoadOrderLinks);
         ProcessData::MODULE_DATA module;
 
-        module.nameWithPath =  wstring(module_entry->FullDllName.Buffer);
-        module.baseName = wstring(module_entry->BaseDllName.Buffer);
+        module.nameWithPath = std::wstring(module_entry->FullDllName.Buffer);
+        module.baseName = std::wstring(module_entry->BaseDllName.Buffer);
 
         module.hModule = (HMODULE)module_entry->DllBase;
         module.dllInfo.lpBaseOfDll = module_entry->DllBase;
@@ -850,8 +850,8 @@ ProcessData::MODULE_DATA Process::GetModuleInfo(__in const  wchar_t* nameWithPat
         {
             ProcessData::MODULE_DATA module;
 
-            module.nameWithPath = wstring(module_entry->FullDllName.Buffer);
-            module.baseName =  wstring(module_entry->BaseDllName.Buffer);
+            module.nameWithPath = std::wstring(module_entry->FullDllName.Buffer);
+            module.baseName = std::wstring(module_entry->BaseDllName.Buffer);
             module.hModule = (HMODULE)module_entry->DllBase;
             module.dllInfo.lpBaseOfDll = module_entry->DllBase;
             module.dllInfo.SizeOfImage = module_entry->SizeOfImage;

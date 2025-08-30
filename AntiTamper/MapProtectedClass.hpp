@@ -4,8 +4,6 @@
 #include "../Process/Memory/ntdll.h"
 #include <stdexcept>
 
-using namespace std;
-
 /*
     ProtectedMemory - Protects the memory of a class object by memory mapping it, then remapping it with SEC_NO_CHANGE
     should be used as follows:

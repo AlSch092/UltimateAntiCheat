@@ -25,7 +25,7 @@ bool HttpClient::GetRequest(__inout HttpRequest& requestInfo) //GET request
     curl = curl_easy_init();
 
     struct curl_slist* request_headers = NULL;
-    vector<std::string> response_headers;
+    std::vector<std::string> response_headers;
 
     if (curl)
     {
@@ -45,7 +45,7 @@ bool HttpClient::GetRequest(__inout HttpRequest& requestInfo) //GET request
 
         if (requestInfo.requestHeaders.size() > 0)
         {
-            for (string header : requestInfo.requestHeaders)
+            for (const std::string& header : requestInfo.requestHeaders)
             {
                 request_headers = curl_slist_append(request_headers, header.c_str());
             }
@@ -111,7 +111,7 @@ bool HttpClient::PostRequest(__inout HttpRequest& requestInfo)
 
         if (requestInfo.requestHeaders.size() > 0)
         {
-            for (string header : requestInfo.requestHeaders)
+            for (const std::string& header : requestInfo.requestHeaders)
             {
                 request_headers = curl_slist_append(request_headers, header.c_str());
             }

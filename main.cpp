@@ -25,8 +25,6 @@
 #pragma comment (linker, "/INCLUDE:_tls_used")
 #pragma comment (linker, "/INCLUDE:_tls_callback")
 
-using namespace std;
-
 void NTAPI __stdcall TLSCallback(PVOID pHandle, DWORD dwReason, PVOID Reserved);
 
 EXTERN_C
@@ -142,15 +140,15 @@ int main(int argc, char** argv)
 
     Thread* t = new Thread((LPTHREAD_START_ROUTINE)Splash::InitializeSplash, 0, false, true);
 
-    cout << "*----------------------------------------------------------------------------------------*\n";
-    cout << "|                           Welcome to Ultimate Anti-Cheat (UAC)!                        |\n";
-    cout << "|       A non-commercial, educational AC made to help teach concepts in game security    |\n";
-    cout << "|                              Made by AlSch092 @Github                                  |\n";
-    cout << "|         ...With special thanks to:                                                     |\n";
-    cout << "|           changeofpace (remapping method)                                              |\n";
-    cout << "|           discriminating (dll load notifcations, catalog verification)                 |\n";
-    cout << "|           LucasParsy (testing, bug fixing)                                             |\n";
-    cout << "*----------------------------------------------------------------------------------------*\n";
+    std::cout << "*----------------------------------------------------------------------------------------*\n";
+    std::cout << "|                           Welcome to Ultimate Anti-Cheat (UAC)!                        |\n";
+    std::cout << "|       A non-commercial, educational AC made to help teach concepts in game security    |\n";
+    std::cout << "|                              Made by AlSch092 @Github                                  |\n";
+    std::cout << "|         ...With special thanks to:                                                     |\n";
+    std::cout << "|           changeofpace (remapping method)                                              |\n";
+    std::cout << "|           discriminating (dll load notifcations, catalog verification)                 |\n";
+    std::cout << "|           LucasParsy (testing, bug fixing)                                             |\n";
+    std::cout << "*----------------------------------------------------------------------------------------*\n";
 
     std::unique_ptr<AntiCheat> Anti_Cheat = nullptr;
 
@@ -210,17 +208,17 @@ int main(int argc, char** argv)
 
     SupressingUnknownThreads = Anti_Cheat->GetBarrier()->IsPreventingThreads(); //if this is set to TRUE, we can stop the creation of any new unknown threads via the TLS callback
 
-    cout << "\n----------------------------------------------------------------------------------------------------------" << endl;
-    cout << "All protections have been deployed, the program will now loop using its detection methods. Thanks for your interest in the project!" << endl;
-    cout << "Please enter 'q' if you'd like to end the program." << endl;
+    std::cout << "\n----------------------------------------------------------------------------------------------------------" << std::endl;
+    std::cout << "All protections have been deployed, the program will now loop using its detection methods. Thanks for your interest in the project!" << std::endl;
+    std::cout << "Please enter 'q' if you'd like to end the program." << std::endl;
     
     while (true)
     {
-        cin >> userKeyboardInput;
+        std::cin >> userKeyboardInput;
 
         if (userKeyboardInput == "q" || userKeyboardInput == "Q")
         {
-            cout << "Exit key was pressed, shutting down program..." << endl;
+            std::cout << "Exit key was pressed, shutting down program..." << std::endl;
             break;
         }     
     }

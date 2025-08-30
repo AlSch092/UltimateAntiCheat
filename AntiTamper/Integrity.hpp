@@ -11,8 +11,6 @@
 #include <unordered_map>
 #include <mutex>
 
-using namespace std;
-
 /**
  * @brief IntegrityViolation structure tracks anomalies with module integrity
  */

@@ -31,9 +31,9 @@ bool Services::FetchBlacklistedDrivers(__in const char* url)
         return false;
     }
 
-    stringstream ss(request.responseText);
+    std::stringstream ss(request.responseText);
 
-    string blacklistedDriver;
+    std::string blacklistedDriver;
 
     while (getline(ss, blacklistedDriver))
     {
@@ -42,8 +42,7 @@ bool Services::FetchBlacklistedDrivers(__in const char* url)
             blacklistedDriver.pop_back();
         }
 
-        wstring s = Utility::ConvertStringToWString(blacklistedDriver);
-        BlacklistedDrivers.push_back(s);
+        BlacklistedDrivers.emplace_back(Utility::ConvertStringToWString(blacklistedDriver));
     }
     
     return true;
@@ -154,7 +153,7 @@ BOOL Services::GetLoadedDrivers()
         {
             this->DriverPaths.push_back(driverPath);
 
-            for (wstring blacklisted : this->BlacklistedDrivers) //enumerate blacklisted drivers, check if driverPath contains a blacklisted driver
+            for (std::wstring blacklisted : this->BlacklistedDrivers) //enumerate blacklisted drivers, check if driverPath contains a blacklisted driver
             {
                 if (Utility::ContainsWStringInsensitive(driverPath, blacklisted))
                 {
@@ -176,9 +175,9 @@ BOOL Services::GetLoadedDrivers()
 /*
     GetUnsignedDrivers - returns a list of unsigned driver names (wstring) loaded on the machine
 */
-list<wstring> Services::GetUnsignedDrivers()
+std::list<std::wstring> Services::GetUnsignedDrivers()
 {
-    list<wstring> unsignedDrivers;
+    std::list<std::wstring> unsignedDrivers;
 
     if (DriverPaths.size() == 0)
     {
@@ -189,14 +188,14 @@ list<wstring> Services::GetUnsignedDrivers()
         }
     }
 
-    const wstring windowsDrive = Services::GetWindowsDriveW();
+    const std::wstring windowsDrive = Services::GetWindowsDriveW();
 
     for (const std::wstring& driverPath : DriverPaths)
     {
-        wstring fixedDriverPath;
+        std::wstring fixedDriverPath;
         bool foundWhitelisted = false;
 
-        if (driverPath.find(L"\\SystemRoot\\", 0) != wstring::npos) /* replace "\\SystemRoot\\" with "\\??\\<windowsVolume>\\WINDOWS" */
+        if (driverPath.find(L"\\SystemRoot\\", 0) != std::wstring::npos) /* replace "\\SystemRoot\\" with "\\??\\<windowsVolume>\\WINDOWS" */
         {
             fixedDriverPath = L"\\??\\" + windowsDrive + L"WINDOWS\\" + driverPath.substr(12);
         }
@@ -205,7 +204,7 @@ list<wstring> Services::GetUnsignedDrivers()
             fixedDriverPath = driverPath;
         }
 
-        for (const wstring& whitelisted : WhitelistedUnsignedDrivers)
+        for (const std::wstring& whitelisted : WhitelistedUnsignedDrivers)
         {
             if (Utility::wcscmp_insensitive(whitelisted.c_str(), driverPath.c_str()) )
             {
@@ -231,9 +230,9 @@ list<wstring> Services::GetUnsignedDrivers()
 /*
     GetUnsignedDrivers - returns a list of unsigned driver names (wstring) loaded on the machine
 */
-list<wstring> Services::GetUnsignedDrivers(__in list<wstring>& cachedVerifiedDriverList)
+std::list<std::wstring> Services::GetUnsignedDrivers(__in std::list<std::wstring>& cachedVerifiedDriverList)
 {
-    list<wstring> unsignedDrivers;
+    std::list<std::wstring> unsignedDrivers;
 
     if (DriverPaths.size() == 0)
     {
@@ -244,15 +243,15 @@ list<wstring> Services::GetUnsignedDrivers(__in list<wstring>& cachedVerifiedDri
         }
     }
 
-    const wstring windowsDrive = Services::GetWindowsDriveW();
+    const std::wstring windowsDrive = Services::GetWindowsDriveW();
 
     for (const std::wstring& driverPath : DriverPaths) //enumerate all loaded drivers
     {
-        wstring fixedDriverPath;
+        std::wstring fixedDriverPath;
 
         bool foundWhitelisted = false;
 
-        if (driverPath.find(L"\\SystemRoot\\", 0) != wstring::npos) /* replace "\\SystemRoot\\" with "\\??\\<windowsVolume>\\WINDOWS" */
+        if (driverPath.find(L"\\SystemRoot\\", 0) != std::wstring::npos) /* replace "\\SystemRoot\\" with "\\??\\<windowsVolume>\\WINDOWS" */
         {
             fixedDriverPath = L"\\??\\" + windowsDrive + L"WINDOWS\\" + driverPath.substr(12);
         }
@@ -261,7 +260,7 @@ list<wstring> Services::GetUnsignedDrivers(__in list<wstring>& cachedVerifiedDri
             fixedDriverPath = driverPath;
         }
 
-        for (const wstring& whitelisted : WhitelistedUnsignedDrivers) //check against whitelisted unsigned list, if so we can skip the cert check
+        for (const std::wstring& whitelisted : WhitelistedUnsignedDrivers) //check against whitelisted unsigned list, if so we can skip the cert check
         {
             if (Utility::wcscmp_insensitive(whitelisted.c_str(), driverPath.c_str()))
             {
@@ -270,7 +269,7 @@ list<wstring> Services::GetUnsignedDrivers(__in list<wstring>& cachedVerifiedDri
             }
         }
 
-        for (const wstring& cached : cachedVerifiedDriverList) //check against cached/already verified list, if so we can skip the cert check
+        for (const std::wstring& cached : cachedVerifiedDriverList) //check against cached/already verified list, if so we can skip the cert check
         {
             if (Utility::wcscmp_insensitive(cached.c_str(), driverPath.c_str()))
             {
@@ -416,7 +415,7 @@ BOOL Services::IsSecureBootEnabled()
 /*
     GetWindowsDrive - return drive where windows is installed, such as C:\\
 */
-string Services::GetWindowsDrive()
+std::string Services::GetWindowsDrive()
 {
     CHAR volumePath[MAX_PATH];
     DWORD charCount;
@@ -441,7 +440,7 @@ string Services::GetWindowsDrive()
 /*
     GetWindowsDriveW - return drive where windows is installed, such as C:\\
 */
-wstring Services::GetWindowsDriveW()
+std::wstring Services::GetWindowsDriveW()
 {
     wchar_t volumePath[MAX_PATH];
     DWORD charCount;
@@ -484,9 +483,9 @@ BOOL Services::IsRunningAsAdmin()
 /*
     GetHardwareDevicesW - returns a list<DeviceW>  representing various devices on the machine
 */
-list<DeviceW> Services::GetHardwareDevicesW()
+std::list<DeviceW> Services::GetHardwareDevicesW()
 {
-    list<DeviceW> deviceList;
+    std::list<DeviceW> deviceList;
 
     HDEVINFO deviceInfoSet;
     SP_DEVINFO_DATA deviceInfoData;
@@ -510,7 +509,7 @@ list<DeviceW> Services::GetHardwareDevicesW()
         TCHAR deviceInstanceId[MAX_DEVICE_ID_LEN];
         if (CM_Get_Device_ID(deviceInfoData.DevInst, deviceInstanceId, MAX_DEVICE_ID_LEN, 0) == CR_SUCCESS)         // Get the device instance ID
         {
-            d.InstanceID = wstring(deviceInstanceId);
+            d.InstanceID = std::wstring(deviceInstanceId);
         }
         else
         {
@@ -520,7 +519,7 @@ list<DeviceW> Services::GetHardwareDevicesW()
         TCHAR deviceDescription[1024];
         if (SetupDiGetDeviceRegistryProperty(deviceInfoSet, &deviceInfoData, SPDRP_DEVICEDESC, NULL, (PBYTE)deviceDescription, sizeof(deviceDescription), NULL))          // Get the device description
         {
-            d.Description = wstring(deviceDescription);
+            d.Description = std::wstring(deviceDescription);
         }
         else 
         {
@@ -660,7 +659,7 @@ bool Services::IsHypervisorPresent()
     Services::GetCPUVendor - fetches the CPU vendor
 Additionally, 0x40000001 to 0x400000FF can be queries in the 2nd parameter to __cpuid for more hypervisor-specific info
 */
-string Services::GetCPUVendor() 
+std::string Services::GetCPUVendor()
 {
     int cpuInfo[4] = { 0 };
 
@@ -672,7 +671,7 @@ string Services::GetCPUVendor()
     memcpy(vendor + 4, &cpuInfo[3], 4);
     memcpy(vendor + 8, &cpuInfo[2], 4);
 
-    return string(vendor);
+    return std::string(vendor);
 }
 
 /*
@@ -685,7 +684,7 @@ string Services::GetCPUVendor()
 "prl hyperv"	Parallels
 "VBoxVBoxVBox"	VirtualBox
 */
-string Services::GetHypervisorVendor()
+std::string Services::GetHypervisorVendor()
 {
     int cpuInfo[4] = { 0 };
 
@@ -697,7 +696,7 @@ string Services::GetHypervisorVendor()
     memcpy(vendor + 4, &cpuInfo[2], 4);
     memcpy(vendor + 8, &cpuInfo[3], 4);
 
-    return string(vendor);
+    return std::string(vendor);
 }
 
 /*

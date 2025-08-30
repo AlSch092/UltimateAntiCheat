@@ -1,6 +1,6 @@
 #include "Packets.hpp"
 
-PacketWriter* Packets::Builder::ClientHello(__in const std::string gameCode, __in const std::string HWID, __in const std::string hostname, __in  const std::string MACAddress)
+PacketWriter* Packets::Builder::ClientHello(__in const std::string& gameCode, __in const std::string& HWID, __in const std::string& hostname, __in  const std::string& MACAddress)
 {
 	PacketWriter* p = new PacketWriter(Packets::Opcodes::CS_HELLO);
 	p->WriteString(gameCode.c_str());
@@ -27,7 +27,7 @@ PacketWriter* Packets::Builder::DetectedCheater(__in  const int flags) //todo: f
 /*
 	DetectedCheater - flag a user as cheating, with some string data about what it found
 */
-PacketWriter* Packets::Builder::DetectedCheater(__in const uint32_t flags, __in const std::string detectedModule, __in const DWORD pid)
+PacketWriter* Packets::Builder::DetectedCheater(__in const uint32_t flags, __in const std::string& detectedModule, __in const DWORD pid)
 {
 	PacketWriter* p = new PacketWriter(Packets::Opcodes::CS_FLAGGED_CHEATER);
 	p->Write<uint32_t>(flags);

@@ -294,7 +294,7 @@ Error NetClient::HandleInboundPacket(__in PacketReader* p)
 			if (cookie_len != 128)
 				return Error::INCOMPLETE_RECV;
 
-			string cookie = p->readString(128);
+			std::string cookie = p->readString(128);
 
 			const char* ResponseCookie = MakeHeartbeat(cookie);
 
@@ -434,7 +434,7 @@ void __forceinline NetClient::CipherData(__inout LPBYTE buffer, __in const int l
 	GetMACAddress - Generates MAC address of the network adapter
 	returns empty string on failure
 */
-string NetClient::GetMACAddress()
+std::string NetClient::GetMACAddress()
 {
 	PIP_ADAPTER_INFO AdapterInfo;
 	DWORD dwBufLen = sizeof(IP_ADAPTER_INFO);
@@ -471,7 +471,7 @@ string NetClient::GetMACAddress()
 	}
 
 	free(AdapterInfo);
-	string s_mac_addr = mac_addr;
+	std::string s_mac_addr = mac_addr;
 	delete[] mac_addr;
 	return s_mac_addr;
 }
@@ -479,9 +479,9 @@ string NetClient::GetMACAddress()
 /*
 	GetHardwareID - Generates and returns a unique identifier based on PC name and hardware components
 */
-string NetClient::GetHardwareID()
+std::string NetClient::GetHardwareID()
 {
-	string HWID = "";
+	std::string HWID = "";
 
 	CHAR volumeName[MAX_PATH + 1] = { 0 };
 	CHAR fileSystemName[MAX_PATH + 1] = { 0 };

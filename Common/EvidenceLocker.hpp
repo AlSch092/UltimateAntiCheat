@@ -27,14 +27,14 @@ public:
 	bool PushAllEvidence();
 
 	bool AddFlagged(__in const DetectionFlags flag);
-	bool AddFlagged(__in const DetectionFlags flag, __in const std::string data, __in const DWORD pid);
+	bool AddFlagged(__in const DetectionFlags flag, __in const std::string& data, __in const DWORD pid);
 
-	void AddEvidence(__in const DetectionFlags type, __in const std::string data, __in const DWORD pid); //add to evidence list
+	void AddEvidence(__in const DetectionFlags type, __in const std::string& data, __in const DWORD pid); //add to evidence list
 
 	bool HasSentFlag(__in const DetectionFlags flag) { return SentFlags[flag]; }
 
 	bool SendFlag(__in const DetectionFlags flag);
-	bool FlagWithData(__in const DetectionFlags flag, __in const string data, __in const DWORD pid, __in const bool ShouldMarkAsSent);
+	bool FlagWithData(__in const DetectionFlags flag, __in const std::string& data, __in const DWORD pid, __in const bool ShouldMarkAsSent);
 
 	int GetFlagListSize() const { return this->FlaggedList.size(); }
 

@@ -21,7 +21,7 @@ bool EvidenceLocker::AddFlagged(__in const DetectionFlags flag)
 	AddFlagged - adds `flag` to our flagged/detections list, along with `data` to our evidence list. evidence is additional data associated with a flag
 	returns `true` if the flag was added, returns `false` if the flag is a duplicate (to prevent multiple repeat data pushes for the same thing)
 */
-bool EvidenceLocker::AddFlagged(__in const DetectionFlags flag, __in const std::string data, __in const DWORD pid)
+bool EvidenceLocker::AddFlagged(__in const DetectionFlags flag, __in const std::string& data, __in const DWORD pid)
 {
 	bool AlreadyAdded = false;
 
@@ -47,7 +47,7 @@ bool EvidenceLocker::AddFlagged(__in const DetectionFlags flag, __in const std::
 	AddEvidence - Adds `data` to our evidence list for `flag` type. Evidence is any additional string data associated with a flag, such as a memory address, a module name, a python script, etc
 	returns `true` if the flag was added, returns `false` if the flag is a duplicate (to prevent multiple repeat data pushes for the same thing)
 */
-void EvidenceLocker::AddEvidence(__in const DetectionFlags flag, __in const std::string data, __in const DWORD pid)
+void EvidenceLocker::AddEvidence(__in const DetectionFlags flag, __in const std::string& data, __in const DWORD pid)
 {
 	Evidence evi;
 	evi.type = flag;
@@ -96,7 +96,7 @@ bool EvidenceLocker::SendFlag(__in const DetectionFlags flag)
 	FlagWithData - send a detected flag to the server (with evidence)
 	returns `true` on success
 */
-bool EvidenceLocker::FlagWithData(__in const DetectionFlags flag, __in const std::string data, __in const DWORD pid, __in const bool ShouldMarkAsSent)
+bool EvidenceLocker::FlagWithData(__in const DetectionFlags flag, __in const std::string& data, __in const DWORD pid, __in const bool ShouldMarkAsSent)
 {
 	bool wasDuplicate = AddFlagged(flag);
 
@@ -156,7 +156,7 @@ bool EvidenceLocker::PushAllEvidence()
 							}
 						}
 
-						this_thread::sleep_for(std::chrono::milliseconds(1000));
+						std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 					}
 				}
 			}

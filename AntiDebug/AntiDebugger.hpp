@@ -100,21 +100,21 @@ namespace Debugger
         static void HideAllThreadsFromDebugger();
 
     protected:
-        vector<std::function<DetectionFlags()>> DetectionFunctionList; //list of debugger detection methods, which are contained in the subclass `DebuggerDetections`      
+        std::vector<std::function<DetectionFlags()>> DetectionFunctionList; //list of debugger detection methods, which are contained in the subclass `DebuggerDetections`      
         
-        list<wstring> CommonDebuggerProcesses;
+        std::list<std::wstring> CommonDebuggerProcesses;
         
         EvidenceLocker* EvidenceManager = nullptr;
 
     private:      
 
-        unique_ptr<Thread> DetectionThread = nullptr; //set in `StartAntiDebugThread`
+        std::unique_ptr<Thread> DetectionThread = nullptr; //set in `StartAntiDebugThread`
 
-        list<DetectionFlags> DetectedMethods;
+        std::list<DetectionFlags> DetectedMethods;
 
         Settings* Config = nullptr;
 
-        const wstring DBK64Driver = L"DBK64.sys"; //DBVM debugger, this driver loaded and in a running state may likely indicate the presence of dark byte's VM debugger *todo -> add check on this driver*
+        const std::wstring DBK64Driver = L"DBK64.sys"; //DBVM debugger, this driver loaded and in a running state may likely indicate the presence of dark byte's VM debugger *todo -> add check on this driver*
 
         std::mutex DetectionRoutineMutex;
         std::mutex FlggedListMutex;

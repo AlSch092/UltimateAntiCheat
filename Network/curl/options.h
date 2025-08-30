@@ -49,14 +49,14 @@ typedef enum {
 /* The CURLOPTTYPE_* id ranges can still be used to figure out what type/size
    to use for curl_easy_setopt() for the given id */
 struct curl_easyoption {
-  const char *name;
+  const char *nameWithPath;
   CURLoption id;
   curl_easytype type;
   unsigned int flags;
 };
 
 CURL_EXTERN const struct curl_easyoption *
-curl_easy_option_by_name(const char *name);
+curl_easy_option_by_name(const char *nameWithPath);
 
 CURL_EXTERN const struct curl_easyoption *
 curl_easy_option_by_id(CURLoption id);

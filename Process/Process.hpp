@@ -13,8 +13,6 @@
 
 #pragma comment(lib, "ImageHlp")
 
-using namespace std;
-
 namespace ProcessData
 {
 	typedef enum _PROCESS_INFORMATION_CLASS 
@@ -36,15 +34,15 @@ namespace ProcessData
 
 	struct MODULE_DATA
 	{
-		wstring baseName;
-		wstring nameWithPath;
+		std::wstring baseName;
+		std::wstring nameWithPath;
 		MODULEINFO dllInfo;
 		HMODULE hModule = 0;
 	};
 
 	struct Section
 	{
-		string name = "";
+		std::string name = "";
 		unsigned int size;
 		UINT64 address;
 
@@ -109,7 +107,7 @@ public:
 
 	bool FillModuleList();
 
-	static list<ProcessData::Section> GetSections(__in const string& module);
+	static std::list<ProcessData::Section> GetSections(__in const std::string& module);
 
 #ifdef _M_IX86
 	static _MYPEB* GetPEB() { return (_MYPEB*)__readfsdword(0x30); }
@@ -117,25 +115,25 @@ public:
 	static _MYPEB* GetPEB() { return (_MYPEB*)__readgsqword(0x60); }
 #endif
 
-	static wstring GetProcessName(__in const DWORD pid);
-	static DWORD GetProcessIdByName(__in const wstring procName);
-	static list<DWORD> GetProcessIdsByName(__in const wstring procName);
+	static std::wstring GetProcessName(__in const DWORD pid);
+	static DWORD GetProcessIdByName(__in const std::wstring& procName);
+	static std::list<DWORD> GetProcessIdsByName(__in const std::wstring& procName);
 
 	static DWORD GetParentProcessId();
-	static bool CheckParentProcess(__in const wstring desiredParent, __in const bool bShouldCheckSignature);
+	static bool CheckParentProcess(__in const std::wstring& desiredParent, __in const bool bShouldCheckSignature);
 
-	wstring GetParentName() const noexcept { return this->_ParentProcessName; }
+	std::wstring GetParentName() const noexcept { return this->_ParentProcessName; }
 	uint32_t GetParentId() const noexcept { return this->_ParentProcessId; }
 
-	void SetParentName(__in const wstring parentName) noexcept { if(!parentName.empty()) this->_ParentProcessName = parentName; }
+	void SetParentName(__in const std::wstring& parentName) noexcept { if(!parentName.empty()) this->_ParentProcessName = parentName; }
 	void SetParentId(__in const uint32_t id) noexcept { this->_ParentProcessId = id; }
 
-	static bool ChangeModuleName(__in const  wstring szModule, __in const  wstring newName); //these `ChangeXYZ` routines all modify aspects of the PEB
-	static bool ChangeNumberOfSections(__in const string module, __in const DWORD newSectionsCount);
+	static bool ChangeModuleName(__in const  std::wstring& szModule, __in const  std::wstring& newName); //these `ChangeXYZ` routines all modify aspects of the PEB
+	static bool ChangeNumberOfSections(__in const std::string& module, __in const DWORD newSectionsCount);
 	
 	static bool ModifyTLSCallbackPtr(__in const uintptr_t NewTLSFunction);
 
-	static bool HasExportedFunction(__in const string dllName, __in const string functionName);
+	static bool HasExportedFunction(__in const std::string& dllName, __in const std::string& functionName);
 
 	static FARPROC _GetProcAddress(__in const PCSTR Module, __in const  LPCSTR lpProcName); //GetProcAddress without winAPI call
 
@@ -146,13 +144,13 @@ public:
 
 	static DWORD GetModuleSize(__in const HMODULE module);
 
-	static list<ProcessData::ImportFunction> GetIATEntries(const std::string& module);
+	static std::list<ProcessData::ImportFunction> GetIATEntries(const std::string& module);
 
-	static bool IsReturnAddressInModule(__in const uintptr_t RetAddr, __in const  wchar_t* module);
+	static bool IsReturnAddressInModule(__in const uintptr_t RetAddr, __in const wchar_t* module);
 
 	static std::vector<ProcessData::MODULE_DATA> GetLoadedModules();
 
-	static ProcessData::MODULE_DATA GetModuleInfo(__in const  wchar_t* nameWithPath);
+	static ProcessData::MODULE_DATA GetModuleInfo(__in const wchar_t* nameWithPath);
 	
 	static HMODULE GetModuleHandle_Ldr(__in const  wchar_t* moduleName);
 
@@ -166,8 +164,8 @@ public:
 	static int GetNumSections() { return NumSections; }
 	static void SetNumSections(__in const unsigned int nSections) { NumSections = nSections; }
 
-	static wstring GetExecutableModuleName() { return ExecutableModuleNameW; }
-	static void SetExecutableModuleName(wstring nameWithPath) { ExecutableModuleNameW = nameWithPath; }
+	static std::wstring GetExecutableModuleName() { return ExecutableModuleNameW; }
+	static void SetExecutableModuleName(__in const std::wstring& nameWithPath) { ExecutableModuleNameW = nameWithPath; }
 
 	static std::list<ProcessData::Section> FindNonWritableSections(__in const std::string module);
 
@@ -177,19 +175,19 @@ private:
 
 	uint32_t _ProcessId = 0;
 
-	wstring _ProcessName;
-	wstring _WindowClassName;
-	wstring _WindowTitle;
+	std::wstring _ProcessName;
+	std::wstring _WindowClassName;
+	std::wstring _WindowTitle;
 
-	wstring _ParentProcessName;
+	std::wstring _ParentProcessName;
 	uint32_t _ParentProcessId = 0;
 
-	list<ProcessData::Section> MainModuleSections;
+	std::list<ProcessData::Section> MainModuleSections;
 
-	list<ProcessData::MODULE_DATA> ModuleList; //todo: make routine to fill this member
+	std::list<ProcessData::MODULE_DATA> ModuleList; //todo: make routine to fill this member
 
 	static int NumSections;
-	static wstring ExecutableModuleNameW;
+	static std::wstring ExecutableModuleNameW;
 };
 
 typedef enum _PROCESSINFOCLASS

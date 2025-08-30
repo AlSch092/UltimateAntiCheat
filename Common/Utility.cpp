@@ -1,14 +1,14 @@
 //By AlSch092 @ github
 #include "Utility.hpp"
 
-string Utility::GenerateRandomString(__in const int length)
+std::string Utility::GenerateRandomString(__in const int length)
 {
     if (length <= 0) return "";
 
     const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
     const size_t charsetSize = strlen(charset);
 
-    string randomString;
+    std::string randomString;
     randomString.reserve(length);
 
     static bool seedInitialized = false;
@@ -26,14 +26,14 @@ string Utility::GenerateRandomString(__in const int length)
     return randomString;
 }
 
-wstring Utility::GenerateRandomWString(__in const int length)
+std::wstring Utility::GenerateRandomWString(__in const int length)
 {
     if (length <= 0) return L"";
 
     const wchar_t charset[] = L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
     const size_t charsetSize = wcslen(charset);
 
-    wstring randomString;
+    std::wstring randomString;
     randomString.reserve(length);
 
     static bool seedInitialized = false;

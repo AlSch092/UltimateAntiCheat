@@ -44,7 +44,7 @@ public:
 
 	DebuggerDetections* GetAntiDebugger() const { return this->AntiDebugger.get(); }
 	
-	weak_ptr<NetClient> GetNetworkClient() const  { return this->NetworkClient; }
+	std::weak_ptr<NetClient> GetNetworkClient() const  { return this->NetworkClient; }
 	
 	Preventions* GetBarrier() const  { return this->Barrier.get(); }  //pointer lifetime stays within the Anticheat class, these 'Get' functions should only be used to call functions of these classes
 	
@@ -56,13 +56,13 @@ public:
 
 private:
 
-	unique_ptr<Detections> Monitor = nullptr;  //cheat detections
+	std::unique_ptr<Detections> Monitor = nullptr;  //cheat detections
 
-	unique_ptr<Preventions> Barrier = nullptr;  //cheat preventions
+	std::unique_ptr<Preventions> Barrier = nullptr;  //cheat preventions
 
-	unique_ptr<DebuggerDetections> AntiDebugger = nullptr;
+	std::unique_ptr<DebuggerDetections> AntiDebugger = nullptr;
 
-	shared_ptr <NetClient> NetworkClient = nullptr; //for client-server comms, our other classes need access to this to send detected flags to the server
+	std::shared_ptr <NetClient> NetworkClient = nullptr; //for client-server comms, our other classes need access to this to send detected flags to the server
 	
 	Settings* Config = nullptr; //the unique_ptr for this is made in main.cpp
 

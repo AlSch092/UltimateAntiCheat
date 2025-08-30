@@ -13,13 +13,10 @@
 #include "Packets/Packets.hpp"
 #include "../Process/Process.hpp"
 
-
 #include <Iphlpapi.h>
 
 #define DEFAULT_RECV_LENGTH 512
 #define MINIMUM_PACKET_SIZE 4
-
-using namespace std;
 
 /*
 Class NetClient - Client-side of networking portion
@@ -48,7 +45,7 @@ public:
 		}
 
 		if(serverEndpoint != nullptr)
-			Ip = string(serverEndpoint);
+			Ip = serverEndpoint;
 
 		Port = port;
 
@@ -84,9 +81,9 @@ public:
 	Error QueryMemory(__in const uint64_t address, __in const  uint32_t size); //query specific memory address, send its bytes values back to server
 	__forceinline const char*  MakeHeartbeat(__in const std::string cookie);
 
-	static string GetHostname();
-	string GetMACAddress();
-	string GetHardwareID();
+	static std::string GetHostname();
+	std::string GetMACAddress();
+	std::string GetHardwareID();
 
 	Error HandleInboundPacket(PacketReader* p);
 
@@ -94,7 +91,7 @@ public:
 	bool Initialized = false;
 
 	SOCKET GetClientSocket() const { return this->Socket; }
-	string GetConnectedIP() const { return this->Ip; }
+	std::string GetConnectedIP() const { return this->Ip; }
 	uint16_t GetConnectedPort() const { return this->Port; }
 	Thread* GetRecvThread() const { return this->RecvLoopThread; }
 
@@ -108,22 +105,22 @@ private:
 
 	bool Connected = false;
 
-	string Ip;
+	std::string Ip;
 	uint16_t Port;
 
 	unsigned long long ConnectedDuration = 0;
 	unsigned long long ConnectedAt = 0; //GetTickCount64 
 
-	string Hostname;
-	string HardwareID;
-	string MACAddress;
+	std::string Hostname;
+	std::string HardwareID;
+	std::string MACAddress;
 
 	Error LastError = Error::OK;
 
 	Thread* RecvLoopThread = NULL;
 	DWORD recvThreadId = 0;
 
-	mutex SendPacketMutex;
-	mutex RecvPacketMutex;
+	std::mutex SendPacketMutex;
+	std::mutex RecvPacketMutex;
 };
 
