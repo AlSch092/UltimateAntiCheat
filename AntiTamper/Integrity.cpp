@@ -140,13 +140,9 @@ void Integrity::PeriodicIntegrityCheck(LPVOID classThisPtr)
 					
 				}
 
-#ifndef _DEBUG
 				if (uintptr_t addr = FindWritableAddress(Utility::ConvertWStringToString(mod.Name), section.name.c_str()) != 0) //check if any page is writable inside .text|.rdata
 				{
-
-					Logger::logf(Detection, "non-writable section %s had writable page at %llx", section.name.c_str(), addr);
-#endif			
-
+					Logger::logf(Detection, "non-writable section %s had writable page at %llx", section.name.c_str(), addr);		
 					IntegrityViolation IV(mod.Name, Utility::ConvertStringToWString(section.name), L"page=writable", (uintptr_t)mod.hMod + section.address);
 					integrity->AddViolation(IV);
 					
