@@ -113,19 +113,19 @@ int main(int argc, char** argv)
 
 #ifdef _DEBUG
 
-    cout << "Settings for this instance:\n";
-    cout << "\t Enable Networking:\t" << boolalpha << bEnableNetworking << endl;
-    cout << "\t Enforce Secure Boot: \t" << boolalpha << bEnforceSecureBoot << endl;
-    cout << "\t Enforce DSE:\t\t" << boolalpha << bEnforceDSE << endl;
-    cout << "\t Enforce No KDBG:\t" << boolalpha << bEnforceNoKDBG << endl;
-    cout << "\t Use Anti-Debugging:\t" << boolalpha << bUseAntiDebugging << endl;
-    cout << "\t Use Integrity Checking:\t" << boolalpha << bUseIntegrityChecking << endl;
-    cout << "\t Check Thread Integrity:\t" << boolalpha << bCheckThreadIntegrity << endl;
-    cout << "\t Check Hypervisor:\t" << boolalpha << bCheckHypervisor << endl;
-    cout << "\t Require Admin:\t\t" << boolalpha << bRequireRunAsAdministrator << endl;
-    cout << "\t Using Kernelmode Driver:\t\t" << boolalpha << bUsingDriver << endl;
-    cout << "\t Enable logging :\t\t" << boolalpha << bEnableLogging << endl;
-    cout << "\t Allowed parent processes: \t\t" << endl;
+    std::cout << "Settings for this instance:\n";
+    std::cout << "\t Enable Networking:\t" << std::boolalpha << bEnableNetworking << std::endl;
+    std::cout << "\t Enforce Secure Boot: \t" << std::boolalpha << bEnforceSecureBoot << std::endl;
+    std::cout << "\t Enforce DSE:\t\t" << std::boolalpha << bEnforceDSE << std::endl;
+    std::cout << "\t Enforce No KDBG:\t" << std::boolalpha << bEnforceNoKDBG << std::endl;
+    std::cout << "\t Use Anti-Debugging:\t" << std::boolalpha << bUseAntiDebugging << std::endl;
+    std::cout << "\t Use Integrity Checking:\t" << std::boolalpha << bUseIntegrityChecking << std::endl;
+    std::cout << "\t Check Thread Integrity:\t" << std::boolalpha << bCheckThreadIntegrity << std::endl;
+    std::cout << "\t Check Hypervisor:\t" << std::boolalpha << bCheckHypervisor << std::endl;
+    std::cout << "\t Require Admin:\t\t" << std::boolalpha << bRequireRunAsAdministrator << std::endl;
+    std::cout << "\t Using Kernelmode Driver:\t\t" << std::boolalpha << bUsingDriver << std::endl;
+    std::cout << "\t Enable logging :\t\t" << std::boolalpha << bEnableLogging << std::endl;
+    std::cout << "\t Allowed parent processes: \t\t" << std::endl;
 
     for (const auto& parent: allowedParents) 
     {
@@ -221,6 +221,8 @@ int main(int argc, char** argv)
             std::cout << "Exit key was pressed, shutting down program..." << std::endl;
             break;
         }     
+
+       // SleepEx(100, TRUE);
     }
 
     if (Anti_Cheat->GetMonitor()->IsUserCheater())
