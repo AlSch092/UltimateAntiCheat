@@ -146,15 +146,30 @@ bool Utility::wcscmp_insensitive(__in const wchar_t* s1, __in const wchar_t* s2)
 
 std::string Utility::ConvertWStringToString(__in const std::wstring& wstr)
 {
-    std::locale loc("");
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
-    return conv.to_bytes(wstr);
+    if (wstr.empty())
+        return {};
+
+    int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0,wstr.c_str(),static_cast<int>(wstr.size()),nullptr, 0, nullptr, nullptr);
+
+    std::string strTo(sizeNeeded, 0);
+    
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), static_cast<int>(wstr.size()), &strTo[0], sizeNeeded, nullptr, nullptr);
+
+    return strTo;
 }
 
 std::wstring Utility::ConvertStringToWString(__in const std::string& str)
 {
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    return converter.from_bytes(str);
+    if (str.empty())
+        return {};
+
+    int sizeNeeded = MultiByteToWideChar(CP_UTF8, 0,str.c_str(),static_cast<int>(str.size()),nullptr, 0);
+
+    std::wstring wstrTo(sizeNeeded, 0);
+    
+    MultiByteToWideChar(CP_UTF8, 0,str.c_str(),static_cast<int>(str.size()), &wstrTo[0], sizeNeeded);
+
+    return wstrTo;
 }
 
 std::vector<std::string> Utility::splitStringBySpace(__in char* str)

@@ -4,12 +4,9 @@
 #include <Windows.h>
 #include <time.h>
 #include <string>
-#include <locale>
-#include <codecvt>
 #include <vector>
 #include <list>
 #include <algorithm> //std::transform
-#include <locale>
 #include <cwctype> //std::towlower
 
 /*
