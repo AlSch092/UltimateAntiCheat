@@ -545,9 +545,9 @@ bool Process::FillModuleList()
     HMODULE hModules[512];
     DWORD cbNeeded = 0;
 
-    if (EnumProcessModules(GetCurrentProcess(), hModules, sizeof(hModules), &cbNeeded))
+    if (!EnumProcessModules(GetCurrentProcess(), hModules, sizeof(hModules), &cbNeeded))
     {
-        Logger::logf(Err, "EnumProcessModules failed @ Process::FillModuleList");
+        Logger::logf(Err, "EnumProcessModules failed @ Process::FillModuleList: Error %d", GetLastError());
         return false;
     }
 
@@ -1132,4 +1132,5 @@ std::list<ProcessData::Section> Process::FindNonWritableSections(__in const std:
     }
 
     return nonWritableSections;
+
 }
