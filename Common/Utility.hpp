@@ -8,6 +8,8 @@
 #include <list>
 #include <algorithm> //std::transform
 #include <cwctype> //std::towlower
+#include <iphlpapi.h>
+#pragma comment(lib, "IPHLPAPI.lib")
 
 /*
 	Utility is a 'helper class' which provides some functions for string operations and comparisons
@@ -35,4 +37,6 @@ public:
 
 	static std::wstring ToLower(__in const std::wstring& str);
 	static bool ContainsWStringInsensitive(__in const std::wstring& haystack, __in const std::wstring& needle);
+
+	static std::vector<std::string> GetMACAddresses(); // Get all MAC addresses of network adapters
 };

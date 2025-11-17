@@ -275,6 +275,7 @@ copy "$(ProjectDir)DLLs\zlibd1.dll" "$(OutDir)zlibd1.dll"</Command>
     <ClCompile Include="Core\Preventions.cpp" />
     <ClCompile Include="Environment\Services.cpp" />
     <ClCompile Include="GameEvents\EventLogger.cpp" />
+    <ClCompile Include="GameEvents\EventReporter.cpp" />
     <ClCompile Include="Network\HttpClient.cpp" />
     <ClCompile Include="Network\NetClient.cpp" />
     <ClCompile Include="Network\Packets\Packets.cpp" />
@@ -295,6 +296,7 @@ copy "$(ProjectDir)DLLs\zlibd1.dll" "$(OutDir)zlibd1.dll"</Command>
     <ClInclude Include="AntiTamper\NAuthenticode.hpp" />
     <ClInclude Include="AntiTamper\remap.hpp" />
     <ClInclude Include="Common\DetectionFlags.hpp" />
+    <ClInclude Include="Common\DetectionSeverity.hpp" />
     <ClInclude Include="Common\Error.hpp" />
     <ClInclude Include="Common\EvidenceLocker.hpp" />
     <ClInclude Include="Common\json.hpp" />
@@ -316,6 +318,7 @@ copy "$(ProjectDir)DLLs\zlibd1.dll" "$(OutDir)zlibd1.dll"</Command>
     <ClInclude Include="Core\Preventions.hpp" />
     <ClInclude Include="Environment\Services.hpp" />
     <ClInclude Include="GameEvents\EventLogger.hpp" />
+    <ClInclude Include="GameEvents\EventReporter.hpp" />
     <ClInclude Include="Network\HttpClient.hpp" />
     <ClInclude Include="Network\NetClient.hpp" />
     <ClInclude Include="Network\Packets\PacketReader.hpp" />

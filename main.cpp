@@ -59,6 +59,41 @@ int main(int argc, char** argv)
     std::unordered_map<DetectionFlags, const char*> explanations;
     std::list<DetectionFlags> flags; //for explanation output after the program is finished running
 
+    // Parse command-line arguments for PID targeting
+    DWORD targetPid = 0;
+    std::string apiDomain = "";
+    bool bEnableAPILogging = false;
+    bool bExternalMode = false;
+
+    for (int i = 1; i < argc; i++)
+    {
+        std::string arg = argv[i];
+        if (arg == "--pid" && i + 1 < argc)
+        {
+            targetPid = static_cast<DWORD>(std::stoul(argv[++i]));
+            bExternalMode = true;
+            std::cout << "Targeting external process with PID: " << targetPid << std::endl;
+        }
+        else if (arg == "--api-domain" && i + 1 < argc)
+        {
+            apiDomain = argv[++i];
+            bEnableAPILogging = true;
+            std::cout << "API logging enabled with domain: " << apiDomain << std::endl;
+        }
+        else if (arg == "--help" || arg == "-h")
+        {
+            std::cout << "UltimateAntiCheat - External Process Monitor" << std::endl;
+            std::cout << "Usage: " << argv[0] << " [options]" << std::endl;
+            std::cout << "\nOptions:" << std::endl;
+            std::cout << "  --pid <process_id>         Target process ID to monitor" << std::endl;
+            std::cout << "  --api-domain <domain>      API domain for event logging (e.g., https://api.example.com)" << std::endl;
+            std::cout << "  --help, -h                 Show this help message" << std::endl;
+            std::cout << "\nExample:" << std::endl;
+            std::cout << "  " << argv[0] << " --pid 1234 --api-domain https://api.yourgame.com" << std::endl;
+            return 0;
+        }
+    }
+
     // Set default options
 #ifdef _DEBUG //in debug compilation, we are more lax with our protections for easier testing purposes
     const bool bEnableNetworking = false;  //change this to false if you don't want to use the server
@@ -70,7 +105,7 @@ int main(int argc, char** argv)
     const bool bCheckThreadIntegrity = true;
     const bool bCheckHypervisor = false;
     const bool bRequireRunAsAdministrator = true;
-    const bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option  
+    const bool bUsingDriver = false; //signed driver for hybrid KM + UM anticheat. the KM driver will not be public, so make one yourself if you want to use this option
     const bool bEnableLogging = true;
 
     std::wstring DriverCertSubject = L"YourGameCompany";
@@ -109,6 +144,13 @@ int main(int argc, char** argv)
 
     const std::string serverIP = "127.0.0.1";
     const uint16_t serverPort = 5445;
+
+    // Set default API domain if not provided via command line
+    if (apiDomain.empty())
+    {
+        apiDomain = ""; // Set your default API domain here if needed
+        bEnableAPILogging = false;
+    }
 #endif
 
 #ifdef _DEBUG
@@ -157,20 +199,24 @@ int main(int argc, char** argv)
     Settings* Config = ProtectedSettingsMemory.Construct<Settings>(
         serverIP,
         serverPort,
-        bEnableNetworking, 
-        bEnforceSecureBoot, 
-        bEnforceDSE, 
-        bEnforceNoKDBG, 
-        bUseAntiDebugging, 
-        bUseIntegrityChecking, 
-        bCheckThreadIntegrity, 
-        bCheckHypervisor, 
-        bRequireRunAsAdministrator, 
+        bEnableNetworking,
+        bEnforceSecureBoot,
+        bEnforceDSE,
+        bEnforceNoKDBG,
+        bUseAntiDebugging,
+        bUseIntegrityChecking,
+        bCheckThreadIntegrity,
+        bCheckHypervisor,
+        bRequireRunAsAdministrator,
         bUsingDriver,
         DriverCertSubject,
-        allowedParents, 
-        bEnableLogging, 
-        logFileName);
+        allowedParents,
+        bEnableLogging,
+        logFileName,
+        apiDomain,
+        bEnableAPILogging,
+        targetPid,
+        bExternalMode);
 
     try
     {

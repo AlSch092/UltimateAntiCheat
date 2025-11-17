@@ -25,10 +25,15 @@ public:
 		const std::wstring DriverSignerSubject,
 		std::list<std::wstring> allowedParents,
 		const bool bEnableLogging,
-		const std::string logFileName)
+		const std::string logFileName,
+		const std::string apiDomain = "",
+		const bool bEnableAPILogging = false,
+		const DWORD targetProcessId = 0,
+		const bool bExternalMode = false)
 		: serverIP(serverIP), serverPort(serverPort), bNetworkingEnabled(bNetworkingEnabled), bEnforceSecureBoot(bEnforceSecureBoot), bEnforceDSE(bEnforceDSE),
 		bEnforceNoKDbg(bEnforceNoKDbg), bUseAntiDebugging(bUseAntiDebugging), bCheckIntegrity(bCheckIntegrity), bCheckThreads(bCheckThreads), bCheckHypervisor(bCheckHypervisor),
-		bRequireRunAsAdministrator(bRequireRunAsAdministrator), bUsingDriver(bUsingDriver), DriverSignerSubject(DriverSignerSubject), allowedParents(allowedParents), bEnableLogging(bEnableLogging), logFileName(logFileName)
+		bRequireRunAsAdministrator(bRequireRunAsAdministrator), bUsingDriver(bUsingDriver), DriverSignerSubject(DriverSignerSubject), allowedParents(allowedParents),
+		bEnableLogging(bEnableLogging), logFileName(logFileName), apiDomain(apiDomain), bEnableAPILogging(bEnableAPILogging), targetProcessId(targetProcessId), bExternalMode(bExternalMode)
 	{
 		Logger::enableLogging = bEnableLogging; //put this line here to be as early as possible.
 		Logger::logFileName = logFileName;
@@ -50,14 +55,22 @@ public:
 	bool bRequireRunAsAdministrator;
 
 	bool bNetworkingEnabled;
-	
+
 	bool bUsingDriver; //signed + msft approved kernelmode driver for hybrid approach
 	std::wstring DriverSignerSubject;  //this refers to the company/party who initiated the file signing, for example "Valve Corp.". If you have an EV certificate, you can change this to your own company
 
 	std::list<std::wstring> allowedParents;
-	
+
 	bool bEnableLogging;
 	std::string logFileName;
+
+	// API Event Logging Configuration
+	std::string apiDomain; // Domain for API event logging (e.g., "https://api.yourgame.com")
+	bool bEnableAPILogging; // Enable sending detection events to API
+
+	// External Process Monitoring
+	DWORD targetProcessId; // If non-zero, monitor this PID instead of self
+	bool bExternalMode; // Enable external process monitoring mode
 
 	std::wstring GetKMDriverName() const { return this->KMDriverName; }
 	std::wstring GetKMDriverPath() const { return this->KMDriverPath; }

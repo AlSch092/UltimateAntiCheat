@@ -16,7 +16,7 @@ Detections::Detections(Settings* s, EvidenceLocker* evidence, std::shared_ptr<Ne
         if(sections.size() > 0)
             _Proc = std::make_unique<Process>(sections.size());
         else
-            _Proc = std::make_unique<Process>(6); //.text , .rdata, .data, .pdata, .rsrc, .reloc, .tls, 
+            _Proc = std::make_unique<Process>(6); //.text , .rdata, .data, .pdata, .rsrc, .reloc, .tls,
 
         Process::SetNumSections(sections.size());
 
@@ -25,6 +25,13 @@ Detections::Detections(Settings* s, EvidenceLocker* evidence, std::shared_ptr<Ne
         integrityChecker = std::make_shared<Integrity>(s);
 
         VM = std::make_unique<VirtualMachine>(256);
+
+        // Initialize EventReporter if API logging is enabled
+        if (s->bEnableAPILogging && !s->apiDomain.empty())
+        {
+            eventReporter = std::make_unique<EventReporter>(s->apiDomain);
+            Logger::logf(Info, "EventReporter initialized with domain: %s", s->apiDomain.c_str());
+        }
     }
     catch (const std::bad_alloc& e)
     {
@@ -77,6 +84,70 @@ Detections::~Detections()
 
     if (ProcessCreationMonitorThread != nullptr)
         delete ProcessCreationMonitorThread;
+}
+
+/*
+    HandleDetection - Centralized handler for all detections
+    Logs the detection, reports to API if enabled, and takes action based on severity
+*/
+void Detections::HandleDetection(__in DetectionFlags flag, __in const std::string& detectionName, __in const std::string& details)
+{
+    // Log the detection
+    Logger::logf(Detection, "%s: %s", detectionName.c_str(), details.c_str());
+
+    // Add to evidence locker
+    if (this->EvidenceManager)
+    {
+        this->EvidenceManager->AddFlag(flag);
+    }
+
+    // Add to detected flags list
+    if (std::find(DetectedFlags.begin(), DetectedFlags.end(), flag) == DetectedFlags.end())
+    {
+        DetectedFlags.push_back(flag);
+    }
+
+    // Get target PID (either current process or external target)
+    DWORD targetPid = this->Config->targetProcessId;
+    if (targetPid == 0)
+    {
+        targetPid = GetCurrentProcessId();
+    }
+
+    // Report to API if enabled
+    if (this->Config->bEnableAPILogging && this->eventReporter && severityConfig.ShouldReportToAPI(flag))
+    {
+        Logger::logf(Info, "Reporting detection to API: %s", detectionName.c_str());
+        this->eventReporter->ReportDetection(flag, detectionName, details, targetPid);
+    }
+
+    // Take action based on severity
+    if (severityConfig.ShouldTerminateProcess(flag))
+    {
+        Logger::logf(Warning, "Critical detection - terminating target process (PID: %d)", targetPid);
+
+        if (this->Config->bExternalMode && targetPid != GetCurrentProcessId())
+        {
+            // Terminate external process
+            HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, targetPid);
+            if (hProcess != NULL)
+            {
+                TerminateProcess(hProcess, 1);
+                CloseHandle(hProcess);
+                Logger::logf(Info, "Terminated target process PID %d", targetPid);
+            }
+            else
+            {
+                Logger::logf(Err, "Failed to open target process for termination: %d", GetLastError());
+            }
+        }
+        else
+        {
+            // Self-termination (traditional mode)
+            Logger::logf(Warning, "Critical detection in self-monitoring mode - terminating...");
+            std::terminate();
+        }
+    }
 }
 
 /*

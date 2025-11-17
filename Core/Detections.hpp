@@ -8,6 +8,8 @@
 #include "../Obscure/ntldr.hpp" //dll notification structures
 #include "../Obscure/VirtualMachine.hpp" //simple virtual machine for detection routine calls
 #include "../Obscure/XorStr.hpp"
+#include "../GameEvents/EventReporter.hpp" //API event reporting
+#include "../Common/DetectionSeverity.hpp" //severity configuration
 
 #include <future>
 #include <Wbemidl.h> //for process event creation (WMI)
@@ -99,6 +101,8 @@ public:
 
 	EvidenceLocker* GetEvidenceLog() const { return this->EvidenceManager; }
 
+	void HandleDetection(__in DetectionFlags flag, __in const std::string& detectionName, __in const std::string& details); // Centralized detection handler
+
 private:
 
 	Settings* Config = nullptr; //non-owning pointer to the original unique_ptr<Settings> in main.cpp
@@ -144,4 +148,7 @@ private:
 	EvidenceLocker* EvidenceManager = nullptr;
 
 	std::unique_ptr<VirtualMachine> VM = nullptr; //simple virtual machine for detection routine calls
+
+	std::unique_ptr<EventReporter> eventReporter = nullptr; //API event reporting
+	DetectionSeverityConfig severityConfig; //severity configuration for detections
 };

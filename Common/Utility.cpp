@@ -211,9 +211,49 @@ std::wstring Utility::ToLower(__in const std::wstring& str)
     return lowerStr;
 }
 
-bool Utility::ContainsWStringInsensitive(__in const std::wstring& haystack, __in const std::wstring& needle) 
+bool Utility::ContainsWStringInsensitive(__in const std::wstring& haystack, __in const std::wstring& needle)
 {
     std::wstring lowerHaystack = ToLower(haystack);
     std::wstring lowerNeedle = ToLower(needle); //convert both strings to lowercase, check if the needle is in the haystack
     return lowerHaystack.find(lowerNeedle) != std::wstring::npos;
+}
+
+std::vector<std::string> Utility::GetMACAddresses()
+{
+    std::vector<std::string> macAddresses;
+
+    ULONG bufferSize = 0;
+    DWORD result = GetAdaptersInfo(nullptr, &bufferSize);
+
+    if (result != ERROR_BUFFER_OVERFLOW)
+    {
+        return macAddresses; // Failed to get buffer size
+    }
+
+    PIP_ADAPTER_INFO adapterInfo = (IP_ADAPTER_INFO*)malloc(bufferSize);
+    if (!adapterInfo)
+    {
+        return macAddresses; // Memory allocation failed
+    }
+
+    result = GetAdaptersInfo(adapterInfo, &bufferSize);
+    if (result == NO_ERROR)
+    {
+        PIP_ADAPTER_INFO adapter = adapterInfo;
+        while (adapter)
+        {
+            if (adapter->AddressLength == 6) // MAC address is 6 bytes
+            {
+                char macStr[18];
+                sprintf_s(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
+                    adapter->Address[0], adapter->Address[1], adapter->Address[2],
+                    adapter->Address[3], adapter->Address[4], adapter->Address[5]);
+                macAddresses.push_back(std::string(macStr));
+            }
+            adapter = adapter->Next;
+        }
+    }
+
+    free(adapterInfo);
+    return macAddresses;
 }
