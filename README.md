@@ -9,7 +9,7 @@
 
 UltimateAntiCheat is an open source, educational usermode anti-cheat system made to detect and prevent common attack vectors of game hacking. The project also features an optional basic client-server mechanism, with a simple heartbeat being sent every minute to clients. No privacy-invasive techniques are used. Optionally, a hybrid kernelmode + usermode approach can now be used through the settings in `main.cpp` and `Common/Settings.hpp` (you will need to make/provide your own driver for this).
 
-The project now supports CMake & using the LLVM/clang-cl compiler, which can be found in the `llvm-clang` branch (may be lagging behind the main branch or not be error-free, my apologies if so). In the future (time permitting) we may attempt to add in code obfuscation via LLVM transformative passes. Certain sections of the code such as the `Detections` class may be messy or lacking modularity since the project was originally written in plain C-style, then later on moved into using C++14 concepts.  
+The project now supports CMake & using the LLVM/clang-cl compiler, which can be found in the `llvm-clang` branch (may be lagging behind the main branch or not be error-free, my apologies if so). In the future (time permitting) we may attempt to add in code obfuscation via LLVM transformative passes. Certain sections of the code such as the `Detections` class may be considered messy, lacking C++ design concepts, and modularity, as the project was originally written in a "plain old C-style", then later on moved into using C++14 concepts.    
 
 If you're looking for a modular, light-weight code integrity library with far cleaner code, check out [UltimateDRM](https://github.com/AlSch092/UltimateDRM), and a much improved detection library can be found at: [DetectionEngine](https://github.com/AlSch092/DetectionEngine). These two projects will be implemented/used by UltimateAnticheat if I have time in the future to merge them and add auto-compilation scripts for each library. 
 
@@ -32,7 +32,7 @@ Networking support is available in the project: the server can be found in the `
 
 ## Windows version targeting:  
 
-The preprocessor definition `_WIN32_WINNT=0x...` can be used to target different versions of Windows at compile-time. For example, using 0x0A00 will target Windows 10 and above, and 0x0601 will target Windows 7 and above. Certain features might only work on newer Windows versions and are excluded from compilation based on this value. The client will also fetch the machine's windows version at program startup, in `main.cpp`.
+The preprocessor definition `_WIN32_WINNT=0x...` can be used to target different versions of Windows at compile-time. For example, using 0x0A00 will target Windows 10 and above, and 0x0601 will target Windows 7 and above. Certain features may only work on newer Windows versions, and are excluded from compilation based on this definition. The client will also fetch the machine's Windows version at program startup, in `main.cpp`.
 
 ## Licensing   
 
