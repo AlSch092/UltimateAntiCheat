@@ -1,6 +1,6 @@
 ![SampleOutput](https://github.com/AlSch092/UltimateAntiCheat/assets/94417808/8e2112b8-2c82-4a38-aca8-ec54aa7d7516)
 
-# UltimateAntiCheat: A usermode educational anti-cheat built in C++ (x64)
+# UltimateAntiCheat: An Educational Usermode Anti-cheat Built in C++ (x64)  
 
 ![C++](https://img.shields.io/badge/c++-%2300599C.svg?style=for-the-badge&logo=c%2B%2B&logoColor=white)
 ![Visual Studio](https://img.shields.io/badge/Visual%20Studio-5C2D91.svg?style=for-the-badge&logo=visual-studio&logoColor=white)
